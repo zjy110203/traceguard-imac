@@ -16,9 +16,9 @@
 | 3 | 4 | Event 与 Evidence 证据基础设施 | ACCEPTED | 16 测试 + 全项目79测试 + lint全绿 | Event幂等/冲突/序号/缺口/工作区注入、Consumer Inbox、Evidence完整性/脱敏/派生链 |
 | 3 | 5 | Explorer Agent 自主 Web 探索 | ACCEPTED | 11 测试 + ToolGateway权限/域名/预算/PromptInjection + Trace完整 | 规则planner默认，真实LLM注入接口就绪 |
 | 3 | 6 | TestCase Compiler 智能用例编译器 | ACCEPTED | 10 测试 + 全项目100测试 + 可独立回放验证 | 候选→审核→晋升门禁完整 |
-| 4 | 7 | 基础故障分类与 Diagnosis v1 | NOT_STARTED | — | 前置：阶段6 |
-| 4 | 8 | Evidence Correlation Graph | NOT_STARTED | — | 前置：阶段7 |
-| 4 | 9 | Active Diagnosis Planner | NOT_STARTED | — | 前置：阶段8 |
+| 4 | 7 | 基础故障分类与 Diagnosis v1 | ACCEPTED | 10 测试 + 八维独立/多假设/确认规则/Flaky/Disposition | LLM不得宣布CONFIRMED |
+| 4 | 8 | Evidence Correlation Graph | ACCEPTED | 10 测试 + 关联/因果限制/来源独立性/冲突分析 | 修复派生证据独立性bug |
+| 4 | 9 | Active Diagnosis Planner | ACCEPTED | 16 测试 + 五项校验/任意SQL拒绝/脱敏/预算/EIG/停止条件 | — |
 | 4 | 10 | Oracle-Protected Self-Healing | NOT_STARTED | — | 前置：阶段9 |
 | 5 | 11 | UI-FaultBench 完整 Benchmark | NOT_STARTED | — | 前置：阶段10 |
 | 5 | 12 | 外部 Web 泛化、安全与可靠性 | NOT_STARTED | — | 前置：阶段11；需外部应用授权 |
@@ -31,7 +31,7 @@
 | M0 | 工程环境与 TeamFlow 可重复运行 | 0,1 | ACCEPTED | ✅ 阶段0/1 ACCEPTED（前端 build 环境限制已记录） | 达成 |
 | M1 | 专业 UI 自动化测试平台完成 | 2,3 | ACCEPTED | ✅ 阶段2/3 READY_FOR_REVIEW→ACCEPTED（真浏览器 PoC 因网络限制记录为待验证） | 达成 |
 | M2 | 证据基础设施与 Agentic Testing 完成 | 4,5,6 | ACCEPTED | ✅ 阶段4/5/6 ACCEPTED | 达成 |
-| M3 | Evidence Graph 与智能诊断完成 | 7,8,9 | NOT_STARTED | 阶段7/8/9 ACCEPTED |
+| M3 | Evidence Graph 与智能诊断完成 | 7,8,9 | ACCEPTED | ✅ 阶段7/8/9 ACCEPTED | 达成 |
 | M4 | 安全测试自愈完成 | 10 | NOT_STARTED | 阶段10 ACCEPTED |
 | M5 | Benchmark、泛化、安全与最终交付 | 11,12,13 | NOT_STARTED | 阶段11/12/13 ACCEPTED |
 
