@@ -23,17 +23,26 @@ def _h(
     status: HypothesisStatus = HypothesisStatus.CANDIDATE,
 ) -> Hypothesis:  # type: ignore[no-untyped-def]
     return Hypothesis(
-        hypothesis_id=hid, description=hid, failure_domain=domain,
-        failure_mechanism=mech, supporting=supporting or [],
-        contradicting=contradicting or [], suggested_by=suggested_by, status=status,
+        hypothesis_id=hid,
+        description=hid,
+        failure_domain=domain,
+        failure_mechanism=mech,
+        supporting=supporting or [],
+        contradicting=contradicting or [],
+        suggested_by=suggested_by,
+        status=status,
     )
 
 
 def test_confirmed_requires_authoritative_evidence() -> None:
     eng = DiagnosisEngine()
     # 只有 UNTRUSTED 支持证据 → 不能 CONFIRMED
-    h = _h("h1", FailureDomain.PRODUCT, FailureMechanism.PERSISTENCE,
-           supporting=[EvidenceRef("e1", "UNTRUSTED", True)])
+    h = _h(
+        "h1",
+        FailureDomain.PRODUCT,
+        FailureMechanism.PERSISTENCE,
+        supporting=[EvidenceRef("e1", "UNTRUSTED", True)],
+    )
     d = eng.diagnose("未持久化", [h])
     assert h.status != HypothesisStatus.CONFIRMED
     assert d.outcome != "CONFIRMED" or d.outcome.value != "CONFIRMED"
@@ -41,8 +50,12 @@ def test_confirmed_requires_authoritative_evidence() -> None:
 
 def test_confirmed_with_trusted_authoritative_evidence() -> None:
     eng = DiagnosisEngine()
-    h = _h("h1", FailureDomain.PRODUCT, FailureMechanism.PERSISTENCE,
-           supporting=[EvidenceRef("e1", "TRUSTED", True)])
+    h = _h(
+        "h1",
+        FailureDomain.PRODUCT,
+        FailureMechanism.PERSISTENCE,
+        supporting=[EvidenceRef("e1", "TRUSTED", True)],
+    )
     d = eng.diagnose("未持久化", [h])
     assert h.status == HypothesisStatus.CONFIRMED
     assert d.root_causes == ["h1"]
@@ -52,8 +65,13 @@ def test_confirmed_with_trusted_authoritative_evidence() -> None:
 def test_llm_cannot_self_declare_confirmed() -> None:
     """LLM 提出的假设即便标了 CONFIRMED，也被强制降级。"""
     eng = DiagnosisEngine()
-    h = _h("h1", FailureDomain.TEST_ASSET, FailureMechanism.LOCATOR,
-           suggested_by="llm", status=HypothesisStatus.CONFIRMED)
+    h = _h(
+        "h1",
+        FailureDomain.TEST_ASSET,
+        FailureMechanism.LOCATOR,
+        suggested_by="llm",
+        status=HypothesisStatus.CONFIRMED,
+    )
     d = eng.diagnose("定位失败", [h])
     assert h.status == HypothesisStatus.CANDIDATE
     assert d.root_causes == []
@@ -61,9 +79,13 @@ def test_llm_cannot_self_declare_confirmed() -> None:
 
 def test_contradicting_evidence_prevents_confirmation() -> None:
     eng = DiagnosisEngine()
-    h = _h("h1", FailureDomain.PRODUCT, FailureMechanism.API,
-           supporting=[EvidenceRef("e1", "TRUSTED", True)],
-           contradicting=[EvidenceRef("e2", "TRUSTED")])
+    h = _h(
+        "h1",
+        FailureDomain.PRODUCT,
+        FailureMechanism.API,
+        supporting=[EvidenceRef("e1", "TRUSTED", True)],
+        contradicting=[EvidenceRef("e2", "TRUSTED")],
+    )
     d = eng.diagnose("API 错误", [h])
     assert h.status == HypothesisStatus.CONTRADICTED
     assert "e2" not in [e.evidence_id for e in h.supporting]  # 反驳证据保留在 contradicting
@@ -72,10 +94,18 @@ def test_contradicting_evidence_prevents_confirmation() -> None:
 
 def test_multiple_root_causes_preserved() -> None:
     eng = DiagnosisEngine()
-    h1 = _h("h1", FailureDomain.PRODUCT, FailureMechanism.PERSISTENCE,
-            supporting=[EvidenceRef("e1", "TRUSTED", True)])
-    h2 = _h("h2", FailureDomain.ENVIRONMENT, FailureMechanism.NETWORK,
-            supporting=[EvidenceRef("e2", "TRUSTED", True)])
+    h1 = _h(
+        "h1",
+        FailureDomain.PRODUCT,
+        FailureMechanism.PERSISTENCE,
+        supporting=[EvidenceRef("e1", "TRUSTED", True)],
+    )
+    h2 = _h(
+        "h2",
+        FailureDomain.ENVIRONMENT,
+        FailureMechanism.NETWORK,
+        supporting=[EvidenceRef("e2", "TRUSTED", True)],
+    )
     d = eng.diagnose("多故障", [h1, h2])
     assert set(d.root_causes) == {"h1", "h2"}  # 不强制压缩为一个
     assert d.disposition == Disposition.PRODUCT_DEFECT  # 产品域优先
@@ -83,8 +113,12 @@ def test_multiple_root_causes_preserved() -> None:
 
 def test_supported_but_not_confirmed_is_probable() -> None:
     eng = DiagnosisEngine()
-    h = _h("h1", FailureDomain.TEST_ASSET, FailureMechanism.LOCATOR,
-           supporting=[EvidenceRef("e1", "UNTRUSTED")])
+    h = _h(
+        "h1",
+        FailureDomain.TEST_ASSET,
+        FailureMechanism.LOCATOR,
+        supporting=[EvidenceRef("e1", "UNTRUSTED")],
+    )
     d = eng.diagnose("定位失败", [h])
     assert h.status == HypothesisStatus.SUPPORTED
     assert d.outcome.value == "PROBABLE"
@@ -101,8 +135,12 @@ def test_inconclusive_when_no_evidence() -> None:
 
 def test_flaky_is_characteristic_not_root_cause() -> None:
     eng = DiagnosisEngine()
-    h = _h("h1", FailureDomain.TEST_EXECUTION, FailureMechanism.TIMING,
-           supporting=[EvidenceRef("e1", "TRUSTED", True)])
+    h = _h(
+        "h1",
+        FailureDomain.TEST_EXECUTION,
+        FailureMechanism.TIMING,
+        supporting=[EvidenceRef("e1", "TRUSTED", True)],
+    )
     h.flaky_characteristic = True  # 不稳定特征
     d = eng.diagnose("偶发失败", [h])
     # Flaky 只是特征标记，不作为独立根因类别
@@ -132,7 +170,8 @@ def test_disposition_routes_by_failure_domain() -> None:
         (FailureDomain.AGENT, Disposition.AGENT_ISSUE),
     ]
     for domain, expected in cases:
-        h = _h("h1", domain, FailureMechanism.UNKNOWN,
-               supporting=[EvidenceRef("e", "TRUSTED", True)])
+        h = _h(
+            "h1", domain, FailureMechanism.UNKNOWN, supporting=[EvidenceRef("e", "TRUSTED", True)]
+        )
         d = eng.diagnose("x", [h])
         assert d.disposition == expected, domain

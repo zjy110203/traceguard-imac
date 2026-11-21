@@ -71,11 +71,15 @@ class ProbeEngine:
     def grant_permission(self, perm: str) -> None:
         self._permissions.add(perm)
 
-    def register(self, definition: ProbeDefinition, executor: Callable[[dict[str, Any]], dict[str, Any]]) -> None:
+    def register(
+        self, definition: ProbeDefinition, executor: Callable[[dict[str, Any]], dict[str, Any]]
+    ) -> None:
         self.definitions[definition.probe_id] = definition
         self.executors[definition.probe_id] = executor
 
-    def _validate(self, probe_id: str, params: dict[str, Any], workspace_id: str) -> tuple[ProbeDefinition, str]:
+    def _validate(
+        self, probe_id: str, params: dict[str, Any], workspace_id: str
+    ) -> tuple[ProbeDefinition, str]:
         """五项校验：权限 → 资源范围 → 风险 → 预算 → 参数 Schema。任一失败抛错。"""
         d = self.definitions.get(probe_id)
         if not d:
@@ -118,10 +122,20 @@ class ProbeEngine:
         try:
             d, decision = self._validate(probe_id, params, workspace_id)
         except AppError as e:
-            self._audit.append({"probe_id": probe_id, "decision": e.code.value,
-                                "reason": e.message, "at": time.time()})
-            return ProbeResult(probe_id, "BLOCKED", reason=e.message,
-                               source={"decision": e.code.value, "error_code": e.code.value})
+            self._audit.append(
+                {
+                    "probe_id": probe_id,
+                    "decision": e.code.value,
+                    "reason": e.message,
+                    "at": time.time(),
+                }
+            )
+            return ProbeResult(
+                probe_id,
+                "BLOCKED",
+                reason=e.message,
+                source={"decision": e.code.value, "error_code": e.code.value},
+            )
 
         self._calls += 1
         self._cost += d.estimated_cost
@@ -131,17 +145,36 @@ class ProbeEngine:
             if "rows" in data and isinstance(data["rows"], list):
                 data["rows"] = data["rows"][: d.max_rows]
             redacted_data = redact(data)
-            self._audit.append({"probe_id": probe_id, "decision": "ALLOW",
-                                "workspace": workspace_id, "at": time.time()})
+            self._audit.append(
+                {
+                    "probe_id": probe_id,
+                    "decision": "ALLOW",
+                    "workspace": workspace_id,
+                    "at": time.time(),
+                }
+            )
             return ProbeResult(
-                probe_id, "SUCCEEDED", data=redacted_data, redacted=True,
-                source={"probe_id": probe_id, "template": params.get("template"),
-                        "params_keys": sorted(params.keys()), "workspace": workspace_id,
-                        "timestamp": time.time()},
+                probe_id,
+                "SUCCEEDED",
+                data=redacted_data,
+                redacted=True,
+                source={
+                    "probe_id": probe_id,
+                    "template": params.get("template"),
+                    "params_keys": sorted(params.keys()),
+                    "workspace": workspace_id,
+                    "timestamp": time.time(),
+                },
             )
         except Exception as e:  # noqa: BLE001
-            self._audit.append({"probe_id": probe_id, "decision": "EXEC_ERROR",
-                                "reason": str(e)[:100], "at": time.time()})
+            self._audit.append(
+                {
+                    "probe_id": probe_id,
+                    "decision": "EXEC_ERROR",
+                    "reason": str(e)[:100],
+                    "at": time.time(),
+                }
+            )
             return ProbeResult(probe_id, "FAILED", reason=str(e)[:200])
 
     def audit_log(self) -> list[dict[str, Any]]:
@@ -190,7 +223,10 @@ class ActivePlanner:
             return None, "STOP_CONFLICT_UNRESOLVED"
         if not candidates:
             return None, "STOP_NO_HIGH_VALUE_PROBE"
-        if self.engine.budget.time_left() <= 0 or self.engine._calls >= self.engine.budget.max_probes:
+        if (
+            self.engine.budget.time_left() <= 0
+            or self.engine._calls >= self.engine.budget.max_probes
+        ):
             return None, "STOP_BUDGET_EXHAUSTED"
 
         scored = [(self.score(p, eig), p) for p, eig in candidates]

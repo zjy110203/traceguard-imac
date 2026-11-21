@@ -90,11 +90,17 @@ class Hypothesis:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "hypothesis_id": self.hypothesis_id, "description": self.description,
+            "hypothesis_id": self.hypothesis_id,
+            "description": self.description,
             "failure_domain": self.failure_domain.value,
             "failure_mechanism": self.failure_mechanism.value,
-            "supporting": [{"id": e.evidence_id, "trust": e.source_trust, "confirming": e.directly_confirming} for e in self.supporting],
-            "contradicting": [{"id": e.evidence_id, "trust": e.source_trust} for e in self.contradicting],
+            "supporting": [
+                {"id": e.evidence_id, "trust": e.source_trust, "confirming": e.directly_confirming}
+                for e in self.supporting
+            ],
+            "contradicting": [
+                {"id": e.evidence_id, "trust": e.source_trust} for e in self.contradicting
+            ],
             "status": self.status.value,
             "contributing_factors": list(self.contributing_factors),
             "flaky_characteristic": self.flaky_characteristic,
@@ -115,9 +121,11 @@ class Diagnosis:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "diagnosis_id": self.diagnosis_id, "symptom": self.symptom,
+            "diagnosis_id": self.diagnosis_id,
+            "symptom": self.symptom,
             "hypotheses": [h.to_dict() for h in self.hypotheses],
-            "root_causes": list(self.root_causes), "outcome": self.outcome.value,
+            "root_causes": list(self.root_causes),
+            "outcome": self.outcome.value,
             "disposition": self.disposition.value,
             "unresolved_conflicts": list(self.unresolved_conflicts),
             "created_at": self.created_at,
@@ -160,7 +168,9 @@ class DiagnosisEngine:
                 h.status = HypothesisStatus.CANDIDATE
 
         # 根因：仅 CONFIRMED，可多个，不强制压缩
-        d.root_causes = [h.hypothesis_id for h in hypotheses if h.status == HypothesisStatus.CONFIRMED]
+        d.root_causes = [
+            h.hypothesis_id for h in hypotheses if h.status == HypothesisStatus.CONFIRMED
+        ]
 
         # Diagnosis Outcome
         if d.root_causes:

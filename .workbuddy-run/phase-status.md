@@ -19,7 +19,7 @@
 | 4 | 7 | 基础故障分类与 Diagnosis v1 | ACCEPTED | 10 测试 + 八维独立/多假设/确认规则/Flaky/Disposition | LLM不得宣布CONFIRMED |
 | 4 | 8 | Evidence Correlation Graph | ACCEPTED | 10 测试 + 关联/因果限制/来源独立性/冲突分析 | 修复派生证据独立性bug |
 | 4 | 9 | Active Diagnosis Planner | ACCEPTED | 16 测试 + 五项校验/任意SQL拒绝/脱敏/预算/EIG/停止条件 | — |
-| 4 | 10 | Oracle-Protected Self-Healing | NOT_STARTED | — | 前置：阶段9 |
+| 4 | 10 | Oracle-Protected Self-Healing | ACCEPTED | 12 测试 + 断言保护/Oracle完整性/状态机/CAS版本保护/审批/回滚 | M4达成 |
 | 5 | 11 | UI-FaultBench 完整 Benchmark | NOT_STARTED | — | 前置：阶段10 |
 | 5 | 12 | 外部 Web 泛化、安全与可靠性 | NOT_STARTED | — | 前置：阶段11；需外部应用授权 |
 | 5 | 13 | 全链路集成、最终验收与交付 | NOT_STARTED | — | 前置：阶段12 |
@@ -32,7 +32,7 @@
 | M1 | 专业 UI 自动化测试平台完成 | 2,3 | ACCEPTED | ✅ 阶段2/3 READY_FOR_REVIEW→ACCEPTED（真浏览器 PoC 因网络限制记录为待验证） | 达成 |
 | M2 | 证据基础设施与 Agentic Testing 完成 | 4,5,6 | ACCEPTED | ✅ 阶段4/5/6 ACCEPTED | 达成 |
 | M3 | Evidence Graph 与智能诊断完成 | 7,8,9 | ACCEPTED | ✅ 阶段7/8/9 ACCEPTED | 达成 |
-| M4 | 安全测试自愈完成 | 10 | NOT_STARTED | 阶段10 ACCEPTED |
+| M4 | 安全测试自愈完成 | 10 | ACCEPTED | ✅ 阶段10 ACCEPTED（P08审批角色待确认，用role字符串未编造人员） | 达成 |
 | M5 | Benchmark、泛化、安全与最终交付 | 11,12,13 | NOT_STARTED | 阶段11/12/13 ACCEPTED |
 
 ## C01～C12 契约状态

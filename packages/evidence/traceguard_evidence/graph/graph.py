@@ -19,13 +19,27 @@ from typing import Any
 from traceguard_core.ids import new_id
 
 NODE_TYPES = {
-    "Run", "Step", "Event", "Evidence", "Assertion",
-    "Hypothesis", "ProbeExecution", "Source",
+    "Run",
+    "Step",
+    "Event",
+    "Evidence",
+    "Assertion",
+    "Hypothesis",
+    "ProbeExecution",
+    "Source",
 }
 EDGE_TYPES = {
-    "parent_child", "emitted_by", "derived_from",
-    "correlated_by_trace_id", "correlated_by_request_id", "same_execution_context",
-    "temporal", "supports", "contradicts", "evaluates", "direct_causal",
+    "parent_child",
+    "emitted_by",
+    "derived_from",
+    "correlated_by_trace_id",
+    "correlated_by_request_id",
+    "same_execution_context",
+    "temporal",
+    "supports",
+    "contradicts",
+    "evaluates",
+    "direct_causal",
 }
 
 
@@ -49,9 +63,13 @@ class Edge:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "edge_id": self.edge_id, "src": self.src, "dst": self.dst,
-            "relation": self.relation, "basis": self.basis,
-            "workspace_id": self.workspace_id, "causal_evidence": self.causal_evidence,
+            "edge_id": self.edge_id,
+            "src": self.src,
+            "dst": self.dst,
+            "relation": self.relation,
+            "basis": self.basis,
+            "workspace_id": self.workspace_id,
+            "causal_evidence": self.causal_evidence,
         }
 
 
@@ -60,7 +78,9 @@ class EvidenceGraph:
         self._nodes: dict[str, Node] = {}
         self._edges: list[Edge] = []
 
-    def add_node(self, node_type: str, ref_id: str, *, node_id: str | None = None, **props: Any) -> Node:
+    def add_node(
+        self, node_type: str, ref_id: str, *, node_id: str | None = None, **props: Any
+    ) -> Node:
         if node_type not in NODE_TYPES:
             raise ValueError(f"unknown node type: {node_type}")
         nid = node_id or new_id("node")
@@ -83,8 +103,13 @@ class EvidenceGraph:
         if relation == "direct_causal" and not causal_evidence:
             raise ValueError("direct_causal requires explicit trusted causal evidence")
         edge = Edge(
-            edge_id=new_id("edge"), src=src, dst=dst, relation=relation,
-            basis=basis, workspace_id=workspace_id, causal_evidence=causal_evidence,
+            edge_id=new_id("edge"),
+            src=src,
+            dst=dst,
+            relation=relation,
+            basis=basis,
+            workspace_id=workspace_id,
+            causal_evidence=causal_evidence,
         )
         self._edges.append(edge)
         return edge
@@ -115,11 +140,15 @@ class EvidenceGraph:
                 continue
             # 确保目标节点存在
             dst_ref = self._ensure_ref_node(value)
-            created.append(self.add_edge(
-                event_node_id, dst_ref.node_id, relation,
-                basis=f"context_refs.{field_name} (validated)",
-                workspace_id=workspace_id,
-            ))
+            created.append(
+                self.add_edge(
+                    event_node_id,
+                    dst_ref.node_id,
+                    relation,
+                    basis=f"context_refs.{field_name} (validated)",
+                    workspace_id=workspace_id,
+                )
+            )
         return created
 
     def _ensure_ref_node(self, ref_id: str) -> Node:
@@ -130,12 +159,22 @@ class EvidenceGraph:
         return self.add_node("Source", ref_id, resolved="unknown")
 
     def add_support(self, hypothesis_node: str, evidence_node: str, workspace_id: str) -> Edge:
-        return self.add_edge(hypothesis_node, evidence_node, "supports",
-                             basis="diagnosis:supporting_evidence", workspace_id=workspace_id)
+        return self.add_edge(
+            hypothesis_node,
+            evidence_node,
+            "supports",
+            basis="diagnosis:supporting_evidence",
+            workspace_id=workspace_id,
+        )
 
     def add_contradict(self, hypothesis_node: str, evidence_node: str, workspace_id: str) -> Edge:
-        return self.add_edge(hypothesis_node, evidence_node, "contradicts",
-                             basis="diagnosis:contradicting_evidence", workspace_id=workspace_id)
+        return self.add_edge(
+            hypothesis_node,
+            evidence_node,
+            "contradicts",
+            basis="diagnosis:contradicting_evidence",
+            workspace_id=workspace_id,
+        )
 
     def independent_supports(self, hypothesis_node: str) -> list[str]:
         """来源独立性分析：过滤掉同源派生证据，只保留独立佐证。
@@ -143,22 +182,31 @@ class EvidenceGraph:
         规则：若某 supports 边的目标证据是 derived_from 另一条证据，
         且两者同源，则不算独立佐证。
         """
-        support_edges = [e for e in self._edges
-                         if e.src == hypothesis_node and e.relation == "supports"]
+        support_edges = [
+            e for e in self._edges if e.src == hypothesis_node and e.relation == "supports"
+        ]
         # derived_from 边：src 是派生证据，dst 是其来源。派生证据（src）不算独立佐证。
-        derived_evidence = {
-            e.src for e in self._edges if e.relation == "derived_from"
-        }
+        derived_evidence = {e.src for e in self._edges if e.relation == "derived_from"}
         return [e.dst for e in support_edges if e.dst not in derived_evidence]
 
     def conflicts(self, hypothesis_node: str) -> list[dict[str, str]]:
         """冲突分析：同时有 supports 和 contradicts 的证据。"""
-        supports = {e.dst for e in self._edges if e.src == hypothesis_node and e.relation == "supports"}
-        contradicts = {e.dst for e in self._edges if e.src == hypothesis_node and e.relation == "contradicts"}
+        supports = {
+            e.dst for e in self._edges if e.src == hypothesis_node and e.relation == "supports"
+        }
+        contradicts = {
+            e.dst for e in self._edges if e.src == hypothesis_node and e.relation == "contradicts"
+        }
         overlap = supports & contradicts
         return [{"evidence_id": eid, "status": "CONFLICT_UNRESOLVED"} for eid in overlap]
 
-    def query(self, *, src: str | None = None, relation: str | None = None, workspace_id: str | None = None) -> list[Edge]:
+    def query(
+        self,
+        *,
+        src: str | None = None,
+        relation: str | None = None,
+        workspace_id: str | None = None,
+    ) -> list[Edge]:
         out = self._edges
         if src:
             out = [e for e in out if e.src == src or e.dst == src]
@@ -174,7 +222,12 @@ class EvidenceGraph:
     def to_dict(self) -> dict[str, Any]:
         return {
             "nodes": [
-                {"node_id": n.node_id, "node_type": n.node_type, "ref_id": n.ref_id, "properties": n.properties}
+                {
+                    "node_id": n.node_id,
+                    "node_type": n.node_type,
+                    "ref_id": n.ref_id,
+                    "properties": n.properties,
+                }
                 for n in self._nodes.values()
             ],
             "edges": [e.to_dict() for e in self._edges],

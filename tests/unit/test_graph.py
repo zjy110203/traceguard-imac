@@ -27,8 +27,14 @@ def test_direct_causal_requires_explicit_evidence() -> None:
     with pytest.raises(ValueError, match="direct_causal requires"):
         g.add_edge(a.node_id, b.node_id, "direct_causal", basis="temporal", workspace_id="ws")
     # 有明确可信依据才允许
-    e = g.add_edge(a.node_id, b.node_id, "direct_causal", basis="transaction-rollback-log",
-                   workspace_id="ws", causal_evidence="server transaction log shows rollback")
+    e = g.add_edge(
+        a.node_id,
+        b.node_id,
+        "direct_causal",
+        basis="transaction-rollback-log",
+        workspace_id="ws",
+        causal_evidence="server transaction log shows rollback",
+    )
     assert e.causal_evidence is not None
 
 
@@ -36,8 +42,10 @@ def test_correlate_only_validated_refs() -> None:
     g = EvidenceGraph()
     ev = g.add_node("Event", "evt_1")
     created = g.correlate_from_context_refs(
-        ev.node_id, {"trace_id": "trace_1", "request_id": "req_1", "run_id": "run_1"},
-        workspace_id="ws", validated={"trace_id"},  # 只有 trace_id 通过校验
+        ev.node_id,
+        {"trace_id": "trace_1", "request_id": "req_1", "run_id": "run_1"},
+        workspace_id="ws",
+        validated={"trace_id"},  # 只有 trace_id 通过校验
     )
     assert len(created) == 1
     assert created[0].relation == "correlated_by_trace_id"
@@ -47,8 +55,9 @@ def test_correlate_only_validated_refs() -> None:
 def test_unknown_ref_not_treated_as_verified() -> None:
     g = EvidenceGraph()
     ev = g.add_node("Event", "evt_1")
-    g.correlate_from_context_refs(ev.node_id, {"request_id": "req_unknown"},
-                                  workspace_id="ws", validated={"request_id"})
+    g.correlate_from_context_refs(
+        ev.node_id, {"request_id": "req_unknown"}, workspace_id="ws", validated={"request_id"}
+    )
     # req_unknown 建了占位节点但标记 unknown
     unknown_nodes = [n for n in g.nodes() if n.ref_id == "req_unknown"]
     assert len(unknown_nodes) == 1
@@ -60,7 +69,9 @@ def test_temporal_proximity_not_causal() -> None:
     g = EvidenceGraph()
     a = g.add_node("Event", "evt_1")
     b = g.add_node("Event", "evt_2")
-    g.add_edge(a.node_id, b.node_id, "temporal", basis="occurred_at within 100ms", workspace_id="ws")
+    g.add_edge(
+        a.node_id, b.node_id, "temporal", basis="occurred_at within 100ms", workspace_id="ws"
+    )
     causal = g.query(relation="direct_causal")
     assert causal == []
 
@@ -82,8 +93,7 @@ def test_derived_evidence_not_independent_support() -> None:
     h = g.add_node("Hypothesis", "hyp_1")
     raw = g.add_node("Evidence", "evd_raw")
     derived = g.add_node("Evidence", "evd_derived")
-    g.add_edge(derived.node_id, raw.node_id, "derived_from",
-               basis="rule-v1", workspace_id="ws")
+    g.add_edge(derived.node_id, raw.node_id, "derived_from", basis="rule-v1", workspace_id="ws")
     g.add_support(h.node_id, raw.node_id, "ws")
     g.add_support(h.node_id, derived.node_id, "ws")
     independent = g.independent_supports(h.node_id)
@@ -105,8 +115,7 @@ def test_every_edge_has_basis() -> None:
     g = EvidenceGraph()
     a = g.add_node("Run", "run_1")
     b = g.add_node("Step", "step_1")
-    e = g.add_edge(a.node_id, b.node_id, "parent_child",
-                   basis="run.steps[0]", workspace_id="ws")
+    e = g.add_edge(a.node_id, b.node_id, "parent_child", basis="run.steps[0]", workspace_id="ws")
     assert e.basis
     d = g.to_dict()
     assert all(edge["basis"] for edge in d["edges"])
