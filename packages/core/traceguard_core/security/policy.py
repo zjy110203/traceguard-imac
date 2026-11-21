@@ -22,10 +22,15 @@ class SecurityPolicy:
     allowed_ports: set[int] = field(default_factory=lambda: {8011})
     max_redirects: int = 3
     blocked_private_networks: bool = True
-    credential_patterns: list[str] = field(default_factory=lambda: [
-        r"password\s*[=:]", r"api[_-]?key\s*[=:]", r"token\s*[=:]",
-        r"authorization\s*[=:]", r"secret\s*[=:]",
-    ])
+    credential_patterns: list[str] = field(
+        default_factory=lambda: [
+            r"password\s*[=:]",
+            r"api[_-]?key\s*[=:]",
+            r"token\s*[=:]",
+            r"authorization\s*[=:]",
+            r"secret\s*[=:]",
+        ]
+    )
 
     def check_url(self, url: str, *, resolve_dns: bool = False) -> dict[str, Any]:
         """SSRF + DNS Rebinding 防护：校验域名与解析 IP。"""
@@ -56,7 +61,11 @@ class SecurityPolicy:
         # 内网地址字面量阻断
         try:
             ip = ipaddress.ip_address(host)
-            if self.blocked_private_networks and (ip.is_private or ip.is_link_local) and host not in self.allowed_hosts:
+            if (
+                self.blocked_private_networks
+                and (ip.is_private or ip.is_link_local)
+                and host not in self.allowed_hosts
+            ):
                 return {"allowed": False, "reason": "PRIVATE_IP_BLOCKED"}
         except ValueError:
             pass
@@ -88,6 +97,7 @@ class SecurityPolicy:
 @dataclass
 class ResourceQuota:
     """资源配额（默认值，需实测校准；不声称是最终 SLO）。"""
+
     max_concurrent_tasks: int = 4
     max_browsers: int = 2
     max_event_write_rate: int = 100  # events/sec

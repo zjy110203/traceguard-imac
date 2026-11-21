@@ -115,13 +115,17 @@ class SelfHealingService:
     def __init__(self) -> None:
         # 正式版本注册表：testcase_id -> (version_id, version_number, TestCaseVersion)
         self._official: dict[str, tuple[str, int, TestCaseVersion]] = {}
+        # 版本历史：testcase_id -> {version_id: (version_number, TestCaseVersion)}，回滚需保留历史
+        self._history: dict[str, dict[str, tuple[int, TestCaseVersion]]] = {}
         self._proposals: dict[str, RepairProposal] = {}
         self._lock = threading.RLock()
 
     # ---------- 注册正式版本 ----------
     def register_official(self, tc: TestCaseVersion) -> None:
         with self._lock:
-            self._official[tc.testcase_id] = (f"{tc.testcase_id}:v{tc.version}", tc.version, tc)
+            vid = f"{tc.testcase_id}:v{tc.version}"
+            self._official[tc.testcase_id] = (vid, tc.version, tc)
+            self._history.setdefault(tc.testcase_id, {})[vid] = (tc.version, tc)
 
     def official_version(self, testcase_id: str) -> str:
         with self._lock:
@@ -291,6 +295,11 @@ class SelfHealingService:
                 prop.promotion_target_version,
                 promoted,
             )
+            # 写入版本历史，供回滚使用
+            self._history.setdefault(prop.testcase_id, {})[new_version_id] = (
+                prop.promotion_target_version,
+                promoted,
+            )
             prop.promotion_record = {
                 "idempotency_key": idempotency_key,
                 "target_version": new_version_id,
@@ -305,9 +314,10 @@ class SelfHealingService:
         prop = self._proposals[proposal_id]
         with self._lock:
             target_id = prop.base_version_id
-            target = next((v for v in self._official.values() if v[0] == target_id), None)
-            if target:
-                self._official[prop.testcase_id] = target
+            # 从版本历史中恢复目标版本（正式指针可能已指向新版本）
+            historical = self._history.get(prop.testcase_id, {}).get(target_id)
+            if historical:
+                self._official[prop.testcase_id] = (target_id, historical[0], historical[1])
             prop.promotion_record["rollback"] = {
                 "target_version": target_id,
                 "operator": operator,

@@ -13,7 +13,11 @@ from traceguard_evidence.event_store import EventStore
 
 def test_ssrf_private_ip_blocked() -> None:
     p = SecurityPolicy()
-    for url in ("http://169.254.169.254/latest/meta-data", "http://10.0.0.5/", "http://192.168.0.1/"):
+    for url in (
+        "http://169.254.169.254/latest/meta-data",
+        "http://10.0.0.5/",
+        "http://192.168.0.1/",
+    ):
         r = p.check_url(url)
         assert r["allowed"] is False, url
 
@@ -85,9 +89,12 @@ def test_concurrent_event_append_sequence_unique() -> None:
 
     def append(i: int) -> int:
         ev = store.append(
-            event_type="test", server_workspace_id="ws",
-            producer_id="runner", producer_instance_id=iid,
-            idempotency_key=f"k-{i}", payload={"i": i},
+            event_type="test",
+            server_workspace_id="ws",
+            producer_id="runner",
+            producer_instance_id=iid,
+            idempotency_key=f"k-{i}",
+            payload={"i": i},
         )
         return ev.sequence
 
@@ -105,9 +112,12 @@ def test_event_idempotent_under_concurrency() -> None:
 
     def append_same(_: int):
         return store.append(
-            event_type="test", server_workspace_id="ws",
-            producer_id="runner", producer_instance_id=iid,
-            idempotency_key="same-key", payload={"v": 1},
+            event_type="test",
+            server_workspace_id="ws",
+            producer_id="runner",
+            producer_instance_id=iid,
+            idempotency_key="same-key",
+            payload={"v": 1},
         ).event_id
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as ex:

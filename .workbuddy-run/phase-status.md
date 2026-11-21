@@ -3,7 +3,7 @@
 状态枚举：NOT_STARTED / IN_PROGRESS / BLOCKED / READY_FOR_REVIEW / ACCEPTED / REJECTED
 规则：只有具备真实验收证据（测试日志、运行结果）的 ACCEPTED 才代表阶段完成；代码写完 ≠ ACCEPTED。
 
-- 最后更新：2026-11-21 23:45
+- 最后更新：2026-11-22 00:10
 
 ## 五层 / 十四阶段
 
@@ -22,7 +22,7 @@
 | 4 | 10 | Oracle-Protected Self-Healing | ACCEPTED | 12 测试 + 断言保护/Oracle完整性/状态机/CAS版本保护/审批/回滚 | M4达成 |
 | 5 | 11 | UI-FaultBench 完整 Benchmark | ACCEPTED | 13 测试 + 数据隔离/GT令牌/指标口径/INCONCLUSIVE排除/消融 | 指标口径明确 |
 | 5 | 12 | 外部 Web 泛化、安全与可靠性 | READY_FOR_REVIEW | 12 本地安全/可靠性测试 + 全项目173测试 | 外部泛化BLOCKED(未授权P-EXT)；本地SSRF/DNS/Redirect/凭证/并发序号已验证 |
-| 5 | 13 | 全链路集成、最终验收与交付 | NOT_STARTED | — | 前置：阶段12 |
+| 5 | 13 | 全链路集成、最终验收与交付 | READY_FOR_REVIEW | 5全链路集成测试 + 10/10演示场景 + 最终交付报告 | 178总测试通过；外部泛化授权限制如实记录 |
 
 ## 六里程碑
 
