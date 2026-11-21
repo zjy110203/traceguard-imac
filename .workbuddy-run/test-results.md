@@ -44,7 +44,19 @@ $ .venv/bin/pytest tests/unit tests/contracts tests/integration -q
 3. 契约测试构造 OracleSpec 漏 `version` 必填字段 → 修正测试数据。
 以上均来自真实测试暴露，修复后 22/22 通过。
 
+### 阶段 1 测试结果（真实执行）
+
+| 测试项 | 命令 | 结果 |
+|---|---|---|
+| TeamFlow 测试 | `.venv/bin/pytest tests/teamflow -q` | **9 passed** (0.64s) |
+| 全项目测试 | `pytest tests/unit tests/contracts tests/integration tests/teamflow -q` | **31 passed** (0.67s) |
+| lint | `ruff check packages apps tests` | All checks passed |
+| format | `ruff format packages apps tests` | 通过 |
+| TeamFlow 真实 HTTP 业务闭环 | uvicorn :8011 + curl | 登录/create/独立state 全部正确返回 |
+| TF-DB-001 假成功揭穿 | curl create(注入) + state | UI ok=true 但 state count 仍=1 ✅ |
+| Ground Truth 隔离 | curl 无令牌读 GT | HTTP 403 ✅ |
+
 ### 环境限制（真实）
-- node 构建进程（vite/vue-tsc）在本沙箱被 SIGTERM（Exit 137），前台与后台均出现；疑似沙箱对 node 子进程资源/时间限制，非代码错误。正在以后台日志方式确认。
-- mypy、httpx2 因 PyPI 下载极慢（25~45 kB/s）未装完；不阻塞阶段0，CI（ubuntu）会安装。
+- node 构建进程（vite/vue-tsc）在本沙箱被 SIGTERM（Exit 137），前台与后台均出现；疑似沙箱对 node 子进程资源/时间限制，非代码错误。前端源码完整，CI（ubuntu）可执行 build。
+- mypy、httpx2 因 PyPI 下载极慢（25~45 kB/s）未装完；不阻塞，CI（ubuntu）会安装。
 - 集成测试采用直接调用路由函数，规避 TestClient 对 httpx2 的依赖；真实 HTTP 已用 curl 单独验证。

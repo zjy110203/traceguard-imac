@@ -9,22 +9,21 @@
 ## 当前快照
 
 - 项目根：`/Users/dlp--test/Desktop/traceguard`
-- 真实进度：阶段 0 尚未开始编码；只读审查 + 运行记录基线已完成。
-- Git：非仓库（即将初始化）；分支计划 `workbuddy/traceguard-autonomous`。
-- 环境：Python3.13 / Node22 可用；Docker、psql、uv、poetry 不可用；PyPI/npm 可达。
+- 真实进度：**阶段 0、1 已完成并提交**（Git: c9d3a45、fc1397c，分支 workbuddy/traceguard-autonomous）。**M0 里程碑达成**。累计 31 测试通过，lint/format 全绿。
+- 环境：Python3.13 / Node22 可用；Docker、psql、uv、poetry 不可用；PyPI/npm 可达但极慢(25-45kB/s)。
+- 已装依赖：fastapi 0.165.0 / uvicorn 0.54.0 / pydantic 2.14.4 / sqlalchemy 2.1.9 / pytest 9.2.0 / ruff / pytest-cov。mypy、httpx2 未装完（不阻塞）。
 
 ## 断点
 
-- 断点位置：阶段 0 实施开始前。
+- 断点位置：**阶段 2 开始前**（专业 Web UI 自动化测试框架）。
 - 下一步（按顺序）：
-  1. `git init` + `.gitignore` + 分支 + 基线提交。
-  2. 建项目目录骨架与根 `pyproject.toml`、`README.md`。
-  3. 建 venv 并安装后端基础依赖（FastAPI/Pydantic/SQLAlchemy/pytest/uvicorn），实测版本兼容并记录。
-  4. 写统一 config / logging / errors / health。
-  5. 建 C01～C12 JSON Schema 与契约测试。
-  6. 建前端 Vite+Vue3+TS 骨架并实测 build。
-  7. 建 CI 三级门禁配置与安全基线。
-  8. 阶段0 单元/契约测试通过后更新 phase-status 为 READY_FOR_REVIEW，再按验收证据判定 ACCEPTED。
+  1. 后台安装 playwright + pytest 插件（网络慢，务必后台+耐心），实测浏览器 chromium 可启动（PoC）。
+  2. 建 packages/execution：TestCase/TestCaseVersion 加载、Browser Manager/Context/Page Manager、Locator 管理、Action Executor、Assertion Executor。
+  3. 建 Oracle Manager（来源+审批记录）与 Verdict Aggregator（阶段2 已冻结四态聚合规则 + 8 补充规则）。
+  4. 写 10-20 条 TeamFlow 用例，覆盖正常/异常/表单/列表/权限边界/网络场景。
+  5. 验证 Test Verdict 合法/非法样例可执行、NOT_EVALUATED 与 INCONCLUSIVE 可区分、execution_status 与 test_verdict 独立、历史 Run 不覆盖。
+  6. 阶段2 测试通过后更新 phase-status，判定 ACCEPTED，进入阶段3。
+- 注意：若 Playwright 浏览器在本环境无法安装/启动，记录真实限制，先用轻量 DOM 驱动的确定性执行内核验证 Verdict 逻辑（标记清楚与真实浏览器的差异），不谎称完成浏览器 E2E。
 
 ## 不要做的事
 
