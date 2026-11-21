@@ -12,7 +12,7 @@ from traceguard_api.main import create_app
 
 def test_create_app_and_health_routes() -> None:
     app = create_app()
-    paths = {r.path for r in app.routes}
+    paths = {getattr(r, "path", None) for r in app.routes}
     assert "/health" in paths
     assert "/health/ready" in paths
     assert "/openapi.json" in paths

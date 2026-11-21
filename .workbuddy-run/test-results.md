@@ -71,6 +71,21 @@ $ .venv/bin/pytest tests/unit tests/contracts tests/integration -q
 INCONCLUSIVE 来自 HttpObserver 降级路径无法解析客户端 JS 渲染的列表 DOM（COUNT_MISSING），
 这是诚实的不确定性，不伪造为 PASSED。TF-DB-001 假成功用例正确判 FAILED（Trusted Oracle 揭穿）。
 
+### 阶段 3 测试结果（真实执行）
+
+| 测试项 | 命令 | 结果 |
+|---|---|---|
+| Task/Run/Step 服务 | `pytest tests/unit/test_tasks.py -q` | **9 passed** |
+| 全项目 | `pytest tests/unit tests/contracts tests/integration tests/teamflow tests/e2e -q` | **63 passed** (1.35s) |
+| lint / format | `ruff check` + `ruff format` | All checks passed |
+| 平台 API 真实 HTTP | uvicorn :8020 + curl | Task 创建/Run 创建/Task 汇总全部正确 |
+
+阶段3 修复的真实问题：
+1. 路径参数误用 Query() → FastAPI 集合期报错 → 修正。
+2. pytest 遍历 routes 遇到 _IncludedRouter 无 path → 用 getattr 容错。
+3. 测试幂等 key / step_id 固定导致持久化库跨运行污染 → 改唯一值。
+4. 状态机约束生效（PREPARING 不能直达 FINALIZING）→ 测试改走合法路径 RUNNING。
+
 ### 阶段2 修复的真实 bug
 1. 编排器在操作步骤"之前"查询业务状态，导致 reset 后旧状态使正常创建用例假 FAILED → 改为步骤"之后"查询（Trusted Oracle 正确时序）。
 2. Assertion 的 `expected_absent` 语义判断写反 → 修正为"want 出现且 absent 不出现才 PASSED"。

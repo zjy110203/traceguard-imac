@@ -40,14 +40,18 @@
 
 ## 当前阶段
 
-- 阶段 0、1：已完成并提交（Git: c9d3a45、fc1397c）。
-- 阶段 2：专业 Web UI 自动化测试框架 —— 下一步开始。
+- 阶段 0、1、2、3：已完成并提交（Git: c9d3a45、fc1397c、eb99ed2、08eebd8）。
+- **M0、M1 里程碑达成**。累计 63 测试通过，lint/format 全绿。
+
+## 已完成（续）
+
+6. ✅ **阶段 2 完成**：确定性执行内核——Verdict 四态聚合（13测试，含全部合法/非法样例+8补充规则）、Oracle Manager（来源/审批校验、冲突检测）、Assertion Evaluator（6测试）、TestCase 加载器 + 14 用例 + 10 Oracle、HttpObserver(降级)/PlaywrightObserver(真浏览器代码就绪)、LocalExecutor、Trusted Oracle 独立时序、E2E 4测试、演示报告。修复了"业务状态查询时序"真实 bug。
+7. ✅ **阶段 3 完成**：Task/Run/Step 持久化服务 + 状态机 + 租约 fencing（F06）+ 幂等 Task 创建 + 重试创新 Run + execution_status/test_verdict 独立 + Task 展示汇总 + 平台 API 挂载 + 9 测试 + curl 真实 HTTP 验证。
 
 ## 下一步
 
-- 阶段 2：Playwright + pytest 确定性执行内核。先做 Playwright 安装与浏览器启动 PoC（本机网络慢，需后台安装）。
-- 建立 TestCase/Version、Oracle Manager、Assertion Evaluator、Verdict 四态聚合（已冻结规则），10-20 条 TeamFlow 用例。
-- 验证 Test Verdict 合法/非法样例可执行、NOT_EVALUATED 与 INCONCLUSIVE 可区分、execution_status 与 test_verdict 独立。
+- 阶段 4：Event 与 Evidence 基础设施。Event Envelope（context_refs/workspace_id 服务端注入）、幂等消费、Consumer Inbox、序号缺口、Evidence 分类/完整性/SHA256/脱敏。
+- Playwright 真浏览器 PoC 因本机网络极慢（累计>30分钟未装成）记录为限制，CI 环境验证；本机用 HttpObserver 降级路径并明确标记 mode。
 
 ## 环境约束（真实）
 

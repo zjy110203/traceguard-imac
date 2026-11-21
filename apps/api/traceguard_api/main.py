@@ -59,7 +59,11 @@ def create_app() -> FastAPI:
         except asyncio.CancelledError:
             return
 
-    # 业务路由在阶段1+ 通过 include_router 挂载，阶段0 不挂载占位空壳。
+    # 阶段3：挂载执行平台 API（Task/Run/Step）。
+    from traceguard_api.routers.execution import router as execution_router
+
+    app.include_router(execution_router)
+
     return app
 
 
