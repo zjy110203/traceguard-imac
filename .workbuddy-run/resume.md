@@ -3,7 +3,7 @@
 > 下一次运行的第一步：读本文件 → progress.md → phase-status.md → current-task.md → decisions.md → test-results.md。
 > 不要从零重新开发。不要谎称项目已完成。
 
-- 最后保存：2026-11-21 23:45
+- 最后保存：2026-11-22 00:12
 - 运行：RUN-001
 
 ## 当前快照
@@ -16,11 +16,12 @@
 ## 断点
 
 - 断点位置：**阶段 4 开始前**（Event 与 Evidence 证据基础设施）。
-- 下一步（按顺序）：
-  1. 建 packages/evidence：EventEnvelope 生成（context_refs、workspace_id 服务端注入、producer_instance_id、sequence、idempotency_key）、Event Store（只追加、唯一约束）、Consumer Inbox（消费幂等）。
-  2. 序号缺口检测（合法跳号 vs 丢失，待确认窗口不伪造结论）、同键异载荷冲突拒绝、工作重启新实例。
-  3. Evidence Manager：raw/normalized/derived、SHA-256、来源可信度与完整性分离、脱敏、附件引用。
-  4. 契约测试 + 单元 + 集成；更新 phase-status。
+- 若继续（按顺序）：
+  1. 在具备 Docker/CI 的环境安装 Playwright+chromium，运行 PlaywrightObserver 真浏览器 E2E，回填报告。
+  2. 在 CI 环境执行 `npm run build` 验证前端（本机 node 构建被沙箱终止）。
+  3. 获得 1～2 个外部应用授权后执行阶段12 泛化验证（无 GT 不宣称诊断准确率）。
+  4. 完成 P03（Oracle 多来源裁决）/P08（Repair 审批角色）人工裁决并更新契约。
+  5. 运行 UI-FaultBench 全量 A～E 对照与消融，产出带置信区间的真实指标。
 - 注意：Playwright 真浏览器 PoC 本机网络累计>30min未装成，已记录限制；PlaywrightObserver 代码就绪但未验证浏览器启动，不谎称真实浏览器 E2E。CI(ubuntu) 环境验证。
 
 ## 不要做的事
