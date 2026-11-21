@@ -20,7 +20,7 @@
 | 4 | 8 | Evidence Correlation Graph | ACCEPTED | 10 测试 + 关联/因果限制/来源独立性/冲突分析 | 修复派生证据独立性bug |
 | 4 | 9 | Active Diagnosis Planner | ACCEPTED | 16 测试 + 五项校验/任意SQL拒绝/脱敏/预算/EIG/停止条件 | — |
 | 4 | 10 | Oracle-Protected Self-Healing | ACCEPTED | 12 测试 + 断言保护/Oracle完整性/状态机/CAS版本保护/审批/回滚 | M4达成 |
-| 5 | 11 | UI-FaultBench 完整 Benchmark | NOT_STARTED | — | 前置：阶段10 |
+| 5 | 11 | UI-FaultBench 完整 Benchmark | ACCEPTED | 13 测试 + 数据隔离/GT令牌/指标口径/INCONCLUSIVE排除/消融 | 指标口径明确 |
 | 5 | 12 | 外部 Web 泛化、安全与可靠性 | NOT_STARTED | — | 前置：阶段11；需外部应用授权 |
 | 5 | 13 | 全链路集成、最终验收与交付 | NOT_STARTED | — | 前置：阶段12 |
 
