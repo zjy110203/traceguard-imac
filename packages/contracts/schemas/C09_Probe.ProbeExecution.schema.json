@@ -1,0 +1,88 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "execution_id": {
+      "title": "Execution Id",
+      "type": "string"
+    },
+    "probe_id": {
+      "title": "Probe Id",
+      "type": "string"
+    },
+    "workspace_id": {
+      "title": "Workspace Id",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "QUEUED",
+        "RUNNING",
+        "SUCCEEDED",
+        "FAILED",
+        "TIMED_OUT",
+        "BLOCKED",
+        "CANCELLED"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "permission_decision": {
+      "enum": [
+        "ALLOW",
+        "DENY"
+      ],
+      "title": "Permission Decision",
+      "type": "string"
+    },
+    "risk_level": {
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH"
+      ],
+      "title": "Risk Level",
+      "type": "string"
+    },
+    "budget_ms": {
+      "minimum": 0,
+      "title": "Budget Ms",
+      "type": "integer"
+    },
+    "evidence_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Evidence Refs",
+      "type": "array"
+    },
+    "block_reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Block Reason"
+    },
+    "schema_version": {
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "execution_id",
+    "probe_id",
+    "workspace_id",
+    "status",
+    "permission_decision",
+    "risk_level",
+    "budget_ms"
+  ],
+  "title": "ProbeExecution",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

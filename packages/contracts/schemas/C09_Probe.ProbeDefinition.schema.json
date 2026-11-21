@@ -1,0 +1,73 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "probe_id": {
+      "title": "Probe Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "capability": {
+      "enum": [
+        "dom_snapshot",
+        "screenshot",
+        "network_read",
+        "console_read",
+        "api_read",
+        "backend_log_read",
+        "database_read"
+      ],
+      "title": "Capability",
+      "type": "string"
+    },
+    "readonly": {
+      "default": true,
+      "title": "Readonly",
+      "type": "boolean"
+    },
+    "risk_level": {
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH"
+      ],
+      "title": "Risk Level",
+      "type": "string"
+    },
+    "required_permissions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Required Permissions",
+      "type": "array"
+    },
+    "allowed_templates": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Allowed Templates",
+      "type": "array"
+    },
+    "timeout_ms": {
+      "default": 5000,
+      "title": "Timeout Ms",
+      "type": "integer"
+    },
+    "version": {
+      "default": 1,
+      "title": "Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "probe_id",
+    "name",
+    "capability",
+    "risk_level"
+  ],
+  "title": "ProbeDefinition",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,147 @@
+{
+  "$defs": {
+    "RepairStatus": {
+      "enum": [
+        "DRAFT",
+        "VALIDATING",
+        "VALIDATION_FAILED",
+        "VALIDATED",
+        "PENDING_APPROVAL",
+        "APPROVED",
+        "PROMOTING",
+        "PROMOTED",
+        "PROMOTION_FAILED",
+        "REJECTED",
+        "ROLLED_BACK"
+      ],
+      "title": "RepairStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "proposal_id": {
+      "title": "Proposal Id",
+      "type": "string"
+    },
+    "base_testcase_version": {
+      "title": "Base Testcase Version",
+      "type": "string"
+    },
+    "candidate_testcase_version": {
+      "title": "Candidate Testcase Version",
+      "type": "string"
+    },
+    "target_testcase_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Target Testcase Version"
+    },
+    "diff": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Diff",
+      "type": "array"
+    },
+    "affected_assertions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Affected Assertions",
+      "type": "array"
+    },
+    "assertion_preservation": {
+      "default": "NOT_RUN",
+      "enum": [
+        "PASS",
+        "FAIL",
+        "NOT_RUN"
+      ],
+      "title": "Assertion Preservation",
+      "type": "string"
+    },
+    "oracle_integrity": {
+      "default": "NOT_RUN",
+      "enum": [
+        "PASS",
+        "FAIL",
+        "NOT_RUN"
+      ],
+      "title": "Oracle Integrity",
+      "type": "string"
+    },
+    "sandbox_validation_status": {
+      "default": "NOT_STARTED",
+      "enum": [
+        "NOT_STARTED",
+        "RUNNING",
+        "PASSED",
+        "FAILED",
+        "TIMED_OUT",
+        "BLOCKED"
+      ],
+      "title": "Sandbox Validation Status",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/RepairStatus",
+      "default": "DRAFT"
+    },
+    "approval_ref": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Approval Ref"
+    },
+    "regression_ref": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Regression Ref"
+    },
+    "promotion_record": {
+      "additionalProperties": true,
+      "title": "Promotion Record",
+      "type": "object"
+    },
+    "created_by_agent": {
+      "default": true,
+      "title": "Created By Agent",
+      "type": "boolean"
+    },
+    "schema_version": {
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "proposal_id",
+    "base_testcase_version",
+    "candidate_testcase_version"
+  ],
+  "title": "RepairProposal",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

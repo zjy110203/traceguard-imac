@@ -1,0 +1,60 @@
+# ===== 密钥与真实凭据（严禁入库） =====
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*_rsa
+*_dsa
+secrets/
+credentials/
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# ===== Node =====
+node_modules/
+apps/web/dist/
+apps/web/.vite/
+*.tsbuildinfo
+
+# ===== 数据库与本地状态 =====
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# ===== 日志与测试产物（大文件不入库） =====
+logs/*
+!logs/.gitkeep
+tests/reports/*
+!tests/reports/.gitkeep
+.traces/
+*.har
+
+# ===== 参考资料（放在项目内但不入库源码仓库） =====
+资料.zip
+资料/TraceGuard-开源项目调研/.research-tmp/
+
+# ===== IDE / 系统 =====
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# ===== WorkBuddy 工具内部数据（保留在磁盘，不入库） =====
+.workbuddy/

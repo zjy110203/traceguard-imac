@@ -1,0 +1,53 @@
+{
+  "$defs": {
+    "AssertionStatus": {
+      "enum": [
+        "PASSED",
+        "FAILED",
+        "INCONCLUSIVE",
+        "NOT_EVALUATED"
+      ],
+      "title": "AssertionStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "assertion_id": {
+      "title": "Assertion Id",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/AssertionStatus"
+    },
+    "oracle_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Oracle Id"
+    },
+    "observed": {
+      "additionalProperties": true,
+      "title": "Observed",
+      "type": "object"
+    },
+    "reason": {
+      "default": "",
+      "title": "Reason",
+      "type": "string"
+    }
+  },
+  "required": [
+    "assertion_id",
+    "status"
+  ],
+  "title": "AssertionResult",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

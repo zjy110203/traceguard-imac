@@ -1,0 +1,62 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "task_id": {
+      "pattern": "^task_[0-9a-f]+$",
+      "title": "Task Id",
+      "type": "string"
+    },
+    "testcase_ref": {
+      "title": "Testcase Ref",
+      "type": "string"
+    },
+    "oracle_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Oracle Refs",
+      "type": "array"
+    },
+    "application": {
+      "default": "teamflow",
+      "title": "Application",
+      "type": "string"
+    },
+    "status": {
+      "default": "CREATED",
+      "enum": [
+        "CREATED",
+        "QUEUED",
+        "RUNNING",
+        "WAITING",
+        "COMPLETED",
+        "FAILED",
+        "CANCELLED"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "retry_policy": {
+      "additionalProperties": true,
+      "title": "Retry Policy",
+      "type": "object"
+    },
+    "created_at": {
+      "title": "Created At",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "task_id",
+    "testcase_ref",
+    "created_at"
+  ],
+  "title": "Task",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

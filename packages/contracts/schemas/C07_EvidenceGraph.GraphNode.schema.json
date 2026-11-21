@@ -1,0 +1,40 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "node_id": {
+      "title": "Node Id",
+      "type": "string"
+    },
+    "node_type": {
+      "enum": [
+        "Run",
+        "Step",
+        "Event",
+        "Evidence",
+        "Assertion",
+        "Hypothesis",
+        "ProbeExecution",
+        "Source"
+      ],
+      "title": "Node Type",
+      "type": "string"
+    },
+    "ref_id": {
+      "title": "Ref Id",
+      "type": "string"
+    },
+    "properties": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "Properties"
+    }
+  },
+  "required": [
+    "node_id",
+    "node_type",
+    "ref_id"
+  ],
+  "title": "GraphNode",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

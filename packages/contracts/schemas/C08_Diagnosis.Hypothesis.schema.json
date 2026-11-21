@@ -1,0 +1,83 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "hypothesis_id": {
+      "title": "Hypothesis Id",
+      "type": "string"
+    },
+    "description": {
+      "title": "Description",
+      "type": "string"
+    },
+    "failure_domain": {
+      "default": "",
+      "title": "Failure Domain",
+      "type": "string"
+    },
+    "failure_mechanism": {
+      "default": "",
+      "title": "Failure Mechanism",
+      "type": "string"
+    },
+    "symptom": {
+      "default": "",
+      "title": "Symptom",
+      "type": "string"
+    },
+    "status": {
+      "default": "PROPOSED",
+      "enum": [
+        "PROPOSED",
+        "SUPPORTED",
+        "CONFIRMED",
+        "REJECTED",
+        "INCONCLUSIVE"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "supporting_evidence": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Supporting Evidence",
+      "type": "array"
+    },
+    "contradicting_evidence": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Contradicting Evidence",
+      "type": "array"
+    },
+    "contributing_factors": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Contributing Factors",
+      "type": "array"
+    },
+    "flaky_characteristic": {
+      "default": false,
+      "title": "Flaky Characteristic",
+      "type": "boolean"
+    },
+    "created_by": {
+      "default": "rule",
+      "enum": [
+        "agent",
+        "rule",
+        "human"
+      ],
+      "title": "Created By",
+      "type": "string"
+    }
+  },
+  "required": [
+    "hypothesis_id",
+    "description"
+  ],
+  "title": "Hypothesis",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

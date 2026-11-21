@@ -1,0 +1,80 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "intent_id": {
+      "pattern": "^intent_[0-9a-f]+$",
+      "title": "Intent Id",
+      "type": "string"
+    },
+    "title": {
+      "minLength": 1,
+      "title": "Title",
+      "type": "string"
+    },
+    "description": {
+      "minLength": 1,
+      "title": "Description",
+      "type": "string"
+    },
+    "requirement_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Requirement Refs",
+      "type": "array"
+    },
+    "business_context": {
+      "additionalProperties": true,
+      "title": "Business Context",
+      "type": "object"
+    },
+    "preconditions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Preconditions",
+      "type": "array"
+    },
+    "candidate_assertions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Candidate Assertions",
+      "type": "array"
+    },
+    "owner": {
+      "title": "Owner",
+      "type": "string"
+    },
+    "status": {
+      "default": "DRAFT",
+      "enum": [
+        "DRAFT",
+        "REVIEW",
+        "APPROVED",
+        "DEPRECATED"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "version": {
+      "default": 1,
+      "title": "Version",
+      "type": "integer"
+    },
+    "schema_version": {
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "intent_id",
+    "title",
+    "description",
+    "owner"
+  ],
+  "title": "TestIntent",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,179 @@
+{
+  "$defs": {
+    "DiagnosisOutcome": {
+      "enum": [
+        "CONFIRMED",
+        "PROBABLE",
+        "INCONCLUSIVE"
+      ],
+      "title": "DiagnosisOutcome",
+      "type": "string"
+    },
+    "DiagnosisStatus": {
+      "enum": [
+        "QUEUED",
+        "COLLECTING",
+        "TRIAGING",
+        "HYPOTHESIZING",
+        "PROBING",
+        "EVALUATING",
+        "COMPLETED",
+        "FAILED",
+        "CANCELLED"
+      ],
+      "title": "DiagnosisStatus",
+      "type": "string"
+    },
+    "Hypothesis": {
+      "additionalProperties": false,
+      "properties": {
+        "hypothesis_id": {
+          "title": "Hypothesis Id",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "failure_domain": {
+          "default": "",
+          "title": "Failure Domain",
+          "type": "string"
+        },
+        "failure_mechanism": {
+          "default": "",
+          "title": "Failure Mechanism",
+          "type": "string"
+        },
+        "symptom": {
+          "default": "",
+          "title": "Symptom",
+          "type": "string"
+        },
+        "status": {
+          "default": "PROPOSED",
+          "enum": [
+            "PROPOSED",
+            "SUPPORTED",
+            "CONFIRMED",
+            "REJECTED",
+            "INCONCLUSIVE"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "supporting_evidence": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Supporting Evidence",
+          "type": "array"
+        },
+        "contradicting_evidence": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Contradicting Evidence",
+          "type": "array"
+        },
+        "contributing_factors": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Contributing Factors",
+          "type": "array"
+        },
+        "flaky_characteristic": {
+          "default": false,
+          "title": "Flaky Characteristic",
+          "type": "boolean"
+        },
+        "created_by": {
+          "default": "rule",
+          "enum": [
+            "agent",
+            "rule",
+            "human"
+          ],
+          "title": "Created By",
+          "type": "string"
+        }
+      },
+      "required": [
+        "hypothesis_id",
+        "description"
+      ],
+      "title": "Hypothesis",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "diagnosis_id": {
+      "title": "Diagnosis Id",
+      "type": "string"
+    },
+    "run_id": {
+      "title": "Run Id",
+      "type": "string"
+    },
+    "diagnosis_status": {
+      "$ref": "#/$defs/DiagnosisStatus"
+    },
+    "diagnosis_outcome": {
+      "$ref": "#/$defs/DiagnosisOutcome"
+    },
+    "hypotheses": {
+      "items": {
+        "$ref": "#/$defs/Hypothesis"
+      },
+      "title": "Hypotheses",
+      "type": "array"
+    },
+    "root_causes": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Root Causes",
+      "type": "array"
+    },
+    "unresolved_conflicts": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Unresolved Conflicts",
+      "type": "array"
+    },
+    "probe_history": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Probe History",
+      "type": "array"
+    },
+    "stop_reason": {
+      "default": "",
+      "title": "Stop Reason",
+      "type": "string"
+    },
+    "strategy_version": {
+      "default": "v1",
+      "title": "Strategy Version",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "diagnosis_id",
+    "run_id",
+    "diagnosis_status",
+    "diagnosis_outcome"
+  ],
+  "title": "Diagnosis",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

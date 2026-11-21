@@ -1,0 +1,113 @@
+{
+  "$defs": {
+    "LocatorSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "strategy": {
+          "enum": [
+            "role",
+            "accessible_name",
+            "label",
+            "placeholder",
+            "test_id",
+            "css",
+            "xpath"
+          ],
+          "title": "Strategy",
+          "type": "string"
+        },
+        "value": {
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        },
+        "source": {
+          "default": "human",
+          "enum": [
+            "human",
+            "compiler",
+            "healed"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "stability_score": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Stability Score"
+        }
+      },
+      "required": [
+        "strategy",
+        "value"
+      ],
+      "title": "LocatorSpec",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "step_id": {
+      "title": "Step Id",
+      "type": "string"
+    },
+    "action": {
+      "enum": [
+        "navigate",
+        "click",
+        "fill",
+        "select",
+        "press",
+        "assert",
+        "wait",
+        "api"
+      ],
+      "title": "Action",
+      "type": "string"
+    },
+    "target": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/LocatorSpec"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "value": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Value"
+    },
+    "description": {
+      "default": "",
+      "title": "Description",
+      "type": "string"
+    }
+  },
+  "required": [
+    "step_id",
+    "action"
+  ],
+  "title": "TestStep",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

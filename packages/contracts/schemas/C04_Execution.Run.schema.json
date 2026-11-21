@@ -1,0 +1,131 @@
+{
+  "$defs": {
+    "ExecutionStatus": {
+      "enum": [
+        "QUEUED",
+        "PREPARING",
+        "RUNNING",
+        "FINALIZING",
+        "COMPLETED",
+        "FAILED",
+        "TIMED_OUT",
+        "CANCELLED"
+      ],
+      "title": "ExecutionStatus",
+      "type": "string"
+    },
+    "TestVerdict": {
+      "enum": [
+        "PASSED",
+        "FAILED",
+        "INCONCLUSIVE",
+        "NOT_EVALUATED"
+      ],
+      "title": "TestVerdict",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "run_id": {
+      "pattern": "^run_[0-9a-f]+$",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "task_id": {
+      "title": "Task Id",
+      "type": "string"
+    },
+    "attempt": {
+      "minimum": 1,
+      "title": "Attempt",
+      "type": "integer"
+    },
+    "testcase_version_id": {
+      "title": "Testcase Version Id",
+      "type": "string"
+    },
+    "oracle_versions": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "Oracle Versions",
+      "type": "object"
+    },
+    "browser_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Browser Version"
+    },
+    "runner_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Runner Version"
+    },
+    "environment": {
+      "default": "local",
+      "title": "Environment",
+      "type": "string"
+    },
+    "execution_status": {
+      "$ref": "#/$defs/ExecutionStatus",
+      "default": "QUEUED"
+    },
+    "test_verdict": {
+      "$ref": "#/$defs/TestVerdict",
+      "default": "NOT_EVALUATED"
+    },
+    "started_at": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Started At"
+    },
+    "ended_at": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Ended At"
+    },
+    "schema_version": {
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "run_id",
+    "task_id",
+    "attempt",
+    "testcase_version_id"
+  ],
+  "title": "Run",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

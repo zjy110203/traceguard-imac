@@ -1,0 +1,65 @@
+{
+  "$defs": {
+    "DispositionKind": {
+      "enum": [
+        "PRODUCT_DEFECT",
+        "TEST_ASSET",
+        "TEST_EXECUTION",
+        "ENVIRONMENT",
+        "AGENT",
+        "PLATFORM",
+        "NEEDS_MORE_EVIDENCE",
+        "MANUAL_REVIEW"
+      ],
+      "title": "DispositionKind",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "disposition_id": {
+      "title": "Disposition Id",
+      "type": "string"
+    },
+    "diagnosis_id": {
+      "title": "Diagnosis Id",
+      "type": "string"
+    },
+    "kind": {
+      "$ref": "#/$defs/DispositionKind"
+    },
+    "route_target": {
+      "title": "Route Target",
+      "type": "string"
+    },
+    "review_status": {
+      "default": "PENDING",
+      "enum": [
+        "PENDING",
+        "APPROVED",
+        "REJECTED"
+      ],
+      "title": "Review Status",
+      "type": "string"
+    },
+    "reason": {
+      "default": "",
+      "title": "Reason",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "disposition_id",
+    "diagnosis_id",
+    "kind",
+    "route_target"
+  ],
+  "title": "Disposition",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

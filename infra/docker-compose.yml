@@ -1,0 +1,60 @@
+# TraceGuard 本地开发依赖（生产/完整验收用）。
+# 注意：当前机器无 Docker，本配置按路线图产出但非本机验收硬依赖。
+# 安全：无 privileged、无 host network、无 docker socket 挂载、无全局清理。
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: traceguard-postgres
+    environment:
+      POSTGRES_DB: traceguard
+      POSTGRES_USER: traceguard
+      POSTGRES_PASSWORD_FILE: /run/secrets/tg_pg_password
+    secrets:
+      - tg_pg_password
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - tg_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U traceguard -d traceguard"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: traceguard-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - tg_redis_data:/data
+
+  minio:
+    image: minio/minio:latest
+    container_name: traceguard-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER_FILE: /run/secrets/tg_minio_user
+      MINIO_ROOT_PASSWORD_FILE: /run/secrets/tg_minio_password
+    secrets:
+      - tg_minio_user
+      - tg_minio_password
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - tg_minio_data:/data
+
+secrets:
+  tg_pg_password:
+    file: ./secrets/pg_password.txt       # 不入库，由部署者本地提供
+  tg_minio_user:
+    file: ./secrets/minio_user.txt
+  tg_minio_password:
+    file: ./secrets/minio_password.txt
+
+volumes:
+  tg_pg_data:
+  tg_redis_data:
+  tg_minio_data:

@@ -1,0 +1,70 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "oracle_id": {
+      "pattern": "^oracle_[0-9a-f]+$",
+      "title": "Oracle Id",
+      "type": "string"
+    },
+    "assertion_id": {
+      "title": "Assertion Id",
+      "type": "string"
+    },
+    "expected_behavior": {
+      "minLength": 1,
+      "title": "Expected Behavior",
+      "type": "string"
+    },
+    "requirement_ref": {
+      "title": "Requirement Ref",
+      "type": "string"
+    },
+    "expectation_approval": {
+      "additionalProperties": true,
+      "title": "Expectation Approval",
+      "type": "object"
+    },
+    "evaluation_rule": {
+      "additionalProperties": true,
+      "title": "Evaluation Rule",
+      "type": "object"
+    },
+    "consistency_window_ms": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Consistency Window Ms",
+      "type": "integer"
+    },
+    "required": {
+      "default": true,
+      "title": "Required",
+      "type": "boolean"
+    },
+    "version": {
+      "minimum": 1,
+      "title": "Version",
+      "type": "integer"
+    },
+    "approved_by_agent": {
+      "const": false,
+      "default": false,
+      "title": "Approved By Agent",
+      "type": "boolean"
+    },
+    "schema_version": {
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "oracle_id",
+    "assertion_id",
+    "expected_behavior",
+    "requirement_ref",
+    "version"
+  ],
+  "title": "OracleSpec",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,156 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "evidence_id": {
+      "pattern": "^evd_[0-9a-f]+$",
+      "title": "Evidence Id",
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "raw",
+        "normalized",
+        "derived",
+        "diagnostic"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "source_type": {
+      "enum": [
+        "browser",
+        "network",
+        "api",
+        "backend_log",
+        "database",
+        "agent",
+        "probe"
+      ],
+      "title": "Source Type",
+      "type": "string"
+    },
+    "source_ref": {
+      "title": "Source Ref",
+      "type": "string"
+    },
+    "raw_ref": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Raw Ref"
+    },
+    "derivation_rule": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Derivation Rule"
+    },
+    "model_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Model Version"
+    },
+    "workspace_id": {
+      "title": "Workspace Id",
+      "type": "string"
+    },
+    "run_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Run Id"
+    },
+    "sha256": {
+      "title": "Sha256",
+      "type": "string"
+    },
+    "content_summary": {
+      "default": "",
+      "title": "Content Summary",
+      "type": "string"
+    },
+    "attachment_ref": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Attachment Ref"
+    },
+    "integrity_check": {
+      "default": "NOT_RUN",
+      "enum": [
+        "PASS",
+        "FAIL",
+        "NOT_RUN"
+      ],
+      "title": "Integrity Check",
+      "type": "string"
+    },
+    "source_trust": {
+      "default": "UNKNOWN",
+      "enum": [
+        "TRUSTED",
+        "UNTRUSTED",
+        "UNKNOWN"
+      ],
+      "title": "Source Trust",
+      "type": "string"
+    },
+    "redacted": {
+      "default": false,
+      "title": "Redacted",
+      "type": "boolean"
+    },
+    "captured_at": {
+      "title": "Captured At",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "evidence_id",
+    "kind",
+    "source_type",
+    "source_ref",
+    "workspace_id",
+    "sha256",
+    "captured_at"
+  ],
+  "title": "Evidence",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

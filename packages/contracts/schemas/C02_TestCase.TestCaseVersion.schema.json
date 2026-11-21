@@ -1,0 +1,290 @@
+{
+  "$defs": {
+    "AssertionSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "assertion_id": {
+          "title": "Assertion Id",
+          "type": "string"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "ui",
+            "business_state",
+            "api",
+            "network",
+            "consistency"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "required": {
+          "default": true,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "expected": {
+          "additionalProperties": true,
+          "title": "Expected",
+          "type": "object"
+        },
+        "oracle_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Oracle Id"
+        }
+      },
+      "required": [
+        "assertion_id",
+        "description",
+        "kind"
+      ],
+      "title": "AssertionSpec",
+      "type": "object"
+    },
+    "LocatorSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "strategy": {
+          "enum": [
+            "role",
+            "accessible_name",
+            "label",
+            "placeholder",
+            "test_id",
+            "css",
+            "xpath"
+          ],
+          "title": "Strategy",
+          "type": "string"
+        },
+        "value": {
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        },
+        "source": {
+          "default": "human",
+          "enum": [
+            "human",
+            "compiler",
+            "healed"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "stability_score": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Stability Score"
+        }
+      },
+      "required": [
+        "strategy",
+        "value"
+      ],
+      "title": "LocatorSpec",
+      "type": "object"
+    },
+    "TestStep": {
+      "additionalProperties": false,
+      "properties": {
+        "step_id": {
+          "title": "Step Id",
+          "type": "string"
+        },
+        "action": {
+          "enum": [
+            "navigate",
+            "click",
+            "fill",
+            "select",
+            "press",
+            "assert",
+            "wait",
+            "api"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LocatorSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "required": [
+        "step_id",
+        "action"
+      ],
+      "title": "TestStep",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "testcase_id": {
+      "pattern": "^tcase_[0-9a-f]+$",
+      "title": "Testcase Id",
+      "type": "string"
+    },
+    "version": {
+      "minimum": 1,
+      "title": "Version",
+      "type": "integer"
+    },
+    "intent_ref": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Intent Ref"
+    },
+    "steps": {
+      "items": {
+        "$ref": "#/$defs/TestStep"
+      },
+      "minItems": 1,
+      "title": "Steps",
+      "type": "array"
+    },
+    "assertions": {
+      "items": {
+        "$ref": "#/$defs/AssertionSpec"
+      },
+      "minItems": 1,
+      "title": "Assertions",
+      "type": "array"
+    },
+    "test_data_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Test Data Refs",
+      "type": "array"
+    },
+    "preconditions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Preconditions",
+      "type": "array"
+    },
+    "postconditions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Postconditions",
+      "type": "array"
+    },
+    "cleanup_policy": {
+      "default": "NONE",
+      "enum": [
+        "NONE",
+        "RESET_DATA",
+        "CUSTOM"
+      ],
+      "title": "Cleanup Policy",
+      "type": "string"
+    },
+    "run_config": {
+      "additionalProperties": true,
+      "title": "Run Config",
+      "type": "object"
+    },
+    "compile_source": {
+      "default": "human",
+      "enum": [
+        "human",
+        "compiler",
+        "healed"
+      ],
+      "title": "Compile Source",
+      "type": "string"
+    },
+    "review_status": {
+      "default": "DRAFT",
+      "enum": [
+        "DRAFT",
+        "PENDING",
+        "APPROVED",
+        "REJECTED"
+      ],
+      "title": "Review Status",
+      "type": "string"
+    },
+    "immutable": {
+      "default": true,
+      "title": "Immutable",
+      "type": "boolean"
+    },
+    "created_at": {
+      "title": "Created At",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "testcase_id",
+    "version",
+    "steps",
+    "assertions",
+    "created_at"
+  ],
+  "title": "TestCaseVersion",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

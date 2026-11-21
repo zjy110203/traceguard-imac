@@ -1,0 +1,64 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "experiment_id": {
+      "title": "Experiment Id",
+      "type": "string"
+    },
+    "baseline": {
+      "title": "Baseline",
+      "type": "string"
+    },
+    "metric": {
+      "title": "Metric",
+      "type": "string"
+    },
+    "value": {
+      "title": "Value",
+      "type": "number"
+    },
+    "numerator": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Numerator"
+    },
+    "denominator": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Denominator"
+    },
+    "note": {
+      "default": "",
+      "title": "Note",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "experiment_id",
+    "baseline",
+    "metric",
+    "value"
+  ],
+  "title": "EvaluationResult",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

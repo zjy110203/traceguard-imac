@@ -1,0 +1,41 @@
+# PR Gate（阶段0 基础版）：快速、确定性检查。
+# 职责：lint / typecheck(前端) / unit / contract。不跑完整 Benchmark（Nightly/Release 负责）。
+name: PR Gate
+
+on:
+  pull_request:
+  push:
+    branches: [workbuddy/traceguard-autonomous]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -r requirements-dev.txt
+      - name: Lint
+        run: .venv/bin/ruff check packages apps tests
+      - name: Format check
+        run: .venv/bin/ruff format --check packages apps tests
+      - name: Unit + Contract tests
+        run: .venv/bin/pytest tests/unit tests/contracts -q
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install
+        working-directory: apps/web
+        run: npm ci
+      - name: Typecheck + Build
+        working-directory: apps/web
+        run: npm run build

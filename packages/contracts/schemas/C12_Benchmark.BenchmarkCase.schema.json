@@ -1,0 +1,45 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "case_id": {
+      "title": "Case Id",
+      "type": "string"
+    },
+    "scenario_id": {
+      "title": "Scenario Id",
+      "type": "string"
+    },
+    "fault_mechanism_id": {
+      "title": "Fault Mechanism Id",
+      "type": "string"
+    },
+    "application_version": {
+      "title": "Application Version",
+      "type": "string"
+    },
+    "seed_ref": {
+      "title": "Seed Ref",
+      "type": "string"
+    },
+    "ground_truth_ref": {
+      "title": "Ground Truth Ref",
+      "type": "string"
+    },
+    "cleanup_method": {
+      "default": "",
+      "title": "Cleanup Method",
+      "type": "string"
+    }
+  },
+  "required": [
+    "case_id",
+    "scenario_id",
+    "fault_mechanism_id",
+    "application_version",
+    "seed_ref",
+    "ground_truth_ref"
+  ],
+  "title": "BenchmarkCase",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,48 @@
+{
+  "C01_TestIntent": [
+    "C01_TestIntent.TestIntent.schema.json"
+  ],
+  "C02_TestCase": [
+    "C02_TestCase.LocatorSpec.schema.json",
+    "C02_TestCase.TestStep.schema.json",
+    "C02_TestCase.AssertionSpec.schema.json",
+    "C02_TestCase.TestCaseVersion.schema.json"
+  ],
+  "C03_Oracle": [
+    "C03_Oracle.OracleSpec.schema.json"
+  ],
+  "C04_Execution": [
+    "C04_Execution.Task.schema.json",
+    "C04_Execution.Run.schema.json",
+    "C04_Execution.Step.schema.json",
+    "C04_Execution.AssertionResult.schema.json"
+  ],
+  "C05_Event": [
+    "C05_Event.EventEnvelope.schema.json"
+  ],
+  "C06_Evidence": [
+    "C06_Evidence.Evidence.schema.json"
+  ],
+  "C07_EvidenceGraph": [
+    "C07_EvidenceGraph.GraphNode.schema.json",
+    "C07_EvidenceGraph.GraphEdge.schema.json"
+  ],
+  "C08_Diagnosis": [
+    "C08_Diagnosis.Hypothesis.schema.json",
+    "C08_Diagnosis.Diagnosis.schema.json"
+  ],
+  "C09_Probe": [
+    "C09_Probe.ProbeDefinition.schema.json",
+    "C09_Probe.ProbeExecution.schema.json"
+  ],
+  "C10_Disposition": [
+    "C10_Disposition.Disposition.schema.json"
+  ],
+  "C11_Repair": [
+    "C11_Repair.RepairProposal.schema.json"
+  ],
+  "C12_Benchmark": [
+    "C12_Benchmark.BenchmarkCase.schema.json",
+    "C12_Benchmark.EvaluationResult.schema.json"
+  ]
+}

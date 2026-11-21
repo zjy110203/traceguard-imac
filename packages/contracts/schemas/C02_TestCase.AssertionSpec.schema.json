@@ -1,0 +1,55 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "assertion_id": {
+      "title": "Assertion Id",
+      "type": "string"
+    },
+    "description": {
+      "minLength": 1,
+      "title": "Description",
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "ui",
+        "business_state",
+        "api",
+        "network",
+        "consistency"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "required": {
+      "default": true,
+      "title": "Required",
+      "type": "boolean"
+    },
+    "expected": {
+      "additionalProperties": true,
+      "title": "Expected",
+      "type": "object"
+    },
+    "oracle_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Oracle Id"
+    }
+  },
+  "required": [
+    "assertion_id",
+    "description",
+    "kind"
+  ],
+  "title": "AssertionSpec",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}
