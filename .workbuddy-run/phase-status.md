@@ -21,7 +21,7 @@
 | 4 | 9 | Active Diagnosis Planner | ACCEPTED | 16 测试 + 五项校验/任意SQL拒绝/脱敏/预算/EIG/停止条件 | — |
 | 4 | 10 | Oracle-Protected Self-Healing | ACCEPTED | 12 测试 + 断言保护/Oracle完整性/状态机/CAS版本保护/审批/回滚 | M4达成 |
 | 5 | 11 | UI-FaultBench 完整 Benchmark | ACCEPTED | 13 测试 + 数据隔离/GT令牌/指标口径/INCONCLUSIVE排除/消融 | 指标口径明确 |
-| 5 | 12 | 外部 Web 泛化、安全与可靠性 | NOT_STARTED | — | 前置：阶段11；需外部应用授权 |
+| 5 | 12 | 外部 Web 泛化、安全与可靠性 | READY_FOR_REVIEW | 12 本地安全/可靠性测试 + 全项目173测试 | 外部泛化BLOCKED(未授权P-EXT)；本地SSRF/DNS/Redirect/凭证/并发序号已验证 |
 | 5 | 13 | 全链路集成、最终验收与交付 | NOT_STARTED | — | 前置：阶段12 |
 
 ## 六里程碑
