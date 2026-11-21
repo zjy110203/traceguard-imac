@@ -1,0 +1,50 @@
+{
+  "testcase_id": "tcase_timeout001",
+  "version": 1,
+  "intent_ref": null,
+  "steps": [
+    {
+      "step_id": "s_api",
+      "action": "api",
+      "target": null,
+      "value": "POST /api/faults/TF-NET-001/activate",
+      "description": ""
+    },
+    {
+      "step_id": "s_nav",
+      "action": "navigate",
+      "target": null,
+      "value": "/login",
+      "description": ""
+    }
+  ],
+  "assertions": [
+    {
+      "assertion_id": "a_timeout_detect",
+      "description": "页面可加载或超时被记录",
+      "kind": "network",
+      "required": true,
+      "expected": {
+        "timeout_ms": 1000,
+        "expect": "timeout"
+      },
+      "oracle_id": "oracle_timeout"
+    }
+  ],
+  "test_data_refs": [
+    "reset:default"
+  ],
+  "preconditions": [
+    "测试数据已 reset"
+  ],
+  "postconditions": [],
+  "cleanup_policy": "RESET_DATA",
+  "run_config": {
+    "base_url": "http://127.0.0.1:8011"
+  },
+  "compile_source": "human",
+  "review_status": "APPROVED",
+  "immutable": true,
+  "created_at": "2026-11-21T00:00:00Z",
+  "schema_version": "0.1.0"
+}

@@ -1,0 +1,20 @@
+{
+  "oracle_id": "oracle_create_persist",
+  "assertion_id": "a_create_persisted",
+  "expected_behavior": "业务状态 count>=1",
+  "requirement_ref": "REQ-TF-CREATE-001",
+  "expectation_approval": {
+    "approved": true,
+    "approver": "human:qa-lead",
+    "at": "2026-11-21T00:00:00Z"
+  },
+  "evaluation_rule": {
+    "type": "api_field",
+    "op": "gte"
+  },
+  "consistency_window_ms": 500,
+  "required": true,
+  "version": 1,
+  "approved_by_agent": false,
+  "schema_version": "0.1.0"
+}

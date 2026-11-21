@@ -2,7 +2,7 @@
   "additionalProperties": false,
   "properties": {
     "oracle_id": {
-      "pattern": "^oracle_[0-9a-f]+$",
+      "pattern": "^oracle_[A-Za-z0-9_]+$",
       "title": "Oracle Id",
       "type": "string"
     },

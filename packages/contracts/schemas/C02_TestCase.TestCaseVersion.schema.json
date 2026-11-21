@@ -168,7 +168,7 @@
   "additionalProperties": false,
   "properties": {
     "testcase_id": {
-      "pattern": "^tcase_[0-9a-f]+$",
+      "pattern": "^tcase_[A-Za-z0-9_]+$",
       "title": "Testcase Id",
       "type": "string"
     },

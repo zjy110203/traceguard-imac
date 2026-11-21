@@ -1,0 +1,40 @@
+{
+  "testcase_id": "tcase_apifail001",
+  "version": 1,
+  "intent_ref": "intent_create_project_api_error",
+  "steps": [
+    {"step_id": "s1", "action": "api", "value": "POST /api/faults/TF-API-001/activate"},
+    {"step_id": "s2", "action": "navigate", "value": "/projects/new"},
+    {"step_id": "s3", "action": "fill", "target": {"strategy": "test_id", "value": "project-name", "source": "human"}, "value": "Should Fail"},
+    {"step_id": "s4", "action": "click", "target": {"strategy": "test_id", "value": "create-submit", "source": "human"}},
+    {"step_id": "s5", "action": "assert", "value": "create-error"}
+  ],
+  "assertions": [
+    {
+      "assertion_id": "a_api_error_shown",
+      "description": "API 500 错误展示给用户",
+      "kind": "api",
+      "required": true,
+      "expected": {"test_id": "create-error", "text_contains": "创建失败"},
+      "oracle_id": "oracle_api_error"
+    },
+    {
+      "assertion_id": "a_not_persisted",
+      "description": "失败时未持久化",
+      "kind": "business_state",
+      "required": true,
+      "expected": {"api": "/api/state/projects?workspace=default", "field": "count", "op": "eq", "value": 0},
+      "oracle_id": "oracle_not_persist"
+    }
+  ],
+  "test_data_refs": ["reset:default"],
+  "preconditions": ["测试数据已 reset"],
+  "postconditions": [],
+  "cleanup_policy": "RESET_DATA",
+  "run_config": {"base_url": "http://127.0.0.1:8011"},
+  "compile_source": "human",
+  "review_status": "APPROVED",
+  "immutable": true,
+  "created_at": "2026-11-21T00:00:00Z",
+  "schema_version": "0.1.0"
+}

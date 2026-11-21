@@ -1,0 +1,20 @@
+{
+  "oracle_id": "oracle_false_pass",
+  "assertion_id": "a_persistence_truth",
+  "expected_behavior": "TF-DB-001 下应未持久化 count==0",
+  "requirement_ref": "REQ-TF-CREATE-001",
+  "expectation_approval": {
+    "approved": true,
+    "approver": "human:qa-lead",
+    "at": "2026-11-21T00:00:00Z"
+  },
+  "evaluation_rule": {
+    "type": "api_field",
+    "op": "eq"
+  },
+  "consistency_window_ms": 500,
+  "required": true,
+  "version": 1,
+  "approved_by_agent": false,
+  "schema_version": "0.1.0"
+}

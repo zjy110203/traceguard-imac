@@ -2,7 +2,7 @@
   "additionalProperties": false,
   "properties": {
     "evidence_id": {
-      "pattern": "^evd_[0-9a-f]+$",
+      "pattern": "^evd_[A-Za-z0-9_]+$",
       "title": "Evidence Id",
       "type": "string"
     },

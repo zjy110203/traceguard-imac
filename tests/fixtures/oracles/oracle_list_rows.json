@@ -1,0 +1,19 @@
+{
+  "oracle_id": "oracle_list_rows",
+  "assertion_id": "a_list_rows",
+  "expected_behavior": "列表展示新建项目",
+  "requirement_ref": "REQ-TF-CREATE-001",
+  "expectation_approval": {
+    "approved": true,
+    "approver": "human:qa-lead",
+    "at": "2026-11-21T00:00:00Z"
+  },
+  "evaluation_rule": {
+    "type": "dom_count"
+  },
+  "consistency_window_ms": 500,
+  "required": true,
+  "version": 1,
+  "approved_by_agent": false,
+  "schema_version": "0.1.0"
+}

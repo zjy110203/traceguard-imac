@@ -2,7 +2,7 @@
   "additionalProperties": false,
   "properties": {
     "intent_id": {
-      "pattern": "^intent_[0-9a-f]+$",
+      "pattern": "^intent_[A-Za-z0-9_]+$",
       "title": "Intent Id",
       "type": "string"
     },

@@ -26,7 +26,7 @@ SCHEMA_VERSION = "0.1.0"
 
 # ---------------- C01 TestIntent ----------------
 class TestIntent(ContractBase):
-    intent_id: str = Field(pattern=r"^intent_[0-9a-f]+$")
+    intent_id: str = Field(pattern=r"^intent_[A-Za-z0-9_]+$")
     title: str = Field(min_length=1)
     description: str = Field(min_length=1)
     requirement_refs: list[str] = Field(default_factory=list)
@@ -65,7 +65,7 @@ class AssertionSpec(ContractBase):
 
 
 class TestCaseVersion(ContractBase):
-    testcase_id: str = Field(pattern=r"^tcase_[0-9a-f]+$")
+    testcase_id: str = Field(pattern=r"^tcase_[A-Za-z0-9_]+$")
     version: int = Field(ge=1)
     intent_ref: str | None = None
     steps: list[TestStep] = Field(min_length=1)
@@ -84,7 +84,7 @@ class TestCaseVersion(ContractBase):
 
 # ---------------- C03 Oracle ----------------
 class OracleSpec(ContractBase):
-    oracle_id: str = Field(pattern=r"^oracle_[0-9a-f]+$")
+    oracle_id: str = Field(pattern=r"^oracle_[A-Za-z0-9_]+$")
     assertion_id: str
     expected_behavior: str = Field(min_length=1)
     requirement_ref: str
@@ -100,7 +100,7 @@ class OracleSpec(ContractBase):
 
 # ---------------- C04 Execution ----------------
 class Task(ContractBase):
-    task_id: str = Field(pattern=r"^task_[0-9a-f]+$")
+    task_id: str = Field(pattern=r"^task_[A-Za-z0-9_]+$")
     testcase_ref: str
     oracle_refs: list[str] = Field(default_factory=list)
     application: str = "teamflow"
@@ -113,7 +113,7 @@ class Task(ContractBase):
 
 
 class Run(ContractBase):
-    run_id: str = Field(pattern=r"^run_[0-9a-f]+$")
+    run_id: str = Field(pattern=r"^run_[A-Za-z0-9_]+$")
     task_id: str
     attempt: int = Field(ge=1)
     testcase_version_id: str  # 绑定具体版本，不引用可变指针
@@ -153,7 +153,7 @@ class EventEnvelope(ContractBase):
     """F01/F02/G02/G05 修订后：workspace_id 必填且服务端注入；context_refs 统一关联；
     occurred_at 与 observed_at 分离；幂等键 producer 维度唯一。"""
 
-    event_id: str = Field(pattern=r"^evt_[0-9a-f]+$")
+    event_id: str = Field(pattern=r"^evt_[A-Za-z0-9_]+$")
     event_type: str
     schema_version: str = SCHEMA_VERSION
     workspace_id: str  # 必填，服务端可信上下文注入
@@ -171,7 +171,7 @@ class EventEnvelope(ContractBase):
 
 # ---------------- C06 Evidence ----------------
 class Evidence(ContractBase):
-    evidence_id: str = Field(pattern=r"^evd_[0-9a-f]+$")
+    evidence_id: str = Field(pattern=r"^evd_[A-Za-z0-9_]+$")
     kind: Literal["raw", "normalized", "derived", "diagnostic"]
     source_type: Literal["browser", "network", "api", "backend_log", "database", "agent", "probe"]
     source_ref: str

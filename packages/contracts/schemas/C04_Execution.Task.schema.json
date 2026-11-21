@@ -2,7 +2,7 @@
   "additionalProperties": false,
   "properties": {
     "task_id": {
-      "pattern": "^task_[0-9a-f]+$",
+      "pattern": "^task_[A-Za-z0-9_]+$",
       "title": "Task Id",
       "type": "string"
     },

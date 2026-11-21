@@ -1,0 +1,19 @@
+{
+  "oracle_id": "oracle_detail_name",
+  "assertion_id": "a_detail_name",
+  "expected_behavior": "详情页名称正确",
+  "requirement_ref": "REQ-TF-CREATE-001",
+  "expectation_approval": {
+    "approved": true,
+    "approver": "human:qa-lead",
+    "at": "2026-11-21T00:00:00Z"
+  },
+  "evaluation_rule": {
+    "type": "text_contains"
+  },
+  "consistency_window_ms": 500,
+  "required": true,
+  "version": 1,
+  "approved_by_agent": false,
+  "schema_version": "0.1.0"
+}

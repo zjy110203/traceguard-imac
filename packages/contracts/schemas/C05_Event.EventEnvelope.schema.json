@@ -3,7 +3,7 @@
   "description": "F01/F02/G02/G05 修订后：workspace_id 必填且服务端注入；context_refs 统一关联；\noccurred_at 与 observed_at 分离；幂等键 producer 维度唯一。",
   "properties": {
     "event_id": {
-      "pattern": "^evt_[0-9a-f]+$",
+      "pattern": "^evt_[A-Za-z0-9_]+$",
       "title": "Event Id",
       "type": "string"
     },

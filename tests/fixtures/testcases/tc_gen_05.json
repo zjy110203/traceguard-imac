@@ -1,0 +1,90 @@
+{
+  "testcase_id": "tcase_edit001",
+  "version": 1,
+  "intent_ref": null,
+  "steps": [
+    {
+      "step_id": "s_nav",
+      "action": "navigate",
+      "target": null,
+      "value": "/projects",
+      "description": ""
+    },
+    {
+      "step_id": "s_click_nav-new",
+      "action": "click",
+      "target": {
+        "strategy": "test_id",
+        "value": "nav-new",
+        "source": "human",
+        "stability_score": null
+      },
+      "value": null,
+      "description": ""
+    },
+    {
+      "step_id": "s_fill_project-name",
+      "action": "fill",
+      "target": {
+        "strategy": "test_id",
+        "value": "project-name",
+        "source": "human",
+        "stability_score": null
+      },
+      "value": "EditTarget",
+      "description": ""
+    },
+    {
+      "step_id": "s_click_create-submit",
+      "action": "click",
+      "target": {
+        "strategy": "test_id",
+        "value": "create-submit",
+        "source": "human",
+        "stability_score": null
+      },
+      "value": null,
+      "description": ""
+    }
+  ],
+  "assertions": [
+    {
+      "assertion_id": "a_list_rows",
+      "description": "编辑后列表可见",
+      "kind": "ui",
+      "required": false,
+      "expected": {
+        "test_id": "project-row",
+        "op": "count_gte",
+        "value": 1
+      },
+      "oracle_id": "oracle_list_rows"
+    },
+    {
+      "assertion_id": "a_create_ui_success",
+      "description": "创建成功",
+      "kind": "ui",
+      "required": true,
+      "expected": {
+        "test_id": "banner-success"
+      },
+      "oracle_id": "oracle_create_ui"
+    }
+  ],
+  "test_data_refs": [
+    "reset:default"
+  ],
+  "preconditions": [
+    "测试数据已 reset"
+  ],
+  "postconditions": [],
+  "cleanup_policy": "RESET_DATA",
+  "run_config": {
+    "base_url": "http://127.0.0.1:8011"
+  },
+  "compile_source": "human",
+  "review_status": "APPROVED",
+  "immutable": true,
+  "created_at": "2026-11-21T00:00:00Z",
+  "schema_version": "0.1.0"
+}

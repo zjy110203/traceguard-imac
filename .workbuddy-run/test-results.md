@@ -56,7 +56,29 @@ $ .venv/bin/pytest tests/unit tests/contracts tests/integration -q
 | TF-DB-001 假成功揭穿 | curl create(注入) + state | UI ok=true 但 state count 仍=1 ✅ |
 | Ground Truth 隔离 | curl 无令牌读 GT | HTTP 403 ✅ |
 
+### 阶段 2 测试结果（真实执行）
+
+| 测试项 | 命令 | 结果 |
+|---|---|---|
+| Verdict 四态聚合 | `pytest tests/unit/test_verdict.py -q` | **13 passed** |
+| Assertion Evaluator | `pytest tests/unit/test_assertions.py -q` | **6 passed** |
+| E2E 确定性执行 | `pytest tests/e2e -q` | **4 passed**（真实 TeamFlow 子进程） |
+| 全项目 | `pytest tests/unit tests/contracts tests/integration tests/teamflow tests/e2e -q` | **54 passed** (1.93s) |
+| lint / format | `ruff check` + `ruff format` | All checks passed |
+| 执行演示 | `python scripts/run_demo.py` | 14 用例跑完，报告 `tests/reports/stage2_demo_runs.json` |
+
+演示报告 verdict 分布（真实）：PASSED×3 / FAILED×2 / INCONCLUSIVE×9。
+INCONCLUSIVE 来自 HttpObserver 降级路径无法解析客户端 JS 渲染的列表 DOM（COUNT_MISSING），
+这是诚实的不确定性，不伪造为 PASSED。TF-DB-001 假成功用例正确判 FAILED（Trusted Oracle 揭穿）。
+
+### 阶段2 修复的真实 bug
+1. 编排器在操作步骤"之前"查询业务状态，导致 reset 后旧状态使正常创建用例假 FAILED → 改为步骤"之后"查询（Trusted Oracle 正确时序）。
+2. Assertion 的 `expected_absent` 语义判断写反 → 修正为"want 出现且 absent 不出现才 PASSED"。
+3. ID 正则过严（纯 hex）导致可读 fixtures ID 校验失败 → 放宽为字母数字下划线，兼容两种格式。
+4. `TestVerdict` 类名被 pytest 误收集 → 测试内用别名 Verdict 导入。
+
 ### 环境限制（真实）
-- node 构建进程（vite/vue-tsc）在本沙箱被 SIGTERM（Exit 137），前台与后台均出现；疑似沙箱对 node 子进程资源/时间限制，非代码错误。前端源码完整，CI（ubuntu）可执行 build。
-- mypy、httpx2 因 PyPI 下载极慢（25~45 kB/s）未装完；不阻塞，CI（ubuntu）会安装。
-- 集成测试采用直接调用路由函数，规避 TestClient 对 httpx2 的依赖；真实 HTTP 已用 curl 单独验证。
+- node 构建进程（vite/vue-tsc）在本沙箱被 SIGTERM（Exit 137）；前端源码完整，CI（ubuntu）可执行 build。
+- mypy、httpx2 未装完（PyPI 25~45 kB/s）；不阻塞。
+- Playwright 包下载极慢（多次后台尝试累计 >25 分钟仍未完成）；真实浏览器 PoC 待包就绪。**PlaywrightObserver 代码已就绪但未在本机验证浏览器启动，不谎称已完成真实浏览器 E2E。**
+- 本机阶段2 采用 HttpObserver（真实 HTTP）降级路径，报告明确标记 mode=http-fallback。

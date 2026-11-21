@@ -28,7 +28,7 @@
   "additionalProperties": false,
   "properties": {
     "run_id": {
-      "pattern": "^run_[0-9a-f]+$",
+      "pattern": "^run_[A-Za-z0-9_]+$",
       "title": "Run Id",
       "type": "string"
     },

@@ -1,0 +1,50 @@
+{
+  "testcase_id": "tcase_uifail001",
+  "version": 1,
+  "intent_ref": null,
+  "steps": [
+    {
+      "step_id": "s_api",
+      "action": "api",
+      "target": null,
+      "value": "POST /api/faults/TF-UI-001/activate",
+      "description": ""
+    },
+    {
+      "step_id": "s_nav",
+      "action": "navigate",
+      "target": null,
+      "value": "/projects?created=1",
+      "description": ""
+    }
+  ],
+  "assertions": [
+    {
+      "assertion_id": "a_banner_error",
+      "description": "UI 故障下显示错误横幅",
+      "kind": "ui",
+      "required": true,
+      "expected": {
+        "test_id": "banner-error",
+        "expected_absent": "banner-success"
+      },
+      "oracle_id": "oracle_banner_error"
+    }
+  ],
+  "test_data_refs": [
+    "reset:default"
+  ],
+  "preconditions": [
+    "测试数据已 reset"
+  ],
+  "postconditions": [],
+  "cleanup_policy": "RESET_DATA",
+  "run_config": {
+    "base_url": "http://127.0.0.1:8011"
+  },
+  "compile_source": "human",
+  "review_status": "APPROVED",
+  "immutable": true,
+  "created_at": "2026-11-21T00:00:00Z",
+  "schema_version": "0.1.0"
+}

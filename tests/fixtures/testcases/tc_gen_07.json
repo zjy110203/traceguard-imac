@@ -1,0 +1,79 @@
+{
+  "testcase_id": "tcase_badlogin001",
+  "version": 1,
+  "intent_ref": null,
+  "steps": [
+    {
+      "step_id": "s_nav",
+      "action": "navigate",
+      "target": null,
+      "value": "/login",
+      "description": ""
+    },
+    {
+      "step_id": "s_fill_username",
+      "action": "fill",
+      "target": {
+        "strategy": "test_id",
+        "value": "username",
+        "source": "human",
+        "stability_score": null
+      },
+      "value": "tester",
+      "description": ""
+    },
+    {
+      "step_id": "s_fill_password",
+      "action": "fill",
+      "target": {
+        "strategy": "test_id",
+        "value": "password",
+        "source": "human",
+        "stability_score": null
+      },
+      "value": "wrongpass",
+      "description": ""
+    },
+    {
+      "step_id": "s_click_login-submit",
+      "action": "click",
+      "target": {
+        "strategy": "test_id",
+        "value": "login-submit",
+        "source": "human",
+        "stability_score": null
+      },
+      "value": null,
+      "description": ""
+    }
+  ],
+  "assertions": [
+    {
+      "assertion_id": "a_login_msg",
+      "description": "登录失败提示",
+      "kind": "ui",
+      "required": true,
+      "expected": {
+        "test_id": "login-message",
+        "text_contains": "登录失败"
+      },
+      "oracle_id": "oracle_login_msg"
+    }
+  ],
+  "test_data_refs": [
+    "reset:default"
+  ],
+  "preconditions": [
+    "测试数据已 reset"
+  ],
+  "postconditions": [],
+  "cleanup_policy": "RESET_DATA",
+  "run_config": {
+    "base_url": "http://127.0.0.1:8011"
+  },
+  "compile_source": "human",
+  "review_status": "APPROVED",
+  "immutable": true,
+  "created_at": "2026-11-21T00:00:00Z",
+  "schema_version": "0.1.0"
+}

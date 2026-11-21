@@ -1,0 +1,19 @@
+{
+  "oracle_id": "oracle_timeout",
+  "assertion_id": "a_timeout_detect",
+  "expected_behavior": "网络超时被检测",
+  "requirement_ref": "REQ-TF-CREATE-001",
+  "expectation_approval": {
+    "approved": true,
+    "approver": "human:qa-lead",
+    "at": "2026-11-21T00:00:00Z"
+  },
+  "evaluation_rule": {
+    "type": "timeout"
+  },
+  "consistency_window_ms": 500,
+  "required": true,
+  "version": 1,
+  "approved_by_agent": false,
+  "schema_version": "0.1.0"
+}

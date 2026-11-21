@@ -1,0 +1,40 @@
+{
+  "testcase_id": "tcase_dbfail001",
+  "version": 1,
+  "intent_ref": "intent_detect_false_pass",
+  "steps": [
+    {"step_id": "s1", "action": "api", "value": "POST /api/faults/TF-DB-001/activate"},
+    {"step_id": "s2", "action": "navigate", "value": "/projects/new"},
+    {"step_id": "s3", "action": "fill", "target": {"strategy": "test_id", "value": "project-name", "source": "human"}, "value": "False Pass"},
+    {"step_id": "s4", "action": "click", "target": {"strategy": "test_id", "value": "create-submit", "source": "human"}},
+    {"step_id": "s5", "action": "assert", "value": "banner-success"}
+  ],
+  "assertions": [
+    {
+      "assertion_id": "a_ui_success",
+      "description": "UI 显示成功（误导性）",
+      "kind": "ui",
+      "required": true,
+      "expected": {"test_id": "banner-success", "text_contains": "项目创建成功"},
+      "oracle_id": "oracle_create_ui"
+    },
+    {
+      "assertion_id": "a_persistence_truth",
+      "description": "Trusted Oracle：业务持久化真实状态",
+      "kind": "business_state",
+      "required": true,
+      "expected": {"api": "/api/state/projects?workspace=default", "field": "count", "op": "eq", "value": 1},
+      "oracle_id": "oracle_create_persist"
+    }
+  ],
+  "test_data_refs": ["reset:default"],
+  "preconditions": ["测试数据已 reset"],
+  "postconditions": [],
+  "cleanup_policy": "RESET_DATA",
+  "run_config": {"base_url": "http://127.0.0.1:8011"},
+  "compile_source": "human",
+  "review_status": "APPROVED",
+  "immutable": true,
+  "created_at": "2026-11-21T00:00:00Z",
+  "schema_version": "0.1.0"
+}
