@@ -18,7 +18,7 @@
 - 断点位置：**阶段 4 开始前**（Event 与 Evidence 证据基础设施）。
 - 若继续（按顺序）：
   1. 在具备 Docker/CI 的环境安装 Playwright+chromium，运行 PlaywrightObserver 真浏览器 E2E，回填报告。
-  2. 在 CI 环境执行 `npm run build` 验证前端（本机 node 构建被沙箱终止）。
+  2. ~~CI 验证前端 build~~ 已在本地实测通过：`npm run build`（vue-tsc + vite build）exit 0。
   3. 获得 1～2 个外部应用授权后执行阶段12 泛化验证（无 GT 不宣称诊断准确率）。
   4. 完成 P03（Oracle 多来源裁决）/P08（Repair 审批角色）人工裁决并更新契约。
   5. 运行 UI-FaultBench 全量 A～E 对照与消融，产出带置信区间的真实指标。

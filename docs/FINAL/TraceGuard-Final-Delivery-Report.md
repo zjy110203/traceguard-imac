@@ -13,7 +13,7 @@
 3. **未完成/受限事项**（不隐瞒）：
    - **阶段 12 外部 Web 应用泛化**：未获明确授权，按安全边界保持 BLOCKED，未访问任何外部应用。
    - **Playwright 真实浏览器 E2E**：本机 PyPI 下载极慢（累计 >30 分钟未完成 playwright 安装），真实浏览器 PoC 未在本机执行；阶段 2 用 HttpObserver（真实 HTTP）降级路径并明确标记 `mode=http-fallback`。PlaywrightObserver 代码已就绪，CI（ubuntu）可验证。
-   - **Vue 前端 build**：本沙箱对 node 构建进程异常终止（Exit 137），前端源码完整，CI 可执行 build。
+   - ~~Vue 前端 build~~：**已修正**——`npm run build`（`vue-tsc --noEmit && vite build`）在本机实测通过（13 模块，exit 0，2 秒）。此前"沙箱终止 node 构建"的记录有误，已更正。
    - Redis/Celery/MinIO 异步分布式增强：本机无 Docker/Redis，阶段 3/4 用持久化同步内核 + 内存实现完成核心语义，生产需按 Docker Compose 部署。
    - 待确认事项 P03（Oracle 多来源裁决细则）、P08（Repair 审批角色）保持待确认，用确定性兜底/role 字符串处理，未编造参数。
 
@@ -40,7 +40,7 @@
 
 | 阶段 | 名称 | 状态 | 关键证据 |
 |---|---|---|---|
-| 0 | 工程初始化与设计基线 | ACCEPTED* | 22 测试 + API 真实运行 + 22 Schema + lint 全绿 |
+| 0 | 工程初始化与设计基线 | ACCEPTED | 22 测试 + API 真实运行 + 22 Schema + **前端类型检查与 build 实测通过** |
 | 1 | TeamFlow 与故障注入 | ACCEPTED | 9 测试 + curl 闭环 + TF-DB-001 假成功揭穿 |
 | 2 | 确定性测试内核 | ACCEPTED | 13 Verdict + 4 E2E，共 54 测试；14 用例/10 Oracle |
 | 3 | Task/Run 平台 | ACCEPTED | 9 测试 + API 真实 HTTP；租约 fencing |
@@ -55,7 +55,7 @@
 | 12 | 外部泛化/安全/可靠性 | READY_FOR_REVIEW | 12 本地安全测试；外部泛化 BLOCKED（授权） |
 | 13 | 全链路集成与交付 | READY_FOR_REVIEW | 5 全链路集成测试 + 10/10 演示场景 |
 
-\* 阶段 0 前端 build 因沙箱 node 限制未在本机完成，核心功能已验证。
+阶段 0 前端已通过类型检查与生产构建（vue-tsc + vite build，exit 0）。
 
 ## 3. 六个里程碑验收结果
 
@@ -201,7 +201,7 @@ cd infra && docker compose up -d
 
 1. 阶段 12 外部 Web 应用泛化（未授权，BLOCKED）。
 2. Playwright 真实浏览器 E2E（本机下载受限，代码就绪待 CI 验证）。
-3. Vue 前端 build 本机验证（沙箱 node 限制，CI 可执行）。
+3. ~~Vue 前端 build 本机验证~~：已实测通过（见第 0 节修正说明）。
 4. Redis/Celery/MinIO 分布式增强的生产部署与实测。
 5. P03/P08 待确认事项的最终裁决。
 6. 路线图 v1.1 的正式评审冻结。

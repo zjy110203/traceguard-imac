@@ -29,7 +29,7 @@
 | C01-C12 Schema 导出 | `python packages/contracts/export_schemas.py` | 12 契约 / 22 Schema | manifest.json |
 | API 健康检查（真实 HTTP） | uvicorn + `curl /health` | `{"status":"ok","app":"TraceGuard",...}` | 真实运行，非 Mock |
 | API ready（真实 HTTP） | `curl /health/ready` | `{"ready":true,...}` 且配置无敏感泄露 | 同上 |
-| 前端 build | `npm run build` / `vite build` | 进行中（环境对 node 构建进程有限制，见下） | 待回填 |
+| 前端 build（含类型检查） | `npm run build`（vue-tsc --noEmit && vite build） | **通过**：13 模块，exit 0，2 秒，产出 dist/ | 已回填（2026-11-22 修正） |
 
 ### pytest 真实输出（阶段0）
 ```
@@ -93,7 +93,7 @@ INCONCLUSIVE 来自 HttpObserver 降级路径无法解析客户端 JS 渲染的�
 4. `TestVerdict` 类名被 pytest 误收集 → 测试内用别名 Verdict 导入。
 
 ### 环境限制（真实）
-- node 构建进程（vite/vue-tsc）在本沙箱被 SIGTERM（Exit 137）；前端源码完整，CI（ubuntu）可执行 build。
+- ~~node 构建进程被 SIGTERM~~ 已更正：前端构建初次因排队极慢被判超时，最终 `npm run build`（含 vue-tsc 类型检查）实测通过（exit 0，2 秒）。
 - mypy、httpx2 未装完（PyPI 25~45 kB/s）；不阻塞。
 - Playwright 包下载极慢（多次后台尝试累计 >25 分钟仍未完成）；真实浏览器 PoC 待包就绪。**PlaywrightObserver 代码已就绪但未在本机验证浏览器启动，不谎称已完成真实浏览器 E2E。**
 - 本机阶段2 采用 HttpObserver（真实 HTTP）降级路径，报告明确标记 mode=http-fallback。
