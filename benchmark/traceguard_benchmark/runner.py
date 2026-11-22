@@ -18,6 +18,7 @@
 
 from __future__ import annotations
 
+import json
 import math
 import time
 from typing import Any
@@ -90,11 +91,11 @@ class BenchmarkRunner:
         a_pred = [self._baseline_raw_report(o) for o in failures]
         metrics += self._diag_metrics("A_raw_report", a_pred, failures)
 
-        # C/D/E 共用同一份诊断与证据图（同一输入、同一确定性引擎）
+        # C/D/E 共用同一份诊断与证据图（同一输入、同一确定性引擎；显式关闭 LLM 顾问保证组纯净）
         diag_cache: dict[str, dict[str, Any] | None] = {}
         graph_cache: dict[str, dict[str, Any] | None] = {}
         for o in failures:
-            diag_cache[o["run_id"]] = self._diagnose(o["run_id"])
+            diag_cache[o["run_id"]] = self._diagnose(o["run_id"], use_llm=False)
             graph_cache[o["run_id"]] = self._graph(o["run_id"])
 
         # C：规则诊断
@@ -143,9 +144,17 @@ class BenchmarkRunner:
                 "reason": "无 LLM API Key / 无本地大模型；不产生任何编造数值",
             }
         ]
+
+        # ---- LLM 对照组（RUN-003-G）：同一批 Run、同一份证据摘要输入
+        llm_metrics, llm_observations = self._run_llm_diagnosis_groups(failures)
+        metrics += llm_metrics
+        observations += llm_observations
+        if llm_metrics:
+            blocked = []  # 真实 LLM 组已产生数值，不再标记 B 组阻塞
+
         doc = {
             "experiment_id": exp_id,
-            "name": "实验 B · 故障诊断对照（A/C/D/E）",
+            "name": "实验 B · 故障诊断对照（A/C/D/E + LLM）",
             "kind": "B",
             "status": "COMPLETED",
             "dataset": DATASET_ID,
@@ -155,15 +164,176 @@ class BenchmarkRunner:
                 "browser": "playwright-chromium",
                 "gt_isolated": True,
                 "engine": "rule-v1",
+                "llm_groups": bool(llm_metrics),
             },
             "metrics": metrics,
             "blocked_baselines": blocked,
             "observations": observations,
             "started_at": started,
             "ended_at": utc_now_iso(),
-            "notes": "A 组只看原始断言，无法区分 UI 成功与业务落库；C/D/E 共用同一批真实 Run。",
+            "notes": "A 组只看原始断言；C/D/E 共用同一批真实 Run（纯规则诊断，无 LLM 顾问）；LLM 组使用同一份证据摘要，候选假设永远不产生 CONFIRMED。",
         }
         return self._persist(doc)
+
+    # --------------------------------------------------- LLM 对照组（RUN-003-G）
+    def _run_llm_diagnosis_groups(
+        self, failures: list[dict[str, Any]]
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+        """真实 LLM 诊断对照：B=Flash / C=Pro / D=Flash+Pro 按需路由。
+
+        隔离与诚实性：
+        - 输入只有症状 + 失败步骤 + 证据摘要（不含 Ground Truth）；
+        - LLM 候选永远不是 CONFIRMED（比规则引擎少一层确认，如实反映在 coverage 口径）；
+        - 无可用 LLM 栈时返回空（不产生编造数值）；
+        - 记录真实 Token 用量与估算成本。
+        """
+        from traceguard_agents.gateway.llm_gateway import (
+            LLMDiagnosisAdvisor,
+            build_llm_stack,
+        )
+        from traceguard_api.services.diagnosis_service import DiagnosisService
+
+        stack = build_llm_stack(self.rt.settings, root_dir=".")
+        if not stack:
+            return [], []
+        tracker = stack["tracker"]
+        cost_before = float(tracker.usage_for_date().get("estimated_cost_usd") or 0.0)
+        calls_before = tracker.usage_for_date().get("calls", 0)
+
+        def make_advisor(use_pro: bool) -> LLMDiagnosisAdvisor:
+            return LLMDiagnosisAdvisor(
+                provider=stack["provider"],
+                router=stack["router"],
+                prompts=stack["prompts"],
+                tracker=tracker,
+                use_pro=use_pro,
+                upgrade_reason="benchmark:flash_low_confidence" if use_pro else "",
+            )
+
+        advisor_flash = make_advisor(False)
+        advisor_pro = make_advisor(True)
+        router = stack["router"]
+
+        def predict(advisor: LLMDiagnosisAdvisor, o: dict[str, Any]) -> dict[str, Any]:
+            evd_summary, failed_steps, symptom = self._llm_input_for(o)
+            hyps = advisor.suggest(symptom, failed_steps, evd_summary)
+            if not hyps:
+                return {"mechanism": "UNKNOWN", "conclusive": False, "n_hypotheses": 0}
+            top = max(hyps, key=lambda h: h.confidence)
+            _domain, mech = DiagnosisService._map_llm_domain(
+                top.failure_domain, top.failure_mechanism
+            )
+            return {
+                "mechanism": mech.value if hasattr(mech, "value") else str(mech),
+                "conclusive": True,  # "给出了候选假设"（注意：永远不是 CONFIRMED 级）
+                "n_hypotheses": len(hyps),
+                "confidence": top.confidence,
+                "llm_suggested_by": top.suggested_by,
+            }
+
+        def routed_predict(o: dict[str, Any]) -> dict[str, Any]:
+            evd_summary, failed_steps, symptom = self._llm_input_for(o)
+            flash_hyps = advisor_flash.suggest(symptom, failed_steps, evd_summary)
+            top_conf = max((h.confidence for h in flash_hyps), default=0.0)
+            if top_conf < 0.5:
+                # 按需升级 Pro：记录升级原因（不允许无理由升级）
+                model, route = router.resolve(
+                    "complex_diagnosis", complexity="high", reason=f"flash_confidence_{top_conf:.2f}"
+                )
+                pred = predict(advisor_pro, o)
+                pred["routed_to"] = model
+                return pred
+            if not flash_hyps:
+                return {"mechanism": "UNKNOWN", "conclusive": False, "n_hypotheses": 0}
+            top = max(flash_hyps, key=lambda h: h.confidence)
+            _domain, mech = DiagnosisService._map_llm_domain(
+                top.failure_domain, top.failure_mechanism
+            )
+            return {
+                "mechanism": mech.value if hasattr(mech, "value") else str(mech),
+                "conclusive": True,
+                "n_hypotheses": len(flash_hyps),
+                "confidence": top.confidence,
+                "routed_to": stack["router"].default_model,
+            }
+
+        metrics: list[dict[str, Any]] = []
+        llm_obs: list[dict[str, Any]] = []
+        groups = [
+            ("LLM_flash", lambda o: predict(advisor_flash, o)),
+            ("LLM_pro", lambda o: predict(advisor_pro, o)),
+            ("LLM_routed", routed_predict),
+        ]
+        for name, fn in groups:
+            preds = []
+            for o in failures:
+                try:
+                    preds.append(fn(o))
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("llm_benchmark_pred_failed", group=name, error=str(exc))
+                    preds.append({"mechanism": "UNKNOWN", "conclusive": False, "error": str(exc)[:120]})
+            metrics += self._diag_metrics(name, preds, failures)
+            llm_obs.append({"baseline": name, "predictions": preds})
+
+        usage_now = tracker.usage_for_date()
+        llm_cost = float(usage_now.get("estimated_cost_usd") or 0.0) - cost_before
+        llm_calls = usage_now.get("calls", 0) - calls_before
+        # 非比例指标（调用次数/成本）不套 Wilson 置信区间，直接记录原始值
+        metrics.append(
+            {
+                "metric": "llm_calls_total",
+                "baseline": "LLM_all_groups",
+                "value": float(llm_calls),
+                "numerator": llm_calls,
+                "denominator": None,
+                "ci_low": None,
+                "ci_high": None,
+                "note": f"3 组 × {len(failures)} 样本的真实调用次数（含重试）",
+            }
+        )
+        metrics.append(
+            {
+                "metric": "estimated_cost_usd",
+                "baseline": "LLM_all_groups",
+                "value": round(llm_cost, 6),
+                "numerator": None,
+                "denominator": None,
+                "ci_low": None,
+                "ci_high": None,
+                "note": "应用侧按官方牌价估算，非平台账单；价格查证 2026-11-22",
+            }
+        )
+        return metrics, llm_obs
+
+    def _llm_input_for(self, o: dict[str, Any]) -> tuple[list[dict[str, str]], list[dict[str, Any]], str]:
+        """从 Run 报告与证据库构建 LLM 输入（与诊断服务相同的摘要口径，不含 GT）。"""
+        run_id = o["run_id"]
+        report = o.get("report") or {}
+        failed_steps = [
+            {
+                "step_id": s.get("step_id"),
+                "action": s.get("action"),
+                "error": str(s.get("error", ""))[:200],
+            }
+            for s in (report.get("steps") or [])
+            if s.get("status") == "FAILED"
+        ][:8]
+        observed = [
+            f"{s.get('step_id')}:{str(s.get('error', ''))[:120]}"
+            for s in (report.get("steps") or [])
+            if s.get("status") == "FAILED"
+        ]
+        symptom = " | ".join(observed[:3]) or f"verdict={o.get('verdict')}"
+        evd_summary: list[dict[str, str]] = []
+        try:
+            for e in self.rt.evidence.list(run_id=run_id, limit=60):
+                brief = json.dumps(e.content or {}, ensure_ascii=False, default=str)[:220]
+                evd_summary.append(
+                    {"evidence_id": e.evidence_id, "source_type": e.source_type, "brief": brief}
+                )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("llm_benchmark_evidence_failed", error=str(exc))
+        return evd_summary, failed_steps, symptom
 
     # ------------------------------------------------------------- experiment C
     def _run_healing(self) -> dict[str, Any]:
@@ -492,9 +662,9 @@ class BenchmarkRunner:
             "report": run.get("report"),
         }
 
-    def _diagnose(self, run_id: str) -> dict[str, Any] | None:
+    def _diagnose(self, run_id: str, use_llm: bool = False) -> dict[str, Any] | None:
         try:
-            return self.services.diagnosis.diagnose(run_id)
+            return self.services.diagnosis.diagnose(run_id, use_llm_advisor=use_llm)
         except Exception:  # noqa: BLE001 - 无失败症状时不做诊断
             return None
 

@@ -263,7 +263,9 @@ class DeepSeekProvider:
                 if res.status_code != 200:
                     raise LLMError("server", f"HTTP {res.status_code}: {res.text[:200]}", res.status_code)
                 data = res.json()
-                content = data["choices"][0]["message"]["content"]
+                choice = (data.get("choices") or [{}])[0]
+                content = choice.get("message", {}).get("content", "")
+                finish_reason = choice.get("finish_reason", "")
                 usage = data.get("usage", {})
                 latency_ms = int((time.monotonic() - start) * 1000)
                 rec = UsageRecord(
@@ -290,6 +292,8 @@ class DeepSeekProvider:
                     trk.record(rec)
                 return {
                     "content": content,
+                    "reasoning_content": choice.get("message", {}).get("reasoning_content", ""),
+                    "finish_reason": finish_reason,
                     "usage": rec.to_dict(),
                     "latency_ms": latency_ms,
                     "model": rec.model,
@@ -725,6 +729,9 @@ class LLMDiagnosisAdvisor:
             failed_steps=json.dumps(failed_steps, ensure_ascii=False, default=str)[:2500],
             evidence=json.dumps(evidence_summary, ensure_ascii=False)[:6000],
         )
+        # 推理模型（Pro）的 reasoning tokens 计入 max_tokens，预算过小会导致
+        # finish_reason=length 且 content 为空；按模型类型区分输出预算。
+        max_tokens = 4000 if model == self.router.reasoning_model else 900
         parsed, _ = self.provider.chat_json(
             messages,
             model=model,
@@ -732,7 +739,7 @@ class LLMDiagnosisAdvisor:
             task_id=self.task_id,
             run_id=self.run_id,
             prompt_version=f"deepseek:{model}:diagnosis_advisor@v1",
-            max_tokens=900,
+            max_tokens=max_tokens,
             tracker=self.tracker,
         )
         out: list[HypothesisCandidate] = []

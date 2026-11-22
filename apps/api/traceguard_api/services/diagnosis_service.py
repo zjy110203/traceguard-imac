@@ -51,7 +51,12 @@ class DiagnosisService:
         self.rt = rt
         self.engine = DiagnosisEngine()
 
-    def diagnose(self, run_id: str) -> dict[str, Any]:
+    def diagnose(self, run_id: str, *, use_llm_advisor: bool | None = None) -> dict[str, Any]:
+        """执行诊断。
+
+        use_llm_advisor: None=按全局配置；True/False=显式指定（Benchmark 分组用，
+        保证规则组与 LLM 组输入隔离、口径纯净）。
+        """
         run = self.rt.tasks.get_run(run_id)
         if not run:
             raise AppError(ErrorCode.NOT_FOUND, "run not found")
@@ -277,8 +282,13 @@ class DiagnosisService:
         symptom = " | ".join(observed[:3]) or f"verdict={run['test_verdict']}"
 
         # ---- LLM 诊断顾问（RUN-003-G）：只追加 PROBABLE 级候选假设，不改 CONFIRMED 判定
+        advisor_enabled = (
+            getattr(self.rt.settings, "llm_diagnosis_enabled", True)
+            if use_llm_advisor is None
+            else use_llm_advisor
+        )
         llm_advisor_notes: dict[str, Any] | None = None
-        if getattr(self.rt.settings, "llm_diagnosis_enabled", True):
+        if advisor_enabled:
             llm_advisor_notes = self._llm_advise(
                 run_id=run_id,
                 symptom=symptom,
