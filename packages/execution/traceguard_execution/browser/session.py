@@ -254,7 +254,9 @@ class BrowserSession:
                 data = fh.read()
             try:
                 os.remove(path)
-            except OSError:
+            except (OSError, SystemExit):
+                # SystemExit：沙箱环境的 safe-delete 守卫可能拦截删除；
+                # 删除失败只留下临时 trace 文件，不影响 Run 结果
                 pass
             return data
         except Exception:  # noqa: BLE001

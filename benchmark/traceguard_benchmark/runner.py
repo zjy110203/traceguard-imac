@@ -32,7 +32,7 @@ from traceguard_benchmark.scenarios import DATASET_ID, SCENARIOS, Scenario
 
 logger = get_logger("traceguard.benchmark")
 
-MAX_CASES_PER_EXPERIMENT = 6
+MAX_CASES_PER_EXPERIMENT = 15
 #: Benchmark 运行与生成资产放在独立 workspace，避免污染主工作台统计
 BENCH_WORKSPACE = "benchmark"
 

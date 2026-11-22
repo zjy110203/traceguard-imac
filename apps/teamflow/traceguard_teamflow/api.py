@@ -55,6 +55,22 @@ async def create_project(
     # TF-API-001：创建接口返回 500
     if FAULT_STATE.is_active("TF-API-001"):
         raise HTTPException(status_code=500, detail="simulated API failure (TF-API-001)")
+    # TF-API-002：创建接口返回 503（服务不可用变体）
+    if FAULT_STATE.is_active("TF-API-002"):
+        raise HTTPException(status_code=503, detail="simulated service unavailable (TF-API-002)")
+    # TF-SEC-001：权限异常
+    if FAULT_STATE.is_active("TF-SEC-001"):
+        raise HTTPException(status_code=403, detail="workspace quota exceeded (TF-SEC-001)")
+    # TF-TIME-003：创建响应延迟 1.2s（让第二次点击落入双提交窗口）
+    if FAULT_STATE.is_active("TF-TIME-003"):
+        import asyncio
+
+        await asyncio.sleep(1.2)
+    # TF-FLAKY-002：按 50% 概率返回 500（Flaky）
+    if FAULT_STATE.is_active("TF-FLAKY-002") and random.random() < FAULT_STATE.param(
+        "TF-FLAKY-002", "probability", 0.5
+    ):
+        raise HTTPException(status_code=500, detail="intermittent API failure (TF-FLAKY-002)")
 
     # 直接调用路由函数时，Header 默认值可能是 Header 对象；统一归一为 str
     ws_raw = x_tg_workspace if isinstance(x_tg_workspace, str) else None
@@ -78,11 +94,59 @@ async def create_project(
                 "persisted": False,  # 内部标记：UI 可忽略，独立状态查询可核对
             }
 
+        # TF-DB-002：重名项目持久化静默失败（假通过变体：返回 ok 但不落库）
+        if FAULT_STATE.is_active("TF-DB-002"):
+            dup = (
+                session.query(Project)
+                .filter_by(workspace_slug=ws, name=req.name)
+                .first()
+            )
+            if dup:
+                key = "TF-" + "".join(random.choices(string.digits, k=6))
+                return {
+                    "ok": True,
+                    "project": {
+                        "id": new_id("proj"),
+                        "key": key,
+                        "name": req.name,
+                        "description": req.description,
+                        "workspace_slug": ws,
+                        "status": "ACTIVE",
+                        "created_at": utc_now_iso(),
+                    },
+                    "persisted": False,  # 重名写入失败但 API 谎报成功
+                }
+
+        # TF-FLAKY-001：按 50% 概率跳过持久化（Flaky 数据源）
+        if FAULT_STATE.is_active("TF-FLAKY-001") and random.random() < FAULT_STATE.param(
+            "TF-FLAKY-001", "probability", 0.5
+        ):
+            key = "TF-" + "".join(random.choices(string.digits, k=6))
+            return {
+                "ok": True,
+                "project": {
+                    "id": new_id("proj"),
+                    "key": key,
+                    "name": req.name,
+                    "description": req.description,
+                    "workspace_slug": ws,
+                    "status": "ACTIVE",
+                    "created_at": utc_now_iso(),
+                },
+                "persisted": False,
+            }
+
         # 正常持久化
         existing = session.query(Workspace).filter_by(slug=ws).first()
         if not existing:
             session.add(Workspace(slug=ws, name=ws, owner_username="tester"))
             session.flush()
+        # TF-DB-005：持久化写入慢（4000ms，最终落库）
+        if FAULT_STATE.is_active("TF-DB-005"):
+            import asyncio
+
+            await asyncio.sleep(4.0)
+
         key = "TF-" + "".join(random.choices(string.digits, k=6))
         p = Project(
             workspace_slug=ws,
@@ -94,6 +158,12 @@ async def create_project(
         )
         session.add(p)
         session.commit()
+        # 供 TF-DB-003/004 滞后窗口计算
+        import time as _t
+
+        for lag_fault in ("TF-DB-003", "TF-DB-004"):
+            if FAULT_STATE.is_active(lag_fault):
+                FAULT_STATE.activate(lag_fault, {"_last_create_ts": _t.time()})
         return {
             "ok": True,
             "persisted": True,
@@ -120,6 +190,14 @@ async def list_projects(workspace: str = "default") -> dict[str, Any]:
         import asyncio
 
         await asyncio.sleep(delay_ms / 1000.0)
+    # TF-TIME-002：强时序延迟 5000ms
+    if FAULT_STATE.is_active("TF-TIME-002"):
+        import asyncio
+
+        await asyncio.sleep(5.0)
+    # TF-SEC-002：列表读取权限异常
+    if FAULT_STATE.is_active("TF-SEC-002"):
+        raise HTTPException(status_code=403, detail="read permission denied (TF-SEC-002)")
     session = get_session()
     try:
         rows = session.query(Project).filter_by(workspace_slug=workspace).all()
@@ -165,6 +243,12 @@ async def get_project(project_id: str) -> dict[str, Any]:
 
 @router.put("/api/projects/{project_id}")
 async def update_project(project_id: str, req: ProjectCreateReq) -> dict[str, Any]:
+    # TF-API-003：更新接口返回 500（编辑链路）
+    if FAULT_STATE.is_active("TF-API-003"):
+        raise HTTPException(status_code=500, detail="simulated update failure (TF-API-003)")
+    # TF-API-004：更新接口返回 503（编辑链路服务不可用）
+    if FAULT_STATE.is_active("TF-API-004"):
+        raise HTTPException(status_code=503, detail="simulated update unavailable (TF-API-004)")
     session = get_session()
     try:
         r = session.query(Project).filter_by(key=project_id).first()
@@ -181,7 +265,39 @@ async def update_project(project_id: str, req: ProjectCreateReq) -> dict[str, An
 # ---------------- 独立业务状态查询（Trusted Oracle 用，不依赖 UI） ----------------
 @router.get("/api/state/projects")
 async def state_projects(workspace: str = "default") -> dict[str, Any]:
-    """独立权威状态查询：直接读持久层，故障注入 TF-DB-001 时此处反映真实未持久化。"""
+    """独立权威状态查询：直接读持久层，故障注入 TF-DB-001 时此处反映真实未持久化。
+
+    TF-DB-003 / TF-DB-004：最终一致性滞后——状态查询返回滞后快照（Flaky 来源）。
+    滞后语义：本次创建后 count 需要等 lag_ms 才反映真实值。
+    """
+    import time as _time
+
+    lag_active = FAULT_STATE.is_active("TF-DB-003") or FAULT_STATE.is_active("TF-DB-004")
+    if lag_active:
+        lag_ms = 2000 if FAULT_STATE.is_active("TF-DB-003") else 9000
+        # 记录最近一次创建时间戳：滞后窗口内返回滞后值
+        last_create = FAULT_STATE.param("TF-DB-003", "_last_create_ts") or FAULT_STATE.param(
+            "TF-DB-004", "_last_create_ts"
+        )
+        session = get_session()
+        try:
+            rows = session.query(Project).filter_by(workspace_slug=workspace).all()
+            real_count = len(rows)
+            within_lag = (
+                last_create is not None
+                and (_time.time() - float(last_create)) * 1000 < lag_ms
+            )
+            count = real_count - 1 if (within_lag and real_count > 0) else real_count
+            keys = [r.key for r in rows]
+            return {
+                "ok": True,
+                "source": "authoritative-state",
+                "workspace": workspace,
+                "count": count,
+                "keys": keys if not within_lag else keys[:-1],
+            }
+        finally:
+            session.close()
     session = get_session()
     try:
         rows = session.query(Project).filter_by(workspace_slug=workspace).all()
@@ -252,6 +368,14 @@ async def activate_fault(fault_id: str, params: dict[str, Any] | None = None) ->
     if fault_id not in FAULT_IDS:
         raise HTTPException(status_code=404, detail="unknown fault")
     FAULT_STATE.activate(fault_id, params or {})
+    # 复合故障：同时激活底层机制（各自保持独立语义，便于证据归属）
+    composite_map = {
+        "TF-COMP-001": ["TF-API-001", "TF-UI-003"],  # API 失败 + 错误提示被误导
+        "TF-COMP-002": ["TF-DB-001", "TF-TIME-001"],  # 持久化回滚 + 列表延迟
+        "TF-COMP-003": ["TF-LOC-001", "TF-UI-002"],  # 定位器失效 + 静默忽略
+    }
+    for underlying in composite_map.get(fault_id, []):
+        FAULT_STATE.activate(underlying)
     return {"ok": True, "activated": fault_id, "state": FAULT_STATE.snapshot()}
 
 

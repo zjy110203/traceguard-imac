@@ -2,9 +2,52 @@
 
 > 所有数值来自本机真实执行（Chromium 159 + TeamFlow），可用
 > `GET /api/v1/benchmark/experiments/{id}` 复核，`observations` 中保存了每个样本的 run_id。
-> 小样本（n=3/4）置信区间很宽，**不做过度外推**；LLM 基线无凭据，标记 BLOCKED，不产生任何数值。
+> 小样本（n=3）置信区间很宽，**不做过度外推**。
+> RUN-003-G 后 LLM 基线已解锁（DeepSeek Flash/Pro/Routed 真实接入，见 RUN-003-G-LLM-Benchmark.md）。
 
-## 1. 数据集与隔离
+## 0. 数据集 v2（RUN-003-D 扩充：30 场景）
+
+`teamflow-faultbench-v2`：30 个独立 Ground Truth 场景，覆盖十类机制：
+
+| 机制族 | 场景 | 数量 |
+|---|---|---|
+| 正常/回归 | NORMAL-001/002、DB-003、DB-005、UI-004、NET-001(-FAST)、TIME-001/002、API-003/004 | 11（PASSED 预期） |
+| PERSISTENCE | DB-001（回滚假通过）、DB-002（重名静默失败） | 2 |
+| UI_RENDERING | UI-001（提示缺失）、UI-002（静默忽略）、UI-003（误导文案） | 3 |
+| API | API-001（500）、API-002（503） | 2 |
+| NETWORK | NET-002（9s 必然超时） | 1 |
+| LOCATOR | LOC-001/002（test_id 变更） | 2 |
+| TIMING | DB-004（状态滞后 9s）、TIME-003（双提交竞态） | 2 |
+| AUTHORIZATION | SEC-001（写 403）、SEC-002（读 403） | 2 |
+| 复合 | COMP-001/002/003 | 3 |
+| Flaky | FLAKY-001/002（50% 概率） | 2 |
+
+**逐场景真实验证**：`scripts/bench_verify.py` 对全部 30 场景逐一真实浏览器执行，
+verdict 与 GT 预期 **30/30 一致**（证据：`.workbuddy-run/bench-v2-verify.json`，
+含每场景 run_id 与耗时；2026-11-22 共 8 轮迭代验证，修复了用例步骤、幂等、
+缓存、观测合并等真实问题——过程记录见 Git 历史）。
+注：定位器失效类场景的确定性执行失败表现为 execution_status=FAILED +
+verdict=NOT_EVALUATED（架构语义：执行中断不产生断言结论），与 GT 的 EXEC_FAILED 语义对齐。
+
+## 0.1 数据集 v2 上的诊断对照（exp_17953628312779018edea4741）
+
+前 9 个场景（DB/UI 机制族）中 3 个故障样本：
+
+| 指标 | A 原始报告 | C 规则 | D 图 | E 探针 | LLM_flash | LLM_pro | LLM_routed |
+|---|---|---|---|---|---|---|---|
+| Primary Cause | 0.000 (0/3) | 0.667 (2/3) | 0.667 | 0.667 | 0.000 | 0.000 | 0.333 |
+| Coverage | 1.000 | 1.000 | 1.000 | 1.000 | 0.667 | 1.000 | 0.333 |
+| False Pass | **1.000 (2/2)** | 0.000 (0/2) | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
+
+诚实结论：
+1. 引入时序类机制（DB-004 状态滞后）后，规则组不再 3/3——滞后场景的主因归类
+   （TIMING vs PERSISTENCE）是真实的难点，如实暴露；
+2. 传统基线 A 在两个假通过场景 2/2 全部被骗——TraceGuard 核心价值再次被证实；
+3. LLM 各组在此切片上低于规则组（n=3，方差大，不作外推）；
+4. 全 30 场景的诊断对照（含 LOCATOR/SEC/COMP/Flaky 族）需要更大样本预算，
+   实验框架已支持（`MAX_CASES_PER_EXPERIMENT=15`，可按需扩大）。
+
+## 1. 数据集 v1 与隔离
 
 | 项 | 值 |
 |---|---|

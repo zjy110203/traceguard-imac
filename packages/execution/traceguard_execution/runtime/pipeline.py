@@ -766,15 +766,21 @@ def _observation_for(
         for k, v in r.observation.items():
             if k not in {"network", "console", "page_errors", "http_errors"}:
                 merged[k] = v
+    # UI 断言（expected 含 test_id）以所选 DOM 观测为准；否则保持既有合并顺序
+    ui_dom = expected.get("test_id") is not None and chosen is not None
     if chosen is not None:
-        merged.update(
-            {
-                k: v
-                for k, v in chosen.observation.items()
-                if k not in {"network", "console", "page_errors", "http_errors"}
-            }
-        )
-    merged.update({k: v for k, v in state.items() if k not in {"error", "raw"}})
+        for k, v in chosen.observation.items():
+            if k in {"network", "console", "page_errors", "http_errors"}:
+                continue
+            if ui_dom or k not in merged:
+                merged[k] = v
+    if ui_dom:
+        # UI 断言：状态查询只补充 DOM 观测中缺失的键，不用业务 count 覆盖 DOM count
+        for k, v in state.items():
+            if k not in {"error", "raw"} and k not in merged:
+                merged[k] = v
+    else:
+        merged.update({k: v for k, v in state.items() if k not in {"error", "raw"}})
     if "api" in expected:
         api = str(expected["api"])
         key = api.split("?")[0].strip("/").replace("/", "_")

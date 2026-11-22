@@ -1,0 +1,276 @@
+{
+  "total": 30,
+  "matched": 30,
+  "results": [
+    {
+      "scenario_id": "TF-NORMAL-001",
+      "testcase_id": "tcase_tf_create_normal",
+      "expected_verdict": "PASSED",
+      "run_id": "run_179536254455673fb01523944",
+      "verdict": "PASSED",
+      "duration_s": 5.9,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-NORMAL-002",
+      "testcase_id": "tcase_bench_normal2",
+      "expected_verdict": "PASSED",
+      "run_id": "run_179536255042459db639719ce",
+      "verdict": "PASSED",
+      "duration_s": 4.9,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-DB-001",
+      "testcase_id": "tcase_tf_false_pass",
+      "expected_verdict": "FAILED",
+      "run_id": "run_17953625552985d29f9c680d3",
+      "verdict": "FAILED",
+      "duration_s": 5.2,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-DB-002",
+      "testcase_id": "tcase_bench_db002",
+      "expected_verdict": "FAILED",
+      "run_id": "run_179536256052293ee217ebe47",
+      "verdict": "FAILED",
+      "duration_s": 9.4,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-DB-003",
+      "testcase_id": "tcase_bench_db003",
+      "expected_verdict": "PASSED",
+      "run_id": "run_179536256994237cd7f8252c6",
+      "verdict": "PASSED",
+      "duration_s": 8.3,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-DB-004",
+      "testcase_id": "tcase_bench_db004",
+      "expected_verdict": "FAILED",
+      "run_id": "run_1795362578256bc3cdb106af4",
+      "verdict": "FAILED",
+      "duration_s": 4.9,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-DB-005",
+      "testcase_id": "tcase_bench_db005",
+      "expected_verdict": "PASSED",
+      "run_id": "run_1795362583155c0346c793782",
+      "verdict": "PASSED",
+      "duration_s": 12.5,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-UI-001",
+      "testcase_id": "tcase_tf_ui_missing",
+      "expected_verdict": "FAILED",
+      "run_id": "run_17953625956835f25732bbea0",
+      "verdict": "FAILED",
+      "duration_s": 5.4,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-UI-002",
+      "testcase_id": "tcase_bench_ui002",
+      "expected_verdict": "FAILED",
+      "run_id": "run_1795362601046d2570f6d58c7",
+      "verdict": "FAILED",
+      "duration_s": 5.1,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-UI-003",
+      "testcase_id": "tcase_bench_ui003",
+      "expected_verdict": "FAILED",
+      "run_id": "run_17953626061264c960ef4bcdb",
+      "verdict": "FAILED",
+      "duration_s": 4.9,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-UI-004",
+      "testcase_id": "tcase_bench_ui004",
+      "expected_verdict": "PASSED",
+      "run_id": "run_17953626110462a764b558bb1",
+      "verdict": "PASSED",
+      "duration_s": 7.8,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-API-001",
+      "testcase_id": "tcase_tf_api_error",
+      "expected_verdict": "FAILED",
+      "run_id": "run_17953626188496c7641d084e2",
+      "verdict": "FAILED",
+      "duration_s": 3.6,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-API-002",
+      "testcase_id": "tcase_bench_api002",
+      "expected_verdict": "FAILED",
+      "run_id": "run_1795362622446f08584ce74e1",
+      "verdict": "FAILED",
+      "duration_s": 5.1,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-API-003",
+      "testcase_id": "tcase_bench_api003",
+      "expected_verdict": "PASSED",
+      "run_id": "run_179536262758065a8b47d3740",
+      "verdict": "PASSED",
+      "duration_s": 9.7,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-API-004",
+      "testcase_id": "tcase_bench_api004",
+      "expected_verdict": "PASSED",
+      "run_id": "run_1795362637238141f66405641",
+      "verdict": "PASSED",
+      "duration_s": 9.6,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-NET-001",
+      "testcase_id": "tcase_bench_net001",
+      "expected_verdict": "PASSED",
+      "run_id": "run_17953626468715dc9febf65b9",
+      "verdict": "PASSED",
+      "duration_s": 14.4,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-NET-001-FAST",
+      "testcase_id": "tcase_bench_net001fast",
+      "expected_verdict": "PASSED",
+      "run_id": "run_1795362661302a4b7653c858c",
+      "verdict": "PASSED",
+      "duration_s": 14.5,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-NET-002",
+      "testcase_id": "tcase_bench_net002",
+      "expected_verdict": "FAILED",
+      "run_id": "run_1795362675839bcb5ff1cd7c5",
+      "verdict": "FAILED",
+      "duration_s": 15.6,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-LOC-001",
+      "testcase_id": "tcase_bench_loc001",
+      "expected_verdict": "EXEC_FAILED",
+      "run_id": "run_179536269144766918b0bbc13",
+      "verdict": "NOT_EVALUATED",
+      "duration_s": 12.8,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-LOC-002",
+      "testcase_id": "tcase_bench_loc002",
+      "expected_verdict": "EXEC_FAILED",
+      "run_id": "run_179536270427584120ac2dbd9",
+      "verdict": "NOT_EVALUATED",
+      "duration_s": 13.4,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-TIME-001",
+      "testcase_id": "tcase_bench_time001",
+      "expected_verdict": "PASSED",
+      "run_id": "run_1795362717644b7ba1b70f2d7",
+      "verdict": "PASSED",
+      "duration_s": 9.7,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-TIME-002",
+      "testcase_id": "tcase_bench_time002",
+      "expected_verdict": "PASSED",
+      "run_id": "run_179536272736095d0bfe29b8e",
+      "verdict": "PASSED",
+      "duration_s": 12.8,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-TIME-003",
+      "testcase_id": "tcase_bench_time003",
+      "expected_verdict": "EXEC_FAILED",
+      "run_id": "run_179536274011701e4bdbea136",
+      "verdict": "NOT_EVALUATED",
+      "duration_s": 13.0,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-SEC-001",
+      "testcase_id": "tcase_bench_sec001",
+      "expected_verdict": "FAILED",
+      "run_id": "run_179536275308158324d708bb3",
+      "verdict": "FAILED",
+      "duration_s": 5.1,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-SEC-002",
+      "testcase_id": "tcase_bench_sec002",
+      "expected_verdict": "FAILED",
+      "run_id": "run_1795362758180e0b5c31001ba",
+      "verdict": "FAILED",
+      "duration_s": 7.2,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-COMP-001",
+      "testcase_id": "tcase_bench_comp001",
+      "expected_verdict": "FAILED",
+      "run_id": "run_1795362765339f25ea3a8d0e8",
+      "verdict": "FAILED",
+      "duration_s": 5.0,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-COMP-002",
+      "testcase_id": "tcase_bench_comp002",
+      "expected_verdict": "FAILED",
+      "run_id": "run_1795362770350908ebbab4bc8",
+      "verdict": "FAILED",
+      "duration_s": 9.2,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-COMP-003",
+      "testcase_id": "tcase_bench_comp003",
+      "expected_verdict": "EXEC_FAILED",
+      "run_id": "run_1795362779507a88928025b93",
+      "verdict": "NOT_EVALUATED",
+      "duration_s": 12.7,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-FLAKY-001",
+      "testcase_id": "tcase_bench_flaky001",
+      "expected_verdict": "FLAKY_ANY",
+      "run_id": "run_179536279224012b7dfffecfa",
+      "verdict": "FAILED",
+      "duration_s": 4.9,
+      "match": true
+    },
+    {
+      "scenario_id": "TF-FLAKY-002",
+      "testcase_id": "tcase_bench_flaky002",
+      "expected_verdict": "FLAKY_ANY",
+      "run_id": "run_179536279710877bbf0158e25",
+      "verdict": "FAILED",
+      "duration_s": 5.3,
+      "match": true
+    }
+  ]
+}

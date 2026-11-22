@@ -381,5 +381,399 @@ def seed_teamflow_catalog(rt: Any, base_url: str = BASE) -> dict[str, Any]:
         )
         created += 1
 
+    created += _seed_bench_v2(rt, base_url)
+
     logger.info("seed_done", created=created, skipped=skipped)
     return {"created": created, "skipped": skipped}
+
+
+# ------------------------------------------------------------------ v2 数据集
+# RUN-003-D：30 场景扩充。每条场景 = 故障激活步骤 + 业务流 + 断言，可重复、可清理。
+
+
+def _fault_step(prefix: str, fault_id: str, idx: str = "f1") -> dict:
+    return _step(f"{prefix}_{idx}", "api", None, f"POST /api/faults/{fault_id}/activate", f"激活故障 {fault_id}")
+
+
+def _wait_step(prefix: str, ms: str, idx: str, desc: str) -> dict:
+    return _step(f"{prefix}_{idx}", "wait", None, ms, desc)
+
+
+def _create_flow(prefix: str, name_value: str, wait_ms: str = "1200") -> list[dict]:
+    """标准创建流：导航 → 填表 → 提交 → 等待 → 观测。"""
+    return [
+        _step(f"{prefix}_n1", "navigate", None, "/projects", "打开项目列表"),
+        _step(f"{prefix}_n2", "click", ("test_id", "nav-new"), None, "点击新建项目"),
+        _step(f"{prefix}_n3", "fill", ("test_id", "project-name"), name_value, "填写项目名称"),
+        _step(f"{prefix}_n4", "click", ("test_id", "create-submit"), None, "提交创建"),
+        _wait_step(prefix, wait_ms, "n5", "等待跳转与提示"),
+        _step(f"{prefix}_n6", "assert", ("test_id", "banner-success"), "banner-success", "读取成功提示"),
+        _step(f"{prefix}_n7", "assert", ("test_id", "project-rows"), "project-rows", "读取项目列表"),
+    ]
+
+
+def _seed_bench_v2(rt: Any, base_url: str) -> int:
+    """数据集 v2 的 30 场景资产（幂等）。"""
+    created = 0
+    stamp = utc_now_iso()[:19]
+
+    if not rt.catalog.get_intent("intent_tf_bench_v2"):
+        rt.catalog.create_intent(
+            {
+                "intent_id": "intent_tf_bench_v2",
+                "title": "UI-FaultBench v2 数据集（30 场景）",
+                "description": "覆盖 API/NETWORK/PERSISTENCE/UI/LOCATOR/TIMING/AUTH/Flaky/复合故障的受控基准数据集。",
+                "requirement_refs": ["TF-PROJECT-CREATE", "TF-PROJECT-EDIT"],
+                "business_context": {"application": "teamflow", "dataset": "faultbench-v2"},
+                "preconditions": ["TeamFlow 可访问", "测试数据已重置"],
+                "candidate_assertions": ["按场景 GT 预期"],
+                "owner": "qa-team",
+            }
+        )
+        rt.catalog.update_intent_status("intent_tf_bench_v2", "APPROVED")
+        created += 1
+
+    if not rt.catalog.get_oracle("oracle_tf_edit_error"):
+        rt.catalog.create_oracle(
+            _oracle(
+                "oracle_tf_edit_error",
+                "a_edit_error",
+                "编辑保存失败时必须出现错误提示（data-testid=edit-error）",
+                "TF-PROJECT-EDIT#ERR-1",
+                {"type": "presence", "test_id": "edit-error"},
+            ),
+            approved_by="role:qa-lead",
+            approval_note="需求评审通过",
+            approved=True,
+        )
+        created += 1
+
+    def banner_assert(aid: str = "a_ui_banner") -> dict:
+        return _assertion(aid, "成功提示出现", "ui", {"test_id": "banner-success"}, "oracle_tf_ui_banner")
+
+    def biz_assert(aid: str = "a_biz_count", op: str = "gte", value: int = 1) -> dict:
+        return _assertion(
+            aid,
+            "独立业务状态计数校验",
+            "business_state",
+            {"api": "/api/state/projects?workspace=default", "field": "count", "op": op, "value": value},
+            "oracle_tf_biz_count",
+        )
+
+    def error_assert(aid: str = "a_error_banner") -> dict:
+        return _assertion(aid, "错误提示可见", "ui", {"test_id": "create-error"}, "oracle_tf_error_banner")
+
+    def rows_assert(aid: str = "a_row_render", test_id: str = "project-rows") -> dict:
+        return _assertion(aid, "列表渲染数据行", "ui", {"test_id": test_id, "op": "count_gte", "value": 1}, "oracle_tf_row_render")
+
+    def edit_error_assert(aid: str = "a_edit_error") -> dict:
+        return _assertion(aid, "编辑保存失败提示", "ui", {"test_id": "edit-error"}, "oracle_tf_edit_error")
+
+    def edit_flow(prefix: str, fault_id: str) -> list[dict]:
+        """编辑链路：先正常创建一个项目，再触发编辑接口故障。"""
+        return [
+            _fault_step(prefix, fault_id),
+            *_create_flow(prefix, f"Bench 编辑链路-{stamp}"),
+            _step(f"{prefix}_e1", "navigate", None, "/projects/first", "打开第一个项目详情"),
+            _wait_step(prefix, "800", "e2", "等待详情加载"),
+            _step(f"{prefix}_e3", "fill", ("test_id", "edit-name"), f"编辑后名称-{stamp}", "填写新名称"),
+            _step(f"{prefix}_e4", "click", ("test_id", "edit-save"), None, "保存编辑（预期接口失败）"),
+            _wait_step(prefix, "800", "e6", "等待保存结果"),
+            _step(f"{prefix}_e7", "assert", ("test_id", "edit-error"), "edit-error", "读取编辑错误提示"),
+        ]
+
+    def double_submit_flow(prefix: str) -> list[dict]:
+        return [
+            _step(f"{prefix}_n1", "navigate", None, "/projects", "打开项目列表"),
+            _step(f"{prefix}_n2", "click", ("test_id", "nav-new"), None, "点击新建项目"),
+            _step(f"{prefix}_n3", "fill", ("test_id", "project-name"), f"双提交-{stamp}", "填写名称"),
+            _step(f"{prefix}_n4", "click", ("test_id", "create-submit"), None, "第一次提交"),
+            _step(f"{prefix}_n5", "click", ("test_id", "create-submit"), None, "第二次提交（300ms 内）"),
+            _wait_step(prefix, "1200", "n6", "等待跳转"),
+            _step(f"{prefix}_n7", "assert", ("test_id", "banner-success"), "banner-success", "成功提示"),
+        ]
+
+    bench: list[dict] = [
+        {
+            "testcase_id": "tcase_bench_normal2",
+            "title": "正常创建（第二可重复样本）",
+            "steps": [*_create_flow("bn2", f"Bench 正常2-{stamp}")],
+            "assertions": [banner_assert("a_b2"), biz_assert("a_b2c")],
+        },
+        {
+            "testcase_id": "tcase_bench_db002",
+            "title": "重名持久化静默失败（假通过变体）",
+            "steps": [
+                # 先正常创建同名项目（fault 未激活，真实落库）
+                *_create_flow("db2a", f"Bench 重名静默-{stamp}"),
+                # 激活故障后用同名再次创建：API 谎报成功但不落库
+                _fault_step("db2", "TF-DB-002"),
+                _step("db2_b1", "navigate", None, "/projects", "打开项目列表"),
+                _step("db2_b2", "click", ("test_id", "nav-new"), None, "点击新建项目"),
+                _step("db2_b3", "fill", ("test_id", "project-name"), f"Bench 重名静默-{stamp}", "再次填写同名"),
+                _step("db2_b4", "click", ("test_id", "create-submit"), None, "提交创建（预期静默失败）"),
+                _wait_step("db2", "1200", "b5", "等待跳转与提示"),
+                _step("db2_b6", "assert", ("test_id", "banner-success"), "banner-success", "读取成功提示"),
+            ],
+            "assertions": [biz_assert("a_biz_count2", value=2)],
+        },
+        {
+            "testcase_id": "tcase_bench_db003",
+            "title": "状态查询滞后 2000ms：等待后通过",
+            "steps": [
+                _fault_step("db3", "TF-DB-003"),
+                *_create_flow("db3", f"Bench 滞后2s-{stamp}"),
+                _wait_step("db3", "3000", "n8", "等待一致性窗口结束"),
+            ],
+            "assertions": [banner_assert(), biz_assert()],
+        },
+        {
+            "testcase_id": "tcase_bench_db004",
+            "title": "状态查询滞后 9000ms：断言窗口内读旧值",
+            "steps": [
+                _fault_step("db4", "TF-DB-004"),
+                *_create_flow("db4", f"Bench 滞后9s-{stamp}"),
+            ],
+            "assertions": [banner_assert(), biz_assert()],
+        },
+        {
+            "testcase_id": "tcase_bench_db005",
+            "title": "持久化写入慢 4000ms：最终落库",
+            "steps": [
+                _fault_step("db5", "TF-DB-005"),
+                *_create_flow("db5", f"Bench 写入慢-{stamp}", wait_ms="6000"),
+            ],
+            "assertions": [banner_assert(), biz_assert()],
+        },
+        {
+            "testcase_id": "tcase_bench_ui002",
+            "title": "表单提交被静默忽略",
+            "steps": [
+                _fault_step("ui2", "TF-UI-002"),
+                *_create_flow("ui2", f"Bench 静默-{stamp}"),
+            ],
+            "assertions": [banner_assert(), biz_assert()],
+        },
+        {
+            "testcase_id": "tcase_bench_ui003",
+            "title": "业务成功但提示被误导为失败文案",
+            "steps": [
+                _fault_step("ui3", "TF-UI-003"),
+                *_create_flow("ui3", f"Bench 误导-{stamp}"),
+            ],
+            "assertions": [banner_assert(), biz_assert()],
+        },
+        {
+            "testcase_id": "tcase_bench_ui004",
+            "title": "成功提示延迟渲染 3000ms",
+            "steps": [
+                _fault_step("ui4", "TF-UI-004"),
+                *_create_flow("ui4", f"Bench 提示晚到-{stamp}", wait_ms="4000"),
+            ],
+            "assertions": [banner_assert(), biz_assert()],
+        },
+        {
+            "testcase_id": "tcase_bench_api002",
+            "title": "创建接口 503",
+            "steps": [
+                _fault_step("api503", "TF-API-002"),
+                *_create_flow("api503", f"Bench 503-{stamp}"),
+            ],
+            "assertions": [error_assert(), biz_assert()],
+        },
+        {
+            "testcase_id": "tcase_bench_api003",
+            "title": "更新接口 500（编辑链路）",
+            "steps": [*edit_flow("api003", "TF-API-003")],
+            "assertions": [edit_error_assert(), biz_assert()],
+        },
+        {
+            "testcase_id": "tcase_bench_api004",
+            "title": "更新接口 503（编辑链路）",
+            "steps": [*edit_flow("api004", "TF-API-004")],
+            "assertions": [edit_error_assert(), biz_assert()],
+        },
+        {
+            "testcase_id": "tcase_bench_net001",
+            "title": "请求延迟 3000ms：可容忍",
+            "steps": [
+                _fault_step("net1", "TF-NET-001"),
+                *_create_flow("net1", f"Bench 网络慢-{stamp}", wait_ms="5000"),
+            ],
+            "assertions": [banner_assert(), biz_assert()],
+        },
+        {
+            "testcase_id": "tcase_bench_net001fast",
+            "title": "网络慢 3000ms（性能感知样本）",
+            "steps": [
+                _fault_step("net1f", "TF-NET-001", idx="f1"),
+                *_create_flow("net1f", f"Bench 性能感知-{stamp}", wait_ms="5000"),
+            ],
+            "assertions": [banner_assert("a_b2"), biz_assert("a_b2c")],
+        },
+        {
+            "testcase_id": "tcase_bench_net002",
+            "title": "9000ms 长延迟必然超时",
+            "steps": [
+                _fault_step("net2", "TF-NET-002"),
+                *_create_flow("net2", f"Bench 超时-{stamp}", wait_ms="1500"),
+            ],
+            "assertions": [banner_assert(), biz_assert()],
+        },
+        {
+            "testcase_id": "tcase_bench_loc001",
+            "title": "提交按钮定位器失效",
+            "steps": [
+                _fault_step("loc1", "TF-LOC-001"),
+                *_create_flow("loc1", f"Bench 定位失效-{stamp}"),
+            ],
+            "assertions": [banner_assert()],
+        },
+        {
+            "testcase_id": "tcase_bench_loc002",
+            "title": "名称输入框定位器失效",
+            "steps": [
+                _fault_step("loc2", "TF-LOC-002"),
+                *_create_flow("loc2", f"Bench 输入失效-{stamp}"),
+            ],
+            "assertions": [banner_assert()],
+        },
+        {
+            "testcase_id": "tcase_bench_time001",
+            "title": "列表刷新延迟 1500ms（预期通过）",
+            "steps": [
+                _fault_step("tm1", "TF-TIME-001"),
+                *_create_flow("tm1", f"Bench 列表延迟-{stamp}", wait_ms="3000"),
+            ],
+            "assertions": [banner_assert(), biz_assert()],
+        },
+        {
+            "testcase_id": "tcase_bench_time002",
+            "title": "列表刷新延迟 5000ms（预期通过）",
+            "steps": [
+                _fault_step("tm2", "TF-TIME-002"),
+                *_create_flow("tm2", f"Bench 强延迟-{stamp}", wait_ms="1000"),
+            ],
+            "assertions": [banner_assert(), biz_assert()],
+        },
+        {
+            "testcase_id": "tcase_bench_time003",
+            "title": "双提交竞态：第二次被丢弃",
+            "steps": [*double_submit_flow("tm3")],
+            "assertions": [banner_assert(), biz_assert()],
+        },
+        {
+            "testcase_id": "tcase_bench_sec001",
+            "title": "创建返回 403 权限异常",
+            "steps": [
+                _fault_step("sec1", "TF-SEC-001"),
+                *_create_flow("sec1", f"Bench 权限-{stamp}"),
+            ],
+            "assertions": [error_assert(), biz_assert()],
+        },
+        {
+            "testcase_id": "tcase_bench_sec002",
+            "title": "列表读取 403",
+            "steps": [
+                # 创建流（不含 rows 观测，避免故障前观测污染断言）
+                _step("sec2_n1", "navigate", None, "/projects", "打开项目列表"),
+                _step("sec2_n2", "click", ("test_id", "nav-new"), None, "点击新建项目"),
+                _step("sec2_n3", "fill", ("test_id", "project-name"), f"Bench 读权限-{stamp}", "填写名称"),
+                _step("sec2_n4", "click", ("test_id", "create-submit"), None, "提交创建"),
+                _wait_step("sec2", "1200", "n5", "等待创建完成"),
+                _fault_step("sec2", "TF-SEC-002", idx="f2"),
+                _step("sec2_r1", "navigate", None, "/projects", "再次打开列表（预期读取失败）"),
+                _wait_step("sec2", "1000", "r2", "等待列表加载失败"),
+                _step("sec2_r3", "assert", ("test_id", "project-row"), "project-row", "观测故障后的数据行数量"),
+            ],
+            "assertions": [rows_assert("a_row_render2", test_id="project-row")],
+        },
+        {
+            "testcase_id": "tcase_bench_comp001",
+            "title": "复合：API 500 + 错误提示被误导",
+            "steps": [
+                _fault_step("cp1", "TF-COMP-001"),
+                *_create_flow("cp1", f"Bench 复合API-{stamp}"),
+            ],
+            "assertions": [biz_assert()],
+        },
+        {
+            "testcase_id": "tcase_bench_comp002",
+            "title": "复合：持久化回滚 + 列表延迟",
+            "steps": [
+                _fault_step("cp2", "TF-COMP-002"),
+                *_create_flow("cp2", f"Bench 复合DB-{stamp}", wait_ms="2500"),
+            ],
+            "assertions": [biz_assert()],
+        },
+        {
+            "testcase_id": "tcase_bench_comp003",
+            "title": "复合：定位器失效 + 静默忽略",
+            "steps": [
+                _fault_step("cp3", "TF-COMP-003"),
+                *_create_flow("cp3", f"Bench 复合LOC-{stamp}"),
+            ],
+            "assertions": [banner_assert()],
+        },
+        {
+            "testcase_id": "tcase_bench_flaky001",
+            "title": "Flaky：持久化 50% 概率失败",
+            "steps": [
+                _fault_step("fl1", "TF-FLAKY-001"),
+                *_create_flow("fl1", f"Bench FlakyDB-{stamp}"),
+            ],
+            "assertions": [biz_assert()],
+        },
+        {
+            "testcase_id": "tcase_bench_flaky002",
+            "title": "Flaky：API 500 概率触发",
+            "steps": [
+                _fault_step("fl2", "TF-FLAKY-002"),
+                *_create_flow("fl2", f"Bench FlakyAPI-{stamp}"),
+                _step("fl2_n8", "assert", ("test_id", "create-error"), "create-error", "读取错误提示（可能不存在）"),
+            ],
+            "assertions": [error_assert(), biz_assert()],
+        },
+    ]
+
+    for tc in bench:
+        existing = rt.catalog.get_testcase(tc["testcase_id"])
+        if existing:
+            latest = existing.get("latest") or {}
+            # 变更检测：断言 ID 集合或步骤序列变化 → 语义升级为新版本并重新审核
+            existing_steps = [
+                (s.get("action"), str(s.get("value")), str((s.get("target") or {}).get("value")))
+                for s in (latest.get("steps") or [])
+            ]
+            desired_steps = [
+                (s.get("action"), str(s.get("value")), str((s.get("target") or {}).get("value")))
+                for s in tc["steps"]
+            ]
+            existing_assertions = {a["assertion_id"] for a in (latest.get("assertions") or [])}
+            desired_assertions = {a["assertion_id"] for a in tc["assertions"]}
+            if existing_steps == desired_steps and existing_assertions == desired_assertions:
+                continue
+        payload = {
+            "testcase_id": tc["testcase_id"],
+            "intent_ref": "intent_tf_bench_v2",
+            "steps": tc["steps"],
+            "assertions": tc["assertions"],
+            "version": 1,
+            "test_data_refs": [],
+            "preconditions": ["TeamFlow 可访问", "测试数据已重置", "对应故障经控制 API 激活"],
+            "postconditions": ["清理注入故障"],
+            "cleanup_policy": "RESET_DATA",
+            "run_config": {"base_url": base_url, "fail_fast": False, "trace": True},
+            "compile_source": "human",
+            "created_at": utc_now_iso(),
+        }
+        doc = rt.catalog.create_testcase(payload, title=tc["title"], review_status="PENDING")
+        rt.catalog.review_testcase(
+            tc["testcase_id"],
+            doc["version"],
+            "APPROVED",
+            reviewer="role:qa-lead",
+            note="Benchmark 数据集 v2 评审通过",
+        )
+        created += 1
+    return created

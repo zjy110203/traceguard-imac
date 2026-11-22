@@ -1,0 +1,1 @@
+{"ts": "2026-11-22T14:34:27.751692+00:00", "provider": "deepseek", "model": "deepseek-flash", "agent": "t", "task_id": "", "run_id": "", "prompt_version": "v1", "input_tokens": 1000, "output_tokens": 500, "cached_tokens": 0, "latency_ms": 10, "request_status": "ok", "retry_count": 0, "estimated_cost_usd": 0.0003, "cost_is_estimated": true, "error_kind": ""}
