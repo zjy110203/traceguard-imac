@@ -39,7 +39,10 @@ open http://127.0.0.1:8000/
 | UI 提示缺失（TF-UI-001） | FAILED | 业务成功但界面无反馈 |
 | 接口 500（TF-API-001） | FAILED | 错误提示正确，功能不可用 |
 
-- 测试：**206 passed**；ruff 全绿；前端类型检查 + 构建通过。
+- 测试：**222 passed**；ruff 全绿；前端类型检查 + 构建通过。
+- RUN-003：专业前端升级（含新增 Agent 探索与编译中心）、DeepSeek 双模型真实接入
+  （Explorer/Diagnosis，规则兜底诚实标记）、Benchmark 数据集 v2（30 场景 30/30 验证）、
+  多 Worker 并发竞态修复（详见 docs/RUN-003-IMPLEMENTATION-REPORT.md）。
 - Benchmark B（n=3）：传统报告基线首选根因 1/3、假通过 1/1；规则诊断 3/3、假通过 0/1。
 - Benchmark C：沙箱 1/1、断言保持 1/1；无保护对照断言保持 0/1。
 
@@ -97,7 +100,8 @@ docs                  架构 / API / 数据库 / Agent / Playwright / 安全 / �
 
 ## 明确未完成
 
-- LLM 基线（无 API Key / 本地模型）→ Benchmark 标记 BLOCKED，不产生数值；
+- LLM：DeepSeek 双模型已接入（Explorer/Diagnosis）；Compiler/Repair 的 LLM 辅助未接入；
+- PostgreSQL 运行时未验证（BLOCKED：本机无实例）；
 - PostgreSQL 运行时未验证；Redis 未采用；MinIO/S3 未实现（本地内容寻址存储已实现完整性与篡改检测）；
 - 外部站点泛化未授权（P-EXT）；
 - 认证/RBAC 未实现（本地单租户）；

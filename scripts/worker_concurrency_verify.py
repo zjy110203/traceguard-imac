@@ -11,9 +11,8 @@ import json
 import subprocess
 import sys
 import time
-from pathlib import Path
-
 import urllib.request
+from pathlib import Path
 
 API = "http://127.0.0.1:8000/api/v1"
 
@@ -33,7 +32,7 @@ def main() -> int:
     n = 4
     run_ids: list[str] = []
     t0 = time.monotonic()
-    for i in range(n):
+    for _i in range(n):
         out = api_call("POST", "/testcases/tcase_tf_create_normal/execute", {"sync": False})
         run_ids.append(out["run_id"])
     print(f"queued {n} runs")
