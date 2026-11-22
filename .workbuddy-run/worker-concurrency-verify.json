@@ -1,0 +1,42 @@
+{
+  "queued": 4,
+  "completed": 4,
+  "distinct_owners": 4,
+  "results": [
+    {
+      "run_id": "run_179536352415007de3595e6fd",
+      "execution_status": "COMPLETED",
+      "verdict": "FAILED",
+      "lease_owner": "04deiMac.local-51718",
+      "ok": true
+    },
+    {
+      "run_id": "run_179536352415679949402fe09",
+      "execution_status": "COMPLETED",
+      "verdict": "FAILED",
+      "lease_owner": "04deiMac.local-51720",
+      "ok": true
+    },
+    {
+      "run_id": "run_1795363524161a8549949ce2f",
+      "execution_status": "COMPLETED",
+      "verdict": "FAILED",
+      "lease_owner": "04deiMac.local-51719",
+      "ok": true
+    },
+    {
+      "run_id": "run_17953635241662c4442166c36",
+      "execution_status": "COMPLETED",
+      "verdict": "PASSED",
+      "lease_owner": "c.local-51580-inline",
+      "ok": true
+    }
+  ],
+  "worker_outputs_tail": [
+    ": \"FAILED\", \"status\": \"COMPLETED\"}\n{\"ts\": \"2026-11-22T16:05:30.597935+00:00\", \"level\": \"WARNING\", \"logger\": \"traceguard.browser\", \"message\": \"browser_disconnected\"}\n{\"ts\": \"2026-11-22T16:05:30.631724+00:00\", \"level\": \"INFO\", \"logger\": \"traceguard.worker\", \"message\": \"worker_stopped\", \"executed\": 1}\n",
+    ": \"FAILED\", \"status\": \"COMPLETED\"}\n{\"ts\": \"2026-11-22T16:05:30.674354+00:00\", \"level\": \"WARNING\", \"logger\": \"traceguard.browser\", \"message\": \"browser_disconnected\"}\n{\"ts\": \"2026-11-22T16:05:30.714759+00:00\", \"level\": \"INFO\", \"logger\": \"traceguard.worker\", \"message\": \"worker_stopped\", \"executed\": 1}\n",
+    ": \"FAILED\", \"status\": \"COMPLETED\"}\n{\"ts\": \"2026-11-22T16:05:30.482777+00:00\", \"level\": \"WARNING\", \"logger\": \"traceguard.browser\", \"message\": \"browser_disconnected\"}\n{\"ts\": \"2026-11-22T16:05:30.519605+00:00\", \"level\": \"INFO\", \"logger\": \"traceguard.worker\", \"message\": \"worker_stopped\", \"executed\": 1}\n",
+    ": \"FAILED\", \"status\": \"COMPLETED\"}\n{\"ts\": \"2026-11-22T16:05:30.514616+00:00\", \"level\": \"WARNING\", \"logger\": \"traceguard.browser\", \"message\": \"browser_disconnected\"}\n{\"ts\": \"2026-11-22T16:05:30.544592+00:00\", \"level\": \"INFO\", \"logger\": \"traceguard.worker\", \"message\": \"worker_stopped\", \"executed\": 1}\n"
+  ],
+  "total_seconds": 10.9
+}

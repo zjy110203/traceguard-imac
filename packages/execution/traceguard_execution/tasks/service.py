@@ -13,7 +13,7 @@ import threading
 import time
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from traceguard_core.errors import AppError, ErrorCode
 from traceguard_core.ids import new_id
 from traceguard_persistence.db import Database, get_database
@@ -269,7 +269,13 @@ class TaskService:
             return True
 
     def claim_next_run(self, worker_id: str, ttl_seconds: float = 120.0) -> dict[str, Any] | None:
-        """Worker 领取：取最早排队的 Run；租约过期未提交的 Run 也会被回收领取。"""
+        """Worker 领取：取最早排队的 Run；租约过期未提交的 Run 也会被回收领取。
+
+        并发安全（RUN-003-E）：领取用单条条件 UPDATE 原子完成——
+        只有在租约仍然空闲/过期的那一刻，条件 UPDATE 才会命中（rowcount=1）。
+        两个进程同时竞争同一 Run 时，只有一个能成功，另一个换下一个候选，
+        杜绝"双方都读到空闲租约 → 双重执行"的竞态（此前可触发 tg_step 双写冲突）。
+        """
         now = time.time()
         with self.db.session() as s:
             candidates = s.scalars(
@@ -281,36 +287,44 @@ class TaskService:
                 .order_by(RunRow.created_at)
                 .limit(5)
             ).all()
-            target = None
-            for r in candidates:
-                if r.execution_status == "QUEUED" or not r.lease_owner:
-                    target = r
-                    break
-                if r.lease_expires_at < now:
-                    target = r
-                    break
-            if target is None:
-                return None
-            target.fencing_token += 1
-            target.lease_owner = worker_id
-            target.lease_expires_at = now + ttl_seconds
-            previous = target.execution_status
-            target.execution_status = "PREPARING"
-            target.started_at = target.started_at or now
-            task = s.get(TaskRow, target.task_id)
-            if task and task.status in {"CREATED", "QUEUED"}:
-                task.status = "RUNNING"
-                task.updated_at = now
-            return {
-                "run_id": target.run_id,
-                "task_id": target.task_id,
-                "workspace_id": target.workspace_id,
-                "attempt": target.attempt,
-                "fencing_token": target.fencing_token,
-                "previous_status": previous,
-                "lease_expires_at": target.lease_expires_at,
-                "ttl_s": ttl_seconds,
-            }
+            for cand in candidates:
+                if not (cand.execution_status == "QUEUED" or not cand.lease_owner or cand.lease_expires_at < now):
+                    continue
+                # 原子领取：条件 UPDATE + rowcount 判定，等价于对租约的 CAS
+                result = s.execute(
+                    update(RunRow)
+                    .where(
+                        RunRow.run_id == cand.run_id,
+                        RunRow.execution_status.in_(["QUEUED", "PREPARING", "RUNNING"]),
+                        (RunRow.lease_expires_at < now) | (RunRow.lease_owner.is_(None)),
+                    )
+                    .values(
+                        fencing_token=RunRow.fencing_token + 1,
+                        lease_owner=worker_id,
+                        lease_expires_at=now + ttl_seconds,
+                        execution_status="PREPARING",
+                        started_at=func.coalesce(RunRow.started_at, now),
+                    )
+                )
+                if result.rowcount != 1:
+                    continue  # 被其他 Worker 抢走，尝试下一个候选
+                target = s.get(RunRow, cand.run_id)
+                assert target is not None
+                task = s.get(TaskRow, target.task_id)
+                if task and task.status in {"CREATED", "QUEUED"}:
+                    task.status = "RUNNING"
+                    task.updated_at = now
+                return {
+                    "run_id": target.run_id,
+                    "task_id": target.task_id,
+                    "workspace_id": target.workspace_id,
+                    "attempt": target.attempt,
+                    "fencing_token": target.fencing_token,
+                    "previous_status": cand.execution_status,
+                    "lease_expires_at": target.lease_expires_at,
+                    "ttl_s": ttl_seconds,
+                }
+            return None
 
     def reap_expired_runs(self) -> list[dict[str, Any]]:
         """把租约过期的未完成 Run 标记为可重新领取（不改变执行历史）。"""
