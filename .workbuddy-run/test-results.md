@@ -122,3 +122,10 @@ Benchmark（真实）：
 - A：human 4/4 执行；compiler 2/2 执行；无可评估断言（Oracle 未绑定，契约要求）。
 
 新增：租约心跳单测（续期 + 被接管检测）。全量 205 passed。
+
+## 最终状态（2026-11-22 14:05）
+
+- 全量：205 passed；ruff check/format 全绿；前端 vue-tsc + vite build 通过。
+- 新库冷启动验证：`TG_DATABASE_URL=sqlite:////tmp/...` 启动 → 自动建表/迁移/种子（4 用例）
+  → 真实执行 `tcase_tf_create_normal` = PASSED / playwright / 8 步。
+- 端到端演示 `scripts/final_demo.py`：19 步全通过（执行/诊断/图/探针/自愈/晋升/回归/回滚/Benchmark）。

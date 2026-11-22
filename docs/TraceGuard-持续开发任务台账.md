@@ -33,7 +33,7 @@
 | T-04 | 真实浏览器执行引擎（BrowserManager） | PASS | P0 | T-01 | `execution/browser/` | 真实启动 Chromium/Edge，Context 隔离，异常释放 | — |
 | T-05 | PlaywrightObserver 强化（DOM/截图/console/network/trace） | PASS | P0 | T-04 | `runtime/playwright_observer.py` | TeamFlow 真实点击/填表/断言成功，证据落盘 | — |
 | T-06 | Run 执行器 + 事件/证据写入 | PASS | P0 | T-02,T-03,T-05 | `runtime/pipeline.py` | `POST /runs/{id}/execute` 真实执行并产出报告 | — |
-| T-07 | Worker 进程（租约/fencing/回收/优雅退出） | PASS（心跳续租未实现） | P1 | T-06 | `apps/workers` | 独立进程消费 QUEUED Run；崩溃后可被重新领取 | — |
+| T-07 | Worker 进程（租约/fencing/回收/心跳/优雅退出） | PASS | P1 | T-06 | `apps/workers` | 独立进程消费 QUEUED Run；崩溃后可被重新领取 | — |
 | T-08 | 完整 REST API（intent/testcase/oracle/evidence/graph/diagnosis/probe/repair/benchmark） | PASS | P0 | T-03 | `api/routers/*` | OpenAPI 覆盖全部资源，真实读写 | — |
 | T-09 | 事件/证据持久化适配器 | PASS | P0 | T-02 | `persistence/event_store.py` 等 | 与内存实现语义一致 + 重启可读 | — |
 | T-10 | Artifact Store + 完整性校验 | PASS（本地已实现；S3 未实现） | P1 | T-02 | `persistence/artifacts.py` | 截图/HTML/Trace 上传下载，sha256 校验 | — |

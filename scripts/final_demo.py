@@ -159,9 +159,7 @@ def main() -> int:
         )
         promoted = step(
             "promote",
-            lambda: call(
-                "POST", f"/repairs/{pid}/promote", {"idempotency_key": f"demo-{pid}"}
-            ),
+            lambda: call("POST", f"/repairs/{pid}/promote", {"idempotency_key": f"demo-{pid}"}),
         )
         if promoted:
             print(f"      promoted_version={promoted.get('promoted_version')}")

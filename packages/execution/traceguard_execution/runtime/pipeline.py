@@ -310,9 +310,7 @@ class RunPipeline:
 
         for idx, step in enumerate(tc.steps):
             if heartbeat is not None and heartbeat.lost:
-                raise AppError(
-                    ErrorCode.CONFLICT, "LEASE_LOST: 租约已被回收，停止写入证据"
-                )
+                raise AppError(ErrorCode.CONFLICT, "LEASE_LOST: 租约已被回收，停止写入证据")
             if step.action == "api":
                 rec = ObservationRecord(
                     step_id=step.step_id, action="api", observation={"preset": True}
