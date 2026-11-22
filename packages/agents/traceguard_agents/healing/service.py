@@ -23,6 +23,10 @@ from traceguard_contracts.models import TestCaseVersion
 from traceguard_core.errors import AppError, ErrorCode
 from traceguard_core.ids import new_id, utc_now_iso
 
+from .rules import assertion_preserved as _assertion_preserved
+from .rules import diff_allowed as _diff_allowed
+from .rules import oracle_integrity_ok as _oracle_integrity_ok
+
 
 class RepairStatus(str, Enum):
     DRAFT = "DRAFT"
@@ -50,23 +54,6 @@ REPAIR_TRANSITIONS: dict[RepairStatus, set[RepairStatus]] = {
     RepairStatus.PROMOTED: {RepairStatus.ROLLED_BACK},
     RepairStatus.REJECTED: set(),
     RepairStatus.ROLLED_BACK: set(),
-}
-
-# 允许修改的字段白名单（非业务语义）
-ALLOWED_DIFF_FIELDS = {
-    "steps[].target",
-    "steps[].value",
-    "run_config.wait_timeout",
-    "test_data_refs",
-    "steps[].action_config",
-}
-FORBIDDEN_DIFF_KEYWORDS = {
-    "assertion",
-    "oracle",
-    "expected_behavior",
-    "required",
-    "product_code",
-    "business",
 }
 
 
@@ -170,24 +157,9 @@ class SelfHealingService:
         if base_tc is None:
             prop.assertion_preservation = "FAIL"
             return False
-        base_req = [a for a in base_tc.assertions if a.required]
-        cand_req = [a for a in prop.candidate.assertions if a.required]
-        if len(cand_req) < len(base_req):
-            prop.assertion_preservation = "FAIL"
-            return False
-        base_map = {a.assertion_id: a for a in base_req}
-        for a in cand_req:
-            b = base_map.get(a.assertion_id)
-            if not b:
-                continue  # 新增必需断言允许（更严格）
-            if a.kind != b.kind or not a.required:
-                prop.assertion_preservation = "FAIL"
-                return False
-            if a.expected != b.expected:  # 预期变更 = 降低/改变严格度 → 禁止
-                prop.assertion_preservation = "FAIL"
-                return False
-        prop.assertion_preservation = "PASS"
-        return True
+        ok = _assertion_preserved(base_tc, prop.candidate)
+        prop.assertion_preservation = "PASS" if ok else "FAIL"
+        return ok
 
     def check_oracle_integrity(self, prop: RepairProposal) -> bool:
         """Oracle 引用与内容不得变更。"""
@@ -196,25 +168,13 @@ class SelfHealingService:
         if base_tc is None:
             prop.oracle_integrity = "FAIL"
             return False
-        base_oracles = {a.assertion_id: a.oracle_id for a in base_tc.assertions}
-        cand_oracles = {a.assertion_id: a.oracle_id for a in prop.candidate.assertions}
-        if base_oracles != cand_oracles:
-            prop.oracle_integrity = "FAIL"
-            return False
-        prop.oracle_integrity = "PASS"
-        return True
+        ok = _oracle_integrity_ok(base_tc, prop.candidate)
+        prop.oracle_integrity = "PASS" if ok else "FAIL"
+        return ok
 
     def validate_diff(self, prop: RepairProposal) -> bool:
         """Diff 只允许非业务语义字段；禁止涉及 assertion/oracle/business。"""
-        for d in prop.diff:
-            path = str(d.get("path", ""))
-            if any(k in path.lower() for k in FORBIDDEN_DIFF_KEYWORDS):
-                return False
-            if path not in ALLOWED_DIFF_FIELDS and not any(
-                path.startswith(a.replace("[]", "")) for a in ALLOWED_DIFF_FIELDS
-            ):
-                return False
-        return True
+        return _diff_allowed(prop.diff)
 
     # ---------- 状态转换 ----------
     def _transition(self, prop: RepairProposal, target: RepairStatus) -> None:

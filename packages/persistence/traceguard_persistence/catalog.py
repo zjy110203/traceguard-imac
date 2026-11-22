@@ -89,7 +89,8 @@ class CatalogService:
 
     # ---------------- TestIntent ----------------
     def create_intent(self, payload: dict[str, Any]) -> dict[str, Any]:
-        intent = TestIntent(**payload)
+        clean = {k: v for k, v in payload.items() if k in TestIntent.model_fields}
+        intent = TestIntent(**clean)
         with self.db.session() as s:
             s.add(
                 IntentRow(
@@ -147,8 +148,13 @@ class CatalogService:
         workspace_id: str = DEFAULT_WORKSPACE,
         review_status: str = "DRAFT",
     ) -> dict[str, Any]:
-        """创建用例新版本；已存在则递增版本，历史版本不被覆盖。"""
-        tc = TestCaseVersion(**payload)
+        """创建用例新版本；已存在则递增版本，历史版本不被覆盖。
+
+        入参允许携带展示用附加字段（review_history/workspace_id 等），
+        进入契约模型前按 model_fields 过滤，避免历史字段污染新版本。
+        """
+        clean = {k: v for k, v in payload.items() if k in TestCaseVersion.model_fields}
+        tc = TestCaseVersion(**clean)
         tc.review_status = review_status  # type: ignore[assignment]
         with self.db.session() as s:
             row = s.get(TestCaseRow, tc.testcase_id)
@@ -312,7 +318,7 @@ class CatalogService:
         approval_note: str = "",
         approved: bool = False,
     ) -> dict[str, Any]:
-        spec = OracleSpec(**payload)
+        spec = OracleSpec(**{k: v for k, v in payload.items() if k in OracleSpec.model_fields})
         with self.db.session() as s:
             prev = s.scalar(
                 select(OracleRow)

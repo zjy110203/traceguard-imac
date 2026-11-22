@@ -1,0 +1,351 @@
+export type Verdict = 'PASSED' | 'FAILED' | 'INCONCLUSIVE' | 'NOT_EVALUATED'
+export type ExecStatus =
+  | 'QUEUED'
+  | 'PREPARING'
+  | 'RUNNING'
+  | 'FINALIZING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'TIMED_OUT'
+  | 'CANCELLED'
+
+export interface Workspace {
+  workspace_id: string
+  name: string
+  description: string
+  created_at: string
+}
+
+export interface Intent {
+  intent_id: string
+  title: string
+  description: string
+  status: string
+  owner: string
+  workspace_id: string
+  requirement_refs: string[]
+  candidate_assertions: string[]
+  created_at: string
+  updated_at: string
+}
+
+export interface Locator {
+  strategy: string
+  value: string
+  source?: string
+}
+
+export interface TestStep {
+  step_id: string
+  action: string
+  target?: Locator | null
+  value?: string | null
+  description?: string
+}
+
+export interface AssertionSpec {
+  assertion_id: string
+  description: string
+  kind: string
+  required: boolean
+  expected: Record<string, unknown>
+  oracle_id?: string | null
+}
+
+export interface TestCaseVersion {
+  testcase_id: string
+  version: number
+  intent_ref?: string | null
+  steps: TestStep[]
+  assertions: AssertionSpec[]
+  review_status: string
+  compile_source: string
+  run_config: Record<string, unknown>
+  cleanup_policy: string
+  created_at: string
+}
+
+export interface TestCaseSummary {
+  testcase_id: string
+  title: string
+  workspace_id: string
+  intent_ref: string | null
+  review_status: string
+  latest_version: number
+  compile_source: string
+  step_count: number
+  assertion_count: number
+  updated_at: string
+}
+
+export interface TestCaseDetail extends TestCaseSummary {
+  latest: TestCaseVersion | null
+}
+
+export interface StepRow {
+  step_id: string
+  run_id: string
+  index: number
+  action: string
+  status: string
+  error: string | null
+  duration_ms: number
+  observation: Record<string, unknown>
+}
+
+export interface AssertionOutcome {
+  assertion_id: string
+  status: string
+  required: boolean
+  oracle_available: boolean
+  reason: string
+}
+
+export interface RunStepReport {
+  step_id: string
+  action: string
+  status: string
+  error: string | null
+  duration_ms: number
+  observation: Record<string, unknown>
+  artifacts: Record<string, ArtifactMeta>
+  evidence_ids?: string[]
+}
+
+export interface RunReport {
+  run_id: string
+  task_id: string
+  workspace_id: string
+  testcase_id?: string
+  testcase_version?: number
+  observer_mode: string
+  browser?: Record<string, unknown>
+  execution_status: string
+  test_verdict: string
+  duration_ms: number
+  steps: RunStepReport[]
+  assertion_outcomes: AssertionOutcome[]
+  summary: { total: number; passed: number; failed: number; not_evaluated: number; inconclusive: number }
+  oracle_state?: Record<string, unknown>
+  evidence_ids?: string[]
+  trace_artifact?: ArtifactMeta | null
+  errors?: string[]
+  error?: string | null
+}
+
+export interface Run {
+  run_id: string
+  task_id: string
+  workspace_id: string
+  attempt: number
+  testcase_version_id: string
+  execution_status: ExecStatus
+  test_verdict: Verdict
+  observer_mode: string
+  fencing_token: number
+  lease_owner: string | null
+  report: RunReport | null
+  error: string | null
+  created_at: number
+  started_at: number | null
+  ended_at: number | null
+}
+
+export interface TaskRow {
+  task_id: string
+  workspace_id: string
+  testcase_ref: string
+  testcase_version_id: string
+  application: string
+  status: string
+  mode: string
+  created_at: number
+}
+
+export interface ArtifactMeta {
+  artifact_id: string
+  sha256: string
+  size: number
+  media_type: string
+  original_name?: string
+}
+
+export interface Evidence {
+  evidence_id: string
+  kind: string
+  source_type: string
+  source_ref: string
+  sha256: string
+  workspace_id: string
+  content: Record<string, any>
+  raw_ref?: string | null
+  derivation_rule?: string | null
+  attachment_ref?: string | null
+  integrity_check: string
+  source_trust: string
+  redacted: boolean
+  captured_at: string
+}
+
+export interface EventRow {
+  event_id: string
+  event_type: string
+  workspace_id: string
+  context_refs: Record<string, string>
+  producer_id: string
+  producer_instance_id: string
+  sequence: number
+  occurred_at: string
+  observed_at: string
+  payload: Record<string, unknown>
+}
+
+export interface Hypothesis {
+  hypothesis_id: string
+  description: string
+  failure_domain: string
+  failure_mechanism: string
+  supporting: { id: string; trust: string; confirming: boolean }[]
+  contradicting: { id: string; trust: string }[]
+  status: string
+  contributing_factors: string[]
+  flaky_characteristic: boolean
+  suggested_by: string
+}
+
+export interface Diagnosis {
+  diagnosis_id: string
+  run_id: string
+  workspace_id: string
+  testcase_id?: string
+  symptom: string
+  outcome: string
+  disposition: string
+  root_causes: string[]
+  hypotheses: Hypothesis[]
+  evidence_refs: string[]
+  flaky_characteristic: boolean
+  engine: string
+  created_at: string
+  disposition_id?: string
+}
+
+export interface Disposition {
+  disposition_id: string
+  diagnosis_id: string
+  run_id: string
+  kind: string
+  route_target: string
+  review_status: string
+  reason: string
+  created_at: string
+}
+
+export interface GraphNode {
+  node_id: string
+  node_type: string
+  ref_id: string
+  properties: Record<string, unknown>
+}
+
+export interface GraphEdge {
+  edge_id: string
+  src: string
+  dst: string
+  relation: string
+  basis: string
+}
+
+export interface EvidenceGraph {
+  run_id: string
+  workspace_id: string
+  nodes: GraphNode[]
+  edges: GraphEdge[]
+  stats: { nodes: number; edges: number }
+  generated_at: string
+}
+
+export interface Repair {
+  proposal_id: string
+  testcase_id: string
+  workspace_id: string
+  base_testcase_version: string
+  base_version: number
+  status: string
+  sandbox_status: string
+  sandbox_run_id?: string | null
+  sandbox_verdict?: string
+  assertion_preservation: string
+  oracle_integrity: string
+  diff_allowed: boolean
+  diff: { path: string; from: unknown; to: unknown; step_index?: number; reason?: string }[]
+  reason: string
+  created_by: string
+  created_at: string
+  approval_ref: string | null
+  approved_by?: string
+  promotion_record: Record<string, any>
+  promoted_version?: number
+  rollback_record?: Record<string, any>
+  failure_reason?: string
+}
+
+export interface ProbeExecution {
+  execution_id: string
+  probe_id: string
+  workspace_id: string
+  run_id?: string | null
+  status: string
+  permission_decision: string
+  risk_level: string
+  params: Record<string, unknown>
+  result: Record<string, unknown>
+  reason: string
+  evidence_refs: string[]
+  executed_at: string
+}
+
+export interface BenchmarkMetric {
+  baseline: string
+  metric: string
+  value: number
+  numerator?: number | null
+  denominator?: number | null
+  ci_low?: number | null
+  ci_high?: number | null
+  note?: string
+}
+
+export interface BenchmarkExperiment {
+  experiment_id: string
+  name: string
+  kind: string
+  status: string
+  dataset: string
+  config: Record<string, unknown>
+  metrics: BenchmarkMetric[]
+  blocked_baselines?: { name: string; reason: string }[]
+  started_at?: string
+  ended_at?: string
+  notes?: string
+}
+
+export interface SystemHealth {
+  status: string
+  app: string
+  environment: string
+  database: { ok: boolean; dialect: string; error: string }
+  artifact_dir: string
+  worker: { id: string; inline_running: boolean }
+  counts: Record<string, number>
+}
+
+export interface BrowserHealth {
+  available: boolean
+  running?: boolean
+  channel?: string
+  version?: string
+  smoke?: boolean
+  config?: Record<string, unknown>
+  error?: string
+}

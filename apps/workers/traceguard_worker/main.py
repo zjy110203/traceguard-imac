@@ -1,0 +1,117 @@
+"""TraceGuard 独立 Worker：消费 QUEUED Run 并执行真实浏览器测试。
+
+与 API 内嵌 Worker 语义一致（同一 TaskService + RunPipeline）：
+- 租约领取 + fencing token，旧 Worker 提交被拒绝；
+- 执行前回收过期租约；
+- 崩溃/重启后任务可被其它 Worker 重新领取；
+- SIGTERM 优雅退出（当前任务完成后停止领取）。
+
+用法：
+    python -m traceguard_worker.main --once        # 执行一个任务后退出（CI/演示）
+    python -m traceguard_worker.main               # 常驻
+    python -m traceguard_worker.main --poll 0.5    # 自定义轮询间隔
+"""
+
+from __future__ import annotations
+
+import argparse
+import signal
+import socket
+import sys
+import time
+from types import FrameType
+
+from traceguard_core.config import get_settings
+from traceguard_core.logging import configure_logging, get_logger
+from traceguard_execution.browser.manager import close_current_thread_browser
+from traceguard_execution.runtime.pipeline import RunPipeline
+from traceguard_execution.tasks.service import TaskService
+from traceguard_persistence import ArtifactStore, CatalogService, Database, get_database
+from traceguard_persistence.stores import PersistentEventStore, PersistentEvidenceManager
+
+logger = get_logger("traceguard.worker")
+
+_stop = False
+
+
+def _handle_signal(signum: int, _frame: FrameType | None) -> None:
+    global _stop
+    _stop = True
+    logger.info("worker_shutdown_requested", signal=signum)
+
+
+def build_worker(worker_id: str) -> tuple[TaskService, RunPipeline]:
+    settings = get_settings()
+    db: Database = get_database()
+    db.create_schema()
+    tasks = TaskService(db)
+    pipeline = RunPipeline(
+        db,
+        tasks,
+        CatalogService(db),
+        PersistentEventStore(db),
+        PersistentEvidenceManager(db),
+        ArtifactStore(db, root=settings.artifact_dir),
+        worker_id=worker_id,
+    )
+    return tasks, pipeline
+
+
+def run(once: bool = False, poll_interval: float | None = None) -> int:
+    settings = get_settings()
+    configure_logging(settings.log_level, settings.log_json)
+    worker_id = settings.worker_id or f"{socket.gethostname()}-{__import__('os').getpid()}"
+    interval = poll_interval if poll_interval is not None else settings.worker_poll_interval_s
+    tasks, pipeline = build_worker(worker_id)
+    logger.info("worker_started", worker=worker_id, once=once, poll=interval)
+
+    executed = 0
+    try:
+        while not _stop:
+            try:
+                reaped = tasks.reap_expired_runs()
+                if reaped:
+                    logger.warning("expired_leases_reaped", count=len(reaped))
+                claimed = tasks.claim_next_run(worker_id, ttl_seconds=settings.worker_lease_ttl_s)
+                if not claimed:
+                    if once:
+                        logger.info("worker_no_task")
+                        return 0
+                    time.sleep(interval)
+                    continue
+                logger.info("run_claimed", run_id=claimed["run_id"], attempt=claimed["attempt"])
+                outcome = pipeline.execute(claimed["run_id"], lease=claimed)
+                executed += 1
+                logger.info(
+                    "run_finished",
+                    run_id=outcome.run_id,
+                    verdict=outcome.test_verdict,
+                    status=outcome.execution_status,
+                )
+                if once:
+                    return 0
+            except KeyboardInterrupt:  # pragma: no cover
+                break
+            except Exception:  # noqa: BLE001 - Worker 不得因单任务失败退出
+                logger.exception("worker_iteration_failed")
+                if once:
+                    return 1
+                time.sleep(max(1.0, interval))
+    finally:
+        close_current_thread_browser()
+        logger.info("worker_stopped", executed=executed)
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="TraceGuard Worker")
+    parser.add_argument("--once", action="store_true", help="执行一个任务后退出")
+    parser.add_argument("--poll", type=float, default=None, help="空闲轮询间隔（秒）")
+    args = parser.parse_args(argv)
+    signal.signal(signal.SIGTERM, _handle_signal)
+    signal.signal(signal.SIGINT, _handle_signal)
+    return run(once=args.once, poll_interval=args.poll)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

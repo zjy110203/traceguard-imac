@@ -325,25 +325,41 @@ def seed_teamflow_catalog(rt: Any, base_url: str = BASE) -> dict[str, Any]:
                     "oracle_tf_error_banner",
                 ),
                 _assertion(
-                    "a_biz_unchanged",
-                    "失败不得产生数据",
+                    "a_biz_created",
+                    "接口失败导致功能不可用：项目未创建",
                     "business_state",
                     {
                         "api": "/api/state/projects?workspace=default",
                         "field": "count",
-                        "op": "eq",
-                        "value": 0,
+                        "op": "gte",
+                        "value": 1,
                     },
-                    "oracle_tf_biz_unchanged",
+                    "oracle_tf_biz_count",
                 ),
             ],
         },
     ]
 
     for tc in testcases:
-        if rt.catalog.get_testcase(tc["testcase_id"]):
-            skipped += 1
-            continue
+        existing = rt.catalog.get_testcase(tc["testcase_id"])
+        if existing:
+            latest = existing.get("latest") or {}
+            existing_assertions = {a["assertion_id"] for a in latest.get("assertions", [])}
+            desired = {a["assertion_id"] for a in tc["assertions"]}
+            if existing_assertions == desired:
+                if latest.get("review_status") != "APPROVED":
+                    rt.catalog.review_testcase(
+                        tc["testcase_id"],
+                        int(latest.get("version", 1)),
+                        "APPROVED",
+                        reviewer="role:qa-lead",
+                        note="用例评审通过",
+                    )
+                    created += 1
+                else:
+                    skipped += 1
+                continue
+            # 契约要求版本不可变：语义升级通过新版本完成，并重新审核
         payload = {
             **{k: v for k, v in tc.items() if k != "title"},
             "version": 1,
@@ -355,9 +371,13 @@ def seed_teamflow_catalog(rt: Any, base_url: str = BASE) -> dict[str, Any]:
             "compile_source": "human",
             "created_at": utc_now_iso(),
         }
-        rt.catalog.create_testcase(payload, title=tc["title"], review_status="PENDING")
+        doc = rt.catalog.create_testcase(payload, title=tc["title"], review_status="PENDING")
         rt.catalog.review_testcase(
-            tc["testcase_id"], 1, "APPROVED", reviewer="role:qa-lead", note="用例评审通过"
+            tc["testcase_id"],
+            doc["version"],
+            "APPROVED",
+            reviewer="role:qa-lead",
+            note="用例评审通过",
         )
         created += 1
 

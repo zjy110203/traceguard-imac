@@ -186,3 +186,25 @@ def test_extra_fields_forbidden() -> None:
             route_target="repair",
             evil_field="x",
         )
+
+
+def test_exported_schemas_are_present_and_consistent() -> None:
+    """C01～C12 的 JSON Schema 必须已导出，且与模型字段一致（防漂移）。"""
+    import json
+    from pathlib import Path
+
+    schemas_dir = Path(__file__).resolve().parents[2] / "packages" / "contracts" / "schemas"
+    assert schemas_dir.is_dir(), "缺少导出的 schemas/ 目录"
+    files = sorted(p for p in schemas_dir.glob("*.schema.json"))
+    manifest = json.loads((schemas_dir / "manifest.json").read_text())
+    assert len(manifest) == 12, f"期望 12 组契约，实际 {len(manifest)}"
+    assert len(files) == sum(len(v) for v in manifest.values()) == 22, len(files)
+
+    event_schema = json.loads((schemas_dir / "C05_Event.EventEnvelope.schema.json").read_text())
+    assert "workspace_id" in event_schema["required"]
+    assert "idempotency_key" in event_schema["required"]
+
+    oracle_schema = json.loads((schemas_dir / "C03_Oracle.OracleSpec.schema.json").read_text())
+    approved_by_agent = oracle_schema["properties"]["approved_by_agent"]
+    # 契约层强制 Agent 不能批准正式 Oracle
+    assert approved_by_agent.get("const") is False or approved_by_agent.get("enum") == [False]

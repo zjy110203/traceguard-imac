@@ -7,11 +7,9 @@ export default defineConfig({
     host: '127.0.0.1',
     port: 5173,
     proxy: {
-      '/api': {
-        target: 'http://127.0.0.1:8000',
-        changeOrigin: true,
-        rewrite: (p: string) => p.replace(/^\/api/, ''),
-      },
+      // 后端路由本身带 /api/v1 前缀，不做 rewrite
+      '/api': { target: 'http://127.0.0.1:8000', changeOrigin: true },
     },
   },
+  build: { outDir: 'dist', sourcemap: false },
 })

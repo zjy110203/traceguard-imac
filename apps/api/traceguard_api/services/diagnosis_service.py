@@ -1,0 +1,385 @@
+"""诊断服务：把真实 Run 证据转成确定性 Hypothesis，再由 DiagnosisEngine 裁决。
+
+不变量：
+- Hypothesis 必须引用真实 evidence_id（不允许凭空创造证据）；
+- CONFIRMED 只能由 Deterministic Rule + TRUSTED/directly_confirming 证据产生；
+- 无足够证据 → INCONCLUSIVE，且 Disposition = NEEDS_MORE_EVIDENCE（不送 Repair）；
+- Flaky 是稳定性特征，不当作根因。
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from traceguard_core.errors import AppError, ErrorCode
+from traceguard_core.ids import new_id, utc_now_iso
+from traceguard_core.logging import get_logger
+from traceguard_evidence.diagnosis.engine import (
+    DiagnosisEngine,
+    EvidenceRef,
+    FailureDomain,
+    FailureMechanism,
+    Hypothesis,
+)
+
+from traceguard_api.runtime import Runtime
+
+logger = get_logger("traceguard.service.diagnosis")
+
+DOMAIN_UI = FailureDomain.PRODUCT
+DOMAIN_ENV = FailureDomain.ENVIRONMENT
+DOMAIN_ASSET = FailureDomain.TEST_ASSET
+DOMAIN_EXEC = FailureDomain.TEST_EXECUTION
+
+
+DISPOSITION_MAP = {
+    "PRODUCT_DEFECT": "PRODUCT_DEFECT",
+    "TEST_ASSET_ISSUE": "TEST_ASSET",
+    "TEST_EXECUTION_ISSUE": "TEST_EXECUTION",
+    "ENVIRONMENT_ISSUE": "ENVIRONMENT",
+    "AGENT_ISSUE": "AGENT",
+    "PLATFORM_ISSUE": "PLATFORM",
+    "NEEDS_MORE_EVIDENCE": "NEEDS_MORE_EVIDENCE",
+    "MANUAL_REVIEW": "MANUAL_REVIEW",
+}
+
+
+class DiagnosisService:
+    def __init__(self, rt: Runtime) -> None:
+        self.rt = rt
+        self.engine = DiagnosisEngine()
+
+    def diagnose(self, run_id: str) -> dict[str, Any]:
+        run = self.rt.tasks.get_run(run_id)
+        if not run:
+            raise AppError(ErrorCode.NOT_FOUND, "run not found")
+        report = run.get("report") or {}
+        if run["test_verdict"] == "PASSED":
+            raise AppError(
+                ErrorCode.PRECONDITION_FAILED, "run PASSED：无失败症状可诊断（不做伪诊断）"
+            )
+        if run["test_verdict"] == "NOT_EVALUATED":
+            raise AppError(
+                ErrorCode.PRECONDITION_FAILED,
+                "run NOT_EVALUATED：缺少 Oracle 或执行中断，只能补证据，不能下结论",
+            )
+        if run["execution_status"] != "COMPLETED" and not report.get("steps"):
+            raise AppError(
+                ErrorCode.PRECONDITION_FAILED, "run has no executable evidence (failed/cancelled)"
+            )
+
+        evidence = self.rt.evidence.list(run_id=run_id, limit=500)
+        by_step: dict[str, list[Any]] = {}
+        by_step_network: dict[str, list[Any]] = {}
+        state_evidence: list[Any] = []
+        for e in evidence:
+            step_id = str((e.content or {}).get("step_id", ""))
+            if step_id:
+                by_step.setdefault(step_id, []).append(e)
+                if e.source_type == "network":
+                    by_step_network.setdefault(step_id, []).append(e)
+            if e.source_type == "api" and "state_query" in str(e.source_ref):
+                state_evidence.append(e)
+
+        steps: list[dict[str, Any]] = report.get("steps") or []
+        outcomes: list[dict[str, Any]] = report.get("assertion_outcomes") or []
+        tc = self.rt.catalog.get_testcase(run["testcase_version_id"].split("@")[0].split(":")[0])
+        assert_kinds: dict[str, str] = {}
+        if tc and tc.get("latest"):
+            for a in tc["latest"].get("assertions", []):
+                assert_kinds[a["assertion_id"]] = a.get("kind", "ui")
+        # 报告自带 kind 时作为兜底（用例被后续版本覆盖后仍可复现历史诊断）
+        for o in outcomes:
+            if o.get("kind") and o.get("assertion_id") not in assert_kinds:
+                assert_kinds[o["assertion_id"]] = o["kind"]
+
+        failed_ui = [
+            o
+            for o in outcomes
+            if o["status"] == "FAILED" and assert_kinds.get(o["assertion_id"], "ui") == "ui"
+        ]
+        failed_biz = [
+            o
+            for o in outcomes
+            if o["status"] == "FAILED"
+            and assert_kinds.get(o["assertion_id"]) in {"business_state", "api"}
+        ]
+
+        hypotheses: list[Hypothesis] = []
+        observed: list[str] = []
+
+        http_5xx: list[dict[str, Any]] = []
+        network_failures: list[dict[str, Any]] = []
+        locator_timeouts: list[dict[str, Any]] = []
+        page_errors: list[dict[str, Any]] = []
+        run_timeouts = False
+        for s in steps:
+            obs = s.get("observation") or {}
+            if s.get("status") == "FAILED" and "locator" in str(s.get("error", "")).lower():
+                locator_timeouts.append(s)
+            if "Timeout" in str(s.get("error", "")) and "Locator" in str(s.get("error", "")):
+                if s not in locator_timeouts:
+                    locator_timeouts.append(s)
+            for he in obs.get("http_errors") or []:
+                if (he.get("status") or 0) >= 500:
+                    http_5xx.append({"step": s["step_id"], "entry": he})
+            for ne in obs.get("network") or []:
+                if ne.get("failure"):
+                    network_failures.append({"step": s["step_id"], "entry": ne})
+            for pe in obs.get("page_errors") or []:
+                page_errors.append({"step": s["step_id"], "entry": pe})
+            if obs.get("timed_out"):
+                run_timeouts = True
+            if s.get("status") == "FAILED":
+                observed.append(f"{s['step_id']}:{s.get('error', '')[:120]}")
+
+        def network_evidence_ids(step_id: str) -> list[str]:
+            ids = [e.evidence_id for e in by_step_network.get(step_id, [])]
+            return list(dict.fromkeys(ids))
+
+        def step_evidence_ids(step_id: str) -> list[str]:
+            ids = [e.evidence_id for e in by_step.get(step_id, [])]
+            for s in steps:
+                if s["step_id"] == step_id:
+                    ids.extend(s.get("evidence_ids") or [])
+            return list(dict.fromkeys(ids))
+
+        def refs(ids: list[str], confirming: bool = False) -> list[EvidenceRef]:
+            return [
+                EvidenceRef(evidence_id=i, source_trust="TRUSTED", directly_confirming=confirming)
+                for i in ids
+            ]
+
+        state_ids = [e.evidence_id for e in state_evidence]
+        biz_failed_detail = self._business_detail(failed_biz)
+
+        # ---- 持久化失败（UI 成功但业务未落库）→ 权威状态证据直接确认
+        # 若存在 5xx，则"未落库"是接口失败的后果，不作为独立根因（避免症状冒充根因）
+        if failed_biz and not failed_ui and not http_5xx:
+            hypotheses.append(
+                Hypothesis(
+                    hypothesis_id=new_id("hyp"),
+                    description="界面操作成功但业务状态未持久化（False Pass 风险）",
+                    failure_domain=DOMAIN_UI,
+                    failure_mechanism=FailureMechanism.PERSISTENCE,
+                    supporting=refs(state_ids, confirming=True),
+                    contributing_factors=[biz_failed_detail] if biz_failed_detail else [],
+                )
+            )
+
+        # ---- UI 渲染缺失（业务成功但界面无反馈）
+        if failed_ui and not failed_biz:
+            ui_ids: list[str] = []
+            if failed_ui:
+                for s in steps:
+                    if s.get("action") == "assert":
+                        ui_ids.extend(step_evidence_ids(s["step_id"]))
+            hypotheses.append(
+                Hypothesis(
+                    hypothesis_id=new_id("hyp"),
+                    description="业务状态正常但界面未渲染预期反馈（UI 渲染缺陷）",
+                    failure_domain=DOMAIN_UI,
+                    failure_mechanism=FailureMechanism.UI_RENDERING,
+                    supporting=refs(ui_ids or state_ids, confirming=True),
+                )
+            )
+
+        # ---- 接口 5xx
+        if http_5xx:
+            ids: list[str] = []
+            for item in http_5xx:
+                ids.extend(network_evidence_ids(item["step"]))
+                ids.extend(step_evidence_ids(item["step"]))
+            hypotheses.append(
+                Hypothesis(
+                    hypothesis_id=new_id("hyp"),
+                    description=f"后端接口返回 5xx（{http_5xx[0]['entry'].get('url', '')}）",
+                    failure_domain=DOMAIN_UI,
+                    failure_mechanism=FailureMechanism.API,
+                    supporting=refs(list(dict.fromkeys(ids)), confirming=True),
+                    contributing_factors=(
+                        [f"业务断言失败：{biz_failed_detail}"] if biz_failed_detail else []
+                    ),
+                )
+            )
+
+        # ---- 网络失败 / 超时
+        if network_failures or run_timeouts:
+            ids = []
+            for item in network_failures:
+                ids.extend(network_evidence_ids(item["step"]))
+                ids.extend(step_evidence_ids(item["step"]))
+            for s in steps:
+                if (s.get("observation") or {}).get("timed_out"):
+                    ids.extend(step_evidence_ids(s["step_id"]))
+            hypotheses.append(
+                Hypothesis(
+                    hypothesis_id=new_id("hyp"),
+                    description="网络请求失败或超时（环境/链路问题）",
+                    failure_domain=DOMAIN_ENV,
+                    failure_mechanism=FailureMechanism.NETWORK,
+                    supporting=refs(list(dict.fromkeys(ids)), confirming=bool(network_failures)),
+                )
+            )
+
+        # ---- 定位器失效（不确认，需补 DOM 证据）
+        if locator_timeouts and not failed_biz:
+            ids = []
+            for s in locator_timeouts:
+                ids.extend(step_evidence_ids(s["step_id"]))
+            hypotheses.append(
+                Hypothesis(
+                    hypothesis_id=new_id("hyp"),
+                    description="元素定位失败或等待超时（可能为用例资产问题）",
+                    failure_domain=DOMAIN_ASSET,
+                    failure_mechanism=FailureMechanism.LOCATOR,
+                    supporting=refs(list(dict.fromkeys(ids)), confirming=False),
+                    contributing_factors=[str(s.get("error", ""))[:160] for s in locator_timeouts][
+                        :3
+                    ],
+                )
+            )
+
+        # ---- 前端 JS 异常
+        if page_errors:
+            ids = []
+            for item in page_errors:
+                ids.extend(step_evidence_ids(item["step"]))
+            hypotheses.append(
+                Hypothesis(
+                    hypothesis_id=new_id("hyp"),
+                    description=f"页面存在未捕获 JS 异常（{str(page_errors[0]['entry'].get('message', ''))[:80]}）",
+                    failure_domain=DOMAIN_UI,
+                    failure_mechanism=FailureMechanism.UI_RENDERING,
+                    supporting=refs(list(dict.fromkeys(ids)), confirming=False),
+                )
+            )
+
+        # ---- Flaky 特征：同用例历史结论不一致
+        flaky = self._flaky_check(run)
+        if flaky:
+            for h in hypotheses:
+                h.flaky_characteristic = True
+            if not hypotheses:
+                hypotheses.append(
+                    Hypothesis(
+                        hypothesis_id=new_id("hyp"),
+                        description="历史结果不一致（Flaky 特征，需多次执行差异证据）",
+                        failure_domain=DOMAIN_EXEC,
+                        failure_mechanism=FailureMechanism.TIMING,
+                        supporting=refs(state_ids, confirming=False),
+                        flaky_characteristic=True,
+                    )
+                )
+
+        symptom = " | ".join(observed[:3]) or f"verdict={run['test_verdict']}"
+        result = self.engine.diagnose(symptom, hypotheses)
+        doc = {
+            "diagnosis_id": result.diagnosis_id,
+            "run_id": run_id,
+            "task_id": run["task_id"],
+            "workspace_id": run["workspace_id"],
+            "testcase_id": tc["testcase_id"] if tc else "",
+            "symptom": symptom,
+            "outcome": result.outcome.value,
+            "disposition": result.disposition.value,
+            "root_causes": result.root_causes,
+            "hypotheses": [h.to_dict() for h in hypotheses],
+            "evidence_refs": list(
+                dict.fromkeys([r["id"] for h in hypotheses for r in h.to_dict()["supporting"]])
+            ),
+            "flaky_characteristic": flaky,
+            "engine": "rule-v1",
+            "strategy_version": "v1",
+            "created_at": utc_now_iso(),
+        }
+        self.rt.docs.put(
+            doc_id=result.diagnosis_id,
+            kind="diagnosis",
+            doc=doc,
+            workspace_id=run["workspace_id"],
+            ref_id=run_id,
+            status=result.outcome.value,
+        )
+        disp = self._create_disposition(doc)
+        doc["disposition_id"] = disp["disposition_id"]
+        return doc
+
+    # ---------------------------------------------------------------- helpers
+    @staticmethod
+    def _business_detail(failed_biz: list[dict[str, Any]]) -> str:
+        if not failed_biz:
+            return ""
+        o = failed_biz[0]
+        return f"{o['assertion_id']}: {o.get('reason', '')}"
+
+    def _flaky_check(self, run: dict[str, Any]) -> bool:
+        siblings = [
+            r
+            for r in self.rt.tasks.list_runs(limit=200)
+            if r["testcase_version_id"] == run["testcase_version_id"]
+            and r["run_id"] != run["run_id"]
+        ]
+        verdicts = {r["test_verdict"] for r in siblings if r["test_verdict"] != "NOT_EVALUATED"}
+        verdicts.add(run["test_verdict"])
+        return "PASSED" in verdicts and "FAILED" in verdicts
+
+    def _create_disposition(self, diagnosis: dict[str, Any]) -> dict[str, Any]:
+        kind = DISPOSITION_MAP.get(diagnosis["disposition"], "MANUAL_REVIEW")
+        disposition_id = new_id("disp")
+        doc = {
+            "disposition_id": disposition_id,
+            "diagnosis_id": diagnosis["diagnosis_id"],
+            "run_id": diagnosis["run_id"],
+            "workspace_id": diagnosis["workspace_id"],
+            "kind": kind,
+            "route_target": _route_target(kind),
+            "review_status": "PENDING",
+            "reason": _route_reason(kind, diagnosis),
+            "created_at": utc_now_iso(),
+        }
+        self.rt.docs.put(
+            doc_id=disposition_id,
+            kind="disposition",
+            doc=doc,
+            workspace_id=diagnosis["workspace_id"],
+            ref_id=diagnosis["diagnosis_id"],
+            status="PENDING",
+        )
+        return doc
+
+    def list_diagnoses(
+        self, workspace_id: str | None = None, run_id: str | None = None, limit: int = 100
+    ) -> list[dict[str, Any]]:
+        recs = self.rt.docs.list(
+            kind="diagnosis", workspace_id=workspace_id, ref_id=run_id, limit=limit
+        )
+        return [r.to_dict() for r in recs]
+
+    def get(self, diagnosis_id: str) -> dict[str, Any] | None:
+        rec = self.rt.docs.get(diagnosis_id)
+        return rec.to_dict() if rec else None
+
+
+def _route_target(kind: str) -> str:
+    return {
+        "PRODUCT_DEFECT": "product-backlog",
+        "TEST_ASSET": "repair-candidate",
+        "TEST_EXECUTION": "retry-scheduler",
+        "ENVIRONMENT": "infra-oncall",
+        "AGENT": "agent-review",
+        "PLATFORM": "platform-oncall",
+        "NEEDS_MORE_EVIDENCE": "probe-planner",
+        "MANUAL_REVIEW": "human-triage",
+    }.get(kind, "human-triage")
+
+
+def _route_reason(kind: str, diagnosis: dict[str, Any]) -> str:
+    root = diagnosis.get("root_causes") or []
+    if kind == "NEEDS_MORE_EVIDENCE":
+        return "证据不足以确认根因：先补探针证据，不得直接进入修复"
+    if kind == "PRODUCT_DEFECT":
+        return f"已确认产品缺陷（根因 {len(root)} 条），需产品侧修复，不由自愈修改产品代码"
+    if kind == "TEST_ASSET":
+        return "疑似用例资产问题，可进入 Repair 候选（需人工审批）"
+    return "需人工分流"

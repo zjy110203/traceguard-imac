@@ -122,6 +122,7 @@ class PlaywrightObserver(Observer):
                     session.page.wait_for_load_state("networkidle", timeout=4000)
                 except Exception:  # noqa: BLE001 - 长轮询页面允许非 idle
                     pass
+                session.wait_network_settle()
                 obs = {
                     "url": session.current_url(),
                     "title": session.title(),
@@ -138,6 +139,7 @@ class PlaywrightObserver(Observer):
                     session.page.wait_for_load_state("networkidle", timeout=2500)
                 except Exception:  # noqa: BLE001
                     pass
+                session.wait_network_settle()
                 obs = {
                     "clicked": step.target.value if step.target else "",
                     "url": session.current_url(),
@@ -148,6 +150,7 @@ class PlaywrightObserver(Observer):
                 if loc is None:
                     raise ValueError("fill 缺少 target")
                 loc.first.fill(step.value or "", timeout=8000)
+                session.wait_network_settle(timeout_ms=800)
                 obs = {
                     "filled": step.target.value if step.target else "",
                     "value_len": len(step.value or ""),
@@ -181,6 +184,7 @@ class PlaywrightObserver(Observer):
                 else:
                     session.page.wait_for_timeout(500)
                     obs = {"waited_ms": 500}
+                session.wait_network_settle(timeout_ms=1500)
             elif action == "assert":
                 obs = self._assert_snapshot(step)
             elif action == "api":

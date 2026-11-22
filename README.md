@@ -2,62 +2,102 @@
 
 Agentic Web UI Testing & Quality Intelligence Platform（智能 Web UI 自动化测试与质量情报平台）
 
-> 架构基线 v1.1 · 实施路线图 v1.1（评审修订稿）· 由 WorkBuddy 自主工程任务持续开发
+> 真实浏览器执行 · 业务事实校验 · 证据可追溯 · 诊断与修复闭环
 
-## 项目状态
+## 现在能做什么
 
-本项目按五层建设路线、14 个实施阶段（0～13）、6 个里程碑（M0～M5）、C01～C12 契约体系交付。
-各阶段真实状态见 [`.workbuddy-run/phase-status.md`](.workbuddy-run/phase-status.md)，当前任务见
-[`.workbuddy-run/current-task.md`](.workbuddy-run/current-task.md)。
+- 用 **真实 Chromium** 执行 Web UI 用例，逐步采集截图 / DOM / ARIA / 网络 / 控制台证据；
+- 用 **独立状态查询 + 已审批 Oracle** 校验业务事实，识破"UI 显示成功但数据未落库"（False Pass）；
+- 对失败 Run 做 **证据驱动诊断**：多假设、确定性确认规则、处置分流，证据不足就是 `INCONCLUSIVE`；
+- 用 **只读探针** 补证据（五项校验 + 白名单 + 预算 + 审计）；
+- **Oracle-Protected Self-Healing**：只改定位/等待，真实沙箱验证，人工审批，CAS 晋升，可回滚；
+- 通过 **Vue 工作台** 完成全部操作：总览 / 需求 / 用例 / 执行 / Run 详情 / 诊断 / 修复 / Benchmark / 系统。
 
-**重要：** 路线图 v1.1 原文标注为"评审修订稿，通过项目评审后方可标记为正式冻结基线"。
-当前仓库未发现正式批准/冻结记录，因此不声称路线已冻结。已冻结的设计语义（Test Verdict
-四态聚合、Event 服务端注入 workspace_id、三级 CI 门禁、Repair 生命周期）作为实施依据；
-其余待确认事项见 [`.workbuddy-run/decisions.md`](.workbuddy-run/decisions.md)。
+## 快速开始
+
+```bash
+bash scripts/bootstrap.sh          # venv + 依赖 + Chromium + 前端构建
+bash scripts/run_teamflow.sh &     # 被测应用 :8001
+bash scripts/run_api.sh &          # 平台 :8000（内嵌 Worker）
+open http://127.0.0.1:8000/
+```
+
+详见 [`docs/quickstart.md`](docs/quickstart.md) 与 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)。
+
+## 真实结果（2026-11-22）
+
+| 场景 | Verdict | 说明 |
+|---|---|---|
+| 正常创建项目 | PASSED | 8 步，24 份证据 |
+| False Pass（TF-DB-001） | FAILED | UI 成功但业务 count=0 |
+| UI 提示缺失（TF-UI-001） | FAILED | 业务成功但界面无反馈 |
+| 接口 500（TF-API-001） | FAILED | 错误提示正确，功能不可用 |
+
+- 测试：**203 passed**；ruff 全绿；前端类型检查 + 构建通过。
+- Benchmark B（n=3）：传统报告基线首选根因 1/3、假通过 1/1；规则诊断 3/3、假通过 0/1。
+- Benchmark C：沙箱 1/1、断言保持 1/1；无保护对照断言保持 0/1。
+
+完整数值与阻塞项见 [`docs/BENCHMARK.md`](docs/BENCHMARK.md)、
+功能状态见 [`docs/FEATURE-STATUS.md`](docs/FEATURE-STATUS.md)。
 
 ## 架构原则（不可改变）
 
 1. Agent 是能力层，不是事实层。
 2. Playwright 负责正式测试的确定性执行。
-3. Oracle 独立于 Agent，正式 Oracle 必须来源可追溯并经审批。
+3. Oracle 独立于 Agent；正式 Oracle 必须来源可追溯并经具名人类审批。
 4. Task 与 Run 分离；重试产生新 Run，不覆盖历史。
-5. Execution Status / Test Verdict / Diagnosis Status / Diagnosis Outcome 四者分离。
+5. Execution Status / Test Verdict / Diagnosis / Disposition 四者分离。
 6. Event 与 Evidence 分离；原始 Evidence 不得被派生结果冒充。
-7. 相关性 ≠ 因果性；证据不足允许 INCONCLUSIVE。
-8. Self-Healing 不得删除必需 Assertion、不得修改正式 Oracle。
+7. 相关性 ≠ 因果；证据不足允许 INCONCLUSIVE，且不等同 PASSED。
+8. Self-Healing 不得削弱必需 Assertion、不得修改正式 Oracle。
 
-## 目录结构
+## 目录
 
 ```
-apps/
-  api/            FastAPI 平台入口
-  web/            Vue 3 + TypeScript 工作台
-  teamflow/       受控被测应用（最小 Web + 业务 API + 故障注入）
-  workers/        Celery Worker（阶段3启用）
-packages/
-  contracts/      C01～C12 JSON Schema 与契约测试
-  core/           配置、日志、错误、通用领域基础
-  execution/      Playwright 确定性执行内核（阶段2）
-  agents/         Explorer / Compiler / Diagnosis Agent（阶段5+）
-  evidence/       Event / Evidence / Graph（阶段4+）
-benchmark/        UI-FaultBench（阶段11）
-tests/            unit / contracts / integration / e2e
-infra/            Docker Compose、CI、部署配置
-docs/             设计、运维、报告（docs/FINAL 为最终交付报告）
-资料/             权威设计资料（只读依据，不入库）
-.workbuddy-run/   长期自主运行记录（进度/决策/测试/安全/恢复）
+apps/api          FastAPI 平台（routers + services + Runtime 组合根）
+apps/web          Vue3 + TS 工作台（9 页，真实 API）
+apps/teamflow     受控被测应用（页面 + 业务 API + 故障注入 + GT 隔离）
+apps/workers      独立 Worker（租约 + fencing + 优雅退出）
+packages/contracts    C01–C12 模型与枚举
+packages/core         配置 / 日志脱敏 / 错误码 / ID / 安全策略
+packages/persistence  统一 Schema / 迁移 / 事件 / 证据 / 产物 / 目录
+packages/execution    浏览器会话 / 观察者 / 断言 / Verdict / 任务服务 / Pipeline
+packages/agents       Explorer / Compiler / Gateway / 自愈规则
+packages/evidence     Event Store / Evidence / Graph / Diagnosis / Probe
+benchmark             UI-FaultBench 数据集（GT 私有）与实验执行器
+tests                 unit / contracts / integration / e2e / teamflow
+docs                  架构 / API / 数据库 / Agent / Playwright / 安全 / 交付报告
+.workbuddy-run/       长期运行记录（恢复点、决策、测试结果）
+资料/                 权威设计资料（只读）
 ```
 
-## 本地运行环境
+## 文档
 
-见 [`docs/quickstart.md`](docs/quickstart.md)（阶段0 产出后补充完整命令）。
+| 文档 | 说明 |
+|---|---|
+| [架构](docs/ARCHITECTURE.md) | 分层、链路、部署形态、与设计差异 |
+| [API](docs/API.md) | 81 个端点与语义约定 |
+| [数据库](docs/DATABASE.md) | 表结构、约束、迁移 |
+| [Agent 与自愈](docs/AGENTS.md) | 探索/编译/诊断/修复机制 |
+| [Playwright](docs/PLAYWRIGHT.md) | 浏览器执行、采集、已修缺陷 |
+| [证据与诊断](docs/EVIDENCE-AND-DIAGNOSIS.md) | 事件/证据/图/诊断规则 |
+| [Benchmark](docs/BENCHMARK.md) | 真实实验与阻塞项 |
+| [安全](docs/SECURITY.md) | 威胁模型与测试 |
+| [测试报告](docs/TEST-REPORT.md) | 203 测试与缺陷回归 |
+| [部署](docs/DEPLOYMENT.md) | 安装、配置、排错 |
+| [功能状态](docs/FEATURE-STATUS.md) | 已运行 / 未验证 / 阻塞 / 待决策 |
+| [最终交付报告](docs/FINAL/TraceGuard-Final-Delivery-Report.md) | 一页结论与交付索引 |
 
-当前机器约束（真实记录）：Docker 与 PostgreSQL 客户端不可用，因此阶段0/1 默认使用项目内
-venv + SQLite（经 SQLAlchemy 抽象，可平滑切换 PostgreSQL）；Docker Compose 配置仍会产出，
-但不作为本机验收的硬依赖。
+## 明确未完成
+
+- LLM 基线（无 API Key / 本地模型）→ Benchmark 标记 BLOCKED，不产生数值；
+- PostgreSQL 运行时未验证；Redis 未采用；MinIO/S3 未实现（本地内容寻址存储已实现完整性与篡改检测）；
+- 外部站点泛化未授权（P-EXT）；
+- 认证/RBAC 未实现（本地单租户）；
+- P03 / P08 / 路线图冻结需负责人决策（见 `docs/decisions/`）。
 
 ## 开发规范
 
 - 分支：`workbuddy/traceguard-autonomous`（本地开发，不推送远程）
-- 提交：阶段性本地提交，禁止提交密钥、禁止强制推送、禁止改写既有历史
-- 测试：所有验收数字来自真实测试日志，禁止 Mock 冒充真实运行
+- 提交：阶段性本地提交；禁止密钥入库；禁止强制推送/改写历史
+- 测试：验收数字必须来自真实测试日志；禁止 Mock 冒充真实运行

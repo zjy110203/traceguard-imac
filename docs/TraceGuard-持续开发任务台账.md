@@ -28,24 +28,24 @@
 | 编号 | 任务 | 状态 | 优先级 | 依赖 | 产物 | 验收标准 | 证据 |
 |---|---|---|---|---|---|---|---|
 | T-01 | 真实项目审计与任务台账 | PASS | P0 | — | 本文件 | 逐项对照代码核实 | 本文件 §0 |
-| T-02 | 统一持久化层（SQLite/PG 可切换）+ 迁移 | IN_PROGRESS | P0 | T-01 | `packages/persistence` | 事件/证据/Run 重启后仍可读；唯一约束生效 | 待补 |
-| T-03 | 组合根（服务容器）与配置 | TODO | P0 | T-02 | `api/runtime.py` | 所有模块由容器构造，单例可替换 | — |
-| T-04 | 真实浏览器执行引擎（BrowserManager） | TODO | P0 | T-01 | `execution/browser/` | 真实启动 Chromium/Edge，Context 隔离，异常释放 | — |
-| T-05 | PlaywrightObserver 强化（DOM/截图/console/network/trace） | TODO | P0 | T-04 | `runtime/playwright_observer.py` | TeamFlow 真实点击/填表/断言成功，证据落盘 | — |
-| T-06 | Run 执行器 + 事件/证据写入 | TODO | P0 | T-02,T-03,T-05 | `runtime/pipeline.py` | `POST /runs/{id}/execute` 真实执行并产出报告 | — |
-| T-07 | Worker 进程（租约/心跳/fencing/回收/优雅退出） | TODO | P1 | T-06 | `apps/workers` | 独立进程消费 QUEUED Run；崩溃后可被重新领取 | — |
-| T-08 | 完整 REST API（intent/testcase/oracle/evidence/graph/diagnosis/probe/repair/benchmark） | TODO | P0 | T-03 | `api/routers/*` | OpenAPI 覆盖全部资源，真实读写 | — |
-| T-09 | 事件/证据持久化适配器 | TODO | P0 | T-02 | `persistence/event_store.py` 等 | 与内存实现语义一致 + 重启可读 | — |
-| T-10 | Artifact Store（本地 + S3/MinIO 可切换）+ 完整性校验 | TODO | P1 | T-02 | `persistence/artifacts.py` | 截图/HTML/Trace 上传下载，sha256 校验 | — |
-| T-11 | 前端工程化骨架（router/pinia/API client/布局） | TODO | P0 | T-08 | `apps/web/src/**` | 路由可用，真实 API 数据，无 Mock | — |
-| T-12 | 前端业务页面（Intent/TestCase/Run/Evidence/Graph/Diagnosis/Repair/Benchmark） | TODO | P0 | T-11 | 同上 | 每个页面有 loading/error/empty 状态 | — |
-| T-13 | 全链路 Pipeline（Intent→…→Benchmark） | TODO | P0 | T-06,T-08 | `pipeline` 服务 + 集成测试 | 一次调用串起全链路，ID 关联一致 | — |
-| T-14 | UI-FaultBench 真实实验执行器 | TODO | P1 | T-13 | `benchmark/runner.py` | 真实跑 TeamFlow 场景并输出带分子分母的指标 | — |
+| T-02 | 统一持久化层（SQLite/PG 可切换）+ 迁移 | PASS | P0 | T-01 | `packages/persistence` | 事件/证据/Run 重启后仍可读；唯一约束生效 | 待补 |
+| T-03 | 组合根（服务容器）与配置 | PASS | P0 | T-02 | `api/runtime.py` | 所有模块由容器构造，单例可替换 | — |
+| T-04 | 真实浏览器执行引擎（BrowserManager） | PASS | P0 | T-01 | `execution/browser/` | 真实启动 Chromium/Edge，Context 隔离，异常释放 | — |
+| T-05 | PlaywrightObserver 强化（DOM/截图/console/network/trace） | PASS | P0 | T-04 | `runtime/playwright_observer.py` | TeamFlow 真实点击/填表/断言成功，证据落盘 | — |
+| T-06 | Run 执行器 + 事件/证据写入 | PASS | P0 | T-02,T-03,T-05 | `runtime/pipeline.py` | `POST /runs/{id}/execute` 真实执行并产出报告 | — |
+| T-07 | Worker 进程（租约/fencing/回收/优雅退出） | PASS（心跳续租未实现） | P1 | T-06 | `apps/workers` | 独立进程消费 QUEUED Run；崩溃后可被重新领取 | — |
+| T-08 | 完整 REST API（intent/testcase/oracle/evidence/graph/diagnosis/probe/repair/benchmark） | PASS | P0 | T-03 | `api/routers/*` | OpenAPI 覆盖全部资源，真实读写 | — |
+| T-09 | 事件/证据持久化适配器 | PASS | P0 | T-02 | `persistence/event_store.py` 等 | 与内存实现语义一致 + 重启可读 | — |
+| T-10 | Artifact Store + 完整性校验 | PASS（本地已实现；S3 未实现） | P1 | T-02 | `persistence/artifacts.py` | 截图/HTML/Trace 上传下载，sha256 校验 | — |
+| T-11 | 前端工程化骨架（router/API client/布局） | PASS | P0 | T-08 | `apps/web/src/**` | 路由可用，真实 API 数据，无 Mock | — |
+| T-12 | 前端业务页面 | PASS | P0 | T-11 | 同上 | 每个页面有 loading/error/empty 状态 | — |
+| T-13 | 全链路 Pipeline（Intent→…→Benchmark） | PASS | P0 | T-06,T-08 | `pipeline` 服务 + 集成测试 | 一次调用串起全链路，ID 关联一致 | — |
+| T-14 | UI-FaultBench 真实实验执行器 | PASS（A/B/C） | P1 | T-13 | `benchmark/runner.py` | 真实跑 TeamFlow 场景并输出带分子分母的指标 | — |
 | T-15 | LLM 基线 | BLOCKED | P2 | T-14 | — | 无 API Key / 无本地模型，不伪造结果 | 见 blockers |
-| T-16 | 安全与可靠性测试（并发/重复/中断/重启） | TODO | P1 | T-02,T-07 | tests | 幂等、租约回收、重启恢复有真实断言 | — |
+| T-16 | 安全与可靠性测试 | PASS（长稳压测未做） | P1 | T-02,T-07 | tests | 幂等、租约回收、重启恢复有真实断言 | — |
 | T-17 | P03 Oracle 多来源裁决决策文档 | NEEDS_REVIEW | P2 | — | `docs/decisions/P03-*.md` | 提供方案与风险，不擅自冻结 | — |
 | T-18 | P08 Repair 审批角色矩阵 | NEEDS_REVIEW | P2 | — | `docs/decisions/P08-*.md` | 角色矩阵 + 推荐，不擅自认定权限 | — |
-| T-19 | 文档与交付报告更新（真实状态） | TODO | P1 | 全部 | `docs/**` | 区分已运行/仅代码/Mock/阻塞 | — |
+| T-19 | 文档与交付报告更新（真实状态） | PASS | P1 | 全部 | `docs/**` | 区分已运行/仅代码/Mock/阻塞 | — |
 
 ## 2. 已知设计约束（不可破坏）
 

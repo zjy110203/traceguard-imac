@@ -25,3 +25,14 @@
 
 ## 冲突记录
 - 暂未发现文档间字段冲突。若后续发现，登记到本文件并保留待确认，不自行选择方案。
+
+## RUN-002 决策
+
+1. **持久化统一到单一 Database**（SQLite 默认，PG 方言兼容）：不再保留 execution.db 独立库；
+   迁移 v4 修复 Step 主键跨 Run 覆盖。
+2. **Worker 形态**：API 内嵌 Worker 为单机默认；独立 Worker 共用同一套 TaskService/Pipeline。
+   不引入 Celery/Redis（无必要复杂度，且本机无 Redis）。
+3. **浏览器渠道优先级**：内置 Chromium → msedge → chrome；显式失败即报错，不静默降级。
+4. **诊断 5xx 优先于下游症状**：接口失败导致的未落库不再作为独立根因。
+5. **Benchmark workspace 隔离**：实验运行与生成资产写入 `benchmark` workspace，避免污染主工作台。
+6. **不做的事**：不伪造 LLM 数值；不实现 S3 适配器并声称 MinIO 完成；不冻结 P03/P08。

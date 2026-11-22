@@ -97,3 +97,23 @@
 ### 测试
 - 全量 190 passed（新增 9 持久化单测 + 3 真实浏览器 E2E）。
 - ruff check / format 全绿。
+
+### 里程碑 C：完整 API（PASS）
+- 81 个端点（system/catalog/execution/evidence/intelligence/benchmark），OpenAPI 可查。
+- 任务一键执行（入队/同步）、队列统计与过期回收；执行走线程池避免事件循环冲突。
+- 统一错误码映射（404/409/412/422/403），集成测试 8 项覆盖门禁与越权。
+
+### 里程碑 D：前端工作台（PASS）
+- Vue3 + TS + vue-router，9 页：总览/需求/资产/执行/Run详情/诊断/修复/Benchmark/系统。
+- 真实 API、loading/error/empty、执行中轮询、证据图 SVG、修复生命周期按钮。
+- 单端口部署（API 托管 dist），浏览器截图人工核验；`vue-tsc + vite build` 通过。
+
+### 里程碑 E：业务闭环（PASS）
+- Explorer 真实探索（3 动作 allowed）→ Compiler 候选（PENDING + warning）→ 人工审核。
+- 诊断→图→探针→处置→修复（沙箱真实执行/审批/CAS 晋升/回归/回滚）全链路实测。
+
+### 里程碑 F：Benchmark 真实实验（PASS，部分基线 BLOCKED）
+- B：A 0.333 / C,D,E 1.000（n=3）；假通过 A 1/1、C/D/E 0/1。
+- C：沙箱 1/1、断言保持 1/1、无保护对照 0/1、回归失败 0/1。
+- A：人工 4/4、编译器 2/2 执行成功；无可评估断言（Oracle 未绑定）。
+- LLM / 手工基线 BLOCKED，不产生数值。

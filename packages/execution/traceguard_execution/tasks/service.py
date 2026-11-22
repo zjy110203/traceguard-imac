@@ -403,8 +403,9 @@ class TaskService:
         duration_ms: int = 0,
         observation: dict[str, Any] | None = None,
     ) -> None:
+        row_id = f"{run_id}:{step_id}"
         with self.db.session() as s:
-            existing = s.get(StepRow, step_id)
+            existing = s.get(StepRow, row_id)
             if existing:
                 existing.status = status
                 existing.error = error
@@ -415,9 +416,10 @@ class TaskService:
             else:
                 s.add(
                     StepRow(
+                        id=row_id,
                         step_id=step_id,
                         run_id=run_id,
-                        index=index,
+                        step_index=index,
                         status=status,
                         error=error,
                         action=action,
@@ -429,13 +431,13 @@ class TaskService:
     def list_steps(self, run_id: str) -> list[dict[str, Any]]:
         with self.db.session() as s:
             rows = s.scalars(
-                select(StepRow).where(StepRow.run_id == run_id).order_by(StepRow.index)
+                select(StepRow).where(StepRow.run_id == run_id).order_by(StepRow.step_index)
             ).all()
             return [
                 {
                     "step_id": r.step_id,
                     "run_id": r.run_id,
-                    "index": r.index,
+                    "index": r.step_index,
                     "action": r.action,
                     "status": r.status,
                     "error": r.error,

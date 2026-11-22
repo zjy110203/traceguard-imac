@@ -131,14 +131,17 @@ class RunRow(Base):
 
 class StepRow(Base):
     __tablename__ = "tg_step"
-    step_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    # step_id 在同一用例的每次 Run 中会重复，因此主键必须是 run 范围的
+    id: Mapped[str] = mapped_column(String(140), primary_key=True)
+    step_id: Mapped[str] = mapped_column(String(64), index=True)
     run_id: Mapped[str] = mapped_column(String(64), index=True)
-    index: Mapped[int] = mapped_column(Integer, default=0)
+    step_index: Mapped[int] = mapped_column(Integer, default=0)
     action: Mapped[str] = mapped_column(String(20), default="")
     status: Mapped[str] = mapped_column(String(24), default="PENDING")
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     duration_ms: Mapped[int] = mapped_column(Integer, default=0)
     observation: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    __table_args__ = (UniqueConstraint("run_id", "step_id", name="uq_step_run_step"),)
 
 
 class EventRow(Base):
@@ -248,4 +251,4 @@ class MetricRow(Base):
 
 
 Index("ix_tg_run_queue", RunRow.execution_status, RunRow.lease_expires_at)
-Index("ix_tg_step_run_idx", StepRow.run_id, StepRow.index)
+Index("ix_tg_step_run_idx", StepRow.run_id, StepRow.step_index)

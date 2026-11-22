@@ -203,6 +203,9 @@ class RunPipeline:
         return TestCaseVersion(**doc)
 
     def _guard_reviewed(self, tc: TestCaseVersion) -> None:
+        # 沙箱验证允许执行 PENDING 候选版本（run_config.sandbox_only 显式标记，不是普通入口）
+        if tc.review_status == "PENDING" and (tc.run_config or {}).get("sandbox_only") is True:
+            return
         if tc.review_status != "APPROVED":
             raise AppError(
                 ErrorCode.PRECONDITION_FAILED,
@@ -378,6 +381,10 @@ class RunPipeline:
 
         # Trusted Oracle：独立业务状态查询（页面文本不算业务事实）
         state_ctx = self._query_states(tc, base_url)
+        state_evidence = self._record_state_evidence(
+            workspace_id, run["run_id"], tc, base_url, state_ctx
+        )
+        evidence_ids.extend(state_evidence)
 
         outcomes = []
         for spec in tc.assertions:
@@ -432,6 +439,7 @@ class RunPipeline:
                     "duration_ms": r.duration_ms,
                     "observation": _compact_observation(r.observation),
                     "artifacts": r.artifacts,
+                    "evidence_ids": r.evidence_refs,
                 }
                 for r in records
             ],
@@ -440,6 +448,9 @@ class RunPipeline:
                     "assertion_id": o.assertion_id,
                     "status": o.status.value,
                     "required": o.required,
+                    "kind": next(
+                        (a.kind for a in tc.assertions if a.assertion_id == o.assertion_id), "ui"
+                    ),
                     "oracle_available": o.oracle_available,
                     "reason": o.reason,
                 }
@@ -456,6 +467,51 @@ class RunPipeline:
         return report
 
     # --------------------------------------------------------------- evidence
+    def _record_state_evidence(
+        self,
+        workspace_id: str,
+        run_id: str,
+        tc: TestCaseVersion,
+        base_url: str,
+        state_ctx: dict[str, Any],
+    ) -> list[str]:
+        """把 Trusted Oracle 的独立状态查询结果登记为证据（可追溯、可诊断引用）。"""
+        paths: set[str] = set()
+        for spec in tc.assertions:
+            api_path = (spec.expected or {}).get("api")
+            if isinstance(api_path, str) and api_path.startswith("/"):
+                paths.add(api_path)
+        if not paths:
+            paths.add(self.options.state_path)
+        ids: list[str] = []
+        for path in sorted(paths):
+            key = path.split("?")[0].strip("/").replace("/", "_")
+            payload = state_ctx.get(key)
+            if payload is None:
+                continue
+            evd_id = new_id("evd")
+            try:
+                self.evidence.add_raw(
+                    evd_id,
+                    "api",
+                    f"state_query:{path}",
+                    workspace_id,
+                    {
+                        "run_id": run_id,
+                        "path": path,
+                        "response": payload,
+                        "source": "independent_state_query",
+                        "base_url": base_url,
+                    },
+                    source_trust="TRUSTED",
+                    do_redact=True,
+                    run_id=run_id,
+                )
+                ids.append(evd_id)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("state_evidence_failed", error=str(exc))
+        return ids
+
     def _record_step_evidence(
         self,
         workspace_id: str,
@@ -465,6 +521,36 @@ class RunPipeline:
         observer_mode: str,
     ) -> list[str]:
         ids: list[str] = []
+        # 网络/控制台信号单独登记为证据（诊断需要可引用的权威来源）
+        obs = rec.observation or {}
+        signals = {
+            "http_errors": obs.get("http_errors") or [],
+            "network": obs.get("network") or [],
+            "page_errors": obs.get("page_errors") or [],
+            "console_errors": [c for c in (obs.get("console") or []) if c.get("type") == "error"],
+        }
+        if any(signals.values()):
+            evd_id = new_id("evd")
+            try:
+                self.evidence.add_raw(
+                    evd_id,
+                    "network" if observer_mode == "playwright" else "network",
+                    f"step_signals:{step.step_id}",
+                    workspace_id,
+                    {
+                        "run_id": run_id,
+                        "step_id": step.step_id,
+                        "action": step.action,
+                        "signals": signals,
+                        "page_url": obs.get("page_url", ""),
+                    },
+                    source_trust="TRUSTED",
+                    do_redact=True,
+                    run_id=run_id,
+                )
+                ids.append(evd_id)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("signal_evidence_failed", error=str(exc))
         if not rec.artifacts:
             return ids
         for kind, art in rec.artifacts.items():

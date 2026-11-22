@@ -108,6 +108,9 @@ def _apply_migrations(db: Database) -> None:
                 statement = statement.strip()
                 if not statement:
                     continue
+                if statement.startswith("__CALLABLE__:"):
+                    _MIGRATION_CALLABLES[statement.split(":", 1)[1]](conn)
+                    continue
                 try:
                     conn.execute(text(statement))
                 except Exception as exc:  # noqa: BLE001 - 并发启动下的重复 DDL
@@ -148,8 +151,57 @@ MIGRATIONS: list[tuple[int, str, list[str]]] = [
             "CREATE INDEX IF NOT EXISTS ix_tg_doc_kind_ws ON tg_doc (kind, workspace_id)",
         ],
     ),
+    (
+        4,
+        "step_primary_key_scoped_by_run",
+        ["__CALLABLE__:_migrate_step_primary_key"],
+    ),
 ]
 
+
+def _migrate_step_primary_key(conn) -> None:  # type: ignore[no-untyped-def]
+    """把 tg_step 主键从 step_id 改为 (run_id, step_id)。
+
+    旧模型里 step_id 全局主键，同一用例多次 Run 会互相覆盖（真实缺陷）。
+    迁移必须兼容：全新库（已是新结构）、旧库（有 index 列）、PostgreSQL。
+    """
+    from sqlalchemy import inspect
+
+    inspector = inspect(conn)
+    if "tg_step" not in inspector.get_table_names():
+        return
+    cols = {c["name"] for c in inspector.get_columns("tg_step")}
+    if "id" in cols:
+        return  # 新结构，无需迁移
+    conn.execute(text("ALTER TABLE tg_step RENAME TO tg_step_legacy"))
+    conn.execute(
+        text(
+            "CREATE TABLE tg_step ("
+            "id VARCHAR(140) PRIMARY KEY, "
+            "step_id VARCHAR(64) NOT NULL, run_id VARCHAR(64) NOT NULL, "
+            "step_index INTEGER NOT NULL DEFAULT 0, action VARCHAR(20) DEFAULT '', "
+            "status VARCHAR(24) DEFAULT 'PENDING', error TEXT, "
+            "duration_ms INTEGER DEFAULT 0, observation TEXT)"
+        )
+    )
+    legacy_cols = {c["name"] for c in inspect(conn).get_columns("tg_step_legacy")}
+    index_expr = '"index"' if "index" in legacy_cols else "0"
+    select_sql = (
+        "SELECT run_id || ':' || step_id, step_id, run_id, "
+        f"{index_expr}, action, status, error, duration_ms, observation FROM tg_step_legacy"
+    )
+    insert_sql = (
+        "INSERT INTO tg_step (id, step_id, run_id, step_index, action, status, error, "
+        "duration_ms, observation) " + select_sql
+    )
+    if conn.dialect.name == "sqlite":
+        conn.execute(text(insert_sql.replace("INSERT INTO", "INSERT OR IGNORE INTO", 1)))
+    else:
+        conn.execute(text(insert_sql + " ON CONFLICT DO NOTHING"))
+    conn.execute(text("DROP TABLE tg_step_legacy"))
+
+
+_MIGRATION_CALLABLES = {"_migrate_step_primary_key": _migrate_step_primary_key}
 
 _lock = threading.RLock()
 _default_db: Database | None = None

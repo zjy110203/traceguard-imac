@@ -97,3 +97,26 @@ INCONCLUSIVE 来自 HttpObserver 降级路径无法解析客户端 JS 渲染的�
 - mypy、httpx2 未装完（PyPI 25~45 kB/s）；不阻塞。
 - Playwright 包下载极慢（多次后台尝试累计 >25 分钟仍未完成）；真实浏览器 PoC 待包就绪。**PlaywrightObserver 代码已就绪但未在本机验证浏览器启动，不谎称已完成真实浏览器 E2E。**
 - 本机阶段2 采用 HttpObserver（真实 HTTP）降级路径，报告明确标记 mode=http-fallback。
+
+## RUN-002（2026-11-22）
+
+```
+.venv/bin/python -m pytest -q
+203 passed in 17.0s
+
+.venv/bin/ruff check packages apps tests scripts benchmark
+All checks passed!
+
+cd apps/web && npm run build
+vue-tsc --noEmit && vite build → ✓ built（14 chunk）
+```
+
+新增：持久化 9、真实浏览器 E2E 3、API 集成 8、诊断规则 5、契约 Schema 防漂移 1。
+
+真实浏览器执行（Chromium 159）：正常 PASSED / FalsePass FAILED / UI 缺失 FAILED / API500 FAILED。
+独立 Worker：`run_179532554450234b50cc4c5e5` COMPLETED PASSED playwright（8 步 / 25 证据）。
+
+Benchmark（真实）：
+- B：A_raw 0.333 / C,D,E 1.000（3/3）；A false_pass 1/1，C/D/E 0/1。
+- C：sandbox 1/1；assertion preservation 1/1 vs 无保护 0/1；regression 0/1。
+- A：human 4/4 执行；compiler 2/2 执行；无可评估断言（Oracle 未绑定，契约要求）。

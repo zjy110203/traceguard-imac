@@ -1,9 +1,0 @@
-- navigation:
-  - link "项目":
-    - /url: /projects
-- heading "新建项目" [level=1]
-- text: 项目名称
-- textbox "项目名称": TraceGuard 接口失败-2026-11-22T05:02:47
-- text: 描述
-- textbox "描述"
-- button "创建"

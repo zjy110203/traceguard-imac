@@ -202,6 +202,27 @@ class BrowserSession:
         except Exception:  # noqa: BLE001
             return ""
 
+    def wait_network_settle(self, timeout_ms: int = 3000, quiet_ms: int = 250) -> None:
+        """等待在途请求收敛。
+
+        Playwright 的事件是在 API 调用期间派发的：仅 await load_state 可能拿不到
+        fetch 的响应事件。这里轮询 page.wait_for_timeout 驱动事件循环，直到
+        没有 status=None 的请求，或超时（超时也返回，由调用方按"在途"记录）。
+        """
+        deadline = time.time() + timeout_ms / 1000
+        quiet_deadline = time.time() + quiet_ms / 1000
+        while time.time() < deadline:
+            pending = [e for e in self.network if e.status is None and not e.failure]
+            if not pending:
+                if time.time() >= quiet_deadline:
+                    return
+            else:
+                quiet_deadline = time.time() + quiet_ms / 1000
+            try:
+                self.page.wait_for_timeout(100)
+            except Exception:  # noqa: BLE001
+                return
+
     def console_since(self, offset: int) -> list[dict[str, Any]]:
         return self.console[offset:]
 

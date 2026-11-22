@@ -61,7 +61,7 @@ class Settings(BaseSettings):
     worker_id: str = ""  # 空则自动生成 host-pid
     worker_poll_interval_s: float = 1.0
     worker_lease_ttl_s: float = 120.0
-    inline_worker: bool = False  # API 内嵌后台执行器（本地演示/单机部署）
+    inline_worker: bool = True  # 单机模式：API 内嵌后台执行器（生产可关掉并独立部署 Worker）
 
     @field_validator("log_level")
     @classmethod
