@@ -15,12 +15,39 @@
   --fail-weak: #fef3f2;
   --warn: #b54708;
   --warn-weak: #fffaeb;
+  --incon: #6941c6;
+  --incon-weak: #f4f3ff;
   --neutral-weak: #f2f4f7;
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   --radius: 8px;
   --shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
   --shadow-lg: 0 8px 24px rgba(16, 24, 40, 0.1);
   color-scheme: light;
+}
+
+/* 深色主题预留（默认不启用；开放前需完整验收） */
+[data-theme='dark'] {
+  --bg: #0c111d;
+  --surface: #161b26;
+  --surface-2: #1c2230;
+  --border: #2a3140;
+  --border-strong: #3a4354;
+  --text: #f2f4f7;
+  --text-2: #b6bfcf;
+  --text-3: #7f8ca3;
+  --brand: #7c9bff;
+  --brand-weak: #1d2a52;
+  --pass: #4cd98f;
+  --pass-weak: #10291c;
+  --fail: #f97066;
+  --fail-weak: #3c1a17;
+  --warn: #fdb022;
+  --warn-weak: #3a2a10;
+  --incon: #b6a5f5;
+  --incon-weak: #251d3f;
+  --neutral-weak: #1c2230;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
 * { box-sizing: border-box; }
@@ -192,6 +219,7 @@ tbody tr:hover { background: #fafbfc; }
 .badge.fail { color: var(--fail); background: var(--fail-weak); border-color: #fecdca; }
 .badge.warn { color: var(--warn); background: var(--warn-weak); border-color: #fedf89; }
 .badge.info { color: var(--brand); background: var(--brand-weak); border-color: #c7d7fe; }
+.badge.incon { color: var(--incon); background: var(--incon-weak); border-color: #d6bbfb; }
 .badge.neutral { color: var(--text-2); background: var(--neutral-weak); border-color: var(--border); }
 
 .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -305,3 +333,71 @@ pre.json {
 
 .bench-grid { display: grid; gap: 14px; grid-template-columns: minmax(340px, 0.95fr) minmax(640px, 1.9fr); align-items: start; }
 @media (max-width: 1240px) { .bench-grid { grid-template-columns: 1fr; } }
+
+/* ===== RUN-003-A 新增 ===== */
+
+/* 网格子项允许收缩（防止 SVG/表格固有宽度撑破布局） */
+.split > *, .master-detail > *, .flex-col > *, .grid > * { min-width: 0; }
+
+/* 主从布局：左主区 + 右详情面板（Run 详情 / 探索详情） */
+.master-detail { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: 14px; align-items: start; }
+@media (max-width: 1150px) { .master-detail { grid-template-columns: 1fr; } }
+
+/* 可点击的步骤/列表行 */
+.row-click { cursor: pointer; }
+.row-click.selected { background: var(--brand-weak); }
+.row-click.selected td { border-color: transparent; }
+
+/* 分布条图例 */
+.legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--text-2); }
+.legend .swatch { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+
+/* 详情小节 */
+.detail-section { padding: 10px 0; border-bottom: 1px solid var(--border); }
+.detail-section:last-child { border-bottom: none; }
+.detail-section .sec-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-bottom: 6px; font-weight: 600; }
+
+/* 截图查看器：点击放大 */
+.shot-frame { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--surface-2); cursor: zoom-in; }
+.shot-frame img { display: block; width: 100%; height: auto; }
+
+/* 图表容器 */
+.chart-wrap { width: 100%; }
+.chart-wrap svg { display: block; width: 100%; max-width: 100%; }
+
+/* 网络请求行 */
+.net-row { display: grid; grid-template-columns: 44px 1fr auto; gap: 8px; font-size: 12px; padding: 4px 0; border-bottom: 1px dashed var(--border); align-items: baseline; }
+.net-row:last-child { border-bottom: none; }
+.net-status { font-weight: 600; text-align: center; }
+.net-status.s2x { color: var(--pass); }
+.net-status.s3x { color: var(--brand); }
+.net-status.s4x { color: var(--warn); }
+.net-status.s5x { color: var(--fail); }
+.net-status.serr { color: var(--fail); }
+
+/* console 行 */
+.console-row { display: grid; grid-template-columns: 56px 1fr; gap: 8px; font-size: 12px; padding: 3px 0; }
+.console-row .ctype { font-weight: 600; }
+.console-row .ctype.error { color: var(--fail); }
+.console-row .ctype.warning { color: var(--warn); }
+.console-row .ctype.info { color: var(--brand); }
+
+/* 待办聚合卡 */
+.todo-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px dashed var(--border); font-size: 13px; }
+.todo-item:last-child { border-bottom: none; }
+.todo-item .num { font-size: 18px; font-weight: 650; min-width: 28px; text-align: right; }
+
+/* 探索动作条目 */
+.action-item { border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; background: var(--surface); }
+.action-item .act-head { display: flex; gap: 8px; align-items: center; font-size: 12.5px; }
+
+/* tab 徽标 */
+.tabs button .tabn { font-size: 11px; color: var(--text-3); margin-left: 2px; }
+
+/* 焦点可见性强化（可访问性） */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}
+
+/* 深色模式下侧栏保持原深色（不受 data-theme 影响，侧栏本就深色） */

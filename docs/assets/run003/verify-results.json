@@ -1,0 +1,87 @@
+[
+  {
+    "page": "dashboard-通过率指标",
+    "ok": true,
+    "detail": "metrics=4"
+  },
+  {
+    "page": "dashboard-四态分布图例",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "page": "dashboard-趋势图SVG",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "page": "dashboard-待办区",
+    "ok": true,
+    "detail": "todos=2"
+  },
+  {
+    "page": "dashboard-真实数据(204 run可见)",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "page": "explorer-诚实标注规则实现",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "page": "explorer-页面渲染",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "page": "rundetail-主从布局",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "page": "rundetail-步骤详情面板",
+    "ok": true,
+    "detail": "sections=5"
+  },
+  {
+    "page": "rundetail-步骤截图存在",
+    "ok": true,
+    "detail": "shots=1"
+  },
+  {
+    "page": "rundetail-网络区渲染",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "page": "rundetail-断言表",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "page": "diagnoses-渲染",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "page": "repairs-渲染",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "page": "benchmark-渲染",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "page": "mobile-侧栏隐藏",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "page": "mobile-无横向溢出",
+    "ok": true,
+    "detail": ""
+  }
+]

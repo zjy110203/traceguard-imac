@@ -34,14 +34,23 @@ const LABELS: Record<string, string> = {
   SUPPORTED: '有支持',
   CONTRADICTED: '被反驳',
   CANDIDATE: '候选',
+  PRODUCT_DEFECT: '产品缺陷',
+  TEST_ASSET: '测试资产问题',
+  TEST_EXECUTION: '测试执行问题',
+  ENVIRONMENT: '环境问题',
+  AGENT: 'Agent 问题',
+  PLATFORM: '平台问题',
+  NEEDS_MORE_EVIDENCE: '证据不足',
+  MANUAL_REVIEW: '需人工复核',
 }
 
 const tone = computed(() => {
   const v = (props.value ?? '').toUpperCase()
   if (['PASSED', 'COMPLETED', 'APPROVED', 'SUCCEEDED', 'PROMOTED', 'CONFIRMED', 'VALIDATED'].includes(v)) return 'pass'
   if (['FAILED', 'TIMED_OUT', 'REJECTED', 'VALIDATION_FAILED', 'PROMOTION_FAILED', 'BLOCKED', 'CONTRADICTED'].includes(v)) return 'fail'
-  if (['PENDING', 'PENDING_APPROVAL', 'RUNNING', 'QUEUED', 'PREPARING', 'FINALIZING', 'INCONCLUSIVE', 'PROBABLE', 'SUPPORTED', 'CANDIDATE', 'VALIDATING', 'PROMOTING', 'DRAFT'].includes(v)) return 'warn'
-  if (['NOT_EVALUATED', 'CANCELLED', 'ROLLED_BACK'].includes(v)) return 'neutral'
+  if (['INCONCLUSIVE'].includes(v)) return 'incon'
+  if (['PENDING', 'PENDING_APPROVAL', 'RUNNING', 'QUEUED', 'PREPARING', 'FINALIZING', 'PROBABLE', 'SUPPORTED', 'CANDIDATE', 'VALIDATING', 'PROMOTING', 'DRAFT'].includes(v)) return 'warn'
+  if (['NOT_EVALUATED', 'CANCELLED', 'ROLLED_BACK', 'PRODUCT_DEFECT', 'TEST_ASSET', 'TEST_EXECUTION', 'ENVIRONMENT', 'AGENT', 'PLATFORM', 'NEEDS_MORE_EVIDENCE', 'MANUAL_REVIEW'].includes(v)) return 'neutral'
   return 'neutral'
 })
 

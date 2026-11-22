@@ -1,0 +1,21 @@
+{
+  "verified_at": "2026-11-22T21:17+08:00",
+  "provider": "deepseek",
+  "base_url": "https://api.deepseek.com",
+  "auth": "Bearer key from DEEPSEEK_API_KEY (.env, gitignored; key value not recorded here)",
+  "models_endpoint": {
+    "ok": true,
+    "models": [
+      {"id": "deepseek-flash", "name": "DeepSeek-V4.1-Flash", "context_window": 1048576, "max_output_tokens": 393216, "input_modalities": ["text", "image"]},
+      {"id": "deepseek-v4-pro", "name": "DeepSeek-V4-Pro", "context_window": 1048576, "max_output_tokens": 393216, "input_modalities": ["text"]}
+    ]
+  },
+  "smoke_test": {
+    "endpoint": "/chat/completions",
+    "model": "deepseek-flash",
+    "ok": true,
+    "json_output": true,
+    "usage": {"prompt_tokens": 51, "completion_tokens": 23, "total_tokens": 74, "cached_tokens": 0, "reasoning_tokens": 11}
+  },
+  "retired_models_not_used": ["deepseek-chat", "deepseek-reasoner"]
+}

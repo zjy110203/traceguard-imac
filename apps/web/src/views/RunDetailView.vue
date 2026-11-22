@@ -1,4 +1,6 @@
 <script setup lang="ts">
+/** Run 详情：步骤轨迹 + 右侧详情面板（截图/网络/Console/观察），
+ *  证据跳转、诊断、探针、事件流。全部数据来自真实 API。 */
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, artifactUrl, fmtDuration, fmtTime } from '../api'
@@ -8,7 +10,7 @@ import GraphView from '../components/GraphView.vue'
 import JsonBlock from '../components/JsonBlock.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import { notify, notifyError } from '../toast'
-import type { Diagnosis, EventRow, Evidence, EvidenceGraph, Run, StepRow } from '../types'
+import type { Diagnosis, EventRow, Evidence, EvidenceGraph, GraphNode, Run, StepRow } from '../types'
 
 const route = useRoute()
 const router = useRouter()
@@ -19,13 +21,15 @@ const steps = ref<StepRow[]>([])
 const evidence = ref<Evidence[]>([])
 const events = ref<EventRow[]>([])
 const graph = ref<EvidenceGraph | null>(null)
+const graphNode = ref<GraphNode | null>(null)
 const diagnoses = ref<Diagnosis[]>([])
 const loading = ref(true)
 const error = ref('')
 const tab = ref<'steps' | 'evidence' | 'assertions' | 'graph' | 'diagnosis' | 'events'>('steps')
 const busy = ref('')
 const probes = ref<{ probe_id: string; params: Record<string, unknown>; why: string; score: number }[]>([])
-
+const selectedStepId = ref<string | null>(null)
+const zoomShot = ref<string | null>(null)
 let timer: number | undefined
 
 const report = computed(() => run.value?.report ?? null)
@@ -52,6 +56,10 @@ async function load(silent = false) {
     evidence.value = ev
     events.value = evt
     diagnoses.value = dg
+    if (!selectedStepId.value) {
+      const failedFirst = st.find((s) => s.status === 'FAILED')
+      selectedStepId.value = failedFirst?.step_id ?? st[0]?.step_id ?? null
+    }
     error.value = ''
   } catch (e) {
     if (!silent) error.value = e instanceof Error ? e.message : String(e)
@@ -60,6 +68,50 @@ async function load(silent = false) {
   }
 }
 
+// ---------- 步骤详情数据（来自真实证据与报告） ----------
+const selectedStep = computed(() => steps.value.find((s) => s.step_id === selectedStepId.value) ?? null)
+const selectedReportStep = computed(() => report.value?.steps?.find((s) => s.step_id === selectedStepId.value) ?? null)
+const selectedScreenshot = computed(() => {
+  const art = selectedReportStep.value?.artifacts?.screenshot
+  return art?.artifact_id ? artifactUrl(art.artifact_id) : null
+})
+
+interface NetEntry { url: string; method?: string; status: number | null; failure?: string | null; resource_type?: string; duration_ms?: number | null }
+interface ConsoleEntry { type: string; text: string; location?: Record<string, unknown> }
+
+const stepSignals = computed(() => {
+  const evd = evidence.value.find((e) => e.source_ref === `step_signals:${selectedStepId.value}`)
+  const sig = evd?.content?.signals ?? {}
+  return {
+    network: (sig.network ?? []) as NetEntry[],
+    consoleErrors: (sig.console_errors ?? []) as ConsoleEntry[],
+    pageErrors: (sig.page_errors ?? []) as { message?: string }[],
+    httpErrors: (sig.http_errors ?? []) as Record<string, unknown>[],
+  }
+})
+
+const stepOtherEvidence = computed(() => {
+  const sid = selectedStepId.value
+  if (!sid) return []
+  return evidence.value.filter(
+    (e) => e.source_ref?.includes(sid) && e.source_ref !== `step_signals:${sid}`,
+  )
+})
+
+function obsPairs(obs: Record<string, unknown> | undefined): [string, string][] {
+  if (!obs) return []
+  const keys = ['url', 'title', 'present', 'count', 'text', 'visible', 'status', 'filled', 'clicked', 'pressed', 'waited_ms', 'error', 'timed_out']
+  return keys
+    .filter((k) => obs[k] !== undefined && obs[k] !== '' && obs[k] !== null)
+    .map((k) => [k, typeof obs[k] === 'object' ? JSON.stringify(obs[k]) : String(obs[k]).slice(0, 160)])
+}
+
+function selectStep(id: string, target: 'steps' | 'evidence' = 'steps') {
+  selectedStepId.value = id
+  tab.value = target
+}
+
+// ---------- 原有动作 ----------
 async function diagnose() {
   busy.value = 'diag'
   try {
@@ -125,7 +177,7 @@ async function retry() {
   busy.value = 'retry'
   try {
     const r = await api.post<{ run_id: string }>(`/tasks/${run.value.task_id}/runs`)
-    notify('已创建新的重试 Run')
+    notify('已创建新的重试 Run（历史保留）')
     router.push(`/runs/${r.run_id}`)
   } catch (e) {
     notifyError(e)
@@ -134,18 +186,12 @@ async function retry() {
   }
 }
 
-function screenshotOf(stepId: string): string | null {
-  const step = report.value?.steps?.find((s) => s.step_id === stepId)
-  const art = step?.artifacts?.screenshot
-  return art?.artifact_id ? artifactUrl(art.artifact_id) : null
-}
-
-function obsPairs(obs: Record<string, unknown> | undefined): [string, string][] {
-  if (!obs) return []
-  const keys = ['url', 'title', 'present', 'count', 'text', 'visible', 'status', 'filled', 'clicked', 'pressed', 'waited_ms', 'error', 'timed_out']
-  return keys
-    .filter((k) => obs[k] !== undefined && obs[k] !== '' && obs[k] !== null)
-    .map((k) => [k, typeof obs[k] === 'object' ? JSON.stringify(obs[k]) : String(obs[k]).slice(0, 160)])
+function statusClass(s: number | null | undefined): string {
+  if (s == null) return 'serr'
+  if (s < 300) return 's2x'
+  if (s < 400) return 's3x'
+  if (s < 500) return 's4x'
+  return 's5x'
 }
 
 onMounted(async () => {
@@ -201,7 +247,7 @@ onUnmounted(() => window.clearInterval(timer))
           <div class="metric">
             <div class="label">证据</div>
             <div class="value">{{ evidence.length }}</div>
-            <div class="hint">截图 / DOM / ARIA / 状态</div>
+            <div class="hint">不可变 · SHA-256 完整性校验</div>
           </div>
         </div>
 
@@ -213,21 +259,31 @@ onUnmounted(() => window.clearInterval(timer))
         </div>
 
         <div class="tabs">
-          <button :class="{ active: tab === 'steps' }" @click="tab = 'steps'">步骤轨迹 ({{ steps.length }})</button>
-          <button :class="{ active: tab === 'assertions' }" @click="tab = 'assertions'">断言 ({{ report?.assertion_outcomes?.length ?? 0 }})</button>
-          <button :class="{ active: tab === 'evidence' }" @click="tab = 'evidence'">证据 ({{ evidence.length }})</button>
+          <button :class="{ active: tab === 'steps' }" @click="tab = 'steps'">步骤轨迹 <span class="tabn">{{ steps.length }}</span></button>
+          <button :class="{ active: tab === 'assertions' }" @click="tab = 'assertions'">断言 <span class="tabn">{{ report?.assertion_outcomes?.length ?? 0 }}</span></button>
+          <button :class="{ active: tab === 'evidence' }" @click="tab = 'evidence'">证据 <span class="tabn">{{ evidence.length }}</span></button>
           <button :class="{ active: tab === 'graph' }" @click="tab = 'graph'">证据图</button>
-          <button :class="{ active: tab === 'diagnosis' }" @click="tab = 'diagnosis'">诊断 ({{ diagnoses.length }})</button>
-          <button :class="{ active: tab === 'events' }" @click="tab = 'events'">事件 ({{ events.length }})</button>
+          <button :class="{ active: tab === 'diagnosis' }" @click="tab = 'diagnosis'">诊断 <span class="tabn">{{ diagnoses.length }}</span></button>
+          <button :class="{ active: tab === 'events' }" @click="tab = 'events'">事件 <span class="tabn">{{ events.length }}</span></button>
         </div>
 
-        <!-- steps -->
-        <div v-if="tab === 'steps'" class="split">
+        <!-- steps：主从布局 -->
+        <div v-if="tab === 'steps'" class="master-detail">
           <div class="card">
-            <div class="card-head"><h2>执行轨迹</h2><div class="actions"><span class="small muted">浏览器真实操作 + 观测</span></div></div>
+            <div class="card-head">
+              <h2>执行轨迹</h2>
+              <div class="actions"><span class="small muted">点击步骤查看截图 / 网络 / Console</span></div>
+            </div>
             <div class="card-body">
               <div class="timeline">
-                <div v-for="(s, i) in steps" :key="s.step_id + s.index" class="timeline-item">
+                <div
+                  v-for="(s, i) in steps"
+                  :key="s.step_id + s.index"
+                  class="timeline-item"
+                  :class="{ 'row-click': true, selected: selectedStepId === s.step_id }"
+                  style="border-radius: 6px; padding: 8px; margin-left: -8px"
+                  @click="selectStep(s.step_id)"
+                >
                   <div class="timeline-dot" :class="s.status === 'PASSED' ? 'pass' : s.status === 'FAILED' ? 'fail' : ''">
                     {{ s.status === 'PASSED' ? '✓' : s.status === 'FAILED' ? '!' : i + 1 }}
                   </div>
@@ -237,10 +293,11 @@ onUnmounted(() => window.clearInterval(timer))
                       <span class="badge neutral">{{ s.action }}</span>
                       <StatusBadge :value="s.status" />
                       <span class="small muted">{{ fmtDuration(s.duration_ms) }}</span>
+                      <button v-if="s.step_id" class="sm ghost" style="margin-left: auto" @click.stop="selectStep(s.step_id, 'evidence')">证据 ↗</button>
                     </div>
                     <div v-if="s.error" class="small mono" style="color: var(--fail); margin-top: 3px">{{ s.error }}</div>
                     <div class="chip-row" style="margin-top: 5px">
-                      <span v-for="[k, v] in obsPairs(s.observation)" :key="k" class="chip">
+                      <span v-for="[k, v] in obsPairs(s.observation).slice(0, 4)" :key="k" class="chip">
                         <b style="font-weight: 600">{{ k }}</b>: {{ v }}
                       </span>
                     </div>
@@ -250,20 +307,74 @@ onUnmounted(() => window.clearInterval(timer))
               </div>
             </div>
           </div>
+
           <div class="card">
-            <div class="card-head"><h2>步骤截图</h2></div>
-            <div class="card-body">
-              <div class="flex-col">
-                <div v-for="s in report?.steps ?? []" :key="'shot-' + s.step_id">
-                  <div v-if="screenshotOf(s.step_id)" style="margin-bottom: 8px">
-                    <div class="small muted">{{ s.step_id }} · {{ s.action }}</div>
-                    <a :href="screenshotOf(s.step_id)!" target="_blank">
-                      <img :src="screenshotOf(s.step_id)!" style="width: 100%; border: 1px solid var(--border); border-radius: 6px" />
-                    </a>
+            <div class="card-head">
+              <h2>步骤详情</h2>
+              <div class="actions"><span class="mono small muted">{{ selectedStepId?.slice(-12) || '—' }}</span></div>
+            </div>
+            <div class="card-body" style="max-height: 620px; overflow: auto">
+              <div v-if="!selectedStep" class="empty">点击左侧步骤查看详情</div>
+              <template v-else>
+                <div class="detail-section">
+                  <div class="sec-title">截图</div>
+                  <div v-if="selectedScreenshot" class="shot-frame" @click="zoomShot = selectedScreenshot">
+                    <img :src="selectedScreenshot" :alt="`步骤 ${selectedStep.action} 截图`" loading="lazy" />
+                  </div>
+                  <div v-else class="empty">该步骤无截图</div>
+                </div>
+
+                <div class="detail-section">
+                  <div class="sec-title">观察数据</div>
+                  <div class="kv">
+                    <template v-for="[k, v] in obsPairs(selectedStep.observation)" :key="k">
+                      <dt>{{ k }}</dt><dd class="mono small">{{ v }}</dd>
+                    </template>
+                    <template v-if="!obsPairs(selectedStep.observation).length">
+                      <dt>—</dt><dd class="muted">无观察数据</dd>
+                    </template>
                   </div>
                 </div>
-                <div v-if="!report?.steps?.length" class="empty">暂无截图</div>
-              </div>
+
+                <div class="detail-section">
+                  <div class="sec-title">网络请求（{{ stepSignals.network.length }}）</div>
+                  <div v-if="stepSignals.network.length">
+                    <div v-for="(n, i) in stepSignals.network.slice(-20)" :key="i" class="net-row">
+                      <span class="net-status mono" :class="statusClass(n.status)">{{ n.status ?? (n.failure ? 'ERR' : '…') }}</span>
+                      <span class="mono truncate" :title="n.url">{{ (n.method ?? 'GET') + ' ' + n.url }}</span>
+                      <span class="small muted nowrap">{{ n.resource_type || '' }}</span>
+                    </div>
+                  </div>
+                  <div v-else class="empty">该步骤无网络信号证据</div>
+                </div>
+
+                <div class="detail-section">
+                  <div class="sec-title">Console 错误（{{ stepSignals.consoleErrors.length }}）· 页面异常（{{ stepSignals.pageErrors.length }}）</div>
+                  <div v-if="stepSignals.consoleErrors.length || stepSignals.pageErrors.length">
+                    <div v-for="(c, i) in stepSignals.consoleErrors" :key="'c' + i" class="console-row">
+                      <span class="ctype mono">{{ c.type }}</span>
+                      <span class="mono small">{{ c.text }}</span>
+                    </div>
+                    <div v-for="(p, i) in stepSignals.pageErrors" :key="'p' + i" class="console-row">
+                      <span class="ctype mono error">pageerror</span>
+                      <span class="mono small">{{ p.message }}</span>
+                    </div>
+                  </div>
+                  <div v-else class="empty">无 Console 错误（该步骤网络证据中）</div>
+                </div>
+
+                <div class="detail-section">
+                  <div class="sec-title">关联证据（{{ stepOtherEvidence.length }}）</div>
+                  <div v-if="stepOtherEvidence.length">
+                    <div v-for="e in stepOtherEvidence" :key="e.evidence_id" class="flex" style="margin-bottom: 4px">
+                      <span class="badge neutral">{{ e.source_type }}</span>
+                      <span class="mono small truncate">{{ e.source_ref }}</span>
+                      <button class="sm ghost" style="margin-left: auto" @click="tab = 'evidence'">查看 ↗</button>
+                    </div>
+                  </div>
+                  <div v-else class="empty">无关联证据</div>
+                </div>
+              </template>
             </div>
           </div>
         </div>
@@ -273,7 +384,7 @@ onUnmounted(() => window.clearInterval(timer))
           <div class="card-head"><h2>断言判定</h2><div class="actions"><span class="small muted">基于 Oracle 与确定性规则，不由 Agent 判定</span></div></div>
           <div class="card-body tight scroll-x">
             <table>
-              <thead><tr><th>断言</th><th>状态</th><th>必需</th><th>Oracle</th><th>判定依据</th></tr></thead>
+              <thead><tr><th>断言</th><th>状态</th><th>必需</th><th>Oracle</th><th>判定依据</th><th></th></tr></thead>
               <tbody>
                 <tr v-for="a in report?.assertion_outcomes ?? []" :key="a.assertion_id">
                   <td class="mono small">{{ a.assertion_id }}</td>
@@ -281,8 +392,9 @@ onUnmounted(() => window.clearInterval(timer))
                   <td class="small">{{ a.required ? '是' : '否' }}</td>
                   <td class="small">{{ a.oracle_available ? '已加载' : '不可用' }}</td>
                   <td class="small mono">{{ a.reason }}</td>
+                  <td><button class="sm ghost" @click="tab = 'evidence'">关联证据 ↗</button></td>
                 </tr>
-                <tr v-if="!report?.assertion_outcomes?.length"><td colspan="5"><div class="empty">无断言结果</div></td></tr>
+                <tr v-if="!report?.assertion_outcomes?.length"><td colspan="6"><div class="empty">无断言结果</div></td></tr>
               </tbody>
             </table>
           </div>
@@ -290,7 +402,12 @@ onUnmounted(() => window.clearInterval(timer))
 
         <!-- evidence -->
         <div v-if="tab === 'evidence'" class="card">
-          <div class="card-head"><h2>证据</h2><div class="actions"><span class="small muted">不可变 · SHA-256 完整性</span></div></div>
+          <div class="card-head">
+            <h2>证据</h2>
+            <div class="actions">
+              <span class="small muted">不可变 · SHA-256 完整性 · 从证据可返回所属 Run</span>
+            </div>
+          </div>
           <div class="card-body">
             <EvidenceGallery :items="evidence" />
           </div>
@@ -301,12 +418,23 @@ onUnmounted(() => window.clearInterval(timer))
           <div class="card-head">
             <h2>Evidence Graph</h2>
             <div class="actions">
-              <span class="small muted">{{ graph?.stats?.nodes ?? 0 }} 节点 / {{ graph?.stats?.edges ?? 0 }} 边</span>
+              <span class="small muted">{{ graph?.stats?.nodes ?? 0 }} 节点 / {{ graph?.stats?.edges ?? 0 }} 边 · 悬停高亮邻接，点击查看节点</span>
               <button class="sm" @click="buildGraph">重建</button>
             </div>
           </div>
           <div class="card-body">
-            <GraphView :graph="graph" />
+            <GraphView :graph="graph" @select="graphNode = $event" />
+            <div v-if="graphNode" style="margin-top: 10px">
+              <div class="flex" style="margin-bottom: 6px">
+                <span class="badge info">{{ graphNode.node_type }}</span>
+                <span class="mono small strong">{{ graphNode.node_id }}</span>
+                <button class="sm ghost" style="margin-left: auto" @click="graphNode = null">关闭</button>
+              </div>
+              <div class="kv" style="margin-bottom: 8px">
+                <dt>引用对象</dt><dd class="mono small">{{ graphNode.ref_id }}</dd>
+              </div>
+              <JsonBlock :data="graphNode.properties" />
+            </div>
           </div>
         </div>
 
@@ -327,13 +455,13 @@ onUnmounted(() => window.clearInterval(timer))
               <div class="actions">
                 <StatusBadge :value="d.outcome" />
                 <StatusBadge :value="d.disposition" />
+                <span class="badge neutral">判定引擎：{{ d.engine }}</span>
                 <router-link :to="`/diagnoses/${d.diagnosis_id}`" class="small">详情 →</router-link>
               </div>
             </div>
             <div class="card-body">
               <div class="kv">
                 <dt>症状</dt><dd class="mono small">{{ d.symptom }}</dd>
-                <dt>引擎</dt><dd>{{ d.engine }}</dd>
                 <dt>根因数量</dt><dd>{{ d.root_causes.length }}</dd>
               </div>
               <div class="hr" />
@@ -347,6 +475,7 @@ onUnmounted(() => window.clearInterval(timer))
                 <div class="small" style="margin-top: 4px">{{ h.description }}</div>
                 <div class="chip-row" style="margin-top: 5px">
                   <span v-for="s in h.supporting" :key="s.id" class="chip">{{ s.id.slice(-10) }} · {{ s.trust }}{{ s.confirming ? ' · confirming' : '' }}</span>
+                  <span v-for="s in h.contradicting" :key="'x' + s.id" class="chip" style="color: var(--fail)">{{ s.id.slice(-10) }} · contradicting</span>
                 </div>
               </div>
             </div>
@@ -402,5 +531,13 @@ onUnmounted(() => window.clearInterval(timer))
         </div>
       </div>
     </AsyncBlock>
+
+    <!-- 截图放大 -->
+    <div v-if="zoomShot" class="modal-backdrop" @click="zoomShot = null">
+      <div style="max-width: 92vw; max-height: 92vh">
+        <img :src="zoomShot" style="max-width: 92vw; max-height: 88vh; border-radius: 8px; box-shadow: var(--shadow-lg)" alt="步骤截图（放大）" />
+        <div class="small muted" style="text-align: center; margin-top: 8px; color: #fff">点击任意处关闭</div>
+      </div>
+    </div>
   </div>
 </template>

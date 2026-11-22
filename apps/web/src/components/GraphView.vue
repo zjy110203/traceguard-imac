@@ -4,6 +4,8 @@ import type { EvidenceGraph, GraphEdge, GraphNode } from '../types'
 
 const props = defineProps<{ graph: EvidenceGraph | null }>()
 
+const emit = defineEmits<{ select: [node: GraphNode] }>()
+
 const ORDER = ['Run', 'Step', 'Assertion', 'Event', 'Evidence', 'Hypothesis', 'Source']
 const COLOR: Record<string, string> = {
   Run: '#2f5bea',
@@ -106,7 +108,8 @@ function isDim(n: GraphNode) {
           />
         </g>
         <g v-for="p in Object.values(layout.positions)" :key="p.node.node_id" :opacity="isDim(p.node) ? 0.25 : 1"
-          @mouseenter="hovered = p.node.node_id" @mouseleave="hovered = null">
+          style="cursor: pointer"
+          @mouseenter="hovered = p.node.node_id" @mouseleave="hovered = null" @click="emit('select', p.node)">
           <rect :x="p.x" :y="p.y" width="104" height="22" rx="5"
             :fill="COLOR[p.node.node_type] || '#475467'" />
           <text :x="p.x + 8" :y="p.y + 15" fill="#fff" font-size="10.5" font-family="ui-monospace, monospace">
