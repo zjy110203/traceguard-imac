@@ -178,6 +178,7 @@ curl -s http://127.0.0.1:8000/api/v1/system/health
 | `docs/EVIDENCE-AND-DIAGNOSIS.md` | 证据与诊断规则 |
 | `docs/BENCHMARK.md` | 真实实验数值与阻塞项 |
 | `docs/SECURITY.md` | 安全测试报告 |
+| `docs/PERFORMANCE.md` | 性能与可靠性实测 |
 | `docs/TEST-REPORT.md` | 203 测试与缺陷回归 |
 | `docs/DEPLOYMENT.md` | 安装/启动/配置/排错 |
 | `docs/FEATURE-STATUS.md` | 功能状态矩阵（已运行/未验证/阻塞/待决策） |

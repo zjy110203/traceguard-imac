@@ -83,6 +83,7 @@ docs                  架构 / API / 数据库 / Agent / Playwright / 安全 / �
 | [证据与诊断](docs/EVIDENCE-AND-DIAGNOSIS.md) | 事件/证据/图/诊断规则 |
 | [Benchmark](docs/BENCHMARK.md) | 真实实验与阻塞项 |
 | [安全](docs/SECURITY.md) | 威胁模型与测试 |
+| [性能与可靠性](docs/PERFORMANCE.md) | 实测延迟、吞吐、可靠性验证 |
 | [测试报告](docs/TEST-REPORT.md) | 203 测试与缺陷回归 |
 | [部署](docs/DEPLOYMENT.md) | 安装、配置、排错 |
 | [功能状态](docs/FEATURE-STATUS.md) | 已运行 / 未验证 / 阻塞 / 待决策 |
