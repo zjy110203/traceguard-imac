@@ -62,3 +62,6 @@ tests/reports/*
 
 # ===== WorkBuddy 工具内部数据（保留在磁盘，不入库） =====
 .workbuddy/
+
+# ===== pytest 临时产物（测试夹具垃圾，不入库） =====
+.pytest-tmp/
