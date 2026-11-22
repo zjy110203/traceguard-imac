@@ -4,7 +4,7 @@
 
 ```
 $ .venv/bin/python -m pytest -q
-205 passed in 19.8s
+206 passed in 19.8s
 $ .venv/bin/ruff check packages apps tests scripts benchmark
 All checks passed!
 $ cd apps/web && npm run build

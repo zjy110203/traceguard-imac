@@ -48,7 +48,7 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/testcases/tcase_tf_create_normal/ex
 ## 3. 测试与检查
 
 ```bash
-.venv/bin/python -m pytest -q                 # 205 passed
+.venv/bin/python -m pytest -q                 # 206 passed
 .venv/bin/ruff check packages apps tests scripts benchmark
 cd apps/web && npm run build                  # vue-tsc + vite
 ```

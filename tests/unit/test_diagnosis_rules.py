@@ -234,3 +234,55 @@ def test_no_evidence_stays_inconclusive(rt) -> None:  # type: ignore[no-untyped-
     for h in diag["hypotheses"]:
         if h["status"] == "CONFIRMED":
             assert h["supporting"], "CONFIRMED 必须引用真实证据"
+
+
+def test_flaky_characteristic_is_flagged_not_root_cause(rt) -> None:  # type: ignore[no-untyped-def]
+    """同一用例版本历史结论不一致 → 标记 flaky 特征；不因 flaky 就判 PASSED。"""
+    from traceguard_api.services.diagnosis_service import DiagnosisService as DS
+
+    tc_version = "tcase_rules@1"
+    # 先跑一次 PASSED（同版本）
+    ok_task = rt.tasks.create_task("tcase_rules", f"flaky-ok-{time.time_ns()}", testcase_version_id=tc_version)
+    ok_run = rt.tasks.create_run(ok_task["task_id"], tc_version)
+    lease = rt.tasks.acquire_lease(ok_run["run_id"], "w")
+    rt.tasks.submit_result(ok_run["run_id"], "w", lease["fencing_token"], execution_status="RUNNING", test_verdict="NOT_EVALUATED")
+    rt.tasks.submit_result(
+        ok_run["run_id"], "w", lease["fencing_token"], execution_status="FINALIZING",
+        test_verdict="PASSED", report={"steps": [], "assertion_outcomes": []},
+    )
+    # 再跑一次 FAILED（UI 断言失败，带证据）
+    bad_task = rt.tasks.create_task("tcase_rules", f"flaky-bad-{time.time_ns()}", testcase_version_id=tc_version)
+    bad_run = rt.tasks.create_run(bad_task["task_id"], tc_version)
+    lease = rt.tasks.acquire_lease(bad_run["run_id"], "w")
+    report = {
+        "steps": [
+            {
+                "step_id": "s1",
+                "action": "assert",
+                "status": "FAILED",
+                "error": "missing success banner",
+                "observation": {"present": False, "text": "", "page_errors": []},
+                "artifacts": {},
+            }
+        ],
+        "assertion_outcomes": [
+            {"assertion_id": "a1", "status": "FAILED", "required": True, "kind": "ui",
+             "oracle_available": True, "reason": "present=False"}
+        ],
+        "summary": {"total": 1, "passed": 0, "failed": 1},
+    }
+    rt.tasks.submit_result(bad_run["run_id"], "w", lease["fencing_token"], execution_status="RUNNING", test_verdict="NOT_EVALUATED")
+    rt.tasks.submit_result(
+        bad_run["run_id"], "w", lease["fencing_token"], execution_status="FINALIZING",
+        test_verdict="FAILED", report=report,
+    )
+    rt.evidence.add_raw(
+        "evd_flaky_ui", "browser", "assert:s1", "default",
+        {"run_id": bad_run["run_id"], "step_id": "s1", "present": False},
+        source_trust="TRUSTED", run_id=bad_run["run_id"],
+    )
+    diag = DS(rt).diagnose(bad_run["run_id"])
+    assert diag["flaky_characteristic"] is True
+    assert all(h["flaky_characteristic"] for h in diag["hypotheses"])
+    # flaky 是特征，不是"通过"的理由
+    assert diag["outcome"] != "PASSED"

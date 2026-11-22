@@ -69,7 +69,7 @@
 | 规则诊断（PERSISTENCE/UI/API/NETWORK/LOCATOR/JS） | **已运行验证** | Benchmark B：3/3 主因正确 |
 | False Pass 识别 | **已运行验证** | 传统基线 1/1 假通过；本平台 0/1 |
 | 多假设与 Disposition 分流 | **已运行验证** | API 场景 CONFIRMED→PRODUCT_DEFECT |
-| Flaky 特征标记 | **仅实现未验证** | 规则存在，未构造真实 flaky 场景 |
+| Flaky 特征标记 | **已实现（单测验证）** | 同版本历史结论不一致 → 标记 flaky，不因此判通过 |
 | 只读探针（4 类） | **已运行验证** | 状态查询真实执行；越权 BLOCKED |
 | 探针对诊断的增益 | **已运行验证（负结果）** | E 组与 D 组指标相同；记录为诚实结论 |
 | LLM 辅助诊断 | **阻塞** | 无 API Key / 本地模型 |

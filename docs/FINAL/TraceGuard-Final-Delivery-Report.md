@@ -16,7 +16,7 @@
 | 诊断 | ✅ 规则诊断 3/3 主因正确；传统报告基线仅 1/3 且假通过 1/1 |
 | 自愈 | ✅ 真实沙箱 + 审批 + CAS 晋升 + 回归 + 回滚；无保护对照断言保持 0/1 |
 | 平台 | ✅ 81 个 REST 端点；Vue 工作台 10 页；独立 Worker |
-| 测试 | ✅ 205 passed；ruff 全绿；前端类型检查 + 构建通过 |
+| 测试 | ✅ 206 passed；ruff 全绿；前端类型检查 + 构建通过 |
 | Benchmark | ⚠️ A/B/C 真实运行；LLM 与手工基线 BLOCKED（无凭据/无人力） |
 | PG / Redis / MinIO | ⚠️ PG 未运行时验证；Redis 未采用；S3 未实现 |
 | 外部站点泛化 | ⛔ 未授权（P-EXT），保持 BLOCKED |
@@ -159,7 +159,7 @@ bash scripts/run_api.sh &
 命令行核对：
 
 ```bash
-.venv/bin/python -m pytest -q                     # 205 passed
+.venv/bin/python -m pytest -q                     # 206 passed
 .venv/bin/python scripts/smoke_playwright.py      # 4 场景真实执行
 curl -s http://127.0.0.1:8000/api/v1/system/health
 ```
@@ -179,7 +179,7 @@ curl -s http://127.0.0.1:8000/api/v1/system/health
 | `docs/BENCHMARK.md` | 真实实验数值与阻塞项 |
 | `docs/SECURITY.md` | 安全测试报告 |
 | `docs/PERFORMANCE.md` | 性能与可靠性实测 |
-| `docs/TEST-REPORT.md` | 205 测试与缺陷回归 |
+| `docs/TEST-REPORT.md` | 206 测试与缺陷回归 |
 | `docs/DEPLOYMENT.md` | 安装/启动/配置/排错 |
 | `docs/FEATURE-STATUS.md` | 功能状态矩阵（已运行/未验证/阻塞/待决策） |
 | `docs/decisions/P03-*.md` / `P08-*.md` | 待评审决策提案 |
