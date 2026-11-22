@@ -5,6 +5,7 @@ const routes = [
   { path: '/intents', name: 'intents', component: () => import('./views/IntentsView.vue'), meta: { title: '测试需求', crumb: '测试需求' } },
   { path: '/testcases', name: 'testcases', component: () => import('./views/TestCasesView.vue'), meta: { title: '测试资产', crumb: '测试资产' } },
   { path: '/testcases/:id', name: 'testcase-detail', component: () => import('./views/TestCaseDetailView.vue'), meta: { title: '用例详情', crumb: '测试资产 / 用例详情' } },
+  { path: '/oracles', name: 'oracles', component: () => import('./views/OraclesView.vue'), meta: { title: 'Oracle 契约', crumb: '测试资产 / Oracle 契约' } },
   { path: '/runs', name: 'runs', component: () => import('./views/RunsView.vue'), meta: { title: '执行中心', crumb: '执行中心' } },
   { path: '/runs/:id', name: 'run-detail', component: () => import('./views/RunDetailView.vue'), meta: { title: 'Run 详情', crumb: '执行中心 / Run 详情' } },
   { path: '/diagnoses', name: 'diagnoses', component: () => import('./views/DiagnosesView.vue'), meta: { title: '诊断中心', crumb: '诊断中心' } },

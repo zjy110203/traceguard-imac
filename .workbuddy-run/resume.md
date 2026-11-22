@@ -13,7 +13,7 @@
 - **产品链路已打通**：Intent → Explorer → Compiler → 审核 → Playwright 执行 → 证据 → Verdict →
   Diagnosis → Graph → Probe → Disposition → Repair（沙箱/审批/晋升/回归/回滚）→ Benchmark。
 - 真实浏览器：Chromium 159（内置）+ Edge 158 均验证；4 场景真实执行有截图证据。
-- 前端：9 页 Vue 工作台，真实 API；`npm run build` 通过；API 单端口托管。
+- 前端：10 页 Vue 工作台，真实 API；`npm run build` 通过；API 单端口托管。
 - 测试：**205 passed**，ruff 全绿；契约 Schema 22 个已导出并有防漂移测试。
 - Benchmark 真实结果：B 组传统基线 1/3 主因 + 1/1 假通过；规则诊断 3/3 + 0/1；C 组沙箱 1/1。
 

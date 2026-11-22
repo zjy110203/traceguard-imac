@@ -49,6 +49,7 @@ const dbOk = computed(() => health.value?.database?.ok ?? false)
           <router-link to="/"><span class="ico">◈</span>总览</router-link>
           <router-link to="/intents"><span class="ico">◎</span>测试需求<span v-if="counts.intents" class="count">{{ counts.intents }}</span></router-link>
           <router-link to="/testcases"><span class="ico">▤</span>测试资产<span v-if="counts.testcases" class="count">{{ counts.testcases }}</span></router-link>
+          <router-link to="/oracles"><span class="ico">◇</span>Oracle 契约</router-link>
           <router-link to="/runs"><span class="ico">▷</span>执行中心<span v-if="counts.runs" class="count">{{ counts.runs }}</span></router-link>
         </div>
         <div class="nav-group">

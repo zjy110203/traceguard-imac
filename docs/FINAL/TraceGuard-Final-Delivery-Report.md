@@ -15,7 +15,7 @@
 | 证据链 | ✅ 事件双唯一约束、证据不可变、产物 SHA-256 校验、图关联 |
 | 诊断 | ✅ 规则诊断 3/3 主因正确；传统报告基线仅 1/3 且假通过 1/1 |
 | 自愈 | ✅ 真实沙箱 + 审批 + CAS 晋升 + 回归 + 回滚；无保护对照断言保持 0/1 |
-| 平台 | ✅ 81 个 REST 端点；Vue 工作台 9 页；独立 Worker |
+| 平台 | ✅ 81 个 REST 端点；Vue 工作台 10 页；独立 Worker |
 | 测试 | ✅ 205 passed；ruff 全绿；前端类型检查 + 构建通过 |
 | Benchmark | ⚠️ A/B/C 真实运行；LLM 与手工基线 BLOCKED（无凭据/无人力） |
 | PG / Redis / MinIO | ⚠️ PG 未运行时验证；Redis 未采用；S3 未实现 |
@@ -34,7 +34,7 @@
 | `POST /tasks/{id}/runs` 只建记录，无执行者 | 实现 `RunPipeline` + 内嵌 Worker + 独立 Worker | 真实 Run：8 步 PASSED；独立 Worker `--once` 执行成功 |
 | Playwright 未安装、从未真实启动 | 安装 1.65.2 + Chromium 159，实测 4 场景 | 截图人工核验（含注入故障文案） |
 | 事件/证据/图/诊断全在内存，重启即丢 | 统一 SQLite/PG Schema + 迁移 + 持久化适配器 | 关闭 DB 重开后事件/证据仍可读（测试） |
-| 前端 45 行只显示 health JSON | 重写为 9 页 Vue 工作台（真实 API、加载/错误/空态、轮询） | 浏览器截图 + 构建通过 |
+| 前端 45 行只显示 health JSON | 重写为 10 页 Vue 工作台（真实 API、加载/错误/空态、轮询） | 浏览器截图 + 构建通过 |
 | 无完整 API（仅 8 个 Task 端点） | 81 个端点覆盖资产/执行/证据/诊断/探针/修复/Benchmark/系统 | OpenAPI + 集成测试 |
 | Benchmark 只有口径，无执行器 | 真实运行 A/B/C，落库分子分母 + Wilson CI | `docs/BENCHMARK.md` |
 | 无自愈端到端验证 | 提案 → 沙箱真实执行 → 审批 → 晋升 → 回归 → 回滚 | 全链路实测（v3/v4） |
@@ -120,7 +120,7 @@ Intent → Explorer(真实探索) → Trace → Compiler(候选) → 人工审�
 8. 证据图（节点/边/basis）+ 图快照持久化；
 9. 只读探针五项校验、白名单、预算、审计；
 10. 自愈 Diff 白名单、断言/Oracle 保护、真实沙箱、审批、CAS 晋升、回滚；
-11. 81 个 REST 端点 + 9 页 Vue 工作台 + 单端口部署；
+11. 81 个 REST 端点 + 10 页 Vue 工作台 + 单端口部署；
 12. 独立 Worker 进程（`--once`/常驻）。
 
 ---

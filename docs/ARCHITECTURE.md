@@ -103,7 +103,7 @@ INCONCLUSIVE 且无 FAILED → 不判 PASSED。
 ## 6. 前端
 
 - Vue 3 + TypeScript + vue-router，无 UI 框架依赖，自建设计系统（`style.css`）。
-- 页面：总览 / 测试需求 / 测试资产 / 执行中心 / Run 详情（步骤·断言·证据·图·诊断·事件）/ 诊断中心 /
+- 页面：总览 / 测试需求 / 测试资产 / Oracle 契约 / 执行中心 / Run 详情（步骤·断言·证据·图·诊断·事件）/ 诊断中心 /
   修复中心 / Benchmark / 系统。
 - 全部数据来自 `/api/v1`，含 loading / error / empty 状态；执行中自动轮询。
 - 生产构建由 API 直接托管（单端口），开发用 Vite 代理。
