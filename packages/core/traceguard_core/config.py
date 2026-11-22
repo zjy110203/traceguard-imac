@@ -11,7 +11,7 @@ import os
 from functools import lru_cache
 from typing import Any
 
-from pydantic import Field, field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -62,6 +62,28 @@ class Settings(BaseSettings):
     worker_poll_interval_s: float = 1.0
     worker_lease_ttl_s: float = 120.0
     inline_worker: bool = True  # 单机模式：API 内嵌后台执行器（生产可关掉并独立部署 Worker）
+
+    # LLM ModelGateway（RUN-003-G）
+    # 密钥只从环境变量读取（DEEPSEEK_API_KEY 或 TG_DEEPSEEK_API_KEY），不得写入代码/文档。
+    deepseek_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("TG_DEEPSEEK_API_KEY", "DEEPSEEK_API_KEY"),
+    )
+    llm_provider: str = ""  # "" = 不启用；"deepseek" = 启用 DeepSeek
+    llm_base_url: str = "https://api.deepseek.com"
+    llm_default_model: str = "deepseek-flash"
+    llm_reasoning_model: str = "deepseek-v4-pro"
+    llm_timeout_s: float = 60.0
+    llm_max_retries: int = 2  # 有限重试（429/5xx/网络错误），不得无限重试
+    llm_daily_budget_usd: float = 1.0  # 应用侧预算目标，非平台硬性封顶
+    llm_max_calls_per_run: int = 24
+    llm_explorer_enabled: bool = True
+    llm_diagnosis_enabled: bool = True
+
+    @field_validator("llm_provider")
+    @classmethod
+    def _norm_provider(cls, v: str) -> str:
+        return v.strip().lower()
 
     @field_validator("log_level")
     @classmethod

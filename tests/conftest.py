@@ -7,9 +7,21 @@ import pytest
 
 @pytest.fixture(autouse=True)
 def _isolate_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    """测试环境强制使用内存/临时 SQLite，绝不连生产库。"""
+    """测试环境强制使用内存/临时 SQLite，绝不连生产库。
+
+    LLM 在测试中默认禁用（防止读取 .env 真实 Key 产生真实 API 调用）；
+    LLM 专项测试自行打开开关并使用 FakeProvider / MockTransport。
+    同时重置 Settings 缓存，确保任何提前建立的 lru_cache 不泄露真实 .env 配置。
+    """
     monkeypatch.setenv("TG_ENVIRONMENT", "test")
     monkeypatch.setenv("TG_DATABASE_URL", "sqlite:///:memory:")
+    monkeypatch.setenv("TG_LLM_PROVIDER", "")
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    from traceguard_core.config import reset_settings_cache
+
+    reset_settings_cache()
+    yield  # noqa: PT022
+    reset_settings_cache()
 
 
 @pytest.fixture

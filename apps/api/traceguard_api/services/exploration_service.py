@@ -30,6 +30,34 @@ logger = get_logger("traceguard.service.exploration")
 MAX_STEPS = 10
 
 
+def _maybe_llm_planner(rt: Runtime, task_id: str = "") -> Any | None:
+    """按配置构建 LLM planner；未启用/未配置返回 None（保持规则引擎）。"""
+    settings = rt.settings
+    if not getattr(settings, "llm_explorer_enabled", True):
+        return None
+    try:
+        from traceguard_agents.gateway.llm_gateway import (
+            LLMExplorerPlanner,
+            build_llm_stack,
+        )
+
+        stack = build_llm_stack(settings, root_dir=".")
+        if not stack:
+            return None
+        return LLMExplorerPlanner(
+            provider=stack["provider"],
+            router=stack["router"],
+            prompts=stack["prompts"],
+            tracker=stack["tracker"],
+            rule_fallback=RuleBasedPlanner(),
+            base_url=settings.teamflow_base_url,
+            task_id=task_id,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("llm_planner_build_failed", error=str(exc))
+        return None
+
+
 class LocalPlanner(RuleBasedPlanner):
     """把规则 planner 的目标地址重写到配置的 TeamFlow 地址（其余逻辑不变）。"""
 
@@ -112,8 +140,15 @@ class ExplorationService:
 
         status = "COMPLETED"
         error = ""
+        llm_planner = _maybe_llm_planner(self.rt)
+        planner: Any = LocalPlanner(base)
+        if llm_planner is not None:
+            # 真实 LLM planner（DeepSeek），失败时内部兜底到规则并在 reason 中标记 fallback
+            llm_planner.rule_fallback = LocalPlanner(base)
+            planner = llm_planner
+        engine_marker = "llm:deepseek" if llm_planner is not None else "rule-based-v1"
         try:
-            explorer = Explorer(gateway, LocalPlanner(base), observer)
+            explorer = Explorer(gateway, planner, observer)
             text = f"{intent.get('title', '')} {intent.get('description', '')} {intent_id}"
             trace = explorer.explore(text, max_steps=max_steps)
         except Exception as exc:  # noqa: BLE001
@@ -137,6 +172,16 @@ class ExplorationService:
             "workspace_id": intent.get("workspace_id", "default"),
             "status": status,
             "error": error,
+            "engine": engine_marker,
+            "llm_stats": (
+                {
+                    "llm_calls": llm_planner.llm_calls,
+                    "fallback_calls": llm_planner.fallback_calls,
+                    "last_error": llm_planner.last_error,
+                }
+                if llm_planner is not None
+                else None
+            ),
             "trace": trace.to_dict(),
             "gateway_audit": gateway.audit_log() if hasattr(gateway, "audit_log") else [],
             "action_count": len(trace.action_sequence),

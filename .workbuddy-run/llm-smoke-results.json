@@ -1,0 +1,57 @@
+[
+  {
+    "check": "connectivity_models",
+    "ok": true,
+    "detail": "models=['deepseek-flash', 'deepseek-v4-pro']"
+  },
+  {
+    "check": "configured_models_exist",
+    "ok": true,
+    "detail": "default=deepseek-flash reasoning=deepseek-v4-pro"
+  },
+  {
+    "check": "flash_text_call",
+    "ok": true,
+    "detail": "38in/77out 793ms"
+  },
+  {
+    "check": "token_usage_recorded",
+    "ok": true,
+    "detail": "cached=0"
+  },
+  {
+    "check": "flash_json_output",
+    "ok": true,
+    "detail": "keys=['action', 'params', 'reason']"
+  },
+  {
+    "check": "pro_reasoning_call",
+    "ok": true,
+    "detail": "model=deepseek-v4-pro 3612ms"
+  },
+  {
+    "check": "timeout_boundary",
+    "ok": true,
+    "detail": "kind=timeout elapsed=0.03s"
+  },
+  {
+    "check": "truncated_output_handled",
+    "ok": true,
+    "detail": "kind=invalid_json"
+  },
+  {
+    "check": "cost_estimated_marked",
+    "ok": true,
+    "detail": "calls=8 cost=$0.00111"
+  },
+  {
+    "check": "key_redaction_settings",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "check": "key_redaction_error_msg",
+    "ok": true,
+    "detail": "not_configured"
+  }
+]

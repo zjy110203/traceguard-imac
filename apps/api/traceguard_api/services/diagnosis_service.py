@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from traceguard_core.errors import AppError, ErrorCode
@@ -20,6 +21,7 @@ from traceguard_evidence.diagnosis.engine import (
     FailureDomain,
     FailureMechanism,
     Hypothesis,
+    HypothesisStatus,
 )
 
 from traceguard_api.runtime import Runtime
@@ -273,6 +275,18 @@ class DiagnosisService:
                 )
 
         symptom = " | ".join(observed[:3]) or f"verdict={run['test_verdict']}"
+
+        # ---- LLM 诊断顾问（RUN-003-G）：只追加 PROBABLE 级候选假设，不改 CONFIRMED 判定
+        llm_advisor_notes: dict[str, Any] | None = None
+        if getattr(self.rt.settings, "llm_diagnosis_enabled", True):
+            llm_advisor_notes = self._llm_advise(
+                run_id=run_id,
+                symptom=symptom,
+                steps=steps,
+                evidence_list=evidence,
+                hypotheses=hypotheses,
+            )
+
         result = self.engine.diagnose(symptom, hypotheses)
         doc = {
             "diagnosis_id": result.diagnosis_id,
@@ -289,7 +303,8 @@ class DiagnosisService:
                 dict.fromkeys([r["id"] for h in hypotheses for r in h.to_dict()["supporting"]])
             ),
             "flaky_characteristic": flaky,
-            "engine": "rule-v1",
+            "engine": ("rule-v1+llm-advisor" if llm_advisor_notes and llm_advisor_notes.get("called") else "rule-v1"),
+            "llm_advisor": llm_advisor_notes,
             "strategy_version": "v1",
             "created_at": utc_now_iso(),
         }
@@ -306,6 +321,134 @@ class DiagnosisService:
         return doc
 
     # ---------------------------------------------------------------- helpers
+    _LLM_DOMAIN_MAP: dict[str, tuple[Any, Any]] = {}
+
+    def _llm_advise(
+        self,
+        run_id: str,
+        symptom: str,
+        steps: list[dict[str, Any]],
+        evidence_list: list[Any],
+        hypotheses: list[Hypothesis],
+    ) -> dict[str, Any] | None:
+        """调用 DeepSeek 诊断顾问，追加 LLM 候选假设。
+
+        安全边界：
+        - 输入只有症状/步骤/证据摘要，不含 Ground Truth；
+        - 引用的 evidence_id 必须真实存在（网关已校验），此处再复核一次；
+        - LLM 假设 status 固定 CANDIDATE，suggested_by="llm:<model>"，不能 CONFIRMED；
+        - 任何 LLM 错误静默降级为"未调用"，诊断仍由确定性规则完成。
+        """
+        try:
+            from traceguard_agents.gateway.llm_gateway import (
+                LLMError,
+                build_llm_stack,
+            )
+
+            settings = self.rt.settings
+            stack = build_llm_stack(settings, root_dir=".")
+            if not stack:
+                return None
+            if stack["tracker"].should_skip_llm():
+                return {"called": False, "skipped": "budget_exhausted"}
+
+            # 证据摘要（真实 ID + 类型 + 截断摘要，不含 GT）
+            evidence_summary = []
+            for e in evidence_list[:60]:
+                content = e.content or {}
+                brief = json.dumps(content, ensure_ascii=False, default=str)[:220]
+                evidence_summary.append(
+                    {"evidence_id": e.evidence_id, "source_type": e.source_type, "brief": brief}
+                )
+            failed_steps = [
+                {
+                    "step_id": s.get("step_id"),
+                    "action": s.get("action"),
+                    "error": str(s.get("error", ""))[:200],
+                }
+                for s in steps
+                if s.get("status") == "FAILED"
+            ][:8]
+
+            advisor = self._get_advisor(stack, run_id)
+            if advisor is None:
+                return {"called": False, "skipped": "not_configured"}
+            candidates = advisor.suggest(
+                symptom=symptom,
+                failed_steps=failed_steps,
+                evidence_summary=evidence_summary,
+            )
+
+            # 域映射 + 复核 evidence id + 追加候选（不改已有规则假设）
+            known_ids = {e.evidence_id for e in evidence_list}
+            added: list[dict[str, Any]] = []
+            for c in candidates:
+                domain, mech = self._map_llm_domain(c.failure_domain, c.failure_mechanism)
+                evd_refs = [
+                    EvidenceRef(evidence_id=i, source_trust="TRUSTED", directly_confirming=False)
+                    for i in c.supporting_evidence_ids
+                    if i in known_ids
+                ]
+                hypotheses.append(
+                    Hypothesis(
+                        hypothesis_id=new_id("hyp"),
+                        description=f"[LLM 候选] {c.description}",
+                        failure_domain=domain,
+                        failure_mechanism=mech,
+                        supporting=evd_refs,
+                        contributing_factors=c.warnings,
+                        status=HypothesisStatus.CANDIDATE,  # 固定候选级，不 CONFIRMED
+                        suggested_by=c.suggested_by,  # 形如 "llm:deepseek-flash"（网关已带前缀）
+                    )
+                )
+                added.append(
+                    {
+                        "description": c.description,
+                        "domain": c.failure_domain,
+                        "confidence": c.confidence,
+                        "evidence_ids": c.supporting_evidence_ids,
+                        "warnings": c.warnings,
+                    }
+                )
+            return {
+                "called": True,
+                "added": added,
+                "model": advisor.router.default_model,
+                "fallbacks": [],
+            }
+        except LLMError as exc:
+            logger.warning("llm_advisor_failed", error_kind=exc.kind)
+            return {"called": False, "skipped": f"llm_error:{exc.kind}"}
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("llm_advisor_unexpected", error=str(exc))
+            return {"called": False, "skipped": f"error:{type(exc).__name__}"}
+
+    def _get_advisor(self, stack: dict[str, Any], run_id: str) -> Any | None:
+        from traceguard_agents.gateway.llm_gateway import LLMDiagnosisAdvisor
+
+        return LLMDiagnosisAdvisor(
+            provider=stack["provider"],
+            router=stack["router"],
+            prompts=stack["prompts"],
+            tracker=stack["tracker"],
+            task_id="",
+            run_id=run_id,
+        )
+
+    @classmethod
+    def _map_llm_domain(cls, domain: str, mechanism: str) -> tuple[Any, Any]:
+        """把 LLM 粗分域映射到确定性枚举（白名单外 → UNKNOWN）。"""
+        mapping = {
+            "API": (DOMAIN_UI, FailureMechanism.API),
+            "NETWORK": (DOMAIN_ENV, FailureMechanism.NETWORK),
+            "UI": (DOMAIN_UI, FailureMechanism.UI_RENDERING),
+            "PERSISTENCE": (DOMAIN_UI, FailureMechanism.PERSISTENCE),
+            "LOCATOR": (DOMAIN_ASSET, FailureMechanism.LOCATOR),
+            "JS": (DOMAIN_UI, FailureMechanism.UI_RENDERING),
+            "TIMEOUT": (DOMAIN_EXEC, FailureMechanism.TIMING),
+        }
+        return mapping.get(domain.upper(), (FailureDomain.UNKNOWN, FailureMechanism.UNKNOWN))
+
     @staticmethod
     def _business_detail(failed_biz: list[dict[str, Any]]) -> str:
         if not failed_biz:

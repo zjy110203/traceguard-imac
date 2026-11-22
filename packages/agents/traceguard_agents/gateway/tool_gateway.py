@@ -59,6 +59,8 @@ class ToolGateway:
 
     # 探索阶段允许的最小工具集（无 shell / 无文件 / 无任意网络）
     ALLOWED_TOOLS = {"navigate", "click", "fill", "read_page", "read_dom", "screenshot"}
+    # 只读工具：合法调用可以不带参数（无写风险，scope/risk 检查不变）
+    READ_ONLY_TOOLS = {"read_page", "read_dom", "screenshot"}
     # 批准的域名白名单（TeamFlow 本地）
     ALLOWED_HOSTS = {"127.0.0.1", "localhost"}
     ALLOWED_PORTS = {8011}  # TeamFlow 端口
@@ -118,8 +120,10 @@ class ToolGateway:
         if not checks["permission"]:
             return GatewayDecision(False, f"TOOL_NOT_ALLOWED: {call.tool}", checks)
 
-        # 2. 参数检查
-        checks["params"] = isinstance(call.params, dict) and bool(call.params)
+        # 2. 参数检查（只读工具允许空参数；写工具必须携带参数）
+        checks["params"] = isinstance(call.params, dict) and (
+            bool(call.params) or call.tool in self.READ_ONLY_TOOLS
+        )
         if not checks["params"]:
             return GatewayDecision(False, "INVALID_PARAMS", checks)
 
