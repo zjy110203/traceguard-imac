@@ -23,6 +23,9 @@ class ObservationRecord:
     observation: dict[str, Any] = field(default_factory=dict)
     evidence_refs: list[str] = field(default_factory=list)
     error: str | None = None
+    duration_ms: int = 0
+    #: 证据产物引用：{"screenshot": {...}, "dom": {...}, "aria": {...}}（artifact 元数据）
+    artifacts: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
 class Observer(ABC):

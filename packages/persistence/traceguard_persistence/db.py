@@ -1,0 +1,180 @@
+"""统一持久化层：SQLAlchemy 2.x，SQLite（本地）与 PostgreSQL（生产）同构。
+
+设计要点：
+- 单一 Database 对象承载所有平台表（执行/事件/证据/目录/文档聚合）；
+- `Session` 通过 `db.session()` 上下文管理，提交/回滚/关闭确定；
+- 轻量迁移：`tg_schema_migration` 记录已应用版本，升级按序执行且幂等；
+- SQLite 内存库使用 StaticPool，保证同一连接、可测。
+"""
+
+from __future__ import annotations
+
+import threading
+from collections.abc import Callable, Generator, Iterator
+from contextlib import contextmanager
+from typing import Any
+
+from sqlalchemy import Engine, create_engine, text
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy.pool import StaticPool
+from traceguard_core.config import get_settings
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+class Database:
+    """数据库门面。生产使用 PostgreSQL 时仅需替换 DSN。"""
+
+    def __init__(self, url: str | None = None, *, echo: bool = False) -> None:
+        settings = get_settings()
+        self.url = url or settings.database_url
+        connect_args: dict[str, Any] = {}
+        kwargs: dict[str, Any] = {}
+        if self.url.startswith("sqlite"):
+            connect_args["check_same_thread"] = False
+            if ":memory:" in self.url:
+                kwargs["poolclass"] = StaticPool
+        self.engine: Engine = create_engine(
+            self.url, echo=echo, future=True, connect_args=connect_args, **kwargs
+        )
+        self.session_factory = sessionmaker(
+            bind=self.engine, autoflush=False, autocommit=False, expire_on_commit=False
+        )
+        self._schema_lock = threading.RLock()
+        self._schema_ready = False
+
+    @contextmanager
+    def session(self) -> Iterator[Session]:
+        s = self.session_factory()
+        try:
+            yield s
+            s.commit()
+        except Exception:
+            s.rollback()
+            raise
+        finally:
+            s.close()
+
+    def get_session(self) -> Generator[Session, None, None]:
+        """FastAPI 依赖注入入口。"""
+        s = self.session_factory()
+        try:
+            yield s
+            s.commit()
+        except Exception:
+            s.rollback()
+            raise
+        finally:
+            s.close()
+
+    def create_schema(self) -> None:
+        """建表 + 应用迁移（幂等）。"""
+        from . import models  # noqa: F401  确保模型注册到 metadata
+
+        with self._schema_lock:
+            if self._schema_ready:
+                return
+            Base.metadata.create_all(self.engine)
+            _apply_migrations(self)
+            self._schema_ready = True
+
+    def dispose(self) -> None:
+        self.engine.dispose()
+
+
+def _apply_migrations(db: Database) -> None:
+    """按序应用迁移。当前 v1 由 metadata.create_all 完成；v2 起为增量 DDL。
+
+    迁移必须是幂等的：多进程同时启动时使用 IF NOT EXISTS / 捕获重复错误。
+    """
+    with db.engine.begin() as conn:
+        conn.execute(
+            text(
+                "CREATE TABLE IF NOT EXISTS tg_schema_migration ("
+                "version INTEGER PRIMARY KEY, name VARCHAR(120) NOT NULL, "
+                "applied_at VARCHAR(40) NOT NULL)"
+            )
+        )
+        applied = {
+            int(r[0])
+            for r in conn.execute(text("SELECT version FROM tg_schema_migration")).fetchall()
+        }
+        for version, name, sql in MIGRATIONS:
+            if version in applied:
+                continue
+            for statement in sql:
+                statement = statement.strip()
+                if not statement:
+                    continue
+                try:
+                    conn.execute(text(statement))
+                except Exception as exc:  # noqa: BLE001 - 并发启动下的重复 DDL
+                    if (
+                        "already exists" not in str(exc).lower()
+                        and "duplicate" not in str(exc).lower()
+                    ):
+                        raise
+            conn.execute(
+                text(
+                    "INSERT INTO tg_schema_migration (version, name, applied_at) "
+                    "VALUES (:v, :n, :a)"
+                ),
+                {"v": version, "n": name, "a": _now()},
+            )
+
+
+def _now() -> str:
+    from traceguard_core.ids import utc_now_iso
+
+    return utc_now_iso()
+
+
+#: (version, name, [DDL...])
+MIGRATIONS: list[tuple[int, str, list[str]]] = [
+    (
+        2,
+        "event_and_evidence_indexes",
+        [
+            "CREATE INDEX IF NOT EXISTS ix_tg_event_ws_type ON tg_event (workspace_id, event_type)",
+            "CREATE INDEX IF NOT EXISTS ix_tg_evidence_run ON tg_evidence (workspace_id, run_id)",
+        ],
+    ),
+    (
+        3,
+        "doc_store_index",
+        [
+            "CREATE INDEX IF NOT EXISTS ix_tg_doc_kind_ws ON tg_doc (kind, workspace_id)",
+        ],
+    ),
+]
+
+
+_lock = threading.RLock()
+_default_db: Database | None = None
+
+
+def get_database(url: str | None = None, *, echo: bool | None = None) -> Database:
+    """进程级默认 Database（可在测试中重定向 URL）。"""
+    global _default_db
+    with _lock:
+        settings = get_settings()
+        target = url or settings.database_url
+        if _default_db is None or (_default_db.url != target and url is not None):
+            _default_db = Database(target, echo=echo if echo is not None else settings.db_echo)
+            _default_db.create_schema()
+        elif not _default_db._schema_ready:
+            _default_db.create_schema()
+        return _default_db
+
+
+def set_database(db: Database) -> None:
+    """替换进程级 Database（测试/多租户部署用）。"""
+    global _default_db
+    with _lock:
+        _default_db = db
+        db.create_schema()
+
+
+DbFactory = Callable[[], Database]

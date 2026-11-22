@@ -22,7 +22,8 @@ ignore = [
 testpaths = ["tests"]
 pythonpath = [
     "packages/core", "packages/contracts", "packages/execution",
-    "packages/agents", "packages/evidence", "apps/api", "apps/teamflow", "benchmark",
+    "packages/agents", "packages/evidence", "packages/persistence",
+    "apps/api", "apps/teamflow", "apps/workers", "benchmark",
 ]
 addopts = "-ra --strict-markers"
 markers = [

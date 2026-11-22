@@ -18,3 +18,14 @@ def tmp_traceguard_dir(tmp_path):  # type: ignore[no-untyped-def]
     d = tmp_path / "traceguard-test"
     d.mkdir()
     return d
+
+
+@pytest.fixture(scope="module")
+def work_tmp():  # type: ignore[no-untyped-def]
+    """项目内临时目录（沙箱内 /var/folders 可能不可写）。"""
+    import uuid
+    from pathlib import Path
+
+    base = Path(".traceguard/test-tmp") / uuid.uuid4().hex[:8]
+    base.mkdir(parents=True, exist_ok=True)
+    return base

@@ -109,5 +109,82 @@ def configure_logging(level: str = "INFO", json_output: bool = True) -> None:
     root.addHandler(handler)
 
 
-def get_logger(name: str) -> logging.Logger:
-    return logging.getLogger(name)
+_RESERVED_LOG_KEYS = {
+    "message",
+    "asctime",
+    "name",
+    "msg",
+    "args",
+    "levelname",
+    "levelno",
+    "pathname",
+    "filename",
+    "module",
+    "exc_info",
+    "exc_text",
+    "stack_info",
+    "lineno",
+    "funcName",
+    "created",
+    "msecs",
+    "relativeCreated",
+    "thread",
+    "threadName",
+    "processName",
+    "process",
+    "taskName",
+    "event",
+}
+
+
+class StructuredLogger:
+    """结构化日志门面：`logger.info("event_name", key=value)`。
+
+    标准库 Logger 不接受任意 kwarg，这里统一转成 `extra`，由 JsonFormatter 写入 JSON 行；
+    同时保留 name/level/isEnabledFor 等常用属性，避免调用方感知差异。
+    """
+
+    __slots__ = ("_logger", "name")
+
+    def __init__(self, name: str) -> None:
+        self._logger = logging.getLogger(name)
+        self.name = name
+
+    def _emit(self, level: int, event: str, exc_info: bool = False, **fields: Any) -> None:
+        if not self._logger.isEnabledFor(level):
+            return
+        clean: dict[str, Any] = {}
+        for k, v in fields.items():
+            key = k if k not in _RESERVED_LOG_KEYS else f"ctx_{k}"
+            clean[key] = redact(v)
+        self._logger.log(level, event, exc_info=exc_info, extra=clean, stacklevel=3)
+
+    def debug(self, event: str, **fields: Any) -> None:
+        self._emit(logging.DEBUG, event, **fields)
+
+    def info(self, event: str, **fields: Any) -> None:
+        self._emit(logging.INFO, event, **fields)
+
+    def warning(self, event: str, **fields: Any) -> None:
+        self._emit(logging.WARNING, event, **fields)
+
+    warn = warning
+
+    def error(self, event: str, **fields: Any) -> None:
+        self._emit(logging.ERROR, event, **fields)
+
+    def exception(self, event: str, **fields: Any) -> None:
+        self._emit(logging.ERROR, event, exc_info=True, **fields)
+
+    def critical(self, event: str, **fields: Any) -> None:
+        self._emit(logging.CRITICAL, event, **fields)
+
+    def isEnabledFor(self, level: int) -> bool:  # noqa: N802 - 兼容 logging API
+        return self._logger.isEnabledFor(level)
+
+    def setLevel(self, level: int | str) -> None:  # noqa: N802 - 兼容 logging API
+        self._logger.setLevel(level)
+
+
+def get_logger(name: str) -> StructuredLogger:
+    return StructuredLogger(name)

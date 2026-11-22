@@ -47,6 +47,22 @@ class Settings(BaseSettings):
     # TeamFlow（阶段1）
     teamflow_base_url: str = "http://127.0.0.1:8001"
 
+    # 浏览器执行
+    browser_headless: bool = True
+    browser_channel: str = ""  # "" = playwright 自带 chromium；msedge / chrome
+    browser_timeout_ms: int = 8000
+    run_max_duration_s: int = 180
+
+    # 证据与产物
+    artifact_dir: str = ".traceguard/artifacts"
+    artifact_backend: str = "local"  # local / s3（S3 需 boto3 与 TG_S3_* 配置）
+
+    # Worker
+    worker_id: str = ""  # 空则自动生成 host-pid
+    worker_poll_interval_s: float = 1.0
+    worker_lease_ttl_s: float = 120.0
+    inline_worker: bool = False  # API 内嵌后台执行器（本地演示/单机部署）
+
     @field_validator("log_level")
     @classmethod
     def _upper_level(cls, v: str) -> str:

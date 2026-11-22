@@ -66,3 +66,34 @@
 - **Docker 不可用、psql 不可用、uv/poetry 不可用**（不改系统环境）
 - PyPI 与 npm registry 可联网（已验证 fastapi=0.165.0、vue=3.5.46 可查）
 - 决策：阶段 0/1 采用项目内 venv + SQLite（通过 SQLAlchemy 抽象，可平滑切 PostgreSQL）；Docker Compose 配置照常产出但不作为本环境验收硬依赖，记录为限制。
+
+## RUN-002 进展（2026-11-22）
+
+### 里程碑 A：真实浏览器执行打通（PASS，有真实证据）
+- 安装 playwright 1.65.2 + Chromium 159（清华/npmmirror 镜像，此前报告的"下载太慢"已解决）。
+- 新增 `traceguard_execution/browser/`：BrowserManager（thread-local，多渠道路径 bundled→msedge→chrome）+ BrowserSession（console/pageerror/network/dialog/trace/截图/DOM/ARIA）。
+- 重写 PlaywrightObserver：全定位策略、全动作、逐步证据、trace。
+- 新增 `runtime/pipeline.py`：Run 领取租约 → 执行 → 逐步落库/事件/证据 → Trusted Oracle 状态查询 → 断言 → Verdict → 提交。
+- 真实运行 4 场景（Chromium 159，TeamFlow 真实服务）：
+  - 正常创建：PASSED（8 步，24 证据）
+  - False Pass（TF-DB-001）：FAILED（业务断言识破 UI 假成功）
+  - UI 提示缺失（TF-UI-001）：FAILED（UI 断言失败，业务断言通过）
+  - API 500：PASSED（错误提示出现且无脏数据）
+- 真实截图已人工核验（1280x800 PNG，页面含"创建失败：simulated API failure (TF-API-001)"）。
+
+### 里程碑 B：统一持久化层（PASS）
+- 新增 `packages/persistence`：单一 Database（SQLite/PG 同构）、迁移表、事件/证据/目录/产物/文档聚合表。
+- Event：`(producer_instance_id, sequence)` 与 `(producer_id, idempotency_key)` 双唯一约束，冲突审计落库，重启可读。
+- Evidence：不可变 + 派生链 + 完整性校验 + 产物内容寻址存储（sha256，篡改即报错）。
+- Catalog：用例版本不可变、审核需具名人类、Oracle Agent 不能自批（版本递增保留历史）。
+- TaskService 全量迁移到统一库（保留原契约）；新增 claim_next_run / reap_expired_runs / 队列统计。
+
+### 修复的真实 Bug
+1. `assertions._apply_rule`：`observation["json"]` 为 dict 且字段为 int 时调用 `.get()` → AttributeError（新增 `_resolve_field`，支持嵌套字段）。
+2. `logging.get_logger` 返回标准 Logger，但全项目按 `logger.info("event", key=val)` 调用 → TypeError；新增 StructuredLogger（extra 透传 + 保留字规避）。
+3. Playwright sync API 在同线程反复 start/stop → "Sync API inside asyncio loop"；改为 thread-local 复用 + 模块结束释放。
+4. 前端此前 45 行仅显示 health JSON（报告与实现不符，已记录）。
+
+### 测试
+- 全量 190 passed（新增 9 持久化单测 + 3 真实浏览器 E2E）。
+- ruff check / format 全绿。

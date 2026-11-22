@@ -69,13 +69,10 @@ def _apply_rule(
         field = expected["field"]
         op = expected.get("op", "eq")
         want = expected.get("value")
-        got = (
-            observation.get(field, observation.get("json") or {}).get(field)
-            if isinstance(observation.get("json"), dict)
-            else observation.get(field)
-        )
+        # 观测字段优先；缺失时回退到独立状态查询的 JSON（Trusted Oracle 通道）
+        got = _resolve_field(observation, field)
         if got is None and isinstance(observation.get("json"), dict):
-            got = observation["json"].get(field)
+            got = _resolve_field(observation["json"], field)
         if got is None:
             return AssertionStatus.INCONCLUSIVE, "OBSERVATION_MISSING"
         ok = _compare(got, op, want)
@@ -125,6 +122,19 @@ def _apply_rule(
         ), f"present={present}"
 
     return AssertionStatus.INCONCLUSIVE, "UNSUPPORTED_RULE"
+
+
+def _resolve_field(observation: dict[str, Any], field: str) -> Any:
+    """支持 `a.b.c` 形式的嵌套字段读取（纯读取，不做推断）。"""
+    if field in observation:
+        return observation[field]
+    cur: Any = observation
+    for part in field.split("."):
+        if isinstance(cur, dict) and part in cur:
+            cur = cur[part]
+        else:
+            return None
+    return cur
 
 
 def _compare(got: Any, op: str, want: Any) -> bool:

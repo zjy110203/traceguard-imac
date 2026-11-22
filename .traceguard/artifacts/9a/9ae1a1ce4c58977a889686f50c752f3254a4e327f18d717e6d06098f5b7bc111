@@ -1,0 +1,9 @@
+- navigation:
+  - link "项目":
+    - /url: /projects
+- heading "新建项目" [level=1]
+- text: 项目名称
+- textbox "项目名称": TraceGuard 提示缺失-2026-11-22T05:02:47
+- text: 描述
+- textbox "描述": TraceGuard 自动化创建
+- button "创建"
