@@ -72,7 +72,7 @@ onMounted(load)
       </div>
     </div>
 
-    <div class="split">
+    <div class="bench-grid">
       <div class="card">
         <div class="card-head"><h2>实验</h2><div class="actions"><span class="small muted">{{ items.length }}</span></div></div>
         <div class="card-body tight scroll-x">
@@ -82,7 +82,7 @@ onMounted(load)
               <tbody>
                 <tr v-for="e in items" :key="e.experiment_id" style="cursor: pointer" :style="selected?.experiment_id === e.experiment_id ? 'background: var(--brand-weak)' : ''" @click="selected = e">
                   <td>
-                    <div class="small strong">{{ e.name }}</div>
+                    <div class="small strong" style="max-width: 200px" :title="e.name">{{ e.name }}</div>
                     <div class="mono muted" style="font-size: 10.5px">{{ e.experiment_id.slice(-10) }}</div>
                   </td>
                   <td><span class="badge neutral">{{ e.kind }}</span></td>
@@ -114,9 +114,9 @@ onMounted(load)
         <div class="card">
           <div class="card-head"><h2>指标（分子 / 分母）</h2></div>
           <div class="card-body tight scroll-x">
-            <table>
+            <table style="min-width: 680px">
               <thead>
-                <tr><th>指标</th><th v-for="b in baselines" :key="b">{{ b }}</th></tr>
+                <tr><th style="width: 190px">指标</th><th v-for="b in baselines" :key="b">{{ b }}</th></tr>
               </thead>
               <tbody>
                 <tr v-for="(bl, metric) in grouped" :key="metric">

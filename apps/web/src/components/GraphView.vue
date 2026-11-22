@@ -67,13 +67,18 @@ function edgePath(e: GraphEdge): string {
   const mx = (x1 + x2) / 2
   return `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`
 }
+function shortId(id: unknown): string {
+  const s = String(id ?? '')
+  return s.length > 8 ? s.slice(-6) : s
+}
 function label(n: GraphNode): string {
   if (n.node_type === 'Run') return 'Run'
   if (n.node_type === 'Step') return String(n.properties.index ?? '') + ' · ' + String(n.properties.action ?? '')
-  if (n.node_type === 'Evidence') return String(n.properties.kind ?? 'evd')
+  if (n.node_type === 'Evidence') return String(n.properties.source_type ?? 'evd') + ' ' + shortId(n.ref_id)
+  if (n.node_type === 'Event') return String(n.properties.event_type ?? 'event').replace('run.', '').replace('step.', 'step:')
   if (n.node_type === 'Assertion') return String(n.ref_id).split(':').pop() ?? 'assert'
   if (n.node_type === 'Hypothesis') return String(n.properties.mechanism ?? 'hyp')
-  return String(n.ref_id).slice(0, 18)
+  return shortId(n.ref_id)
 }
 function isDim(n: GraphNode) {
   return activeSet.value ? !activeSet.value.has(n.node_id) : false

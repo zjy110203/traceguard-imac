@@ -117,7 +117,12 @@ onMounted(() => load())
               <div class="grid c3">
                 <div v-for="(v, k) in metrics" :key="k" class="metric" style="box-shadow: none">
                   <div class="label">{{ k }}</div>
-                  <div class="value" style="font-size: 20px">{{ v }}</div>
+                  <template v-if="k === 'verdicts'">
+                    <div class="chip-row" style="margin-top: 6px">
+                      <span v-for="(n, key) in (v as unknown as Record<string, number>)" :key="key" class="chip">{{ key }} {{ n }}</span>
+                    </div>
+                  </template>
+                  <div v-else class="value" style="font-size: 20px">{{ v }}</div>
                 </div>
               </div>
             </div>

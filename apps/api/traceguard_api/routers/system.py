@@ -6,6 +6,7 @@ import threading
 from typing import Any
 
 from fastapi import APIRouter, Query
+from starlette.concurrency import run_in_threadpool
 
 from ..seed import seed_teamflow_catalog
 from ..services import get_services
@@ -38,9 +39,13 @@ async def browser_health(
 
     with _browser_lock:
         try:
-            _browser_cache = {"available": True, **probe_browser()}
+            # Playwright 同步 API 不能运行在事件循环线程，必须放线程池
+            info = await run_in_threadpool(probe_browser)
+            _browser_cache = {"available": True, **info}
         except BrowserUnavailableError as exc:
             _browser_cache = {"available": False, "error": str(exc)}
+        except Exception as exc:  # noqa: BLE001 - 自检失败不应 500
+            _browser_cache = {"available": False, "error": f"{type(exc).__name__}: {exc}"}
         return _browser_cache
 
 
@@ -60,8 +65,8 @@ async def metrics() -> dict[str, Any]:
     return {
         "runs": len(runs),
         "verdicts": verdicts,
-        "evidence": len(rt.evidence.list(limit=500)),
-        "events": len(rt.events.list_events(limit=2000)),
+        "evidence": rt.evidence.count_all(),
+        "events": rt.events.count_all(),
         "diagnoses": len(rt.docs.list(kind="diagnosis", limit=500)),
         "repairs": len(rt.docs.list(kind="repair", limit=500)),
         "testcases": len(rt.catalog.list_testcases()),

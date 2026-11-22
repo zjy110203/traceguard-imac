@@ -15,7 +15,10 @@ const loading = ref(true)
 const error = ref('')
 const busy = ref('')
 const showCreate = ref(false)
+const includeBench = ref(false)
 const reviewer = ref('role:qa-lead')
+
+const stepOptions = ref<{ index: number; action: string; target: string }[]>([])
 
 const form = ref({
   testcase_id: '',
@@ -29,11 +32,12 @@ const form = ref({
 async function load() {
   loading.value = true
   try {
-    const [r, c] = await Promise.all([api.get<Repair[]>('/repairs'), api.get<TestCaseSummary[]>('/testcases')])
+    const [r, c] = await Promise.all([api.get<Repair[]>(`/repairs${includeBench.value ? '' : '?workspace_id=default'}`), api.get<TestCaseSummary[]>('/testcases')])
     items.value = r
     cases.value = c
-    if (selected.value) selected.value = r.find((x) => x.proposal_id === selected.value!.proposal_id) ?? null
-    else selected.value = r[0] ?? null
+    const keep = selected.value?.proposal_id
+    if (keep) await selectById(keep)
+    else if (r.length) await selectById(r[0].proposal_id)
     error.value = ''
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
@@ -46,10 +50,38 @@ async function onCaseChange() {
   const c = cases.value.find((x) => x.testcase_id === form.value.testcase_id)
   form.value.base_version = c?.latest_version ?? 1
   versions.value = await api.get(`/testcases/${form.value.testcase_id}/versions`)
+  await loadSteps()
+}
+
+async function loadSteps() {
+  stepOptions.value = []
+  if (!form.value.testcase_id) return
+  try {
+    const doc = await api.get<TestCaseVersion>(
+      `/testcases/${form.value.testcase_id}/versions/${form.value.base_version}`,
+    )
+    stepOptions.value = (doc.steps || []).map((s, i) => ({
+      index: i,
+      action: s.action,
+      target: s.target ? `${s.target.strategy}:${s.target.value}` : s.value || '—',
+    }))
+    const clickable = stepOptions.value.find((s) => ['click', 'fill', 'select', 'press'].includes(s.action))
+    form.value.step_index = clickable ? clickable.index : 0
+  } catch {
+    /* 历史版本不可读时保留手填 */
+  }
+}
+
+async function selectById(proposalId: string) {
+  try {
+    selected.value = await api.get<Repair>(`/repairs/${proposalId}`)
+  } catch {
+    selected.value = items.value.find((x) => x.proposal_id === proposalId) ?? null
+  }
 }
 
 async function select(r: Repair) {
-  selected.value = r
+  await selectById(r.proposal_id)
 }
 
 async function propose() {
@@ -70,7 +102,7 @@ async function propose() {
     notify('提案已创建：' + r.status)
     showCreate.value = false
     await load()
-    selected.value = items.value.find((x) => x.proposal_id === r.proposal_id) ?? null
+    await selectById(r.proposal_id)
   } catch (e) {
     notifyError(e)
   } finally {
@@ -107,6 +139,9 @@ onMounted(load)
         <div class="sub">Oracle-Protected Self-Healing：只改定位/等待/数据引用，断言与 Oracle 不可触碰；沙箱必须真实再执行。</div>
       </div>
       <div class="actions">
+        <label class="flex small" style="gap: 5px; margin: 0">
+          <input v-model="includeBench" type="checkbox" style="width: auto" @change="load" /> 包含 Benchmark
+        </label>
         <button @click="load">刷新</button>
         <button class="primary" @click="showCreate = true">新建修复提案</button>
       </div>
@@ -144,17 +179,26 @@ onMounted(load)
               <dt>用例</dt><dd class="mono small">{{ selected.testcase_id }} · base v{{ selected.base_version }}</dd>
               <dt>断言保持</dt><dd><StatusBadge :value="selected.assertion_preservation" /></dd>
               <dt>Oracle 完整</dt><dd><StatusBadge :value="selected.oracle_integrity" /></dd>
-              <dt>Diff 白名单</dt><dd>{{ selected.diff_allowed ? 'PASS' : 'FAIL' }}</dd>
+              <dt>Diff 白名单</dt>
+              <dd>
+                <span v-if="selected.diff_allowed === false" class="badge fail">FAIL</span>
+                <span v-else-if="selected.diff_allowed" class="badge pass">PASS</span>
+                <span v-else class="muted">—</span>
+              </dd>
               <dt>原因</dt><dd class="small">{{ selected.reason || '—' }}</dd>
-              <dt>沙箱 Run</dt><dd class="mono small">{{ selected.sandbox_run_id || '—' }}</dd>
+              <dt>沙箱 Run</dt>
+              <dd class="mono small">
+                <router-link v-if="selected.sandbox_run_id" :to="`/runs/${selected.sandbox_run_id}`">{{ selected.sandbox_run_id }}</router-link>
+                <span v-else>—</span>
+              </dd>
             </div>
             <div class="hr" />
             <div class="small muted" style="margin-bottom: 4px">Diff</div>
-            <pre class="json" style="max-height: 180px">{{ JSON.stringify(selected.diff, null, 2) }}</pre>
+            <pre class="json" style="max-height: 180px">{{ JSON.stringify(selected.diff || [], null, 2) }}</pre>
             <div v-if="selected.failure_reason" class="small" style="color: var(--fail); margin-top: 6px">{{ selected.failure_reason }}</div>
             <div class="hr" />
             <div class="flex wrap">
-              <button class="sm" :disabled="busy === 'validate' || selected.status !== 'DRAFT'" @click="action('validate', undefined, '规则校验')">规则校验</button>
+              <button class="sm" :disabled="busy === 'validate' || ['PROMOTED','PROMOTING','ROLLED_BACK','REJECTED','PENDING_APPROVAL','APPROVED'].includes(selected.status)" @click="action('validate', undefined, '规则校验')">规则校验</button>
               <button class="sm" :disabled="busy === 'sandbox-run' || selected.status !== 'VALIDATED'" @click="action('sandbox-run', undefined, '沙箱验证')">沙箱真实执行</button>
               <button class="sm" :disabled="busy === 'submit' || selected.status !== 'VALIDATED' || selected.sandbox_status !== 'PASSED'" @click="action('submit', undefined, '提交审批')">提交审批</button>
               <button class="sm primary" :disabled="busy === 'approve' || !canApprove" @click="action('approve', { reviewer, note: '控制台审批' }, '审批')">批准</button>
@@ -194,8 +238,13 @@ onMounted(load)
         <input v-model.number="form.base_version" type="number" min="1" />
       </div>
       <div>
-        <label>修改步骤序号（从 0 开始）</label>
-        <input v-model.number="form.step_index" type="number" min="0" />
+        <label>目标步骤</label>
+        <select v-if="stepOptions.length" v-model.number="form.step_index">
+          <option v-for="s in stepOptions" :key="s.index" :value="s.index">
+            #{{ s.index }} · {{ s.action }} · {{ s.target }}
+          </option>
+        </select>
+        <input v-else v-model.number="form.step_index" type="number" min="0" />
       </div>
       <div class="grid c2">
         <div>

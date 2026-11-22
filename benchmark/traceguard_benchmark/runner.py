@@ -624,6 +624,7 @@ class BenchmarkRunner:
             ],
             reason="benchmark 自愈对照",
             created_by="agent:benchmark",
+            workspace_id=BENCH_WORKSPACE,
         )
 
     def _offline_trace(self, base: dict[str, Any] | None, sc: Scenario) -> dict[str, Any]:

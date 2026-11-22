@@ -302,3 +302,6 @@ pre.json {
 .flex-col { display: flex; flex-direction: column; gap: 8px; }
 .right { margin-left: auto; }
 .wrap { flex-wrap: wrap; }
+
+.bench-grid { display: grid; gap: 14px; grid-template-columns: minmax(340px, 0.95fr) minmax(640px, 1.9fr); align-items: start; }
+@media (max-width: 1240px) { .bench-grid { grid-template-columns: 1fr; } }

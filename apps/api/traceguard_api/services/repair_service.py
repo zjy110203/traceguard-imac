@@ -42,6 +42,7 @@ class RepairService:
         changes: list[dict[str, Any]],
         reason: str = "",
         created_by: str = "agent:repair-planner",
+        workspace_id: str | None = None,
     ) -> dict[str, Any]:
         base = self.rt.catalog.get_version(testcase_id, base_version)
         if not base:
@@ -62,7 +63,7 @@ class RepairService:
         doc = {
             "proposal_id": proposal_id,
             "testcase_id": testcase_id,
-            "workspace_id": self._workspace_of(base),
+            "workspace_id": workspace_id or self._workspace_of(base),
             "base_testcase_version": f"{testcase_id}:v{base_version}",
             "base_version": base_version,
             "status": "VALIDATED" if (ok_assert and ok_oracle and ok_diff) else "VALIDATION_FAILED",

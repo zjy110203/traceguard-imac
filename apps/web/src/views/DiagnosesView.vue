@@ -12,6 +12,7 @@ const dispositions = ref<Disposition[]>([])
 const loading = ref(true)
 const error = ref('')
 const outcome = ref('')
+const includeBench = ref(false)
 
 const filtered = computed(() => items.value.filter((d) => !outcome.value || d.outcome === outcome.value))
 
@@ -19,7 +20,7 @@ async function load() {
   loading.value = true
   try {
     const [d, p] = await Promise.all([
-      api.get<Diagnosis[]>('/diagnoses?limit=200'),
+      api.get<Diagnosis[]>(`/diagnoses?limit=200${includeBench.value ? '' : '&workspace_id=default'}`),
       api.get<Disposition[]>('/dispositions?limit=200'),
     ])
     items.value = d
@@ -47,6 +48,9 @@ onMounted(load)
         <div class="sub">确定性规则 + 可信证据裁决。没有足够证据就是 INCONCLUSIVE，不会被包装成 PASSED。</div>
       </div>
       <div class="actions">
+        <label class="flex small" style="gap: 5px; margin: 0">
+          <input v-model="includeBench" type="checkbox" style="width: auto" @change="load" /> 包含 Benchmark
+        </label>
         <select v-model="outcome" style="width: 150px">
           <option value="">全部结论</option>
           <option value="CONFIRMED">CONFIRMED</option>

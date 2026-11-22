@@ -22,7 +22,7 @@ async function load() {
     const [r, c, d] = await Promise.all([
       api.get<Run[]>('/runs?limit=60&workspace_id=default'),
       api.get<TestCaseSummary[]>('/testcases?workspace_id=default'),
-      api.get<Diagnosis[]>('/diagnoses?limit=20'),
+      api.get<Diagnosis[]>('/diagnoses?limit=20&workspace_id=default'),
     ])
     runs.value = r
     cases.value = c

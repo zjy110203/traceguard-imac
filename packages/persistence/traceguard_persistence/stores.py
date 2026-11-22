@@ -186,6 +186,15 @@ class PersistentEventStore:
                 for r in rows
             ]
 
+    def count_all(self, workspace_id: str | None = None) -> int:
+        from sqlalchemy import func
+
+        with self.db.session() as s:
+            q = select(func.count()).select_from(EventRow)
+            if workspace_id:
+                q = q.where(EventRow.workspace_id == workspace_id)
+            return int(s.scalar(q) or 0)
+
     def stats(self, workspace_id: str | None = None) -> dict[str, Any]:
         events = self.list_events(workspace_id, limit=100000)
         by_type: dict[str, int] = {}
@@ -362,6 +371,15 @@ class PersistentEvidenceManager:
 
     def count(self, **kw: Any) -> int:
         return len(self.list(limit=100000, **kw))
+
+    def count_all(self, workspace_id: str | None = None) -> int:
+        from sqlalchemy import func
+
+        with self.db.session() as s:
+            q = select(func.count()).select_from(EvidenceRow)
+            if workspace_id:
+                q = q.where(EvidenceRow.workspace_id == workspace_id)
+            return int(s.scalar(q) or 0)
 
 
 def _to_evidence(row: EvidenceRow) -> EvidenceRecord:
