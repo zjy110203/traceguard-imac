@@ -40,12 +40,15 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/testcases/tcase_tf_create_normal/ex
 
 # 四场景脚本
 .venv/bin/python scripts/smoke_playwright.py
+
+# 端到端演示（执行→诊断→图→探针→自愈→Benchmark）
+.venv/bin/python scripts/final_demo.py
 ```
 
 ## 3. 测试与检查
 
 ```bash
-.venv/bin/python -m pytest -q                 # 203 passed
+.venv/bin/python -m pytest -q                 # 205 passed
 .venv/bin/ruff check packages apps tests scripts benchmark
 cd apps/web && npm run build                  # vue-tsc + vite
 ```

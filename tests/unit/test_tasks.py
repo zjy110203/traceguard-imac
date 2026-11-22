@@ -130,3 +130,30 @@ def test_task_summary_is_display_only() -> None:
     summary = svc.task_summary(tid)
     assert summary["run_count"] == 2
     assert "展示汇总" in summary["note"]
+
+
+def test_lease_heartbeat_renews_and_detects_loss() -> None:
+    """长任务心跳：持续续租；被新 Worker 接管后立即标记 lost。"""
+    import time as _t
+
+    from traceguard_execution.tasks.service import LeaseHeartbeat
+
+    svc = _svc()
+    tid = _mk_task(svc, "idem-heartbeat")
+    rid = svc.create_run(tid, "tc:v1")["run_id"]
+    lease = svc.acquire_lease(rid, "worker-H", ttl_seconds=0.6)
+    hb = LeaseHeartbeat(svc, rid, "worker-H", lease["fencing_token"], ttl_s=0.6).start()
+    _t.sleep(1.1)
+    assert hb.lost is False
+    assert hb.renewals >= 1
+    # 模拟被新 Worker 接管：直接改写 lease owner，续租必须失败并标记 lost
+    from traceguard_execution.tasks.store import RunRow
+
+    with svc.db.session() as s:
+        row = s.get(RunRow, rid)
+        assert row is not None
+        row.lease_owner = "worker-Z"
+    _t.sleep(0.8)
+    assert hb.lost is True
+    hb.stop()
+    assert hb._thread.is_alive() is False

@@ -34,7 +34,7 @@ from traceguard_persistence.stores import (
 )
 
 from ..browser.manager import BrowserConfig, get_browser_manager
-from ..tasks.service import TaskService
+from ..tasks.service import LeaseHeartbeat, TaskService
 from ..verdict import VerdictInput, aggregate
 from .assertions import evaluate_assertion
 from .http_observer import HttpObserver
@@ -99,6 +99,9 @@ class RunPipeline:
         if lease is None:
             lease = self.tasks.acquire_lease(run_id, self.worker_id, ttl_seconds=600)
         token = int(lease["fencing_token"])
+        heartbeat = LeaseHeartbeat(
+            self.tasks, run_id, self.worker_id, token, ttl_s=float(lease.get("ttl_s", 600))
+        ).start()
         task = self.tasks.get_task(run["task_id"]) or {}
         workspace_id = run.get("workspace_id") or "default"
 
@@ -155,6 +158,7 @@ class RunPipeline:
                 idem=f"{run_id}:failed",
             )
 
+        heartbeat.stop()
         self.tasks.submit_result(
             run_id,
             self.worker_id,
@@ -275,6 +279,7 @@ class RunPipeline:
         workspace_id: str,
         token: int,
         started: float,
+        heartbeat: LeaseHeartbeat | None = None,
     ) -> dict[str, Any]:
         default_base = (
             "http://127.0.0.1:8001" if task.get("application") == "teamflow" else base_url_default()
@@ -304,6 +309,10 @@ class RunPipeline:
         step_events = 0
 
         for idx, step in enumerate(tc.steps):
+            if heartbeat is not None and heartbeat.lost:
+                raise AppError(
+                    ErrorCode.CONFLICT, "LEASE_LOST: 租约已被回收，停止写入证据"
+                )
             if step.action == "api":
                 rec = ObservationRecord(
                     step_id=step.step_id, action="api", observation={"preset": True}

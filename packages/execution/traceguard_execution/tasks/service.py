@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import threading
 import time
 from typing import Any
 
@@ -38,6 +39,51 @@ RUN_TRANSITIONS: dict[str, set[str]] = {
     "CANCELLED": set(),
 }
 FINAL_RUN_STATES = {"COMPLETED", "FAILED", "TIMED_OUT", "CANCELLED"}
+
+
+class LeaseHeartbeat:
+    """执行期间的租约续期看护。
+
+    - 每 ttl/3 续租一次；续租失败（被新 Worker 接管/任务被取消）即标记 lost；
+    - Pipeline 在步骤边界检查 lost，主动停止，避免"僵尸执行"继续写证据；
+    - 只续期，不改变 fencing token。
+    """
+
+    def __init__(
+        self, service: TaskService, run_id: str, worker_id: str, fencing_token: int, ttl_s: float
+    ) -> None:
+        self.service = service
+        self.run_id = run_id
+        self.worker_id = worker_id
+        self.fencing_token = fencing_token
+        self.ttl_s = ttl_s
+        self.lost = False
+        self.renewals = 0
+        self._stop = threading.Event()
+        self._thread = threading.Thread(target=self._loop, name="tg-lease-heartbeat", daemon=True)
+
+    def _loop(self) -> None:
+        interval = max(0.2, self.ttl_s / 3)
+        while not self._stop.wait(interval):
+            try:
+                ok = self.service.renew_lease(
+                    self.run_id, self.worker_id, self.fencing_token, ttl_seconds=self.ttl_s
+                )
+            except Exception:  # noqa: BLE001
+                ok = False
+            if not ok:
+                self.lost = True
+                return
+            self.renewals += 1
+
+    def start(self) -> LeaseHeartbeat:
+        self._thread.start()
+        return self
+
+    def stop(self) -> None:
+        self._stop.set()
+        if self._thread.is_alive():
+            self._thread.join(timeout=2)
 
 
 class TaskService:
@@ -209,6 +255,7 @@ class TaskService:
                 "attempt": r.attempt,
                 "workspace_id": r.workspace_id,
                 "task_id": r.task_id,
+                "ttl_s": ttl_seconds,
             }
 
     def renew_lease(
@@ -262,6 +309,7 @@ class TaskService:
                 "fencing_token": target.fencing_token,
                 "previous_status": previous,
                 "lease_expires_at": target.lease_expires_at,
+                "ttl_s": ttl_seconds,
             }
 
     def reap_expired_runs(self) -> list[dict[str, Any]]:

@@ -22,6 +22,12 @@ bash scripts/run_api.sh &          # 平台 :8000（内嵌 Worker）
 open http://127.0.0.1:8000/
 ```
 
+端到端演示（真实执行 19 步，含自愈与 Benchmark）：
+
+```bash
+.venv/bin/python scripts/final_demo.py
+```
+
 详见 [`docs/quickstart.md`](docs/quickstart.md) 与 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)。
 
 ## 真实结果（2026-11-22）
@@ -33,7 +39,7 @@ open http://127.0.0.1:8000/
 | UI 提示缺失（TF-UI-001） | FAILED | 业务成功但界面无反馈 |
 | 接口 500（TF-API-001） | FAILED | 错误提示正确，功能不可用 |
 
-- 测试：**203 passed**；ruff 全绿；前端类型检查 + 构建通过。
+- 测试：**205 passed**；ruff 全绿；前端类型检查 + 构建通过。
 - Benchmark B（n=3）：传统报告基线首选根因 1/3、假通过 1/1；规则诊断 3/3、假通过 0/1。
 - Benchmark C：沙箱 1/1、断言保持 1/1；无保护对照断言保持 0/1。
 
@@ -84,7 +90,7 @@ docs                  架构 / API / 数据库 / Agent / Playwright / 安全 / �
 | [Benchmark](docs/BENCHMARK.md) | 真实实验与阻塞项 |
 | [安全](docs/SECURITY.md) | 威胁模型与测试 |
 | [性能与可靠性](docs/PERFORMANCE.md) | 实测延迟、吞吐、可靠性验证 |
-| [测试报告](docs/TEST-REPORT.md) | 203 测试与缺陷回归 |
+| [测试报告](docs/TEST-REPORT.md) | 205 测试与缺陷回归 |
 | [部署](docs/DEPLOYMENT.md) | 安装、配置、排错 |
 | [功能状态](docs/FEATURE-STATUS.md) | 已运行 / 未验证 / 阻塞 / 待决策 |
 | [最终交付报告](docs/FINAL/TraceGuard-Final-Delivery-Report.md) | 一页结论与交付索引 |

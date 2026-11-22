@@ -102,7 +102,7 @@ INCONCLUSIVE 来自 HttpObserver 降级路径无法解析客户端 JS 渲染的�
 
 ```
 .venv/bin/python -m pytest -q
-203 passed in 17.0s
+205 passed in 19.8s
 
 .venv/bin/ruff check packages apps tests scripts benchmark
 All checks passed!
@@ -120,3 +120,5 @@ Benchmark（真实）：
 - B：A_raw 0.333 / C,D,E 1.000（3/3）；A false_pass 1/1，C/D/E 0/1。
 - C：sandbox 1/1；assertion preservation 1/1 vs 无保护 0/1；regression 0/1。
 - A：human 4/4 执行；compiler 2/2 执行；无可评估断言（Oracle 未绑定，契约要求）。
+
+新增：租约心跳单测（续期 + 被接管检测）。全量 205 passed。
