@@ -26,6 +26,20 @@ import time
 from pathlib import Path
 from typing import Any
 
+ROOT = Path(__file__).resolve().parent.parent
+# pytest 靠 pyproject 的 `pythonpath` 注入本地包；独立脚本与 spawn 子进程没有这个机制，
+# 必须自行注入，否则子进程会 `ModuleNotFoundError: traceguard_api`（CI backend-full 曾因此失败）。
+for _pkg in (
+    "packages/core",
+    "packages/contracts",
+    "packages/execution",
+    "packages/persistence",
+    "apps/api",
+):
+    _path = str(ROOT / _pkg)
+    if _path not in sys.path:
+        sys.path.insert(0, _path)
+
 
 def _child_main(cfg: dict[str, Any]) -> None:
     db_url = cfg["db_url"]

@@ -53,7 +53,9 @@ def _fresh_database(prefix: str) -> str:
             conn.execute(text(f'CREATE DATABASE "{name}"'))
     finally:
         engine.dispose()
-    return str(make_url(PG_URL).set(database=name))
+    # 注意：SQLAlchemy 的 `str(URL)` 默认 hide_password=True，会把密码渲染成字面量 `***`，
+    # 用它建立连接必然 `password authentication failed`。必须显式关闭隐藏。
+    return make_url(PG_URL).set(database=name).render_as_string(hide_password=False)
 
 
 def _drop_database(url: str) -> None:

@@ -195,14 +195,17 @@ jobs:
         with:
           python-version: "3.11"
       - name: Secret pattern scan
+        # 只匹配"真实密钥形态"。占位符（如文档里的 `DEEPSEEK_API_KEY=…`）不得误报：
+        # 有误报的门禁会被人习惯性绕过，等于没有门禁（这正是本轮要修的"掩盖"问题）。
+        # 用 `git grep` 而非 `grep -r`：只扫已跟踪文件，天然排除 .venv / node_modules / 本地运行态。
         run: |
-          if grep -rInE "(sk-[A-Za-z0-9]{20,}|DEEPSEEK_API_KEY=[^[:space:]]+)" \
-              --exclude-dir=.github \
-              --include="*.py" --include="*.ts" --include="*.vue" --include="*.yml" --include="*.md" .; then
-            echo "SECRET_PATTERN_FOUND"; exit 1
-          else
-            echo "no secret pattern found"
+          set -euo pipefail
+          pattern='(sk-[A-Za-z0-9]{20,}|DEEPSEEK_API_KEY=[A-Za-z0-9_-]{16,}|github_pat_[A-Za-z0-9_]{20,}|ghp_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|BEGIN (RSA|OPENSSH|EC) PRIVATE KEY)'
+          if git grep -InE "$pattern" -- '*.py' '*.ts' '*.vue' '*.yml' '*.yaml' '*.md' '*.json' '*.sh' ':!/\.github'; then
+            echo "SECRET_PATTERN_FOUND"
+            exit 1
           fi
+          echo "no secret pattern found"
 
   llm-smoke:
     runs-on: ubuntu-latest
