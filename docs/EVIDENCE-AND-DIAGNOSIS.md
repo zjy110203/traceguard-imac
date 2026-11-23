@@ -23,11 +23,28 @@ Run 执行产生的事件：`run.started`、`step.completed`、`assertion.evalua
 | `kind` | raw / normalized / derived / diagnostic | 派生必须指向 `raw_ref` 并记录规则 |
 | `source_type` | browser / network / api / backend_log / database / agent / probe | 来源可追溯 |
 | `source_trust` | TRUSTED / UNTRUSTED / UNKNOWN | 与完整性独立 |
-| `integrity_check` | PASS / FAIL / NOT_RUN | 用原始内容重算 SHA-256 |
+| `integrity_check` | PASS / FAIL / NOT_RUN | **持久化内容**完整性（服务端读回重算），不是来源内容比对 |
 
 - 入库前递归脱敏（password/token/secret/authorization/cookie/key）。
 - 大对象（截图/DOM/trace）存内容寻址 artifact，证据只存引用。
-- 篡改磁盘文件后读取会报 `integrity check failed`（已测试）。
+
+### 2.1 三种摘要语义（RUN-007-FINALIZATION-2）
+
+脱敏使"入库内容"与"原始来源 payload"必然不同，摘要在语义上必须分开：
+
+| 字段 | 覆盖对象 | 用途 |
+|---|---|---|
+| `sha256` | 脱敏**前**原始来源 payload | 来源可追溯/可比对（调用者提供原始内容时） |
+| `stored_content_sha256` | 脱敏**后**实际持久化内容 | 服务端存储完整性校验（读回重算） |
+| `attachment_sha256` | ArtifactStore 落盘字节 | 附件篡改检测 |
+
+- `POST /evidence/{id}/verify` 默认**不需要**调用者提交内容：服务端读取持久化记录与真实内容，
+  重算 `stored_content_sha256` 比对，附件调用 `ArtifactStore.read()` 重算字节摘要；
+- 兼容旧请求：若仍传 `content`，结果只放在 `legacy_source_check`，
+  绝不与存储完整性合并成一个 PASS；
+- 历史行没有 `stored_content_sha256` → 如实 `NOT_RUN`（无法回溯证明），不冒充 PASS；
+- 派生证据校验 `raw_ref` 存在、是 raw、同工作区、有 `derivation_rule`；
+- 篡改磁盘文件后读取会报 `integrity check failed`；库内内容被改动 → `STORED_CONTENT_MISMATCH`。
 
 ## 3. Evidence Graph（C07）
 
