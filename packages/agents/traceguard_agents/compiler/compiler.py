@@ -16,6 +16,7 @@ import hashlib
 import json
 from dataclasses import dataclass, field
 from typing import Any
+from urllib.parse import urlparse
 
 from traceguard_contracts.models import AssertionSpec, LocatorSpec, TestCaseVersion, TestStep
 from traceguard_core.ids import new_id, utc_now_iso
@@ -150,6 +151,30 @@ class TestCaseCompiler:
                 )
             )
 
+        # RUN-007 WP2：为 UI 断言补齐 assert 步骤。
+        # 执行内核的 `_observation_for()` 只从 action=assert 的观测里取 DOM 文本；
+        # 没有 assert 步骤时 `text_contains` 断言永远拿空文本 → 必然假 FAILED。
+        # 这不是放宽断言，而是补上"执行断言所需的观测动作"。
+        for a in assertions:
+            tid = (a.expected or {}).get("test_id")
+            if not tid or any(
+                s.action == "assert" and (s.target or {}).get("value") == tid for s in steps
+            ):
+                continue
+            steps.append(
+                TestStep(
+                    step_id=f"assert_{a.assertion_id}",
+                    action="assert",
+                    target=LocatorSpec(
+                        strategy="test_id", value=str(tid), source="compiler", stability_score=0.9
+                    ),
+                    value=str(tid),
+                )
+            )
+
+        # base_url 不能写死：跟随探索实际导航到的 origin，退化到当前配置
+        base_url = _infer_base_url(trace)
+
         candidate = TestCaseVersion(
             testcase_id=new_id("tcase"),
             version=1,
@@ -159,7 +184,7 @@ class TestCaseCompiler:
             preconditions=["探索轨迹来源：" + trace.get("exploration_id", "unknown")],
             postconditions=[],
             cleanup_policy="RESET_DATA",
-            run_config={"base_url": "http://127.0.0.1:8011"},
+            run_config={"base_url": base_url},
             compile_source="compiler",
             review_status="DRAFT",  # 候选状态，未审核
             immutable=True,
@@ -343,6 +368,20 @@ class TestCaseCompiler:
 
 
 # ---------------------------------------------------------------- LLM 辅助编译
+
+
+def _infer_base_url(trace: dict[str, Any]) -> str:
+    """从探索轨迹推断被测应用的 base_url（编译候选不能写死端口）。"""
+    from traceguard_core.config import get_settings
+
+    for act in trace.get("action_sequence") or []:
+        if act.get("action") != "navigate":
+            continue
+        result = str(act.get("result") or "") or str((act.get("params") or {}).get("url") or "")
+        parsed = urlparse(result)
+        if parsed.scheme in {"http", "https"} and parsed.netloc:
+            return f"{parsed.scheme}://{parsed.netloc}"
+    return get_settings().teamflow_base_url
 
 
 def compile_candidate(

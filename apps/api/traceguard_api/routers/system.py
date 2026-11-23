@@ -38,18 +38,37 @@ async def browser_health(
     global _browser_cache
     if not probe and _browser_cache:
         return _browser_cache
-    from traceguard_execution.browser.manager import BrowserUnavailableError, probe_browser
-
     with _browser_lock:
-        try:
-            # Playwright 同步 API 不能运行在事件循环线程，必须放线程池
-            info = await run_in_threadpool(probe_browser)
-            _browser_cache = {"available": True, **info}
-        except BrowserUnavailableError as exc:
-            _browser_cache = {"available": False, "error": str(exc)}
-        except Exception as exc:  # noqa: BLE001 - 自检失败不应 500
-            _browser_cache = {"available": False, "error": f"{type(exc).__name__}: {exc}"}
+        # RUN-007 修复：probe 必须在"全新线程"里跑。
+        # 之前放在 anyio 线程池里执行：一旦同进程任何 worker 线程已经创建过
+        # Playwright 同步实例（执行 Run / 探索都会创建），anyio 线程复用会让
+        # `sync_playwright().start()` 误判"在 asyncio loop 里"而失败，
+        # 导致 /system/browser 永久返回 available=false。专用线程没有这个污染。
+        info = await run_in_threadpool(_probe_in_fresh_thread)
+        _browser_cache = info
         return _browser_cache
+
+
+def _probe_in_fresh_thread() -> dict[str, Any]:
+    import queue as _queue
+    import threading
+
+    from traceguard_execution.browser.manager import probe_browser
+
+    box: _queue.Queue[dict[str, Any]] = _queue.Queue(maxsize=1)
+
+    def _run() -> None:
+        try:
+            box.put({"available": True, **probe_browser()})
+        except Exception as exc:  # noqa: BLE001 - 自检失败不应 500
+            box.put({"available": False, "error": f"{type(exc).__name__}: {exc}"})
+
+    thread = threading.Thread(target=_run, name="tg-browser-probe", daemon=True)
+    thread.start()
+    thread.join(timeout=90)
+    if thread.is_alive():
+        return {"available": False, "error": "TimeoutError: browser probe 超过 90s 未完成"}
+    return box.get_nowait()
 
 
 @router.post("/seed")
@@ -88,7 +107,9 @@ async def llm_summary() -> dict[str, Any]:
     s = rt.settings
     configured = s.llm_provider.strip().lower() == "deepseek" and bool(s.deepseek_api_key)
     usage_path = Path(os.environ.get("TG_TRACEGUARD_ROOT", ".")) / ".traceguard" / "llm_usage.jsonl"
-    tracker = TokenUsageTracker(path=str(usage_path), daily_budget_usd=float(s.llm_daily_budget_usd))
+    tracker = TokenUsageTracker(
+        path=str(usage_path), daily_budget_usd=float(s.llm_daily_budget_usd)
+    )
     summary = tracker.summary()
 
     # 规则兜底来自真实探索/诊断文档，不从用量文件臆测。

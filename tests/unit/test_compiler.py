@@ -43,8 +43,10 @@ def test_compile_produces_draft_candidate() -> None:
     assert r.candidate.compile_source == "compiler"
     assert r.candidate.steps  # 有步骤
     assert (
-        len(r.candidate.steps) == 4
-    )  # navigate + fill×2 + click（被拒的 navigate 与 read_page 被过滤）
+        len(r.candidate.steps) == 5
+    )  # navigate + fill×2 + click + 断言观测步骤（RUN-007 WP2：UI 断言必须配 assert 步骤）
+    assert r.candidate.steps[-1].action == "assert"
+    assert r.candidate.steps[-1].target.value == "login-message"
 
 
 def test_compile_trace_is_traceable() -> None:

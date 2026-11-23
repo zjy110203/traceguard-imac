@@ -361,6 +361,18 @@ def seed_teamflow_catalog(rt: Any, base_url: str = BASE) -> dict[str, Any]:
             desired = {a["assertion_id"] for a in tc["assertions"]}
             if existing_assertions == desired:
                 if latest.get("review_status") != "APPROVED":
+                    latest_source = str(latest.get("compile_source") or "human")
+                    if latest_source != "human":
+                        # RUN-007：非人工版本（healed/compiler）受稳定性回放门禁约束，
+                        # seed 不能也不应绕过门禁补审批——保持 PENDING 并如实记录。
+                        skipped += 1
+                        logger.info(
+                            "seed_skip_unreviewed_candidate",
+                            testcase_id=tc["testcase_id"],
+                            version=latest.get("version"),
+                            compile_source=latest_source,
+                        )
+                        continue
                     rt.catalog.review_testcase(
                         tc["testcase_id"],
                         int(latest.get("version", 1)),

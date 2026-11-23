@@ -78,20 +78,34 @@ async def start_stability_replay(
     risk_profile: str = "default",
     sync: bool = False,
 ) -> dict[str, Any]:
-    """候选用例稳定性回放：每次独立 Run，走沙箱入口，不覆盖历史。"""
+    """候选用例稳定性回放：每次独立 Run，走沙箱入口，不覆盖历史。
+
+    RUN-007：sync=true 不再在请求线程里直接 execute_run（会与真实 Worker 抢租约，
+    产生 "run not acquirable" 冲突），而是创建 Run 后等待**真实 Worker 消费**完成，
+    超时仍返回 RUNNING 快照（不伪造结论）。
+    """
     from ..services import get_services
 
-    rt = get_services().rt
     try:
-        return await run_in_threadpool(
-            get_services().stability.start,
+        if not sync:
+            return await run_in_threadpool(
+                get_services().stability.start,
+                testcase_id,
+                version,
+                repeats=repeats,
+                risk_profile=risk_profile,
+                sync=False,
+            )
+        svc = get_services().stability
+        doc = await run_in_threadpool(
+            svc.start,
             testcase_id,
             version,
             repeats=repeats,
             risk_profile=risk_profile,
-            sync=sync,
-            execute_fn=rt.execute_run,
+            sync=False,
         )
+        return await run_in_threadpool(svc.wait, doc["replay_id"], timeout_s=300.0)
     except AppError as exc:
         raise _http(exc) from exc
 

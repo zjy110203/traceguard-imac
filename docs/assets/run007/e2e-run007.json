@@ -1,0 +1,413 @@
+{
+  "api": "http://127.0.0.1:8020",
+  "teamflow": "http://127.0.0.1:8021",
+  "scenarios": {
+    "A": {
+      "intent_id": "intent_17954245980903ad8b525c6f9",
+      "exploration_id": "exploration_17954245981431eb4114c2f15",
+      "testcase_id": "tcase_1795424604082c06ffbe77c29",
+      "version": 1,
+      "oracle_ids": {
+        "cand_a_create_ui": "oracle_e2e_tcase_1795424604082c06ffbe77c29_cand_a_create_ui"
+      },
+      "gate_rejected_as_expected": {
+        "rejected": true,
+        "status": 412,
+        "detail": "POST /testcases/tcase_1795424604082c06ffbe77c29/versions/1/review -> 412: {\"detail\":{\"code\":\"PRECONDITION_FAILED\",\"message\":\"STABILITY_REPLAY_REQUIRED: tcase_1795424604082c06ffbe77c29@1 没有任何稳定性回放记录（compile_source=compiler）\"}}"
+      },
+      "replay_id": "replay_179542460409758760028a2fb",
+      "replay_classification": "STABLE_PASS",
+      "review_revision": 1,
+      "run_id": "run_1795424611461878575d1cd0d",
+      "verdict": "PASSED"
+    },
+    "B": {
+      "run_id": "run_1795424613876d0f343109385",
+      "verdict": "FAILED",
+      "diagnosis_id": "diagnosis_17954246246114086d5d17627",
+      "outcome": "CONFIRMED",
+      "disposition": "PRODUCT_DEFECT",
+      "graph_nodes": 54,
+      "graph_edges": 71,
+      "graph_node_types": [
+        "Assertion",
+        "Event",
+        "Evidence",
+        "Hypothesis",
+        "Run",
+        "Source",
+        "Step"
+      ],
+      "evidence_ids": []
+    },
+    "C": {
+      "suggestions": 2,
+      "probe_steps": [
+        [
+          "http_state",
+          "SUCCEEDED"
+        ],
+        [
+          "network_trace",
+          "SUCCEEDED"
+        ]
+      ],
+      "stop_reason": "STOP_NO_HIGH_VALUE_PROBE",
+      "stop_detail": "已无高价值证据缺口",
+      "new_evidence_ids": [
+        "evd_17954246246437b8d497c688f",
+        "evd_17954246246464afc4ff776e9"
+      ],
+      "hypotheses_after": [
+        {
+          "id": "hyp_17954246188462592de1ad42c",
+          "status": "CONFIRMED"
+        },
+        {
+          "id": "hyp_17954246246085d1b5e3e32e8",
+          "status": "SUPPORTED"
+        },
+        {
+          "id": "hyp_179542462460846fcae33ab13",
+          "status": "SUPPORTED"
+        },
+        {
+          "id": "hyp_17954246246080a651ffe11b3",
+          "status": "SUPPORTED"
+        }
+      ],
+      "diagnosis_status_after": "CONFIRMED",
+      "outcome_after": "CONFIRMED",
+      "graph_after_nodes": 58,
+      "graph_after_edges": 77,
+      "budget": {
+        "budget_id": "pbudget_run-run_1795424613876d0f343109385",
+        "scope_key": "run:run_1795424613876d0f343109385",
+        "owner_run_id": "run_1795424613876d0f343109385",
+        "owner_diagnosis_id": "",
+        "workspace_id": "default",
+        "max_probes": 50,
+        "probes_used": 2,
+        "probes_left": 48,
+        "max_total_cost": 100.0,
+        "cost_used": 1.2,
+        "cost_left": 98.8,
+        "max_duration_seconds": 60.0,
+        "elapsed_seconds": 0.011,
+        "time_left": 59.989,
+        "closed": false,
+        "close_reason": "",
+        "provisional": true,
+        "note": "P06 待负责人确认：以下预算与风险阈值为 provisional 配置，仅用于本轮实现与测试，不得视为正式冻结的工程决策。",
+        "started_at": 1795424624.6361332,
+        "closed_at": null,
+        "version": 3,
+        "doc_version": 3
+      }
+    },
+    "D": {
+      "case_id": "tcase_17954246246608fb6c3d39970",
+      "base_version": 1,
+      "baseline_run_id": "run_1795424624673315914efbe72",
+      "baseline_verdict": "NOT_EVALUATED",
+      "baseline_execution_status": "FAILED",
+      "baseline_note": "定位器故障=步骤执行中断，状态机输出 NOT_EVALUATED（符合规范）",
+      "proposal_id": "repair_17954246366396538b6420f36",
+      "validated_status": "VALIDATED",
+      "assertion_preservation": "PASS",
+      "oracle_integrity": "PASS",
+      "sandbox_run_id": "run_1795424636643d1b31c888a3e",
+      "sandbox_verdict": "PASSED",
+      "approved_by": "role:qa-lead",
+      "promoted_version": 2,
+      "idempotent_replay_version": 2,
+      "regression_run_id": "run_1795424640966671857dc1afc",
+      "regression_verdict": "PASSED",
+      "rolled_back_status": "ROLLED_BACK",
+      "restored_version": 3,
+      "latest_after_rollback": 3,
+      "post_rollback_run_id": "run_179542464520321d821f1d185",
+      "post_rollback_verdict": "PASSED",
+      "fault_cleared": {
+        "ok": true,
+        "cleared_projects": 0,
+        "faults_cleared": true
+      }
+    }
+  },
+  "steps": [
+    {
+      "step": "0 健康检查",
+      "ok": true,
+      "ms": 14,
+      "at": 1795424597.665907
+    },
+    {
+      "step": "0 浏览器可用性",
+      "ok": true,
+      "ms": 373,
+      "at": 1795424598.039714
+    },
+    {
+      "step": "0 资产种子",
+      "ok": true,
+      "ms": 49,
+      "at": 1795424598.089636
+    },
+    {
+      "step": "A1 创建 Intent",
+      "ok": true,
+      "ms": 1,
+      "at": 1795424598.090915
+    },
+    {
+      "step": "A2 Intent 状态推进",
+      "ok": true,
+      "ms": 0,
+      "at": 1795424598.091891
+    },
+    {
+      "step": "A3 Agent 真实探索",
+      "ok": true,
+      "ms": 5987,
+      "at": 1795424604.079475
+    },
+    {
+      "step": "A4 编译候选用例",
+      "ok": true,
+      "ms": 6,
+      "at": 1795424604.086082
+    },
+    {
+      "step": "A5 创建并审批 Oracle（cand_a_create_ui）",
+      "ok": true,
+      "ms": 2,
+      "at": 1795424604.0905259
+    },
+    {
+      "step": "A6 绑定 Oracle（固定版本）",
+      "ok": true,
+      "ms": 2,
+      "at": 1795424604.093057
+    },
+    {
+      "step": "A7 审核门禁应拒绝（无稳定性回放）",
+      "ok": true,
+      "ms": 3,
+      "at": 1795424604.0962439
+    },
+    {
+      "step": "A8 稳定性回放（3 次真实 Run）",
+      "ok": true,
+      "ms": 7356,
+      "at": 1795424611.452855
+    },
+    {
+      "step": "A9 回放结论检查",
+      "ok": true,
+      "ms": 0,
+      "at": 1795424611.4528692
+    },
+    {
+      "step": "A10 人工审核通过（消费回放结论）",
+      "ok": true,
+      "ms": 4,
+      "at": 1795424611.457367
+    },
+    {
+      "step": "A11 审核留痕含回放证据",
+      "ok": true,
+      "ms": 1,
+      "at": 1795424611.458922
+    },
+    {
+      "step": "A12 正式执行（真实浏览器）",
+      "ok": true,
+      "ms": 2415,
+      "at": 1795424613.8741581
+    },
+    {
+      "step": "A13 结果必须 PASSED",
+      "ok": true,
+      "ms": 0,
+      "at": 1795424613.874167
+    },
+    {
+      "step": "B1 真实执行受控故障用例 tcase_tf_false_pass",
+      "ok": true,
+      "ms": 4970,
+      "at": 1795424618.844939
+    },
+    {
+      "step": "B2 假成功必须被判 FAILED",
+      "ok": true,
+      "ms": 0,
+      "at": 1795424618.844946
+    },
+    {
+      "step": "B3 诊断",
+      "ok": true,
+      "ms": 5770,
+      "at": 1795424624.615746
+    },
+    {
+      "step": "B4 生成并查询证据图",
+      "ok": true,
+      "ms": 16,
+      "at": 1795424624.632436
+    },
+    {
+      "step": "B5 证据图必须有真实证据节点与来源",
+      "ok": true,
+      "ms": 0,
+      "at": 1795424624.632459
+    },
+    {
+      "step": "C1 读取探针建议（只读探针）",
+      "ok": true,
+      "ms": 4,
+      "at": 1795424624.6385548
+    },
+    {
+      "step": "C2 执行 Active Diagnosis 探针闭环",
+      "ok": true,
+      "ms": 17,
+      "at": 1795424624.656301
+    },
+    {
+      "step": "C3 必须有真实成功执行的探针与新证据",
+      "ok": true,
+      "ms": 0,
+      "at": 1795424624.656312
+    },
+    {
+      "step": "C4 重新读取诊断结论",
+      "ok": true,
+      "ms": 1,
+      "at": 1795424624.6577952
+    },
+    {
+      "step": "D0 创建场景 D 用例（自带故障激活步骤）",
+      "ok": true,
+      "ms": 11,
+      "at": 1795424624.671423
+    },
+    {
+      "step": "D1 基线版本在故障下必须真实失败（步骤中断→NOT_EVALUATED 或 断言失败→FAILED）",
+      "ok": true,
+      "ms": 0,
+      "at": 1795424636.637894
+    },
+    {
+      "step": "D2 生成修复提案（test_id → role 定位器）",
+      "ok": true,
+      "ms": 2,
+      "at": 1795424636.639936
+    },
+    {
+      "step": "D3 Diff / 断言保护 / Oracle 完整性校验",
+      "ok": true,
+      "ms": 1,
+      "at": 1795424636.641092
+    },
+    {
+      "step": "D4 校验必须通过",
+      "ok": true,
+      "ms": 0,
+      "at": 1795424636.6410959
+    },
+    {
+      "step": "D5 沙箱真实执行（故障仍生效）",
+      "ok": true,
+      "ms": 4312,
+      "at": 1795424640.953301
+    },
+    {
+      "step": "D6 沙箱必须 PASSED（证明修复真实有效）",
+      "ok": true,
+      "ms": 0,
+      "at": 1795424640.953307
+    },
+    {
+      "step": "D7 提交审批",
+      "ok": true,
+      "ms": 1,
+      "at": 1795424640.9552581
+    },
+    {
+      "step": "D8 Agent 审批必须被拒",
+      "ok": true,
+      "ms": 0,
+      "at": 1795424640.9561129
+    },
+    {
+      "step": "D9 人工审批",
+      "ok": true,
+      "ms": 1,
+      "at": 1795424640.9577239
+    },
+    {
+      "step": "D10 CAS 晋升",
+      "ok": true,
+      "ms": 4,
+      "at": 1795424640.961904
+    },
+    {
+      "step": "D11 晋升结果",
+      "ok": true,
+      "ms": 0,
+      "at": 1795424640.961911
+    },
+    {
+      "step": "D12 幂等重放（同键）",
+      "ok": true,
+      "ms": 2,
+      "at": 1795424640.964424
+    },
+    {
+      "step": "D13 重放必须返回同一版本",
+      "ok": true,
+      "ms": 0,
+      "at": 1795424640.964431
+    },
+    {
+      "step": "D14 全量回归（故障仍生效，修复版本应通过）",
+      "ok": true,
+      "ms": 4232,
+      "at": 1795424645.1969368
+    },
+    {
+      "step": "D15 回归必须 PASSED",
+      "ok": true,
+      "ms": 0,
+      "at": 1795424645.196943
+    },
+    {
+      "step": "D16 回滚到基线版本",
+      "ok": true,
+      "ms": 3,
+      "at": 1795424645.2008169
+    },
+    {
+      "step": "D17 回滚后正式版本应回到基线",
+      "ok": true,
+      "ms": 0,
+      "at": 1795424645.201819
+    },
+    {
+      "step": "D18 回滚后复核：晋升版本仍可通过正式执行入口执行",
+      "ok": true,
+      "ms": 0,
+      "at": 1795424649.4791481
+    },
+    {
+      "step": "D19 清除 TeamFlow 故障",
+      "ok": true,
+      "ms": 6,
+      "at": 1795424649.4853199
+    }
+  ],
+  "duration_s": 51.8,
+  "failed_steps": [],
+  "passed": true
+}

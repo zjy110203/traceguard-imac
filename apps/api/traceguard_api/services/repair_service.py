@@ -199,11 +199,17 @@ class RepairService:
         return self._save(doc)
 
     def sandbox_run(self, proposal_id: str) -> dict[str, Any]:
-        """真实沙箱验证：把候选版本作为 PENDING sandbox 用例再执行一次。"""
+        """真实沙箱验证：把候选版本作为 PENDING sandbox 用例再执行一次。
+
+        RUN-007：沙箱副本使用**独立 testcase_id**，不在正式用例上追加 PENDING 版本——
+        否则会污染正式用例的版本线（seed/审核门禁都会被这个"影子版本"干扰）。
+        """
         doc = self.get(proposal_id)
         if doc["status"] != "VALIDATED":
             raise AppError(ErrorCode.PRECONDITION_FAILED, "只有 RULE_VALIDATED 的提案可沙箱验证")
         candidate = dict(doc["candidate_doc"])
+        candidate["testcase_id"] = new_id("tcase")
+        candidate["version"] = 1
         candidate["review_status"] = "PENDING"
         rc = dict(candidate.get("run_config") or {})
         rc["sandbox_only"] = True
@@ -215,15 +221,18 @@ class RepairService:
             workspace_id=doc["workspace_id"],
             review_status="PENDING",
         )
+        sandbox_case_id = created["testcase_id"]
         version = created["version"]
         task = self.rt.tasks.create_task(
-            doc["testcase_id"],
+            sandbox_case_id,
             f"repair-sandbox-{proposal_id}-{time.time_ns()}",
-            testcase_version_id=f"{doc['testcase_id']}@{version}",
+            testcase_version_id=f"{sandbox_case_id}@{version}",
+            mode="sandbox",
         )
-        run = self.rt.tasks.create_run(task["task_id"], f"{doc['testcase_id']}@{version}")
+        run = self.rt.tasks.create_run(task["task_id"], f"{sandbox_case_id}@{version}")
         outcome = self.rt.execute_run(run["run_id"])
         doc["sandbox_run_id"] = outcome["run_id"]
+        doc["sandbox_testcase_id"] = sandbox_case_id
         doc["sandbox_status"] = "PASSED" if outcome["test_verdict"] == "PASSED" else "FAILED"
         doc["sandbox_verdict"] = outcome["test_verdict"]
         doc["sandbox_observer_mode"] = outcome["observer_mode"]
