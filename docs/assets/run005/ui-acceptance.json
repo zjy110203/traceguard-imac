@@ -1,6 +1,6 @@
 {
   "base_url": "http://127.0.0.1:8010",
-  "generated_at": "2026-11-23T04:48:05Z",
+  "generated_at": "2026-11-23T05:12:55Z",
   "checks": [
     {
       "check": "page:dashboard",
@@ -125,7 +125,7 @@
     {
       "check": "run-detail:loaded",
       "status": "PASS",
-      "detail": "run_1795409062183d8293ab67adf"
+      "detail": "run_1795410746955af1cb7811be5"
     },
     {
       "check": "run-detail:sse-badge",
