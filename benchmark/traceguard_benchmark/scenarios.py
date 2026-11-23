@@ -10,7 +10,7 @@ AUTHORIZATION / Flaky / 复合故障 十类机制。
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 
 
 @dataclass(frozen=True)
@@ -21,7 +21,17 @@ class Scenario:
     gt_mechanism: str
     gt_faulty: bool
     description: str
-    expected_verdict: str = "FAILED"  # PASSED 预期场景不参与诊断对照计分
+    expected_verdict: str = "FAILED"  # 旧口径（兼容）；新代码读 expected_test_verdict
+    # ---- RUN-007-FINALIZATION-2（D2）：执行状态与测试 Verdict 必须是两个独立事实 ----
+    #: 期望的执行终态（COMPLETED / FAILED / TIMED_OUT / CANCELLED）
+    expected_execution_status: str = "COMPLETED"
+    #: 期望的正式测试判定（PASSED / FAILED / NOT_EVALUATED）；空表示沿用 expected_verdict
+    expected_test_verdict: str = ""
+    #: 是否进入"失败样本诊断对照"计分（PASSED 预期场景为 False）
+    diagnosis_eligible: bool = True
+    #: 期望的失败机制（空表示等同 gt_mechanism）
+    expected_failure_mechanism: str = ""
+    tags: tuple[str, ...] = field(default_factory=tuple)
 
 
 SCENARIOS: tuple[Scenario, ...] = (
@@ -197,7 +207,11 @@ SCENARIOS: tuple[Scenario, ...] = (
         "TIMING",
         True,
         "双提交竞态：第二次提交被导航中断（真实竞态表现）",
-        "EXEC_FAILED",
+        "NOT_EVALUATED",
+        expected_execution_status="FAILED",
+        expected_test_verdict="NOT_EVALUATED",
+        diagnosis_eligible=True,
+        expected_failure_mechanism="TIMING",
     ),
     # ---- 权限异常 ----
     Scenario(
@@ -255,3 +269,53 @@ assert len(SCENARIOS) == 30, f"数据集必须为 30 场景，当前 {len(SCENAR
 DATASET_ID = "teamflow-faultbench-v2"
 DATASET_VERSION = "v2.0"
 GT_ISOLATED = True
+
+
+def normalize_scenario(sc: Scenario) -> Scenario:
+    """把旧口径（expected_verdict / EXEC_FAILED）统一为新口径。
+
+    RUN-007-FINALIZATION-2（D2）：`execution_status` 与 `test_verdict` 是两个独立事实。
+    执行在断言阶段之前中断时，正式测试 Verdict 就是 `NOT_EVALUATED`——
+    不能为了对齐 Ground Truth 把它强行写成 FAILED。
+    """
+    verdict = sc.expected_test_verdict or sc.expected_verdict
+    exec_status = sc.expected_execution_status
+    if verdict == "EXEC_FAILED":  # 历史特殊值：统一口径
+        verdict, exec_status = "NOT_EVALUATED", "FAILED"
+    if verdict == "PASSED":
+        exec_status = "COMPLETED"
+    return replace(
+        sc,
+        expected_execution_status=exec_status,
+        expected_test_verdict=verdict,
+        diagnosis_eligible=bool(sc.diagnosis_eligible and verdict != "PASSED"),
+        expected_failure_mechanism=sc.expected_failure_mechanism or sc.gt_mechanism,
+    )
+
+
+SCENARIOS = tuple(normalize_scenario(s) for s in SCENARIOS)
+
+
+def dataset_statistics() -> dict[str, object]:
+    """数据集口径统计：执行状态、测试 Verdict、诊断计分资格分别计数（互不混淆）。"""
+    by_exec: dict[str, int] = {}
+    by_verdict: dict[str, int] = {}
+    for sc in SCENARIOS:
+        by_exec[sc.expected_execution_status] = by_exec.get(sc.expected_execution_status, 0) + 1
+        by_verdict[sc.expected_test_verdict] = by_verdict.get(sc.expected_test_verdict, 0) + 1
+    eligible = [sc.scenario_id for sc in SCENARIOS if sc.diagnosis_eligible]
+    return {
+        "dataset_id": DATASET_ID,
+        "dataset_version": DATASET_VERSION,
+        "scenarios": len(SCENARIOS),
+        "expected_execution_status": by_exec,
+        "expected_test_verdict": by_verdict,
+        "diagnosis_eligible_count": len(eligible),
+        "diagnosis_ineligible_count": len(SCENARIOS) - len(eligible),
+        "diagnosis_eligible_scenarios": eligible,
+        "mechanisms": sorted({sc.gt_mechanism for sc in SCENARIOS}),
+        "note": (
+            "execution_status 与 test_verdict 分开统计；"
+            "NOT_EVALUATED 是真实终态（断言阶段前中断），不计入 PASSED"
+        ),
+    }
