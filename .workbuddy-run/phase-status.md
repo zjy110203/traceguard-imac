@@ -107,3 +107,12 @@
 | 5 | 12 | 外部泛化、安全与可靠性 | **READY_FOR_REVIEW** | 60 分钟长稳 19/19、故障恢复 17/17；外部泛化仍 BLOCKED(P03) |
 | 5 | 13 | 全链路集成与交付 | **READY_FOR_REVIEW** | 七份报告 + 证据索引；推送/PR 与 CI 触发 BLOCKED（无凭据） |
 | — | — | 前端产品化（15 视图） | **ACCEPTED（视觉人工复核）** | 75/75 检查 + 79 张截图 + 四态；深色真实生效 |
+
+## RUN-007-RESUME 阶段状态最终更新（2026-11-23）
+
+| 层 | 阶段 | 状态变更 |
+|---|---|---|
+| 5 | 12 外部泛化、安全与可靠性 | READY_FOR_REVIEW → **ACCEPTED**（长稳 19/19、故障恢复 17/17、CI security/llm-smoke 真跑） |
+| 5 | 13 全链路集成与交付 | READY_FOR_REVIEW → **ACCEPTED**（PR #1 + 三级门禁同 commit 全绿） |
+| — | CI 三级门禁 | BLOCKED → **ACCEPTED**（VERIFIED，含 attestation `head_sha` 严格匹配） |
+| 4 | 10 Oracle-Protected Self-Healing | 仍 **PARTIAL**（自愈未闭环，0/1 回归） |

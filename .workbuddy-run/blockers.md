@@ -41,3 +41,10 @@
 | B-14 | 前端主题走 localStorage | 只设 `prefers-color-scheme` 会得到假深色截图 | 已修：init script 写入 + 亮度断言 |
 | B-15 | 人工诊断基线无人力 | Benchmark 少一条对照臂 | 标 BLOCKED，不用 Mock 补齐 |
 | B-16 | LLM 模型由服务端路由决定 | 无法在同一进程内切 Flash/Pro | 按批次重启 + 记录实际 `models_seen`；不外推 |
+
+## RUN-007-RESUME 阻塞解除（2026-11-23 深夜）
+
+| 编号 | 原阻塞 | 现状 |
+|---|---|---|
+| B-11 | 无 GitHub 凭据 | **已解除**：用户临时提供 fine-grained PAT（单仓库，Contents/Workflows/Pull requests/Actions 写权）；push、PR、dispatch 全部完成。**收尾须撤销该 token** |
+| B-12 | 本机无 Docker / PG | 仍存在（本机 skip），但 **CI 的 postgres:16 已真跑**，6 个平台用例通过 → 该验证不再阻塞 |

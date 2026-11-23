@@ -152,9 +152,9 @@
 | R7-08 | 前端 15 视图 × 4 断点 + 深色 + 四态 | PASS | `ui/ui-review.json` 75/75，79 图 | 修 3 处真实视觉缺陷 |
 | R7-09 | Worker 故障恢复实验（重写脚本） | PASS | `worker-fault-recovery-verified.json` | 真实计时/同 Run 接管/陈旧代次拒绝 |
 | R7-10 | 60 分钟长稳（重写脚本） | PASS | `soak-60min.json` + `soak-samples.jsonl` | 独立 API + 4 Worker + SSE 续传 |
-| R7-11 | PostgreSQL 16 扩展验证 | BLOCKED（本机） | `test_postgres_platform.py`(6) | 无 Docker/psql；CI 作业就绪未触发 |
-| R7-12 | CI 三级门禁修复 | PARTIAL | 三份 workflow | 逻辑已修；**无凭据 → 未真实触发** |
+| R7-11 | PostgreSQL 16 扩展验证 | **PASS（CI）** | `test_postgres_platform.py`(6)，Nightly `postgres:16`（16.16） | 本机无 PG 仍 skip；CI 已真跑 |
+| R7-12 | CI 三级门禁修复 | **PASS** | PR/Nightly/Release 同 commit `cc3339d` 全绿；`ci-gates.json` | 首跑暴露 8 个缺陷，4 轮修完 |
 | R7-13 | UI-FaultBench v3 四臂 | PASS | `docs/RUN-007-BENCHMARK-REPORT.md` | 30 场景 + Flaky×5 |
 | R7-14 | LLM 对照臂（预算内子集） | PASS（子集） | `llm-arm-*.json` | 模型由路由决定，按实际记录；不外推 |
 | R7-15 | 七份 RUN-007 报告 + README/台账 | PASS | `docs/RUN-007-*.md` | 状态枚举统一 |
-| R7-16 | 分支推送 + PR | BLOCKED | 本地分支 `workbuddy/run007-resume-20261123` | 无 https 凭据 / 无 SSH key / 无 token |
+| R7-16 | 分支推送 + PR | **PASS** | PR #1 → `main@ac2876e`，head `cc3339d` | token 由用户临时提供；用完即撤销 |

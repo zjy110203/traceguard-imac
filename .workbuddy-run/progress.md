@@ -171,3 +171,12 @@
 | WP6 | UI-FaultBench v3 四臂 + LLM 臂 | ✅ 完成（含 D/E 无增益的负结论） |
 | WP7 | 七份报告 + README/FEATURE-STATUS/台账 + 状态文件 | ✅ 完成 |
 | — | 分支推送 + PR | ❌ BLOCKED（无 Git 凭据） |
+
+## RUN-007-RESUME 收尾（2026-11-23 深夜）
+
+| WP | 变更后状态 |
+|---|---|
+| WP4-01 PostgreSQL 16 | ⚠️ → ✅ **PASS（CI 真跑 16.16，6 用例）**；本机仍无 PG |
+| WP5 CI 三级门禁 | ⚠️（未运行）→ ✅ **PASS**（同 commit 三级全绿） |
+| 分支推送 + PR | ❌ BLOCKED → ✅ **PASS**（PR #1） |
+| CI 首跑暴露缺陷 | 8 个（2 个产品缺陷 + 6 个测试/CI 缺陷），4 轮修完 |

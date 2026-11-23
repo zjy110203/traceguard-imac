@@ -70,13 +70,17 @@
 
 ---
 
-## D-02 CI 触发凭据（本轮直接阻塞项）
+## D-02 CI 触发凭据（已由用户临时授权，已解除）
 
-**现状**：本机无 GitHub 凭据（无 token、无 SSH key、无 `gh` CLI），
-`git push` 返回 `could not read Username`，因此：
-- 分支 `workbuddy/run007-resume-20261123` 的**本地提交无法推送**；
-- 无法创建指向 `main` 的 PR；
-- 无法 dispatch PR Gate / Nightly / Release，CI 改动**无运行证据**。
+**结论：已解除，不再是阻塞项。** 用户提供了权限限定在 `traceguard-imac` 单仓库的 fine-grained PAT
+（Contents / Workflows / Pull requests / Actions 写权限），本轮据此完成：
+- 分支 `workbuddy/run007-resume-20261123` 推送；
+- PR #1 创建（base `main@ac2876e`）；
+- PR Gate / Nightly Gate / Release Gate 三级真实运行且全绿（同 commit `cc3339d`）。
+
+**遗留要求**：该 token 曾出现在会话记录中，**必须在本轮收尾后撤销**；
+本地 `~/.workbuddy/gh_token` 与 `~/.workbuddy/git-cred.sh` 在本轮收尾时删除（不可留档）。
+后续轮次请改用 GitHub App / OIDC 或重新签发短期 token，不要把长期凭据写进任何文件。
 
 **需要的决策 / 支持**：
 1. 提供一个具备 `repo` + `workflow` 权限的临时 token（或配置 SSH key），由 Agent 完成 push + PR；

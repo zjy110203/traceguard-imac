@@ -69,8 +69,11 @@ Agentic Web UI Testing & Quality Intelligence Platform（智能 Web UI 自动化
   60 分钟长稳（独立 API + 4 Worker + 真实 SSE 续传 + 19 项完整性检查）、
   UI-FaultBench v3 四臂（A/C/D/E）30 场景与 LLM 对照臂。
 
-> 已知阻塞：本机无 GitHub 凭据 → 分支无法推送、PR 无法创建、CI 无法真实触发；
-> 本机无 Docker/PostgreSQL → PG16 验证在 CI 作业中就绪但未本地执行。均已在报告中标注 BLOCKED。
+> 交付状态：分支已推送、PR #1 已创建（→ `main@ac2876e`）；同一 commit `cc3339d` 上
+> **PR Gate / Nightly Gate / Release Gate 三级门禁全部真实通过**（Nightly 使用 `postgres:16`，
+> Release 用 Actions API 校验 `head_sha` 严格相等）。
+> 仍存在的限制：本机无 Docker/PostgreSQL（本地 PG 用例 skip，CI 已真跑）、自愈闭环未完成、
+> 证据图/探针臂无增益。详见 `docs/RUN-007-TEST-REPORT.md` §9。
 
 交付文档：`docs/RUN-007-BASELINE.md`、`RUN-007-IMPLEMENTATION-REPORT.md`、`RUN-007-TEST-REPORT.md`、
 `RUN-007-SECURITY-RELIABILITY.md`、`RUN-007-UI-REVIEW.md`、`RUN-007-BENCHMARK-REPORT.md`、

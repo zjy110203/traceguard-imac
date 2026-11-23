@@ -124,3 +124,20 @@ curl -X POST "http://127.0.0.1:8010/api/v1/runs/<run_id>/probe-plan?diagnosis_id
 - 不要用 `use_llm=false` 的结果冒充 LLM 能力；LLM 候选状态是 CANDIDATE，不能当根因。
 - 不要把 PG 用例的 skip 写成 pass；不要声称 CI 门禁"已通过"。
 - 不要在长稳运行期间跑故障注入（会污染 TeamFlow 状态与周期判定）。
+
+## RUN-007-RESUME CI 调试经验（2026-11-23）
+
+- **`str(SQLAlchemy URL)` 会把密码渲染成 `***`**（`hide_password` 默认 True）。凡是要拼 URL 字符串给
+  另一个 `create_engine` 用的地方，必须 `render_as_string(hide_password=False)`。本轮在此踩了两次
+  （测试 fixture + workflow 内联脚本）。
+- **pytest 的 `pythonpath`（pyproject）只对 pytest 生效**：内联 `python - <<'PY'` 与 spawn 子进程
+  都拿不到。CI 里一律给 job 级 `PYTHONPATH`，脚本内部再自行 `sys.path` 注入作双保险。
+- **ORM 实体在 `session.execute(update(...))` 后会被 expire**：紧接着读它的字段会重新 SELECT，
+  拿到的是新值。要记录"更新前的状态"，必须在 UPDATE 前快照。
+- **SQLite 的 `busy_timeout` 不覆盖 DDL 排他锁竞争**：并发 `CREATE TABLE` 仍会直接抛
+  `database is locked`；必须把这类错误纳入重试（并兼容 PG 的 `deadlock detected`）。
+- **状态机是 `QUEUED→PREPARING→RUNNING→FINALIZING→COMPLETED`**：测试不能假设"领取即可提交完成"，
+  真实流程见 `pipeline.py:130` 的 `mark_running`。
+- **门禁要真实跑过才算数**：本地 523 passed 掩盖了 8 个问题，CI 首跑全暴露。
+- 网络：`api.github.com` 稳定；`github.com`（git 传输）经代理间歇性 `Empty reply` / `CONNECT 502`，
+  push 需要重试循环。

@@ -202,12 +202,12 @@
 | 沙箱走队列（无 Worker 时 fail-closed） | **VERIFIED** | `test_sandbox_worker_queue.py`(2) + E2E D 场景 `sandbox_executed_by=run007-w1` |
 | Run 级状态缓存隔离 | **VERIFIED** | `test_pipeline_state_cache.py`(2) + E2E B 场景假成功判 FAILED |
 | 迁移 v8 幂等 / v7 旧库升级 / 并发启动 | **VERIFIED（SQLite）** | `test_migration_v8.py`(4)；修复前并发用例失败 |
-| PostgreSQL 16 平台级契约 | **IMPLEMENTED / 运行时 BLOCKED** | `test_postgres_platform.py`(6) 本地 skip；Nightly PG16 作业就绪但未触发 |
+| PostgreSQL 16 平台级契约 | **VERIFIED（CI）** | `test_postgres_platform.py`(6) 在 Nightly 的 `postgres:16`（实测 16.16）上全过；本机无 PG 仍 skip |
 | Worker 被杀 → 同 Run 接管 + 代次隔离 | **VERIFIED** | `worker-fault-recovery-verified.json`（真实 kill、`killed_after_s`>0、`fencing_token` 递增） |
 | 60 分钟长稳（独立 API + 4 Worker） | **VERIFIED** | `soak-60min.json` + `soak-samples.jsonl`，19 项 checks 全真 |
 | 前端 15 视图 × 4 断点 + 深色 + 四态 | **VERIFIED（视觉人工复核）** | `ui/ui-review.json` 75/75；79 张截图 |
 | 证据图完整可见 / 窄屏筛选栏 | **VERIFIED（已修）** | 修复裁切与 390px 错位，见 `RUN-007-UI-REVIEW.md` §3 |
-| CI 门禁去掩盖（PR/Nightly/Release） | **IMPLEMENTED（未运行）** | 三份 workflow 已改并通过 YAML 校验；**无 GitHub 凭据 → 未触发** |
+| CI 门禁去掩盖（PR/Nightly/Release） | **VERIFIED** | 同 commit `cc3339d` 三级全绿：PR Gate [#45201761239](https://github.com/zjy110203/traceguard-imac/actions/runs/45201761239) / Nightly [#45201774473](https://github.com/zjy110203/traceguard-imac/actions/runs/45201774473) / Release [#45202185410](https://github.com/zjy110203/traceguard-imac/actions/runs/45202185410)；首跑暴露 8 个缺陷已修 |
 | UI-FaultBench v3 四臂 30 场景 | **见 Benchmark 报告** | `docs/RUN-007-BENCHMARK-REPORT.md` |
 | LLM 对照臂（受预算子集） | **见 Benchmark 报告** | `llm-arm-*.json`，模型由服务端路由决定，按实际模型记录 |
 | 身份认证 / RBAC | **NOT_IMPLEMENTED（NEEDS_DECISION）** | D-01 未批准；主体类型门禁 ≠ 身份认证 |

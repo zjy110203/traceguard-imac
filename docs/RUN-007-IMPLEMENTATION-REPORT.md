@@ -211,9 +211,47 @@ API + 多个 Worker 同时指向同一个库启动时，会抛 `table tg_testcas
 | Benchmark 声明 | 只打印输入 | `benchmark_report != true` 或报告缺失 → 阻断 |
 | Release Tag | — | 本工作流**不创建 Tag**（保持指令） |
 
-三份 workflow 均通过 YAML 解析校验（jobs 列表已核对）。
-**真实触发 BLOCKED**：本机无 GitHub 凭据（无 token / 无 SSH key / 无 `gh`），无法 push 分支或 dispatch。
-因此 CI 改动状态为 **IMPLEMENTED（未 VERIFIED）**，不冒充"门禁已通过"。
+### 7.4 真实运行结果（三级门禁均已跑通，不再是 BLOCKED）
+
+证据索引：`docs/assets/run007/ci-gates.json`。全部运行针对同一 commit
+`cc3339d291cc6b0e328922934ec82f6b689f4769`，分支 `workbuddy/run007-resume-20261123`，PR #1（→ `main@ac2876e`）。
+
+| 门禁 | 事件 | commit | 结论 | 运行 |
+|---|---|---|---|---|
+| PR Gate | push | `cc3339d` | ✅ success | [#45201761239](https://github.com/zjy110203/traceguard-imac/actions/runs/45201761239) |
+| PR Gate | pull_request | `cc3339d` | ✅ success | [#45201768385](https://github.com/zjy110203/traceguard-imac/actions/runs/45201768385) |
+| Nightly Gate | workflow_dispatch | `cc3339d` | ✅ success（5/5 job） | [#45201774473](https://github.com/zjy110203/traceguard-imac/actions/runs/45201774473) |
+| Release Gate | workflow_dispatch | `cc3339d` | ✅ success（4/4 job） | [#45202185410](https://github.com/zjy110203/traceguard-imac/actions/runs/45202185410) |
+
+Nightly 的 5 个 job：`backend-full` / `postgres` / `security` / `llm-smoke` / `gate-verdict` 全部 success。
+其中 `postgres` 用 `postgres:16` Service Container，先断言 `SHOW server_version` 以 `16` 开头
+（实测 `16.16 (Debian 16.16-1.pgdg13+1)`），再执行 6 个平台级用例（迁移 v8、租约/代次、CAS、回执）。
+
+Release Gate 的 `nightly-attestation` 实测输出：
+
+```
+NIGHTLY_OK id=45201774473 head_sha=cc3339d291cc6b0e328922934ec82f6b689f4769
+```
+
+即 Nightly 的 `head_sha` 与 Release Gate 的 `github.sha` **严格相等**。
+作为对照：仓库里原本存在的历史 Nightly success 是 `sha=8f912f2`（旧 commit），按新门禁不会被接受——
+这正是"旧 commit 的通过不得冒充新 RC"要解决的问题。
+
+### 7.5 CI 首跑暴露并修复的缺陷（4 轮迭代）
+
+CI 一旦真实运行，就暴露出 8 个本地环境掩盖的问题（本地 523 passed 全部放过）。逐轮记录，不省略失败：
+
+| 轮 | commit | Nightly | 暴露的问题 | 修复 |
+|---|---|---|---|---|
+| 1 | `d2e86ae` | ❌ | ① `str(URL)` 把密码渲染成 `***` → 6 个 PG 用例全挂在 fixture<br>② secret 规则 `DEEPSEEK_API_KEY=[^[:space:]]+` 命中文档占位符（误报）<br>③ `probe_budget_multiprocess` 子进程 `ModuleNotFoundError: traceguard_api` | ① `render_as_string(hide_password=False)`<br>② 改用 `git grep`（只扫已跟踪文件）+ 模式收紧到真实密钥形态<br>③ 补 `sys.path` 注入 |
+| 2 | `7fdd2e9` | ❌ | ④ **`claim_next_run.previous_status` 恒为新值**（ORM 在 UPDATE 后 expire 重读 PREPARING）— **真实产品缺陷**<br>⑤ PG 接管用例缺 `mark_running`（状态机不允许 `PREPARING→COMPLETED`）<br>⑥ **`create_schema` 只重试 `already exists`，不重试 `database is locked`** — **真实产品缺陷**<br>⑦ 路径清单漏 `packages/evidence` | ④ UPDATE 前快照状态<br>⑤ 测试补 `mark_running`（真流程见 `pipeline.py:130`）<br>⑥ 新增 `_is_transient_lock_error`（含 PG deadlock）+ 8 次指数退避<br>⑦ 改为目录扫描 |
+| 3 | `f00f149` | ❌ | ⑧ 内联 `python - <<'PY'` 不走 pytest 的 `pythonpath` → `ModuleNotFoundError: traceguard_persistence` | job 级 `PYTHONPATH`（nightly 的 postgres/backend-full + release 的 full-verification） |
+| 4 | `cc3339d` | ✅ | — | — |
+
+> 其中 ④ 与 ⑥ 是**产品代码缺陷**，其余是测试/CI 自身缺陷。④ 当前无消费方（仅审计字段），
+> 但返回契约错误；⑥ 直接影响"API + N 个 Worker 同时启动"这一真实部署形态。
+
+结论：CI 改动状态为 **VERIFIED**（不再是 IMPLEMENTED 未运行）。
 
 ---
 
@@ -226,8 +264,11 @@ Flaky 重复 5 次保留原始、指标带分子/分母、LLM 与人工基线未
 
 ## 9. 已知限制（本轮未解决，需如实继承）
 
-1. **Git push / PR 无法完成**：无任何凭据；本地提交保留，分支名已按指令命名。
-2. **CI 未真实运行**：同上；Gate 逻辑已修但无运行链接。
-3. **PostgreSQL 运行时未在本机验证**：无 Docker/psql，用例与 CI 作业已就绪。
-4. **进程资源采样受限**：沙箱禁止 `ps` 且无 `/proc`；长稳以存活探测 + DB 租约为准，资源字段为 `null`。
+1. ~~Git push / PR 无法完成~~ → **已解决**：分支已推送（`workbuddy/run007-resume-20261123`），PR #1 已创建（→ `main@ac2876e`）。
+2. ~~CI 未真实运行~~ → **已解决**：PR Gate / Nightly Gate / Release Gate 三级在同 commit（`cc3339d`）全部 success，见 §7.4。
+3. ~~PostgreSQL 运行时未验证~~ → **CI 已真实验证**（`postgres:16` → `16.16`，6 个平台级用例）。**本机仍无 Docker/psql**，本地运行时这 6 个用例仍是 skip（逐条打印原因），不能把 skip 当 pass。
+4. **进程资源采样受限**：沙箱禁止 `ps` 且无 `/proc`；长稳以存活探测 + DB 租约为准，资源字段为 `null`（`source=liveness_only`）。
 5. **冻结边界未动**：D-01 认证、P03、P08、P06 仍为待确认，见 `docs/RUN-007-DECISION-REQUESTS.md`。
+6. **自愈未闭环**：定位器场景沙箱通过后 `/promote` 未返回 `promoted_version`，回归 `NOT_EVALUATED`（0/1）。见 `RUN-007-BENCHMARK-REPORT.md`。
+7. **D/E 臂无增益**：证据图与探针在 19 个失败样本上没有额外主因命中（Macro-F1 略降），不宣称提升。
+8. **CI 网络抖动**：本机经 HTTP 代理访问 `github.com` 间歇性 `Empty reply` / `CONNECT 502`，push 需重试；`api.github.com` 稳定。不影响已在 CI 侧获得的结论。

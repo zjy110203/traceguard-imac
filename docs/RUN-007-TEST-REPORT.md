@@ -145,11 +145,29 @@
 
 | 项 | 状态 | 原因 |
 |---|---|---|
-| PostgreSQL 16 运行时 | BLOCKED（本机） | 无 Docker / psql；用例已就绪并在 CI Nightly 作业中执行 |
-| PR / Nightly / Release Gate 真实运行 | BLOCKED | 无 GitHub 凭据，无法 push / dispatch |
+| PostgreSQL 16 运行时（本机） | BLOCKED（本机） | 无 Docker / psql。**CI 已真实验证**：Nightly 的 `postgres:16`（16.16）上 6 个平台用例全过 |
+| ~~PR / Nightly / Release Gate 真实运行~~ | **VERIFIED** | 同 commit `cc3339d` 三级全绿，见 §9.1 |
 | 人工诊断基线（Benchmark） | BLOCKED | 无人力投入，不用 Mock 补齐 |
 | 多浏览器（Firefox/WebKit） | NOT_IMPLEMENTED | 只有 Chromium |
 | 可访问性（axe） | NOT_IMPLEMENTED | 未接 a11y 工具链 |
+
+### 9.1 CI 三级门禁（真实运行，补上原 BLOCKED 项）
+
+同一 commit `cc3339d291cc6b0e328922934ec82f6b689f4769`：
+
+| 门禁 | 事件 | 结论 | 运行 |
+|---|---|---|---|
+| PR Gate | push | success | [#45201761239](https://github.com/zjy110203/traceguard-imac/actions/runs/45201761239) |
+| PR Gate | pull_request | success | [#45201768385](https://github.com/zjy110203/traceguard-imac/actions/runs/45201768385) |
+| Nightly Gate | dispatch | success（5/5 job，含 `postgres:16`） | [#45201774473](https://github.com/zjy110203/traceguard-imac/actions/runs/45201774473) |
+| Release Gate | dispatch | success（4/4 job） | [#45202185410](https://github.com/zjy110203/traceguard-imac/actions/runs/45202185410) |
+
+Release 的 `nightly-attestation` 实测：`NIGHTLY_OK id=45201774473 head_sha=cc3339d291cc...` —
+Nightly 的 `head_sha` 与 Release 的 `github.sha` 严格相等。
+
+**CI 首跑共暴露 8 个本地掩盖的问题**（4 轮迭代修复，其中 2 个是产品缺陷：`previous_status`
+取到更新后的状态、`create_schema` 不重试 DDL 锁冲突）。详细逐轮记录见
+`docs/RUN-007-IMPLEMENTATION-REPORT.md` §7.5，原始证据见 `docs/assets/run007/ci-gates.json`。
 
 ## 10. Benchmark 结果（摘要）
 

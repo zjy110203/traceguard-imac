@@ -169,3 +169,16 @@ Benchmark（真实）：
 - UI：**75/75 checks**（内容 0 失败、溢出 0、console 0、暗色未生效 0），79 张真实截图 + 四态
 - Benchmark：30 场景 / 38 次执行 / 19 失败样本；A 3/19、C/D/E 10/19；假通过 A 4/4 → C/D/E 0/4；LLM Flash 8/19、Pro 5/8
 - 静态：`ruff check` + `format --check` 全绿；`npm run build`（含 `vue-tsc`）通过；`npm audit` high 0 / critical 0（moderate 3，dev）
+
+## RUN-007-RESUME CI 三级门禁（2026-11-23，真实运行）
+
+- 同一 commit `cc3339d291cc6b0e328922934ec82f6b689f4769`：
+  - PR Gate（push）[#45201761239](https://github.com/zjy110203/traceguard-imac/actions/runs/45201761239) success
+  - PR Gate（pull_request）[#45201768385](https://github.com/zjy110203/traceguard-imac/actions/runs/45201768385) success
+  - Nightly Gate [#45201774473](https://github.com/zjy110203/traceguard-imac/actions/runs/45201774473) success（5/5 job）
+  - Release Gate [#45202185410](https://github.com/zjy110203/traceguard-imac/actions/runs/45202185410) success（4/4 job）
+- Nightly `postgres` job：`postgres:16` → `SHOW server_version` = `16.16 (Debian 16.16-1.pgdg13+1)`，6 个平台用例全过。
+- Release `nightly-attestation`：`NIGHTLY_OK id=45201774473 head_sha=cc3339d291cc...`（严格等于 `github.sha`）。
+- **CI 首跑暴露 8 个本地掩盖的问题**，4 轮迭代修复；其中 2 个是产品缺陷：
+  `claim_next_run.previous_status` 取到更新后的状态；`create_schema` 不重试 DDL 锁冲突。
+- 迭代轮次：`d2e86ae`❌ → `7fdd2e9`❌ → `f00f149`❌ → `cc3339d`✅。证据：`docs/assets/run007/ci-gates.json`。

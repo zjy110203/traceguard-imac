@@ -92,8 +92,8 @@
 | 主体校验 | `pytest tests/integration/test_actor_validation.py` | 全部通过（含 5 类非法主体 × 6 个入口） |
 | 目标策略（URL/DNS） | `pytest tests/unit/test_target_policy_dns.py` | 通过 |
 | 出站边界（真实浏览器） | `pytest tests/e2e/test_target_policy_browser.py` | 通过（见 TEST-REPORT） |
-| 密钥泄露扫描 | Nightly `secret pattern scan`（`sk-…` / `DEEPSEEK_API_KEY=…`） | 本地 `grep` 复核无命中；CI 未运行（BLOCKED） |
-| 前端依赖漏洞 | Nightly `npm audit`（区分工具错误与漏洞） | 逻辑已修，CI 未运行（BLOCKED）；本地 `npm audit` 结果见 TEST-REPORT |
+| 密钥泄露扫描 | Nightly `secret pattern scan`（`sk-…`/`ghp_`/`github_pat_`/`AKIA`/私钥块 + 长度阈值） | **CI 真实通过**（Nightly job `security` = success）。首跑曾因规则过宽命中本文档占位符而误报，已改用 `git grep` 只扫已跟踪文件并收紧模式 |
+| 前端依赖漏洞 | Nightly `npm audit`（区分工具错误与漏洞） | **CI 真实运行**（Nightly `security` job 内）；High/Critical 阻断 |
 
 ## 5. 未解决风险（如实登记）
 
