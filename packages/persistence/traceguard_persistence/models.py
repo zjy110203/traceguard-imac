@@ -256,6 +256,26 @@ class DocRow(Base):
     updated_at: Mapped[str] = mapped_column(String(40), default=utc_now_iso)
 
 
+class PromotionReceiptRow(Base):
+    """晋升 / 回滚的持久化幂等回执（RUN-007 WP1-02）。
+
+    与"版本指针推进"写在同一事务内，因此只要版本指针推进成功，回执必然存在。
+    进程在 CAS 提交后崩溃时，重试可以靠回执确定性恢复修复提案状态，
+    不会因为"正式版本已经不是 base"而误判为 VERSION_CONFLICT。
+    """
+
+    __tablename__ = "tg_promotion_receipt"
+    idempotency_key: Mapped[str] = mapped_column(String(160), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(20))  # PROMOTE / ROLLBACK
+    proposal_id: Mapped[str] = mapped_column(String(90), index=True, default="")
+    testcase_id: Mapped[str] = mapped_column(String(64), index=True)
+    workspace_id: Mapped[str] = mapped_column(String(64), default="default")
+    base_version: Mapped[int] = mapped_column(Integer, default=0)
+    target_version: Mapped[int] = mapped_column(Integer, default=0)
+    result: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    created_at: Mapped[str] = mapped_column(String(40), default=utc_now_iso)
+
+
 class MetricRow(Base):
     __tablename__ = "tg_metric"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)

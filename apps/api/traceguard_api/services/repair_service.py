@@ -251,25 +251,56 @@ class RepairService:
         doc["approved_by"] = actor
         return self._save(doc)
 
-    def reject(
-        self, proposal_id: str, reviewer: str = "human:qa", note: str = ""
-    ) -> dict[str, Any]:
+    def reject(self, proposal_id: str, reviewer: str, note: str = "") -> dict[str, Any]:
+        """拒绝也必须由人类主体发起（RUN-007 WP1-03：统一主体类型校验）。"""
+        actor = require_human_actor(reviewer, field="rejected_by")
         doc = self.get(proposal_id)
         self._transition(doc, RepairStatus.REJECTED)
-        doc["rejected_by"] = reviewer
+        doc["rejected_by"] = actor
         doc["reject_note"] = note
+        doc["reject_history"] = list(doc.get("reject_history") or []) + [
+            {"reviewer": actor, "note": note, "at": utc_now_iso()}
+        ]
         return self._save(doc)
 
+    # ------------------------------------------------------------- promotion
     def promote(self, proposal_id: str, *, idempotency_key: str) -> dict[str, Any]:
-        doc = self.get(proposal_id)
-        if (
-            doc["status"] == "PROMOTED"
-            and doc.get("promotion_record", {}).get("idempotency_key") == idempotency_key
-        ):
-            return doc  # 幂等重放
-        self._transition(doc, RepairStatus.PROMOTING)
+        """原子晋升 + 幂等回执 + 崩溃恢复。
 
-        # WP1-04：比较 + 写入在同一个数据库事务内完成（真正原子 CAS）
+        崩溃窗口与处理方式：
+        - CAS 提交前崩溃 → 无回执、提案停在 PROMOTING → 重试直接重做 CAS（允许 PROMOTING 重入）；
+        - CAS 提交后、提案保存前崩溃 → 有回执、提案停在 PROMOTING → 重试命中回执，
+          用回执里的 target_version 确定性恢复为 PROMOTED，**不会**误报 VERSION_CONFLICT。
+        """
+        if not idempotency_key:
+            raise AppError(ErrorCode.VALIDATION_ERROR, "idempotency_key 不能为空")
+        doc = self.get(proposal_id)
+
+        # 1) 幂等回执命中（含"上一进程 CAS 已提交但没来得及保存提案"的崩溃恢复）
+        receipt = self._match_receipt(proposal_id, idempotency_key, kind="PROMOTE")
+        if receipt is not None:
+            return self._settle_promoted(doc, receipt, idempotency_key, recovered=True)
+
+        status = RepairStatus(doc["status"])
+        if status is RepairStatus.PROMOTED:
+            # 已晋升但没有回执（历史数据）：补一条回执，保持幂等语义
+            receipt = {
+                "target_version": int(doc.get("promoted_version") or 0),
+                "base_version": int(doc["base_version"]),
+            }
+            return self._settle_promoted(doc, receipt, idempotency_key, recovered=True)
+        if status is not RepairStatus.APPROVED and status is not RepairStatus.PROMOTING:
+            raise AppError(
+                ErrorCode.CONFLICT,
+                f"illegal repair transition {status.value}->PROMOTING",
+            )
+        if status is RepairStatus.APPROVED:
+            self._transition(doc, RepairStatus.PROMOTING)
+        else:
+            doc["promotion_retry"] = int(doc.get("promotion_retry") or 0) + 1
+        self._save(doc)  # 先把 PROMOTING 落库，崩溃后从这里恢复
+
+        # 2) 比较 + 写入 + 回执 在同一个数据库事务内完成
         try:
             created = self.rt.catalog.promote_version_cas(
                 doc["testcase_id"],
@@ -277,6 +308,8 @@ class RepairService:
                 candidate=doc["candidate_doc"],
                 workspace_id=doc["workspace_id"],
                 title=f"{doc['testcase_id']} (healed)",
+                idempotency_key=idempotency_key,
+                proposal_id=proposal_id,
             )
         except AppError as exc:
             if exc.code is not ErrorCode.CONFLICT:
@@ -284,6 +317,7 @@ class RepairService:
             current = self.rt.catalog.approved_version_number(doc["testcase_id"])
             doc["failure_reason"] = "VERSION_CONFLICT"
             doc["promotion_record"] = {
+                **(doc.get("promotion_record") or {}),
                 "idempotency_key": idempotency_key,
                 "result": "VERSION_CONFLICT",
                 "current_version": current,
@@ -294,26 +328,85 @@ class RepairService:
             self._transition(doc, RepairStatus.PROMOTION_FAILED)
             return self._save(doc)
 
+        receipt = {
+            "target_version": created.get("version"),
+            "base_version": int(doc["base_version"]),
+        }
+        return self._settle_promoted(doc, receipt, idempotency_key, recovered=False)
+
+    def _match_receipt(
+        self, proposal_id: str, idempotency_key: str, *, kind: str
+    ) -> dict[str, Any] | None:
+        """幂等键命中，或同一提案的同类回执命中（不同幂等键也不重复创建版本）。"""
+        receipt = self.rt.catalog.get_promotion_receipt(idempotency_key)
+        if receipt is None:
+            receipt = self.rt.catalog.find_promotion_receipt(proposal_id, kind=kind)
+        if receipt is None or receipt.get("kind") != kind:
+            return None
+        return receipt
+
+    def _settle_promoted(
+        self,
+        doc: dict[str, Any],
+        receipt: dict[str, Any],
+        idempotency_key: str,
+        *,
+        recovered: bool,
+    ) -> dict[str, Any]:
+        target = int(receipt.get("target_version") or 0)
+        if not target:
+            raise AppError(ErrorCode.CONFLICT, "晋升回执缺少 target_version，无法恢复")
         doc["promotion_record"] = {
+            **(doc.get("promotion_record") or {}),
             "idempotency_key": idempotency_key,
-            "target_version": created["version"],
+            "target_version": target,
             "operator": "system:promotion",
             "check": "CAS_OK",
             "atomic": True,
-            "at": utc_now_iso(),
+            "receipt_recovered": recovered,
+            "at": (doc.get("promotion_record") or {}).get("at") or utc_now_iso(),
         }
-        doc["promoted_version"] = created["version"]
-        self._transition(doc, RepairStatus.PROMOTED)
+        doc["promoted_version"] = target
+        if RepairStatus(doc["status"]) is RepairStatus.PROMOTING:
+            self._transition(doc, RepairStatus.PROMOTED)
         return self._save(doc)
 
-    def rollback(self, proposal_id: str, operator: str, reason: str) -> dict[str, Any]:
+    def reconcile(self, proposal_id: str) -> dict[str, Any]:
+        """确定性恢复：把卡在 PROMOTING 的提案按已提交回执修复到 PROMOTED。"""
         doc = self.get(proposal_id)
-        if doc["status"] != "PROMOTED":
-            raise AppError(ErrorCode.PRECONDITION_FAILED, "只有 PROMOTED 提案可回滚")
-        actor = require_human_actor(operator, field="operator")
+        if doc["status"] not in {"PROMOTING", "PROMOTED"}:
+            return doc
+        receipt = self.rt.catalog.find_promotion_receipt(proposal_id, kind="PROMOTE")
+        if receipt is None:
+            # 没有回执说明 CAS 没提交：回到 APPROVED，允许重新晋升
+            if doc["status"] == "PROMOTING":
+                doc["status"] = RepairStatus.APPROVED.value
+                doc["failure_reason"] = "PROMOTION_NOT_COMMITTED"
+                return self._save(doc)
+            return doc
+        return self._settle_promoted(doc, receipt, receipt["idempotency_key"], recovered=True)
+
+    def rollback(
+        self,
+        proposal_id: str,
+        operator: str,
+        reason: str,
+        *,
+        idempotency_key: str = "",
+    ) -> dict[str, Any]:
+        """回滚：同样具备幂等回执与崩溃恢复（RUN-007 WP1-02）。"""
+        doc = self.get(proposal_id)
         promoted_version = int(doc.get("promoted_version") or 0)
         if not promoted_version:
             raise AppError(ErrorCode.PRECONDITION_FAILED, "提案缺少 promoted_version，无法回滚")
+        key = idempotency_key or f"rollback:{proposal_id}:v{promoted_version}"
+        receipt = self._match_receipt(proposal_id, key, kind="ROLLBACK")
+        if receipt is not None:
+            return self._settle_rolled_back(doc, receipt, operator, reason, recovered=True)
+
+        if doc["status"] != "PROMOTED":
+            raise AppError(ErrorCode.PRECONDITION_FAILED, "只有 PROMOTED 提案可回滚")
+        actor = require_human_actor(operator, field="operator")
         base = doc["base_doc"]
         try:
             created = self.rt.catalog.rollback_version_cas(
@@ -322,6 +415,8 @@ class RepairService:
                 restored=base,
                 workspace_id=doc["workspace_id"],
                 title=f"{doc['testcase_id']} (rolled back)",
+                idempotency_key=key,
+                proposal_id=proposal_id,
             )
         except AppError as exc:
             if exc.code is not ErrorCode.CONFLICT:
@@ -331,18 +426,37 @@ class RepairService:
                 ErrorCode.CONFLICT,
                 f"ROLLBACK_CONFLICT: 当前正式版本已不是本提案晋升的 v{promoted_version}",
             ) from exc
+        receipt = {
+            "target_version": created.get("version"),
+            "base_version": promoted_version,
+        }
+        return self._settle_rolled_back(doc, receipt, actor, reason, recovered=False)
+
+    def _settle_rolled_back(
+        self,
+        doc: dict[str, Any],
+        receipt: dict[str, Any],
+        operator: str,
+        reason: str,
+        *,
+        recovered: bool,
+    ) -> dict[str, Any]:
+        actor = require_human_actor(operator, field="operator")
+        restored_version = int(receipt.get("target_version") or 0)
         doc["rollback_record"] = {
-            "target_version": f"{doc['testcase_id']}:v{promoted_version}",
-            "restored_version": created["version"],
+            "target_version": f"{doc['testcase_id']}:v{receipt.get('base_version')}",
+            "restored_version": restored_version,
             "operator": actor,
             "reason": reason,
-            "at": utc_now_iso(),
+            "receipt_recovered": recovered,
+            "at": (doc.get("rollback_record") or {}).get("at") or utc_now_iso(),
         }
         doc["promotion_record"] = {
             **(doc.get("promotion_record") or {}),
             "rollback": doc["rollback_record"],
         }
-        self._transition(doc, RepairStatus.ROLLED_BACK)
+        if RepairStatus(doc["status"]) is RepairStatus.PROMOTED:
+            self._transition(doc, RepairStatus.ROLLED_BACK)
         return self._save(doc)
 
     # --------------------------------------------------------------- helpers

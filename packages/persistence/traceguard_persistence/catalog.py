@@ -25,7 +25,15 @@ from traceguard_core.ids import new_id, utc_now_iso
 
 from . import stability_gate
 from .db import Database
-from .models import DocRow, IntentRow, OracleRow, TestCaseRow, TestCaseVersionRow, WorkspaceRow
+from .models import (
+    DocRow,
+    IntentRow,
+    OracleRow,
+    PromotionReceiptRow,
+    TestCaseRow,
+    TestCaseVersionRow,
+    WorkspaceRow,
+)
 
 DEFAULT_WORKSPACE = "default"
 
@@ -693,13 +701,22 @@ class CatalogService:
         candidate: dict[str, Any],
         workspace_id: str = DEFAULT_WORKSPACE,
         title: str = "",
+        idempotency_key: str = "",
+        proposal_id: str = "",
     ) -> dict[str, Any]:
-        """正式版本晋升：比较 + 写入在同一个数据库事务内完成（真正原子 CAS）。
+        """正式版本晋升：比较 + 写入 + 幂等回执在同一个数据库事务内完成（真正原子 CAS）。
 
         两个基于同一 base_version 的并发晋升只允许一个成功，另一个得到 VERSION_CONFLICT；
         绝不"先在事务 A 比较，再在事务 B 无条件创建版本"。
+
+        RUN-007 WP1-02：传 `idempotency_key` 时，回执与版本指针在同一事务提交，
+        因此"CAS 已提交但进程随后崩溃"的重试会命中回执并返回原结果，
+        不会被误判成 VERSION_CONFLICT。
         """
         with self.db.session() as s:
+            replay = self._receipt_replay(s, idempotency_key, proposal_id, kind="PROMOTE")
+            if replay is not None:
+                return replay
             row = s.get(TestCaseRow, testcase_id)
             if row is None:
                 raise AppError(ErrorCode.NOT_FOUND, "testcase not found")
@@ -744,6 +761,17 @@ class CatalogService:
                     doc=doc,
                 )
             )
+            self._write_receipt(
+                s,
+                idempotency_key=idempotency_key,
+                kind="PROMOTE",
+                proposal_id=proposal_id,
+                testcase_id=testcase_id,
+                workspace_id=workspace_id,
+                base_version=base_version,
+                target_version=new_version,
+                result={"version": new_version, "testcase_id": testcase_id, "kind": "PROMOTE"},
+            )
             s.flush()
             return doc
 
@@ -755,9 +783,17 @@ class CatalogService:
         restored: dict[str, Any],
         workspace_id: str = DEFAULT_WORKSPACE,
         title: str = "",
+        idempotency_key: str = "",
+        proposal_id: str = "",
     ) -> dict[str, Any]:
-        """回滚：只有"当前正式版本仍是本提案晋升的版本"时才允许回滚。"""
+        """回滚：只有"当前正式版本仍是本提案晋升的版本"时才允许回滚。
+
+        与晋升相同：幂等回执与版本指针在同一事务提交，重试可确定性恢复。
+        """
         with self.db.session() as s:
+            replay = self._receipt_replay(s, idempotency_key, proposal_id, kind="ROLLBACK")
+            if replay is not None:
+                return replay
             row = s.get(TestCaseRow, testcase_id)
             if row is None:
                 raise AppError(ErrorCode.NOT_FOUND, "testcase not found")
@@ -801,8 +837,95 @@ class CatalogService:
                     doc=doc,
                 )
             )
+            self._write_receipt(
+                s,
+                idempotency_key=idempotency_key,
+                kind="ROLLBACK",
+                proposal_id=proposal_id,
+                testcase_id=testcase_id,
+                workspace_id=workspace_id,
+                base_version=promoted_version,
+                target_version=new_version,
+                result={"version": new_version, "testcase_id": testcase_id, "kind": "ROLLBACK"},
+            )
             s.flush()
             return doc
+
+    # -------------------------------------------------------- promotion receipts
+    @staticmethod
+    def _receipt_replay(
+        s: Any, idempotency_key: str, proposal_id: str, *, kind: str
+    ) -> dict[str, Any] | None:
+        """命中已提交的回执 → 返回原结果（幂等重放），不再动版本指针。
+
+        两个来源：
+        1. 同一幂等键（正常重试）；
+        2. 同一 proposal 的同类回执（不同幂等键重试同一动作）——避免重复创建版本。
+        """
+        if idempotency_key:
+            row = s.get(PromotionReceiptRow, idempotency_key)
+            if row is not None:
+                return {**dict(row.result or {}), "idempotent_hit": True, "matched_by": "key"}
+        if proposal_id:
+            row = s.scalar(
+                select(PromotionReceiptRow)
+                .where(
+                    PromotionReceiptRow.proposal_id == proposal_id,
+                    PromotionReceiptRow.kind == kind,
+                )
+                .order_by(PromotionReceiptRow.created_at.desc())
+                .limit(1)
+            )
+            if row is not None:
+                return {**dict(row.result or {}), "idempotent_hit": True, "matched_by": "proposal"}
+        return None
+
+    @staticmethod
+    def _write_receipt(
+        s: Any,
+        *,
+        idempotency_key: str,
+        kind: str,
+        proposal_id: str,
+        testcase_id: str,
+        workspace_id: str,
+        base_version: int,
+        target_version: int,
+        result: dict[str, Any],
+    ) -> None:
+        if not idempotency_key:
+            return
+        existing = s.get(PromotionReceiptRow, idempotency_key)
+        if existing is not None:
+            return  # 同一事务内重复写回执：保持第一次的结果
+        s.add(
+            PromotionReceiptRow(
+                idempotency_key=idempotency_key,
+                kind=kind,
+                proposal_id=proposal_id,
+                testcase_id=testcase_id,
+                workspace_id=workspace_id,
+                base_version=base_version,
+                target_version=target_version,
+                result=result,
+                created_at=_now(),
+            )
+        )
+
+    def get_promotion_receipt(self, idempotency_key: str) -> dict[str, Any] | None:
+        with self.db.session() as s:
+            row = s.get(PromotionReceiptRow, idempotency_key)
+            return _receipt_dict(row) if row else None
+
+    def find_promotion_receipt(
+        self, proposal_id: str, *, kind: str | None = None
+    ) -> dict[str, Any] | None:
+        with self.db.session() as s:
+            q = select(PromotionReceiptRow).where(PromotionReceiptRow.proposal_id == proposal_id)
+            if kind:
+                q = q.where(PromotionReceiptRow.kind == kind)
+            row = s.scalar(q.order_by(PromotionReceiptRow.created_at.desc()).limit(1))
+            return _receipt_dict(row) if row else None
 
     @staticmethod
     def _promoted_doc(candidate: dict[str, Any], *, new_version: int) -> dict[str, Any]:
@@ -908,6 +1031,20 @@ class CatalogService:
                 }
                 for r in rows
             ]
+
+
+def _receipt_dict(r: PromotionReceiptRow) -> dict[str, Any]:
+    return {
+        "idempotency_key": r.idempotency_key,
+        "kind": r.kind,
+        "proposal_id": r.proposal_id,
+        "testcase_id": r.testcase_id,
+        "workspace_id": r.workspace_id,
+        "base_version": r.base_version,
+        "target_version": r.target_version,
+        "result": dict(r.result or {}),
+        "created_at": r.created_at,
+    }
 
 
 def _intent_dict(r: IntentRow) -> dict[str, Any]:

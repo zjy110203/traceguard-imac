@@ -195,6 +195,26 @@ MIGRATIONS: list[tuple[int, str, list[str]]] = [
         "testcase_review_revision",
         ["__CALLABLE__:_migrate_review_revision"],
     ),
+    (
+        8,
+        "promotion_receipts",
+        [
+            "CREATE TABLE IF NOT EXISTS tg_promotion_receipt ("
+            "idempotency_key VARCHAR(160) PRIMARY KEY, "
+            "kind VARCHAR(20) NOT NULL, "
+            "proposal_id VARCHAR(90) NOT NULL DEFAULT '', "
+            "testcase_id VARCHAR(64) NOT NULL, "
+            "workspace_id VARCHAR(64) NOT NULL DEFAULT 'default', "
+            "base_version INTEGER NOT NULL DEFAULT 0, "
+            "target_version INTEGER NOT NULL DEFAULT 0, "
+            "result JSON, "
+            "created_at VARCHAR(40) NOT NULL DEFAULT '')",
+            "CREATE INDEX IF NOT EXISTS ix_tg_promotion_receipt_proposal "
+            "ON tg_promotion_receipt (proposal_id)",
+            "CREATE INDEX IF NOT EXISTS ix_tg_promotion_receipt_testcase "
+            "ON tg_promotion_receipt (testcase_id)",
+        ],
+    ),
 ]
 
 

@@ -424,11 +424,24 @@ async def promote_repair(proposal_id: str, req: PromoteReq) -> dict[str, Any]:
 class RollbackReq(BaseModel):
     operator: str
     reason: str
+    #: 可选：不传时按 proposal + promoted_version 生成确定性键，重试仍幂等
+    idempotency_key: str = ""
 
 
 @router.post("/repairs/{proposal_id}/rollback")
 async def rollback_repair(proposal_id: str, req: RollbackReq) -> dict[str, Any]:
     try:
-        return get_services().repair.rollback(proposal_id, req.operator, req.reason)
+        return get_services().repair.rollback(
+            proposal_id, req.operator, req.reason, idempotency_key=req.idempotency_key
+        )
+    except AppError as exc:
+        raise _http(exc) from exc
+
+
+@router.post("/repairs/{proposal_id}/reconcile")
+async def reconcile_repair(proposal_id: str) -> dict[str, Any]:
+    """确定性恢复：把崩溃后卡在 PROMOTING 的提案按已提交回执修复。"""
+    try:
+        return get_services().repair.reconcile(proposal_id)
     except AppError as exc:
         raise _http(exc) from exc
