@@ -8,6 +8,8 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
 from traceguard_core.errors import AppError
+from traceguard_core.ids import utc_now_iso
+from traceguard_persistence.catalog import require_human_actor
 
 from ..services import get_services
 
@@ -152,20 +154,33 @@ class DispositionReviewReq(BaseModel):
 
 @router.post("/dispositions/{disposition_id}/review")
 async def review_disposition(disposition_id: str, req: DispositionReviewReq) -> dict[str, Any]:
+    """处置结论的人工复核。
+
+    RUN-007 WP1-03：主体校验统一走 `require_human_actor()`（按命名空间首段判断），
+    不再使用"字符串里包含 agent 就拒绝"的子串匹配——那种写法既漏 `bot:`/`system:`，
+    又会误伤 `org:agents-team` 这类合法具名主体。
+    """
     if req.review_status not in {"APPROVED", "REJECTED", "PENDING"}:
         raise HTTPException(422, detail={"code": "VALIDATION_ERROR", "message": "invalid status"})
-    if any(x in req.reviewer.lower() for x in ("agent", "llm")):
-        raise HTTPException(
-            403, detail={"code": "AUTHORIZATION_ERROR", "message": "需具名人类审核"}
-        )
+    try:
+        actor = require_human_actor(req.reviewer, field="reviewer")
+    except AppError as exc:
+        raise _http(exc) from exc
     rt = get_services().rt
     rec = rt.docs.get(disposition_id)
     if not rec or rec.kind != "disposition":
         raise HTTPException(404, detail={"code": "NOT_FOUND", "message": "disposition not found"})
     doc = dict(rec.doc)
     doc["review_status"] = req.review_status
+    doc["review_revision"] = int(doc.get("review_revision") or 0) + 1
     doc.setdefault("review_history", []).append(
-        {"reviewer": req.reviewer, "decision": req.review_status, "note": req.note}
+        {
+            "reviewer": actor,
+            "decision": req.review_status,
+            "note": req.note,
+            "review_revision": doc["review_revision"],
+            "at": utc_now_iso(),
+        }
     )
     rt.docs.put(
         doc_id=disposition_id,

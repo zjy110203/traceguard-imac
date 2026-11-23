@@ -396,6 +396,8 @@ class RepairService:
     ) -> dict[str, Any]:
         """回滚：同样具备幂等回执与崩溃恢复（RUN-007 WP1-02）。"""
         doc = self.get(proposal_id)
+        # 主体校验前置：任何回滚请求都必须先证明"是具名人类"，再谈状态是否允许
+        actor = require_human_actor(operator, field="operator")
         promoted_version = int(doc.get("promoted_version") or 0)
         if not promoted_version:
             raise AppError(ErrorCode.PRECONDITION_FAILED, "提案缺少 promoted_version，无法回滚")
@@ -406,7 +408,6 @@ class RepairService:
 
         if doc["status"] != "PROMOTED":
             raise AppError(ErrorCode.PRECONDITION_FAILED, "只有 PROMOTED 提案可回滚")
-        actor = require_human_actor(operator, field="operator")
         base = doc["base_doc"]
         try:
             created = self.rt.catalog.rollback_version_cas(
