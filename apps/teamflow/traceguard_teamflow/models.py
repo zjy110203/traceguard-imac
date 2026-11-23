@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import os
+
 from sqlalchemy import Boolean, Integer, String, Text, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 from traceguard_core.config import get_settings
 
 _settings = get_settings()
 # TeamFlow 使用独立 SQLite 文件，与平台库隔离（避免污染平台业务状态）
-_tf_url = "sqlite:///./.traceguard/teamflow.db"
+# 允许通过 TG_TEAMFLOW_DB 指向隔离库（演示/验收必须使用独立数据库）
+_tf_url = os.environ.get("TG_TEAMFLOW_DB") or "sqlite:///./.traceguard/teamflow.db"
 _engine = create_engine(
     _tf_url,
     connect_args={"check_same_thread": False},

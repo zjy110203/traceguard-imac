@@ -176,6 +176,19 @@ class EventConflictRow(Base):
     at: Mapped[str] = mapped_column(String(40), default=utc_now_iso)
 
 
+class ProducerSequenceRow(Base):
+    """Producer 实例内序号分配器（数据库原子自增）。
+
+    用一行记录 + `ON CONFLICT DO UPDATE ... RETURNING` 分配序号：
+    SQLite 与 PostgreSQL 都支持，多进程并发下不会重复，也不会因为互相挤占而失败。
+    """
+
+    __tablename__ = "tg_producer_sequence"
+    producer_instance_id: Mapped[str] = mapped_column(String(120), primary_key=True)
+    last_sequence: Mapped[int] = mapped_column(BigInteger, default=0)
+    updated_at: Mapped[str] = mapped_column(String(40), default=utc_now_iso)
+
+
 class EvidenceRow(Base):
     __tablename__ = "tg_evidence"
     evidence_id: Mapped[str] = mapped_column(String(64), primary_key=True)
@@ -197,9 +210,15 @@ class InboxRow(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     consumer_id: Mapped[str] = mapped_column(String(80))
     event_id: Mapped[str] = mapped_column(String(64))
-    status: Mapped[str] = mapped_column(String(20), default="PROCESSED")
+    # PROCESSING / SUCCEEDED / FAILED / UNKNOWN
+    status: Mapped[str] = mapped_column(String(20), default="PROCESSING")
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    claim_expires_at: Mapped[float] = mapped_column(Float, default=0.0)
+    indeterminate: Mapped[bool] = mapped_column(Boolean, default=False)
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     result: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     consumed_at: Mapped[str] = mapped_column(String(40), default=utc_now_iso)
+    updated_at: Mapped[str] = mapped_column(String(40), default=utc_now_iso)
     __table_args__ = (UniqueConstraint("consumer_id", "event_id", name="uq_inbox"),)
 
 

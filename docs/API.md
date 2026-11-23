@@ -125,3 +125,22 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/testcases/tcase_tf_create_normal/ex
 3. 未审批 Oracle 不参与判定；`oracle_available=false` 的断言结论必须是 `NOT_EVALUATED`。
 4. 修复沙箱 `sandbox_status` 与生命周期 `status` 是两个维度，不可互相替代。
 5. Benchmark 的 `blocked_baselines` 表示**没有可用模型/人力**，不是 0 分。
+
+## 10. RUN-005 新增 / 变更接口
+
+| 方法 | 路径 | 语义要点 |
+|---|---|---|
+| GET | `/events/stream` | 真实 SSE。参数 `workspace_id/run_id/event_type/last_event_id/heartbeat_seconds/poll_interval/limit`；也接受 `Last-Event-ID` 头。`id` 游标形如 `pi=…;seq=…;at=…;eid=…`（来源+续传位置）；**sequence 是 producer 实例内序号，不存在跨 producer 全局顺序**；投递 at-least-once，客户端按 `event_id` 去重 |
+| POST | `/runs/{run_id}/probe-plan` | Active Diagnosis 闭环：返回 `steps[]`（probe/score/status/evidence/execution_id）、`stop_reason`、`budget`、`gaps_before/gaps_after`、`llm_planner` |
+| GET | `/probe-plans`、`/probe-plans/{id}` | 计划列表/详情（含 LLM 建议与 fallback 标记） |
+| GET | `/probes/budgets` | 预算快照；`provisional=true` 表示 P06 未确认 |
+| POST | `/probes/budgets/close` | 关闭预算（`run_id` 或 `diagnosis_id`），记录关闭原因 |
+| GET | `/runs/{run_id}/timeline` | Inbox 驱动的投影视图，`authority="derived_view"`，非业务权威 |
+| GET | `/inbox/stats` | 消费状态计数（含 UNKNOWN） |
+| POST | `/explorations/{id}/compile?mode=` | `rule_only / llm_only / llm_plus_rule_validation`；失败回退规则并在 `compiled.llm_meta.fallback=true` |
+| POST | `/testcases/{id}/versions/{v}/stability-replay` | `repeats`（1..10）、`risk_profile`、`sync`；返回独立 Run 记录与 `promotable`（不稳定或 Oracle 不完整 → false） |
+| GET | `/stability-replays`、`/{id}` | `refresh=true` 汇总最新 verdict 并重算分类 |
+| POST | `/repairs/llm-suggest` | LLM 受限变更候选；`propose=true` 仅生成提案，不审批/不晋升 |
+| GET | `/system/llm/summary` | 新增 `enabled.compiler_mode/probe_planner/repair_planner` 与各模块调用/兜底计数 |
+
+**语义红线**：SSE 与时间线都是展示/派生通道；任何界面状态必须以 `/runs/{id}`、`/diagnoses/{id}` 等权威读接口为准。

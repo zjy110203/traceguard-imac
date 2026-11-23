@@ -36,3 +36,15 @@
 4. **诊断 5xx 优先于下游症状**：接口失败导致的未落库不再作为独立根因。
 5. **Benchmark workspace 隔离**：实验运行与生成资产写入 `benchmark` workspace，避免污染主工作台。
 6. **不做的事**：不伪造 LLM 数值；不实现 S3 适配器并声称 MinIO 完成；不冻结 P03/P08。
+
+---
+
+## RUN-005 新增待决策（NEEDS_DECISION）
+
+- P03：推荐策略 D（域内权威 + 跨域冲突升级），未冻结。
+- P08：推荐方案 2（职责分离 + 高风险双人审批），未冻结。
+- P05/P06：EIG 权重与预算数值仍为 provisional。
+- P09：Benchmark 统计方案（指标已定义，未跑多臂）。
+- P11：无压测，不提出 SLO。
+- 依赖漏洞处置：vite 是否升级到 8（破坏性）或豁免 dev-only 并定期限。
+详见 `docs/RUN-005-DECISION-PACKAGE.md`。

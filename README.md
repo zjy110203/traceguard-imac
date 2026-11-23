@@ -13,6 +13,19 @@ Agentic Web UI Testing & Quality Intelligence Platform（智能 Web UI 自动化
 - **Oracle-Protected Self-Healing**：只改定位/等待，真实沙箱验证，人工审批，CAS 晋升，可回滚；
 - 通过 **Vue 工作台** 完成全部操作：质量总览 / 需求 / 用例 / Oracle / 执行 / Run 详情 / Agent Studio / 模型运行 / 诊断 / 修复 / Benchmark / 系统。
 
+## RUN-005 新增能力（2026-11-23）
+
+- **Active Diagnosis 闭环**：证据缺口 → 候选探针 → 五项校验 → EIG → Planner 选择 → 执行 → 新证据 → 再评估；
+  预算按 Run / Diagnosis 隔离并持久化（`provisional` 标注，P06 未冻结）。
+- **真实 SSE**：`/events/stream` 推送持久化业务事件，支持 `Last-Event-ID` 续传、workspace/run 过滤、心跳与轮询降级；
+  SSE 只做实时提示，状态仍以 API 为准。
+- **可靠消费**：Consumer Inbox 统一 PROCESSING/SUCCEEDED/FAILED/UNKNOWN 状态机（租约抢占、崩溃恢复、事务性），
+  并由 Run 时间线投影真实使用。
+- **LLM 三类扩展**：编译（rule_only / llm_only / llm_plus_rule_validation）、探针规划、修复规划；
+  全部只产候选，失败即规则兜底并显式标记。
+- **候选稳定性回放（F08）**：独立 Run、sandbox 入口、不稳定不晋升、Oracle 不完整不得宣称业务已验证。
+- **工程门禁**：PR / Nightly / Release 三级 GitHub Actions；前端验收脚本（30 项）；PG parity 测试。
+
 ## 快速开始
 
 ```bash

@@ -79,6 +79,19 @@ class Settings(BaseSettings):
     llm_max_calls_per_run: int = 24
     llm_explorer_enabled: bool = True
     llm_diagnosis_enabled: bool = True
+    # RUN-005 WP2：三类扩展（默认保守关闭，显式开启才产生模型调用成本）
+    # 编译模式：rule_only / llm_only / llm_plus_rule_validation
+    llm_compiler_enabled: bool = True
+    llm_compiler_mode: str = "rule_only"
+    llm_probe_planner_enabled: bool = False
+    llm_repair_planner_enabled: bool = False
+
+    @field_validator("llm_compiler_mode")
+    @classmethod
+    def _norm_compiler_mode(cls, v: str) -> str:
+        v = (v or "rule_only").strip().lower()
+        allowed = {"rule_only", "llm_only", "llm_plus_rule_validation"}
+        return v if v in allowed else "rule_only"
 
     @field_validator("llm_provider")
     @classmethod

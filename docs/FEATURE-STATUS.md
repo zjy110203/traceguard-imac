@@ -121,3 +121,35 @@
 | P08 | Repair 审批角色矩阵 | 待决策，见 `docs/decisions/P08-repair-approval-roles.md` |
 | — | 路线图 v1.1 正式冻结 | 未冻结（无批准记录） |
 | P-EXT | 外部真实站点泛化授权 | 未授权，保持 BLOCKED |
+
+---
+
+# RUN-005 功能状态（2026-11-23，六状态口径）
+
+> 本节使用 RUN-005 指定口径：**IMPLEMENTED / VERIFIED / PARTIAL / BLOCKED / NEEDS_DECISION / NOT_IMPLEMENTED**。
+> 上述历史章节保留原有五状态口径，作为历史记录，不改写。
+
+| 能力 | 状态 | 证据 / 说明 |
+|---|---|---|
+| Probe 预算按 Run/Diagnosis 隔离 | **VERIFIED** | 15 单测 + 6 集成；600s/3600s 服务时长不耗尽新预算 |
+| 预算持久化与关闭语义 | **VERIFIED** | `probe_budget` 文档；重启按 scope 恢复；关闭后 `PROBE_BUDGET_CLOSED` |
+| Active Planner 真实闭环 | **VERIFIED** | `POST /runs/{id}/probe-plan` 真实执行 2 探针并产出证据，停止原因明确 |
+| 真实 SSE 事件流 | **VERIFIED** | 持久化事件、Last-Event-ID、workspace/run 过滤、心跳、轮询降级；7 项测试 |
+| 前端 SSE 接入与降级 | **VERIFIED** | `apps/web/src/events.ts`；Run 详情页显示通道状态徽标；30/30 UI 验收 |
+| Consumer Inbox 持久化状态机 | **VERIFIED** | PROCESSING/SUCCEEDED/FAILED/UNKNOWN、租约接管、事务性、多连接抢占 |
+| Inbox 真实消费者 | **VERIFIED** | `run-timeline-projector` → `/runs/{id}/timeline`（派生视图） |
+| Event Store 多进程并发 | **VERIFIED** | DB 原子序号分配器；4 进程 × 25 事件无重复无丢失 |
+| LLM TestCase Compiler（三种模式） | **PARTIAL** | 模式与顾问实现 + 真实单次冒烟通过；未做完整探索→编译→回放链路 |
+| 候选稳定性回放（F08） | **PARTIAL** | 编排/语义/门槛 VERIFIED（7 测试）；未做真实浏览器多次回放 |
+| LLM Active Probe Planner | **VERIFIED** | 真实调用成功；只能选已注册探针；确定性 Planner 仍为决策者 |
+| LLM Repair Planner | **VERIFIED** | 真实生成受限变更；禁止断言/Oracle；仍需审批/CAS |
+| 三类 Agent 可观测性 | **VERIFIED** | `/system/llm/summary` 增加 compiler/probe/repair 调用与 fallback |
+| Benchmark v2 verdict 复验 | **VERIFIED** | 30/30（真实浏览器，隔离库） |
+| Benchmark v3 多臂对照 | **BLOCKED** | 成本/时长；未输出任何准确性数字 |
+| PostgreSQL 真实验证 | **PARTIAL** | parity 测试 + CI Service Container 已就绪；本机 BLOCKED |
+| CI 三级门禁 | **VERIFIED（文件）/ 未在真实 CI 跑** | PR / Nightly / Release 工作流入库；Nightly 因 dev-only high 漏洞会先失败（如实记录） |
+| 前端自动化验收 | **VERIFIED** | `scripts/ui_acceptance.py` 30/30 + 18 张截图 |
+| 60 分钟长稳 | **BLOCKED** | 未执行 |
+| 多 Worker 故障恢复 | **PARTIAL** | 历史证据，本轮未复验 |
+| P03 / P08 | **NEEDS_DECISION** | 决策包已产出，未冻结 |
+| Redis/Celery、MinIO/S3、专用图数据库 | **NOT_IMPLEMENTED** | 无明确收益证据，按规则不引入 |

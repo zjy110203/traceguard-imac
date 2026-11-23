@@ -54,10 +54,58 @@ async def get_exploration(exploration_id: str) -> dict[str, Any]:
 
 
 @router.post("/explorations/{exploration_id}/compile", status_code=201)
-async def compile_exploration(exploration_id: str) -> dict[str, Any]:
-    """轨迹 → 候选用例（PENDING，必须人工审核后才能执行）。"""
+async def compile_exploration(exploration_id: str, mode: str | None = None) -> dict[str, Any]:
+    """轨迹 → 候选用例（PENDING，必须人工审核后才能执行）。
+
+    mode: rule_only / llm_only / llm_plus_rule_validation（未指定则读配置开关）。
+    LLM 路径失败时回退规则编译，并在 compiled.llm_meta 中如实标记 fallback。
+    """
     try:
-        return await run_in_threadpool(get_services().exploration.compile, exploration_id)
+        return await run_in_threadpool(
+            get_services().exploration.compile, exploration_id, mode=mode
+        )
+    except AppError as exc:
+        raise _http(exc) from exc
+
+
+@router.post("/testcases/{testcase_id}/versions/{version}/stability-replay", status_code=201)
+async def start_stability_replay(
+    testcase_id: str,
+    version: int,
+    repeats: int | None = None,
+    risk_profile: str = "default",
+    sync: bool = False,
+) -> dict[str, Any]:
+    """候选用例稳定性回放：每次独立 Run，走沙箱入口，不覆盖历史。"""
+    from ..services import get_services
+
+    rt = get_services().rt
+    try:
+        return await run_in_threadpool(
+            get_services().stability.start,
+            testcase_id,
+            version,
+            repeats=repeats,
+            risk_profile=risk_profile,
+            sync=sync,
+            execute_fn=rt.execute_run,
+        )
+    except AppError as exc:
+        raise _http(exc) from exc
+
+
+@router.get("/stability-replays")
+async def list_stability_replays(
+    testcase_id: str | None = None, limit: int = 50
+) -> list[dict[str, Any]]:
+    return get_services().stability.list(testcase_id, limit)
+
+
+@router.get("/stability-replays/{replay_id}")
+async def get_stability_replay(replay_id: str, refresh: bool = False) -> dict[str, Any]:
+    try:
+        svc = get_services().stability
+        return svc.refresh(replay_id) if refresh else svc.get(replay_id)
     except AppError as exc:
         raise _http(exc) from exc
 
@@ -159,11 +207,71 @@ class ProbeExecReq(BaseModel):
     probe_id: str
     params: dict[str, Any] = {}
     workspace_id: str = "default"
+    run_id: str | None = None
+    diagnosis_id: str | None = None
 
 
 @router.post("/probes/execute", status_code=201)
 async def execute_probe(req: ProbeExecReq) -> dict[str, Any]:
-    return get_services().probe.execute(req.probe_id, req.params, req.workspace_id)
+    return get_services().probe.execute(
+        req.probe_id,
+        req.params,
+        req.workspace_id,
+        run_id=req.run_id,
+        diagnosis_id=req.diagnosis_id,
+    )
+
+
+@router.get("/probes/budgets")
+async def probe_budgets(workspace_id: str | None = None) -> list[dict[str, Any]]:
+    """探针预算快照（按 Run / Diagnosis 隔离，provisional 数值明确标注）。"""
+    return get_services().probe.budgets_snapshot(workspace_id)
+
+
+@router.post("/probes/budgets/close")
+async def close_probe_budget(
+    run_id: str | None = None, diagnosis_id: str | None = None
+) -> dict[str, Any]:
+    try:
+        snapshot = get_services().probe.close_budget(
+            run_id=run_id or "", diagnosis_id=diagnosis_id or ""
+        )
+    except AppError as exc:
+        raise _http(exc) from exc
+    if snapshot is None:
+        raise HTTPException(404, detail={"code": "NOT_FOUND", "message": "budget not found"})
+    return snapshot
+
+
+@router.post("/runs/{run_id}/probe-plan", status_code=201)
+async def run_probe_plan(
+    run_id: str,
+    diagnosis_id: str | None = None,
+    max_iterations: int = 6,
+) -> dict[str, Any]:
+    """真实执行 Active Diagnosis 循环（探针选择 → 执行 → 新证据 → 再评估）。"""
+    try:
+        return await run_in_threadpool(
+            get_services().probe.plan_and_probe,
+            run_id,
+            diagnosis_id,
+            max_iterations=max_iterations,
+        )
+    except AppError as exc:
+        raise _http(exc) from exc
+
+
+@router.get("/probe-plans")
+async def list_probe_plans(run_id: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
+    return get_services().probe.list_plans(run_id, limit)
+
+
+@router.get("/probe-plans/{plan_id}")
+async def get_probe_plan(plan_id: str) -> dict[str, Any]:
+    plan = get_services().probe.get_plan(plan_id)
+    if plan is None:
+        raise HTTPException(404, detail={"code": "NOT_FOUND", "message": "plan not found"})
+    return plan
 
 
 @router.get("/probes/executions")
@@ -200,6 +308,30 @@ class RepairProposeReq(BaseModel):
     changes: list[ChangeReq]
     reason: str = ""
     created_by: str = "agent:repair-planner"
+
+
+class RepairLLMReq(BaseModel):
+    testcase_id: str
+    base_version: int
+    run_id: str | None = None
+    diagnosis_id: str | None = None
+    propose: bool = False
+
+
+@router.post("/repairs/llm-suggest", status_code=201)
+async def llm_repair_suggest(req: RepairLLMReq) -> dict[str, Any]:
+    """LLM 生成受限修复候选（禁止自动审批/晋升；不具备凭据时明确返回未配置）。"""
+    try:
+        return await run_in_threadpool(
+            get_services().repair.llm_suggest,
+            testcase_id=req.testcase_id,
+            base_version=req.base_version,
+            run_id=req.run_id,
+            diagnosis_id=req.diagnosis_id,
+            propose=req.propose,
+        )
+    except AppError as exc:
+        raise _http(exc) from exc
 
 
 @router.post("/repairs", status_code=201)

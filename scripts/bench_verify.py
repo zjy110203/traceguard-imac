@@ -8,12 +8,13 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import time
 import urllib.request
 from pathlib import Path
 
-API = "http://127.0.0.1:8000/api/v1"
+API = os.environ.get("TG_API_URL", "http://127.0.0.1:8000").rstrip("/") + "/api/v1"
 
 EXPECTED = {
     # scenario_id → (testcase_id, expected_verdict)

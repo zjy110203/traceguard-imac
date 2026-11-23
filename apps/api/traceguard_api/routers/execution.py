@@ -224,6 +224,26 @@ async def run_events(run_id: str, limit: int = 500) -> list[dict[str, Any]]:
     return [e.to_dict() for e in events]
 
 
+@router.get("/runs/{run_id}/timeline")
+async def run_timeline(run_id: str, catch_up: bool = True) -> dict[str, Any]:
+    """事件时间线（由 Consumer Inbox 驱动的真实内部消费者投影，非权威状态）。"""
+    from traceguard_core.errors import AppError
+
+    try:
+        return get_services().timeline.get_timeline(run_id, catch_up=catch_up)
+    except AppError as exc:
+        raise HTTPException(
+            404, detail={"code": exc.code.value, "message": exc.message}
+        ) from exc
+
+
+@router.get("/inbox/stats")
+async def inbox_stats() -> dict[str, Any]:
+    """消费端幂等状态观测（PROCESSING / SUCCEEDED / FAILED / UNKNOWN）。"""
+    svc = get_services().timeline
+    return {"projector": svc.inbox_stats(), "all": svc.inbox.stats()}
+
+
 @router.get("/queue/stats")
 async def queue_stats() -> dict[str, Any]:
     rt = get_services().rt

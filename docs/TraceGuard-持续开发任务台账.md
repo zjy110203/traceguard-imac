@@ -78,3 +78,28 @@
 | T-25 | 响应式与深色主题 | PASS | 六档断点无溢出；12 路由深色无浅色残留 |
 
 状态说明：B-01 的历史描述保留为 RUN-002 时点快照；LLM 基线已由 RUN-003-G 解锁，B-01 不再适用于当前状态。
+
+---
+
+## RUN-005-CORE 台账（2026-11-23）
+
+| ID | 任务 | 状态 | 证据 |
+|---|---|---|---|
+| R5-01 | ProbeBudget 生命周期重构（按 Run/Diagnosis） | VERIFIED | `tests/unit/test_probe_budget.py`(15)、`tests/integration/test_probe_service.py`(6) |
+| R5-02 | Active Planner 真实决策闭环 | VERIFIED | plan `probeplan_…`；2 探针 + 2 证据 |
+| R5-03 | 真实 SSE 事件流 + 前端订阅/降级 | VERIFIED | `tests/integration/test_sse.py`(7)、`docs/assets/run005/ui-acceptance.json` |
+| R5-04 | Consumer Inbox 持久化状态机 | VERIFIED | `tests/unit/test_inbox_persistence.py`(9) |
+| R5-05 | Inbox 真实消费者（Run 时间线投影） | VERIFIED | `tests/integration/test_timeline_projection.py`(3) |
+| R5-06 | Event Store 多进程并发修复 | VERIFIED | `tests/unit/test_event_concurrency.py`(4)，4 进程 |
+| R5-07 | LLM 编译器三模式 + Oracle 保护 | PARTIAL（顾问真实冒烟通过，完整链路未跑） | `tests/unit/test_llm_advisors.py`(10)、`llm-advisor-smoke.json` |
+| R5-08 | 候选稳定性回放 F08 | PARTIAL（编排 VERIFIED，真实多次回放未跑） | `tests/integration/test_stability_replay.py`(7) |
+| R5-09 | LLM 探针规划 | VERIFIED | 闭环中 `llm_planner.called=true` |
+| R5-10 | LLM 修复规划 | VERIFIED | 3 条受限变更（真实调用） |
+| R5-11 | 三类 Agent 可观测性 | VERIFIED | `/api/v1/system/llm/summary` |
+| R5-12 | Benchmark v2 复验 | VERIFIED | `.workbuddy-run/bench-v2-verify.json` 30/30 |
+| R5-13 | Benchmark v3 多臂 | BLOCKED | `docs/RUN-005-BENCHMARK-REPORT.md` |
+| R5-14 | CI 三级门禁 | VERIFIED（文件）/未在真实 CI 跑 | `.github/workflows/{pr,nightly,release}-gate.yml` |
+| R5-15 | 前端自动化验收 | VERIFIED | `scripts/ui_acceptance.py` 30/30 + 18 截图 |
+| R5-16 | PostgreSQL parity 测试 | PARTIAL（本地 BLOCKED） | `tests/integration/test_postgres_parity.py`(5 skip) |
+| R5-17 | 60 分钟长稳 | BLOCKED | 未执行 |
+| R5-18 | P03/P08 决策包 | NEEDS_DECISION | `docs/RUN-005-DECISION-PACKAGE.md` |

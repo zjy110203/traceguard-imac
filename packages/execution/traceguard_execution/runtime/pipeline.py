@@ -119,7 +119,7 @@ class RunPipeline:
             tc = self._load_testcase(run)
             if tc is None:
                 raise AppError(ErrorCode.PRECONDITION_FAILED, "TESTCASE_VERSION_NOT_FOUND")
-            self._guard_reviewed(tc)
+            self._guard_reviewed(tc, task)
             oracles = self._load_oracles(tc)
             observer, observer_mode = self._build_observer(task, run, workspace_id)
             self.tasks.mark_running(run_id, self.worker_id, token, observer_mode)
@@ -206,9 +206,13 @@ class RunPipeline:
         doc.pop("review_history", None)
         return TestCaseVersion(**doc)
 
-    def _guard_reviewed(self, tc: TestCaseVersion) -> None:
-        # 沙箱验证允许执行 PENDING 候选版本（run_config.sandbox_only 显式标记，不是普通入口）
-        if tc.review_status == "PENDING" and (tc.run_config or {}).get("sandbox_only") is True:
+    def _guard_reviewed(self, tc: TestCaseVersion, task: dict[str, Any] | None = None) -> None:
+        # 沙箱验证允许执行 PENDING 候选版本（显式 sandbox 标记，不是普通入口）
+        # 两个来源：版本自身 run_config.sandbox_only，或 Task.mode == "sandbox"（候选回放）
+        if tc.review_status == "PENDING" and (
+            (tc.run_config or {}).get("sandbox_only") is True
+            or (task or {}).get("mode") == "sandbox"
+        ):
             return
         if tc.review_status != "APPROVED":
             raise AppError(

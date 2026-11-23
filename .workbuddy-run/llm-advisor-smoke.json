@@ -1,0 +1,334 @@
+{
+  "run_id": "run_1795409062183d8293ab67adf",
+  "model": "deepseek-flash",
+  "started_at": "2026-11-23T04:45:26Z",
+  "compiler": {
+    "called": true,
+    "fallback": false,
+    "error": "",
+    "steps": 2,
+    "assertions": 1,
+    "dropped_steps": 1,
+    "warnings": [
+      "llm_step_dropped: navigate 缺少合法 URL",
+      "llm: 轨迹动作序号 0 为 API 前置动作 POST /api/faults/TF-API-001/activate，非 UI 步骤，未编译为 steps，建议作为用例前置条件单独执行。",
+      "llm: 轨迹动作序号 4 为 wait 800ms，不属于允许的步骤动作（navigate|click|fill），未编译为步骤；其等待语义已合并到断言等待说明中。",
+      "llm: 轨迹动作序号 5 为 assert（test_id=create-error），已编译为 ui 断言；轨迹中未出现文本校验以外的业务状态校验。",
+      "llm: 虽然提供了业务状态接口 /api/state/projects?workspace=default，但轨迹中未实际调用，故未凭空生成 business_state 断言。"
+    ]
+  },
+  "probe_planner": {
+    "called": true,
+    "fallback": false,
+    "error": "",
+    "dropped": 0,
+    "selections": [
+      {
+        "probe_id": "http_state",
+        "params": {
+          "template": "get_state_project"
+        },
+        "why": "证据缺口 business_state_unknown 明确要求独立读取业务状态，以确认状态是否已持久化；http_state 属 LOW 风险只读探针，get_state_project 模板直接返回单个项目状态，成本 1.0 可接受，且能与现有推断解耦，形成独立验证。",
+        "info_gain": 0.8
+      },
+      {
+        "probe_id": "network_trace",
+        "params": {
+          "template": "run_network"
+        },
+        "why": "证据缺口 network_unverified 需要核对请求状态码与失败原因；network_trace 成本仅 0.2、LOW 风险，可提供独立的网络层证据，用于判断失败属客户端、服务端还是网络传输问题，并与 http_state 的业务状态结论交叉印证。",
+        "info_gain": 0.55
+      }
+    ]
+  },
+  "repair_planner": {
+    "called": true,
+    "fallback": false,
+    "error": "",
+    "changes": [
+      {
+        "path": "steps[0].action_config",
+        "step_index": 0,
+        "value": {
+          "method": "POST",
+          "path": "/api/faults/TF-API-001/activate",
+          "timeout_ms": 10000
+        },
+        "reason": "api 动作缺少结构化请求配置，value 中拼接的 \"POST /path\" 无法被稳定解析，拆分为 method/path 并补充请求超时",
+        "suggested_by": "llm:deepseek-flash"
+      },
+      {
+        "path": "steps[4].action_config",
+        "step_index": 4,
+        "value": {
+          "wait_for": {
+            "strategy": "test_id",
+            "value": "create-error",
+            "state": "visible"
+          },
+          "timeout_ms": 8000
+        },
+        "reason": "原等待步骤仅为固定 800ms 且 value 为字符串 \"800\"，易解析失败且在 500 响应返回前就结束等待；改为等待目标元素可见的显式等待策略",
+        "suggested_by": "llm:deepseek-flash"
+      },
+      {
+        "path": "steps[4].value",
+        "step_index": 4,
+        "value": null,
+        "reason": "等待时长已由 action_config.timeout_ms 承载，移除字符串形式的时长值，避免解析歧义",
+        "suggested_by": "llm:deepseek-flash"
+      },
+      {
+        "path": "run_config.wait_timeout",
+        "step_index": null,
+        "value": 15000,
+        "reason": "接口故障注入与 500 响应链路耗时较长，提升全局等待上限以避免等待超时导致的 run failed",
+        "suggested_by": "llm:deepseek-flash"
+      }
+    ],
+    "warnings": [
+      "llm: 步骤 api500_s3 的 value 使用硬编码时间戳项目名（TraceGuard 接口失败-2026-11-23T04:43:51），重复执行可能产生同名/脏数据，建议通过 test_data_refs 参数化；本次未擅自改动数据来源",
+      "llm: 步骤 api500_s6 的 assert 动作与断言 a_error_banner 目标重复，仅保留定位器，未修改其期望值或严格度",
+      "llm: 断言 a_biz_created 期望 count gte 1，与描述「项目未创建」语义存在歧义，属断言范畴不予修改，需人工复核"
+    ]
+  },
+  "usage": {
+    "data_available": true,
+    "record_count": 145,
+    "date": "2026-11-23",
+    "calls": 9,
+    "errors": 0,
+    "input_tokens": 9103,
+    "output_tokens": 6967,
+    "estimated_cost_usd": 0.003697,
+    "cost_is_estimated": true,
+    "retries": 0,
+    "avg_latency_ms": 4686.6,
+    "p95_latency_ms": 6030,
+    "latency_sample": 9,
+    "budget_usd": 1.0,
+    "budget_exceeded": false,
+    "total": {
+      "calls": 145,
+      "errors": 0,
+      "input_tokens": 231697,
+      "output_tokens": 106546,
+      "estimated_cost_usd": 0.167896,
+      "cost_is_estimated": true,
+      "retries": 0,
+      "avg_latency_ms": 5876.7,
+      "p95_latency_ms": 14295,
+      "latency_sample": 145
+    },
+    "by_agent": {
+      "compiler": {
+        "calls": 2,
+        "errors": 0,
+        "input_tokens": 1058,
+        "output_tokens": 1419,
+        "estimated_cost_usd": 0.000673,
+        "cost_is_estimated": true,
+        "retries": 0,
+        "avg_latency_ms": 4011.5,
+        "p95_latency_ms": 3945,
+        "latency_sample": 2
+      },
+      "diagnosis": {
+        "calls": 2,
+        "errors": 0,
+        "input_tokens": 5352,
+        "output_tokens": 1765,
+        "estimated_cost_usd": 0.001241,
+        "cost_is_estimated": true,
+        "retries": 0,
+        "avg_latency_ms": 5062.0,
+        "p95_latency_ms": 4590,
+        "latency_sample": 2
+      },
+      "probe_planner": {
+        "calls": 2,
+        "errors": 0,
+        "input_tokens": 716,
+        "output_tokens": 548,
+        "estimated_cost_usd": 0.000291,
+        "cost_is_estimated": true,
+        "retries": 0,
+        "avg_latency_ms": 1865.0,
+        "p95_latency_ms": 1788,
+        "latency_sample": 2
+      },
+      "repair_planner": {
+        "calls": 3,
+        "errors": 0,
+        "input_tokens": 1977,
+        "output_tokens": 3235,
+        "estimated_cost_usd": 0.001492,
+        "cost_is_estimated": true,
+        "retries": 0,
+        "avg_latency_ms": 6767.3,
+        "p95_latency_ms": 6030,
+        "latency_sample": 3
+      }
+    },
+    "by_model": {
+      "deepseek-flash": {
+        "calls": 9,
+        "errors": 0,
+        "input_tokens": 9103,
+        "output_tokens": 6967,
+        "estimated_cost_usd": 0.003697,
+        "cost_is_estimated": true,
+        "retries": 0,
+        "avg_latency_ms": 4686.6,
+        "p95_latency_ms": 6030,
+        "latency_sample": 9
+      }
+    },
+    "daily_series": [
+      {
+        "date": "2026-11-22",
+        "calls": 136,
+        "errors": 0,
+        "input_tokens": 222594,
+        "output_tokens": 99579,
+        "estimated_cost_usd": 0.164199,
+        "cost_is_estimated": true,
+        "retries": 0,
+        "avg_latency_ms": 5955.5,
+        "p95_latency_ms": 14329,
+        "latency_sample": 136
+      },
+      {
+        "date": "2026-11-23",
+        "calls": 9,
+        "errors": 0,
+        "input_tokens": 9103,
+        "output_tokens": 6967,
+        "estimated_cost_usd": 0.003697,
+        "cost_is_estimated": true,
+        "retries": 0,
+        "avg_latency_ms": 4686.6,
+        "p95_latency_ms": 6030,
+        "latency_sample": 9
+      }
+    ],
+    "latency_summary": {
+      "avg_ms": 4686.6,
+      "p95_ms": 6030,
+      "sample": 9
+    },
+    "prompt_versions": {
+      "deepseek:deepseek-flash:compile_advisor@v1": 2,
+      "deepseek:deepseek-flash:diagnosis_advisor@v1": 94,
+      "deepseek:deepseek-flash:explorer_planner@v1": 9,
+      "deepseek:deepseek-flash:probe_planner@v1": 2,
+      "deepseek:deepseek-flash:repair_planner@v1": 3,
+      "deepseek:deepseek-v4-pro:diagnosis_advisor@v1": 27,
+      "smoke@v1": 4
+    },
+    "recent_calls": [
+      {
+        "ts": "2026-11-23T04:45:40.583206+00:00",
+        "model": "deepseek-flash",
+        "agent": "repair_planner",
+        "request_status": "ok",
+        "error_kind": "",
+        "latency_ms": 8434,
+        "input_tokens": 659,
+        "output_tokens": 1435
+      },
+      {
+        "ts": "2026-11-23T04:45:32.141868+00:00",
+        "model": "deepseek-flash",
+        "agent": "probe_planner",
+        "request_status": "ok",
+        "error_kind": "",
+        "latency_ms": 1942,
+        "input_tokens": 358,
+        "output_tokens": 270
+      },
+      {
+        "ts": "2026-11-23T04:45:30.193446+00:00",
+        "model": "deepseek-flash",
+        "agent": "compiler",
+        "request_status": "ok",
+        "error_kind": "",
+        "latency_ms": 3945,
+        "input_tokens": 529,
+        "output_tokens": 750
+      },
+      {
+        "ts": "2026-11-23T04:45:15.719953+00:00",
+        "model": "deepseek-flash",
+        "agent": "repair_planner",
+        "request_status": "ok",
+        "error_kind": "",
+        "latency_ms": 6030,
+        "input_tokens": 659,
+        "output_tokens": 900
+      },
+      {
+        "ts": "2026-11-23T04:45:09.183349+00:00",
+        "model": "deepseek-flash",
+        "agent": "repair_planner",
+        "request_status": "ok",
+        "error_kind": "",
+        "latency_ms": 5838,
+        "input_tokens": 659,
+        "output_tokens": 900
+      },
+      {
+        "ts": "2026-11-23T04:45:03.337363+00:00",
+        "model": "deepseek-flash",
+        "agent": "probe_planner",
+        "request_status": "ok",
+        "error_kind": "",
+        "latency_ms": 1788,
+        "input_tokens": 358,
+        "output_tokens": 278
+      },
+      {
+        "ts": "2026-11-23T04:45:01.542941+00:00",
+        "model": "deepseek-flash",
+        "agent": "compiler",
+        "request_status": "ok",
+        "error_kind": "",
+        "latency_ms": 4078,
+        "input_tokens": 529,
+        "output_tokens": 669
+      },
+      {
+        "ts": "2026-11-23T04:44:40.502470+00:00",
+        "model": "deepseek-flash",
+        "agent": "diagnosis",
+        "request_status": "ok",
+        "error_kind": "",
+        "latency_ms": 4590,
+        "input_tokens": 2676,
+        "output_tokens": 865
+      },
+      {
+        "ts": "2026-11-23T04:44:35.396445+00:00",
+        "model": "deepseek-flash",
+        "agent": "diagnosis",
+        "request_status": "ok",
+        "error_kind": "",
+        "latency_ms": 5534,
+        "input_tokens": 2676,
+        "output_tokens": 900
+      },
+      {
+        "ts": "2026-11-22T15:57:22.544196+00:00",
+        "model": "deepseek-flash",
+        "agent": "diagnosis",
+        "request_status": "ok",
+        "error_kind": "",
+        "latency_ms": 5636,
+        "input_tokens": 2719,
+        "output_tokens": 900
+      }
+    ],
+    "generated_at": "2026-11-23T04:45:40.588485+00:00",
+    "note": "应用侧按公开牌价估算的成本，非 DeepSeek 平台账单；未包含密钥、Prompt 原文或页面内容。"
+  }
+}

@@ -1,11 +1,16 @@
-# PR Gate（阶段0 基础版）：快速、确定性检查。
-# 职责：lint / typecheck(前端) / unit / contract。不跑完整 Benchmark（Nightly/Release 负责）。
+# PR Gate（三级门禁之一）：快速、确定性、可在 PR 内跑完。
+# 职责：Ruff / 格式 / 单元 + 契约 / 关键服务集成（SSE、探针预算、Inbox 投影、稳定性回放）/ 前端 typecheck + build。
+# 不要求真实 API Key；不跑 Benchmark 与真实浏览器全量 E2E（Nightly / Release 负责）。
 name: PR Gate
 
 on:
   pull_request:
   push:
     branches: [workbuddy/traceguard-autonomous]
+
+concurrency:
+  group: pr-gate-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   backend:
@@ -19,12 +24,20 @@ jobs:
         run: |
           python -m venv .venv
           .venv/bin/pip install -r requirements-dev.txt
-      - name: Lint
-        run: .venv/bin/ruff check packages apps tests
-      - name: Format check
-        run: .venv/bin/ruff format --check packages apps tests
+      - name: Ruff check
+        run: .venv/bin/ruff check packages apps tests benchmark scripts
+      - name: Ruff format check
+        run: .venv/bin/ruff format --check packages apps tests benchmark scripts
       - name: Unit + Contract tests
         run: .venv/bin/pytest tests/unit tests/contracts -q
+      - name: Fast service integration
+        run: |
+          .venv/bin/pytest -q \
+            tests/integration/test_sse.py \
+            tests/integration/test_probe_service.py \
+            tests/integration/test_timeline_projection.py \
+            tests/integration/test_stability_replay.py \
+            tests/integration/test_llm_summary.py
 
   frontend:
     runs-on: ubuntu-latest

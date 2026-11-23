@@ -122,3 +122,26 @@
 - RUN-003-G：DeepSeek Flash/Pro 真实接入 Explorer/Diagnosis；Benchmark 三组真实对照（详见 RUN-003-G 报告）。
 - RUN-004-FE：14 视图产品化升级、Explorer 展示真实 engine/llm_stats、新增 `/models` 与只读汇总 API。
 - 验收：224 passed（含新增 2 项）、ruff 全绿、typecheck/build 通过、真实 Chromium 53/53、截图 15 张。
+
+---
+
+## RUN-005-CORE（2026-11-23）
+
+| 阶段 | 工作包 | 结果 |
+|---|---|---|
+| WP0 | 基线审计 | `docs/RUN-005-BASELINE.md`；16 项模块状态重新核定；测试基线 224 |
+| WP1.1 | ProbeBudget 生命周期 | 预算注册表 + 持久化 + 关闭语义；15 单测 + 6 集成 |
+| WP1.2 | Active Planner 闭环 | `plan_and_probe()` 真实执行；真实 Run 2 探针 + 证据 |
+| WP1.3 | 真实 SSE | `/events/stream` 重写；7 测试；前端订阅 + 降级 |
+| WP1.4 | Consumer Inbox | 状态机 + 租约 + 事务 + 真实消费者投影；9 单测 + 3 集成 |
+| WP1.5 | Event Store 并发 | DB 原子序号分配器；4 进程实测 100 事件无冲突 |
+| WP2.1 | LLM 编译器 | 三模式 + 顾问 + 稳定性回放；真实冒烟 2 步 1 断言 |
+| WP2.2 | LLM 探针规划 | 真实选择 + 白名单过滤；闭环中 `called=true` |
+| WP2.3 | LLM 修复规划 | 真实 3 条受限变更；首次 JSON 失败如实 fallback |
+| WP2.4 | 可观测性 | `/system/llm/summary` 增加三类调用/兜底 |
+| WP3 | Benchmark | v2 30/30 复验（真实浏览器）；v3 多臂 BLOCKED |
+| WP4 | CI/PG/前端验收 | 三级门禁工作流；PG parity 测试；UI 30/30 + 18 截图 |
+| WP5 | 安全与可靠性 | 13 项复查；npm audit 1 high(dev-only)+4 moderate 记录 |
+| WP6 | 集成验收 | 隔离库真实执行 3 个场景（PASSED/FAILED/FAILED）+ 诊断 + 探针闭环 |
+
+累计回归：285 passed / 5 skipped / 0 failed。

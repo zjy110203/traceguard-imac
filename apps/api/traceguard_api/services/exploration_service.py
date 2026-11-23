@@ -13,7 +13,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from traceguard_agents.compiler.compiler import TestCaseCompiler
+from traceguard_agents.compiler.compiler import TestCaseCompiler, compile_candidate
 from traceguard_agents.explorer.workflow import ExplorationTrace, Explorer
 from traceguard_agents.gateway.model_gateway import ModelDecision, RuleBasedPlanner
 from traceguard_agents.gateway.tool_gateway import Budget, ToolGateway
@@ -198,7 +198,7 @@ class ExplorationService:
         )
         return doc
 
-    def compile(self, exploration_id: str) -> dict[str, Any]:
+    def compile(self, exploration_id: str, *, mode: str | None = None) -> dict[str, Any]:
         rec = self.rt.docs.get(exploration_id)
         if not rec or rec.kind != "exploration":
             raise AppError(ErrorCode.NOT_FOUND, "exploration not found")
@@ -208,7 +208,20 @@ class ExplorationService:
             raise AppError(ErrorCode.PRECONDITION_FAILED, "探索轨迹为空，无法编译")
         intent = self.rt.catalog.get_intent(doc["intent_id"]) or {}
         intent_text = f"{intent.get('title', '')} {intent.get('description', '')}"
-        result = self.compiler.compile(trace, intent_text)
+        compiler_mode = (mode or self._compiler_mode()).strip().lower()
+        stack = None
+        if compiler_mode != "rule_only":
+            from traceguard_agents.gateway.llm_gateway import build_llm_stack
+
+            stack = build_llm_stack(self.rt.settings, root_dir=".")
+        result = compile_candidate(
+            trace,
+            intent_text,
+            mode=compiler_mode,
+            stack=stack,
+            task_id=doc.get("task_id", ""),
+            run_id=doc.get("run_id", ""),
+        )
         candidate = result.candidate.model_dump()
         candidate["review_status"] = "PENDING"
         candidate["run_config"] = {
@@ -230,6 +243,7 @@ class ExplorationService:
             "compiler_version": result.compiler_version,
             "prompt_version": result.prompt_version,
             "model_version": result.model_version,
+            "llm_meta": result.llm_meta,
         }
         doc["status"] = "COMPILED"
         self.rt.docs.put(
@@ -241,6 +255,14 @@ class ExplorationService:
             status="COMPILED",
         )
         return doc
+
+    def _compiler_mode(self) -> str:
+        """编译模式开关：rule_only（默认）/ llm_only / llm_plus_rule_validation。"""
+        s = self.rt.settings
+        if not getattr(s, "llm_compiler_enabled", True):
+            return "rule_only"
+        mode = str(getattr(s, "llm_compiler_mode", "rule_only")).strip().lower()
+        return mode or "rule_only"
 
     def list(self, workspace_id: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
         recs = self.rt.docs.list(kind="exploration", workspace_id=workspace_id, limit=limit)

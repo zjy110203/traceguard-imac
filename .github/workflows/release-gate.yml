@@ -1,0 +1,89 @@
+# Release Gate（三级门禁之三）：发布前必须全绿。
+# 原则：
+# - Nightly 关键失败必须阻断 Release；旧 Commit 的通过结果不得冒充新 RC 的验收；
+# - 文档版本必须与代码一致（RUN-005 报告缺失即阻断）；
+# - 真实浏览器 E2E / Benchmark 需要外部环境与凭据，未满足时必须记录 BLOCKED，不得写成功。
+name: Release Gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      benchmark_report:
+        description: "是否声明已有本 RC 的 Benchmark 报告（true/false）"
+        required: false
+        default: "false"
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: release-gate
+  cancel-in-progress: false
+
+jobs:
+  full-verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -r requirements-dev.txt
+      - name: Lint + format
+        run: |
+          .venv/bin/ruff check packages apps tests benchmark scripts
+          .venv/bin/ruff format --check packages apps tests benchmark scripts
+      - name: Full test suite
+        run: .venv/bin/pytest -q
+      - name: Schema / migration idempotency (fresh + repeat)
+        run: |
+          .venv/bin/python - <<'PY'
+          from traceguard_persistence import Database
+          import tempfile, os
+          d = tempfile.mkdtemp()
+          url = f"sqlite:///{os.path.join(d, 'release.db')}"
+          db = Database(url); db.create_schema(); db.create_schema()
+          db.dispose()
+          db2 = Database(url); db2.create_schema()  # 第二次启动必须幂等
+          print("schema idempotent OK")
+          PY
+      - name: Docs presence check
+        run: |
+          set -e
+          for f in docs/RUN-005-BASELINE.md docs/RUN-005-TEST-REPORT.md \
+                   docs/RUN-005-IMPLEMENTATION-REPORT.md docs/FEATURE-STATUS.md \
+                   docs/ARCHITECTURE.md docs/DATABASE.md docs/API.md; do
+            test -s "$f" || { echo "missing: $f"; exit 1; }
+          done
+          echo "docs present"
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install
+        working-directory: apps/web
+        run: npm ci
+      - name: Typecheck + build
+        working-directory: apps/web
+        run: npm run build
+      - name: UI acceptance script presence
+        run: |
+          test -f scripts/ui_acceptance.py || { echo "UI acceptance script missing"; exit 1; }
+
+  release-evidence:
+    needs: [full-verification, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evidence summary
+        run: |
+          echo "Commit: ${{ github.sha }}"
+          echo "Benchmark report provided: ${{ github.event.inputs.benchmark_report }}"
+          echo "真实 LLM / 外部站点 / 人工基线若未执行，必须在 RUN-005 报告中标记 BLOCKED"

@@ -21,6 +21,8 @@ from traceguard_contracts.models import AssertionSpec, LocatorSpec, TestCaseVers
 from traceguard_core.ids import new_id, utc_now_iso
 
 COMPILER_VERSION = "compiler-v1"
+COMPILER_VERSION_LLM = "compiler-v2-llm"
+COMPILER_MODES = {"rule_only", "llm_only", "llm_plus_rule_validation"}
 LOCATOR_STRATEGY_VERSION = "locator-v1"
 
 
@@ -34,6 +36,7 @@ class CompileResult:
     model_version: str
     locator_strategy_version: str
     warnings: list[str] = field(default_factory=list)
+    llm_meta: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -45,6 +48,7 @@ class CompileResult:
             "model_version": self.model_version,
             "locator_strategy_version": self.locator_strategy_version,
             "warnings": list(self.warnings),
+            "llm_meta": dict(self.llm_meta),
         }
 
 
@@ -255,3 +259,111 @@ class TestCaseCompiler:
             return None  # Oracle 未绑定，不能晋升
         candidate.review_status = "APPROVED"
         return candidate
+
+
+# ---------------------------------------------------------------- LLM 辅助编译
+
+
+def compile_candidate(
+    trace: dict[str, Any],
+    intent: str,
+    *,
+    mode: str = "rule_only",
+    stack: dict[str, Any] | None = None,
+    task_id: str = "",
+    run_id: str = "",
+) -> CompileResult:
+    """按功能开关选择编译路径。
+
+    - `rule_only`：原规则编译器（Baseline / Fallback，永远保留）；
+    - `llm_only`：LLM 生成候选步骤与断言；失败/无有效输出 → 回退规则并标记 fallback；
+    - `llm_plus_rule_validation`：LLM 生成步骤 + 规则断言作为基线校验（只增不减严格度）。
+
+    不变量：Oracle 一律不绑定、不自动批准；review_status 恒为 DRAFT；LLM 不得成为事实层。
+    """
+    mode = (mode or "rule_only").strip().lower()
+    if mode not in COMPILER_MODES:
+        mode = "rule_only"
+    rule = TestCaseCompiler().compile(trace, intent)
+
+    if mode == "rule_only":
+        rule.llm_meta = {"mode": "rule_only", "called": False, "fallback": False}
+        return rule
+
+    if not stack:
+        rule.warnings.append("LLM_COMPILER_UNAVAILABLE: 未配置模型凭据，规则编译作为兜底")
+        rule.llm_meta = {
+            "mode": mode,
+            "called": False,
+            "fallback": True,
+            "error": "not_configured",
+        }
+        return rule
+
+    from ..gateway.llm_planners import LLMCompilerAdvisor
+
+    advisor = LLMCompilerAdvisor(
+        provider=stack["provider"],
+        router=stack["router"],
+        prompts=stack["prompts"],
+        tracker=stack.get("tracker"),
+        task_id=task_id,
+        run_id=run_id,
+    )
+    advice = advisor.suggest(trace, intent)
+    if advice.fallback or not advice.steps:
+        rule.warnings.append(
+            f"LLM_COMPILER_FALLBACK: {advice.error or 'no valid step'}（规则编译结果作为兜底）"
+        )
+        rule.llm_meta = {
+            "mode": mode,
+            "called": advice.called,
+            "fallback": True,
+            "error": advice.error,
+            "model": advice.model,
+            "prompt_version": "compile_advisor@v1",
+            "dropped_steps": advice.dropped_steps,
+            "warnings": advice.warnings,
+        }
+        return rule
+
+    candidate = rule.candidate.model_copy(deep=True)
+    candidate.steps = advice.steps
+    if mode == "llm_only":
+        candidate.assertions = advice.assertions or rule.candidate.assertions
+    else:
+        # 规则断言作为基线保留；LLM 只能新增更严格断言，不能替换/删除
+        assertions = list(rule.candidate.assertions)
+        for a in advice.assertions:
+            assertions.append(a)
+        candidate.assertions = assertions
+    candidate.review_status = "DRAFT"
+    for a in candidate.assertions:
+        a.oracle_id = None  # 任何路径都不得自动绑定/批准 Oracle
+
+    warnings = list(rule.warnings) + advice.warnings
+    if mode == "llm_plus_rule_validation" and not advice.assertions:
+        warnings.append("LLM_ASSERTION_NONE: 使用规则断言基线，未采纳 LLM 断言")
+    return CompileResult(
+        candidate=candidate,
+        source_exploration_id=rule.source_exploration_id,
+        source_trace_hash=rule.source_trace_hash,
+        compiler_version=COMPILER_VERSION_LLM,
+        prompt_version="compile_advisor@v1",
+        model_version=advice.model or "unknown",
+        locator_strategy_version=LOCATOR_STRATEGY_VERSION,
+        warnings=warnings,
+        llm_meta={
+            "mode": mode,
+            "called": advice.called,
+            "fallback": False,
+            "model": advice.model,
+            "prompt_version": "compile_advisor@v1",
+            "compiler_version": COMPILER_VERSION_LLM,
+            "dropped_steps": advice.dropped_steps,
+            "llm_steps": len(advice.steps),
+            "llm_assertions": len(advice.assertions),
+            "rule_assertions_kept": len(rule.candidate.assertions),
+            "warnings": advice.warnings,
+        },
+    )

@@ -11,6 +11,7 @@ import JsonBlock from '../components/JsonBlock.vue'
 import MetricCard from '../components/MetricCard.vue'
 import PageHeader from '../components/PageHeader.vue'
 import StatusBadge from '../components/StatusBadge.vue'
+import { subscribeEvents, type StreamMode } from '../events'
 import { notify, notifyError } from '../toast'
 import type { Diagnosis, EventRow, Evidence, EvidenceGraph, GraphNode, Run, StepRow } from '../types'
 
@@ -33,6 +34,16 @@ const probes = ref<{ probe_id: string; params: Record<string, unknown>; why: str
 const selectedStepId = ref<string | null>(null)
 const zoomShot = ref<string | null>(null)
 let timer: number | undefined
+let unsubscribe: (() => void) | undefined
+const streamMode = ref<StreamMode>('connecting')
+const liveEvents = ref(0)
+
+const streamLabel = computed(() => {
+  if (streamMode.value === 'live') return '实时推送'
+  if (streamMode.value === 'polling') return '轮询降级'
+  if (streamMode.value === 'connecting') return '连接中'
+  return '已断开'
+})
 
 const report = computed(() => run.value?.report ?? null)
 const running = computed(() => !!run.value && ['QUEUED', 'PREPARING', 'RUNNING', 'FINALIZING'].includes(run.value.execution_status))
@@ -200,11 +211,24 @@ onMounted(async () => {
   await load()
   loadGraph()
   loadProbes()
+  // SSE 负责低延迟提示；轮询保留为降级与纠偏（SSE 不是状态权威来源）
+  unsubscribe = subscribeEvents({
+    runId,
+    onMode: (m) => (streamMode.value = m),
+    onEvent: (ev) => {
+      liveEvents.value += 1
+      const terminal = ev.event_type === 'run.completed' || ev.event_type === 'run.failed'
+      if (running.value || terminal) void load(true)
+    },
+  })
   timer = window.setInterval(() => {
     if (running.value) load(true)
-  }, 2200)
+  }, 6000)
 })
-onUnmounted(() => window.clearInterval(timer))
+onUnmounted(() => {
+  window.clearInterval(timer)
+  unsubscribe?.()
+})
 </script>
 
 <template>
@@ -225,6 +249,8 @@ onUnmounted(() => window.clearInterval(timer))
               <StatusBadge :value="run.execution_status" />
               <span v-if="run.observer_mode" class="badge info">{{ run.observer_mode }}</span>
               <span v-if="running" class="badge warn"><span class="spinner" style="width: 10px; height: 10px; border-width: 1.5px" /> 执行中</span>
+              <span class="badge" :class="streamMode === 'live' ? 'pass' : streamMode === 'polling' ? 'warn' : 'neutral'"
+                :title="`事件通道：${streamLabel}（SSE 仅作实时提示，状态以接口为准）`">{{ streamLabel }}</span>
               <span class="badge neutral">错误 {{ report?.errors?.length ?? 0 }}</span>
             </div>
           </template>
@@ -501,7 +527,7 @@ onUnmounted(() => window.clearInterval(timer))
         <!-- events -->
         <div v-if="tab === 'events'" class="flex-col">
           <div class="card">
-            <div class="card-head"><h2>事件流（只追加）</h2><div class="actions"><span class="small muted">序号在实例内唯一 · 幂等键去重</span></div></div>
+            <div class="card-head"><h2>事件流（只追加）</h2><div class="actions"><span class="badge" :class="streamMode === 'live' ? 'pass' : streamMode === 'polling' ? 'warn' : 'neutral'">{{ streamLabel }}</span><span class="small muted">序号在实例内唯一 · 幂等键去重 · SSE 仅作实时提示</span></div></div>
             <div class="card-body tight scroll-x">
               <table>
                 <thead><tr><th>#</th><th>类型</th><th>发生时间</th><th>生产者</th><th>载荷</th></tr></thead>

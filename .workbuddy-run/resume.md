@@ -1,21 +1,22 @@
-# 中断恢复指引
+# 中断恢复指引（RUN-005 结束点）
 
-> 下一次运行的第一步：读本文件 → `docs/FEATURE-STATUS.md` → `.workbuddy-run/progress.md`
-> → `docs/TraceGuard-持续开发任务台账.md`。
-> 不要从零重新开发。不要谎称项目已完成。
+> 下一次运行的第一步：读本文件 → `docs/RUN-005-BASELINE.md` → `docs/FEATURE-STATUS.md`
+> → `.workbuddy-run/progress.md` → `docs/TraceGuard-持续开发任务台账.md`。
+> 不要从零重新开发。不要把 BLOCKED 写成完成。
 
-- 最后保存：2026-11-22 23:59（RUN-003）
-- 分支：`workbuddy/traceguard-autonomous`
+- 最后保存：2026-11-23（RUN-005-CORE）
+- 分支：`workbuddy/traceguard-autonomous`（本轮未推送远程）
+- 本轮基线提交：`9d751fe`（RUN-004-FE）
 
 ## 当前快照
 
-- 项目根：`/Users/dlp--test/Desktop/traceguard`
-- **产品链路已打通**：Intent → Explorer → Compiler → 审核 → Playwright 执行 → 证据 → Verdict →
-  Diagnosis → Graph → Probe → Disposition → Repair（沙箱/审批/晋升/回归/回滚）→ Benchmark。
-- 真实浏览器：Chromium 159（内置）+ Edge 158 均验证；4 场景真实执行有截图证据。
-- 前端：10 页 Vue 工作台，真实 API；`npm run build` 通过；API 单端口托管。
-- 测试：**222 passed**，ruff 全绿；RUN-003 已交付（前端升级/DeepSeek LLM/30场景数据集/并发修复）。
-- Benchmark 真实结果：B 组传统基线 1/3 主因 + 1/1 假通过；规则诊断 3/3 + 0/1；C 组沙箱 1/1。
+- 测试：**285 passed / 5 skipped / 0 failed**（skip 全部是 PG parity，本机无 PG）
+- Ruff：`check` 全绿；`format` 已格式化本轮改动文件
+- 前端：`vue-tsc` + `vite build` 通过；真实浏览器 UI 验收 **30/30**（`docs/assets/run005/`）
+- 本轮已修复的四个 P0 可靠性缺陷：探针预算全局化、Active Planner 未闭环、伪 SSE、Inbox 单状态；
+  另修复 Event Store 多进程序号竞争
+- 本轮新增：LLM 编译/探针/修复三类顾问（真实冒烟通过）、候选稳定性回放、CI 三级门禁、
+  Run 时间线投影（Inbox 真实消费者）
 
 ## 环境
 
@@ -23,45 +24,55 @@
 |---|---|
 | Python | 3.13.12（.venv） |
 | Node | 22.22.2 |
-| playwright | 1.65.2 + Chromium 159 |
-| 数据库 | SQLite `.traceguard/traceguard.db`（迁移 v4） |
-| 已装额外依赖 | httpx（TestClient）、playwright |
-| Docker / PG / Redis | 不可用（未使用 / 未验证） |
+| playwright | 1.65.2 + Chromium 1255 |
+| 数据库 | SQLite（迁移 **v6**）；隔离验收库 `.traceguard/run005/` |
+| PostgreSQL | 本机不可用（无 Docker/psql）→ parity 测试 skip，CI Nightly 执行 |
+| LLM | `.env` 内已配置 DeepSeek（本轮真实调用过 compiler/probe/repair 三类顾问） |
 
 ## 恢复后立即可做的验证
 
 ```bash
-bash scripts/run_teamflow.sh &     # :8001
-bash scripts/run_api.sh &          # :8000
-curl -s "http://127.0.0.1:8000/api/v1/system/browser?probe=true" | jq '.available'
-curl -s -X POST http://127.0.0.1:8000/api/v1/testcases/tcase_tf_create_normal/execute \
-  -H 'Content-Type: application/json' -d '{"sync":true}' | jq '.execution.test_verdict'
+# 1) 单元 + 集成（约 25s）
 .venv/bin/python -m pytest -q
-cd apps/web && npm run build
+
+# 2) 真实服务（隔离库，勿用默认库做演示）
+TG_TEAMFLOW_DB="sqlite:///./.traceguard/run005/teamflow.db" \
+  .venv/bin/python -m uvicorn traceguard_teamflow.main:app --port 8011 &
+TG_DATABASE_URL="sqlite:///./.traceguard/run005/api.db" \
+TG_ARTIFACT_DIR=".traceguard/run005/artifacts" TG_TEAMFLOW_BASE_URL="http://127.0.0.1:8011" \
+TG_INLINE_WORKER=0 \
+  .venv/bin/python -m uvicorn traceguard_api.main:app --port 8010 &
+
+# 3) UI 验收（需前端已 build）
+.venv/bin/python scripts/ui_acceptance.py --base-url http://127.0.0.1:8010
+
+# 4) 三类 LLM 顾问真实冒烟（有凭据时）
+TG_API_URL=http://127.0.0.1:8010 .venv/bin/python scripts/llm_advisor_smoke.py
 ```
 
-## 下一步（按价值）
+## 下一步（按阻塞解除顺序）
 
-1. Compiler/Self-Healing/Active Probe 的 LLM 辅助接入（ModelGateway 接口已备）。
-2. 全 30 场景诊断对照实验（提高 MAX_CASES_PER_EXPERIMENT，预算约 $0.3/轮）。
-3. PostgreSQL 实测（需本机起 PG 实例）。
-4. P08 决策后落地 RBAC 与审计表；P03 决策后调整 Oracle 契约。
-5. 外部站点泛化（需 P-EXT 授权）。
-6. 前端：深色主题验收后启用、SSE 实时事件流。
+1. **Benchmark v3 多臂对照**（A/C 先行，无 LLM 成本；LLM 臂按日预算分批）——见 `RUN-005-BENCHMARK-REPORT.md` 第 4 节。
+2. **PostgreSQL**：在 CI 手动触发 Nightly（Service Container 已配置）；本地不装 PG。
+3. **60 分钟长稳 + 4 Worker 故障恢复**：需独立环境与时间窗，禁止用短测冒充。
+4. **CI 首次真实运行**：Nightly security job 会因 `vite` dev-only high 漏洞失败，需先决定
+   "迁移 vite 8" 或 "显式豁免 + 期限"（见 `RUN-005-SECURITY-RELIABILITY.md` 第 2 节）。
+5. **P03 / P08 决策后落地**：Oracle 冲突规则 / Repair RBAC。
+6. **LLM 编译完整链路**：真实探索 → LLM 编译 → 稳定性回放（多次浏览器）→ 人工审核。
 
-## RUN-003 关键记忆
+## 本轮关键记忆
 
-- .env 存 DEEPSEEK_API_KEY（gitignored）+ TG_LLM_PROVIDER=deepseek；
-- 沙箱按方法名拦截（budget_exhausted 被强制 False → 改名 should_skip_llm）；
-- pytest 需 --basetemp（已固化 pyproject）；
-- claim 竞态修复：原子条件 UPDATE 租约 CAS；
-- UI 断言 DOM 观测不被业务 count 遮蔽（pipeline _observation_for）；
-- Pro 推理模型 reasoning tokens 计入 max_tokens（预算小则 content 空）。
+- 预算 scope 是 `run:<id>` / `diagnosis:<id>`，`started_at` 首次使用时确定；`CLOSED` 是终态，不会被重新打开。
+- 事件序号由 `tg_producer_sequence` + `ON CONFLICT … RETURNING` 原子分配；跳号合法，不判丢失。
+- SSE 游标 = `pi/seq`（来源）+ `at/eid`（追加顺序）；只承诺 at-least-once，不承诺全局顺序。
+- Inbox `UNKNOWN` = 外部副作用不确定，禁止盲目重试；`consume_in_transaction` 才是副作用+记录同事务。
+- LLM 三条路径只产候选：`oracle_id` 恒为 None，`review_status` 恒 DRAFT，失败即 fallback 并标记。
+- 验收必须用隔离库；`scripts/final_demo.py` 仍禁止对现有库运行。
 
 ## 不要做的事
 
-- 不要删除 `.workbuddy-run/` 与 `.traceguard/`（项目数据）。
-- 不要 `git reset --hard` / `git clean` / 强推 / Docker 全局清理。
+- 不要删除 `.workbuddy-run/` 与 `.traceguard/`。
+- 不要 `git reset --hard` / `git clean` / 强推。
 - 不要访问外部 Web 应用（P-EXT 未授权）。
-- 不要声称路线图 v1.1 已冻结，或 P03/P08 已决策。
-- 不要把 Blocked 的 LLM 基线写成数值，不要把 NOT_EVALUATED 写成 PASSED。
+- 不要声称 P03/P08 已决策、路线图已冻结。
+- 不要把 skip 当 passed，不要把 BLOCKED 写成成功，不要为过测试削弱断言。

@@ -81,3 +81,53 @@ ORDER BY created_at LIMIT 5
 1. PostgreSQL 运行时未验证（本机无 PG 服务）；SQL 使用通用方言，`JSON` 在 PG 映射为 `JSON` 类型。
 2. 未引入 Alembic：迁移为代码内有序列表，足够当前规模；表数量增长后建议迁移到 Alembic。
 3. 未做读写分离/分库；事件表增长后的归档策略未实现（当前为本地项目库）。
+
+## 5. RUN-005 变更（迁移 v5 / v6）
+
+| 版本 | 名称 | 内容 | 兼容性 |
+|---|---|---|---|
+| 5 | consumer_inbox_states | `tg_consumer_inbox` 增加 `attempts INTEGER`、`claim_expires_at FLOAT`、`indeterminate BOOLEAN`、`last_error TEXT`、`updated_at VARCHAR(40)`；旧 `PROCESSED` → `SUCCEEDED` | 列存在性检查 + `ADD COLUMN`，可重复执行；SQLite/PG 通用 |
+| 6 | producer_sequence_allocator | 新表 `tg_producer_sequence(producer_instance_id PK, last_sequence BIGINT, updated_at)` | `CREATE TABLE IF NOT EXISTS` |
+
+### 5.1 事件序号分配
+
+`PersistentEventStore._next_sequence()` 使用一条 SQL 完成原子分配：
+
+```sql
+INSERT INTO tg_producer_sequence (producer_instance_id, last_sequence, updated_at)
+VALUES (:pid, 1, :ts)
+ON CONFLICT (producer_instance_id)
+DO UPDATE SET last_sequence = tg_producer_sequence.last_sequence + 1, updated_at = :ts
+RETURNING last_sequence
+```
+
+SQLite 3.35+ 与 PostgreSQL 均支持；多进程并发不会重复，也不会因为互相挤占而失败。
+幂等检查先于序号分配，正常重复投递不烧序号；极端竞争会留下合法跳号（不判丢失）。
+
+### 5.2 Consumer Inbox 状态机
+
+```
+            ┌────────────┐  成功   ┌───────────┐
+claim ────► │ PROCESSING │ ──────► │ SUCCEEDED │（终态，不再执行）
+（唯一约束+租约）  │         │  失败   └───────────┘
+            │            ├──────► FAILED（可重试，attempts+1）
+            │            └──────► UNKNOWN（外部副作用不确定，禁止盲目重试）
+            └── 租约过期（进程崩溃）→ 可被其他实例接管
+```
+
+`consume_in_transaction()` 把本地副作用（同一 `Session`）与消费记录放在**一个事务**提交。
+
+### 5.3 新增文档类型（复用 tg_doc）
+
+| kind | 用途 | 关键字段 |
+|---|---|---|
+| `probe_budget` | 探针预算快照 | `scope_key`、`probes_used`、`cost_used`、`started_at`、`closed_reason`、`provisional` |
+| `probe_plan` | Active Diagnosis 计划 | `steps[]`、`stop_reason`、`budget`、`llm_planner` |
+| `run_timeline` | Inbox 投影的事件时间线 | `entries[]`、`counts`、`last_event_at`（`derived_view`） |
+| `stability_replay` | 候选稳定性回放 | `records[]`、`classification`、`oracle_complete`、`promotable` |
+
+### 5.4 SQLite 并发设置
+
+文件库连接建立时执行 `PRAGMA journal_mode=WAL`、`busy_timeout=30000`、`synchronous=NORMAL`，
+并将 `connect_args.timeout` 设为 30s；`:memory:` 保持 `StaticPool`，不受影响。
+PostgreSQL 不需要这些 PRAGMA，代码按 URL 前缀分支处理。

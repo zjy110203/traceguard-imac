@@ -131,3 +131,35 @@ INCONCLUSIVE 且无 FAILED → 不判 PASSED。
    Benchmark 的 LLM 基线标记 BLOCKED，不产生数值。
 5. **外部站点未验证**：仅 TeamFlow 本地受控目标（P-EXT 未授权）。
 6. **P03 / P08 待决策**：见 `docs/decisions/`，未擅自冻结。
+
+## RUN-005 架构增补
+
+### 1. 探针预算生命周期（替代"服务级全局预算"）
+
+- `ProbeBudgetRegistry` 以 `run:<id>` / `diagnosis:<id>` / `manual:<ws>` 为 scope 管理预算；
+- 预算 `started_at` 在**首次使用**时确定，进程运行多久都不影响新诊断的 60 秒窗口；
+- 计数与成本存放于预算对象（不是 Engine 全局变量），`try_reserve()` 原子占位防并发超发；
+- 预算文档持久化到 `tg_doc(kind=probe_budget)`，重启按 scope 恢复；`CLOSED` 是显式终态，不会被再次调用静默重置。
+
+### 2. Active Diagnosis 闭环
+
+`ProbeService.plan_and_probe()`：证据缺口 → 候选探针 → 五项校验（权限/范围/风险/预算/Schema）
+→ EIG 评分 → `ActivePlanner.choose()` → `ProbeEngine.execute()` → 新证据（关联 run/diagnosis）
+→ 再评估 → 停止（确认/无高价值/权限失效/预算耗尽/关闭/迭代上限）。
+计划本身落库为 `probe_plan`，每步可追溯到 `execution_id` 与预算快照。
+
+### 3. 事件传输与消费
+
+- **生产**：`RunPipeline._emit()` 写 `tg_event`（序号由 DB 分配器产生）。
+- **传输**：`/events/stream` 按 `(recorded_at, event_id)` 追加顺序增量读取，游标含 `producer_instance_id+sequence`；
+  只声称 at-least-once 与实例内顺序，不声称全局强顺序。
+- **消费**：`PersistentConsumerInbox` 提供幂等消费；`run-timeline-projector` 是真实消费者，
+  把事件投影为时间线文档（派生视图）。
+- **前端**：`subscribeEvents()` 优先 EventSource，连续失败切轮询；SSE 仅触发刷新，界面状态仍读权威接口。
+
+### 4. LLM 顾问层
+
+三条路径共用 `build_llm_stack()`（Provider/Router/Prompt/UsageTracker）：
+`LLMCompilerAdvisor` / `LLMProbePlannerAdvisor` / `LLMRepairAdvisor`。
+共性约束：结构化白名单校验、越界即丢弃、失败即回退规则并标记 `fallback`；不得产生 CONFIRMED、
+不得批准 Oracle、不得批准/晋升 Repair。

@@ -16,7 +16,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from traceguard_core.config import get_settings
 from traceguard_core.errors import AppError, ErrorCode, app_error_handler, error_response
@@ -99,16 +99,85 @@ def create_app() -> FastAPI:
         }
 
     @app.get("/events/stream", tags=["infra"])
-    async def events_stream(request: Request) -> AsyncIterator[bytes]:
-        """SSE 保活通道；持久化事件才是权威来源（前端用轮询/事件 API 查询）。"""
-        try:
-            while True:
-                if await request.is_disconnected():
-                    break
-                yield b": keepalive\n\n"
-                await asyncio.sleep(15)
-        except asyncio.CancelledError:
-            return
+    async def events_stream(
+        request: Request,
+        workspace_id: str | None = None,
+        run_id: str | None = None,
+        event_type: str | None = None,
+        last_event_id: str | None = None,
+        heartbeat_seconds: float = 15.0,
+        poll_interval: float = 1.0,
+        limit: int = 0,
+    ):
+        """真实业务事件流（SSE）。
+
+        - 读取持久化 Event Store（不是内存快照，也不是纯 keepalive）；
+        - 支持 `Last-Event-ID` 头或 `last_event_id` 查询参数续传；
+        - 支持 workspace / run / event_type 过滤、心跳、客户端断开、轮询降级；
+        - `sequence` 是 producer 实例内序号，不对外宣称跨 producer 全局顺序；
+        - SSE 只做实时展示，业务状态权威来源仍是 API / 数据库。
+        """
+        from . import sse as sse_util
+        from .runtime import get_runtime
+
+        rt = get_runtime()
+        cursor = sse_util.decode_cursor(last_event_id or request.headers.get("last-event-id"))
+        start_at = cursor["at"] if cursor else ""
+        start_eid = cursor["eid"] if cursor else ""
+
+        async def generate() -> AsyncIterator[bytes]:
+            import time as _time
+
+            at, eid = start_at, start_eid
+            sent = 0
+            last_beat = _time.monotonic()
+            yield sse_util.format_retry()
+            try:
+                while True:
+                    if await request.is_disconnected():
+                        break
+                    try:
+                        events = await asyncio.to_thread(
+                            rt.events.list_events_after,
+                            after_at=at,
+                            after_event_id=eid,
+                            workspace_id=workspace_id,
+                            run_id=run_id,
+                            event_type=event_type,
+                            limit=100,
+                        )
+                    except Exception as exc:  # noqa: BLE001 - 数据库短暂不可用不得中断长连接
+                        logger.warning("sse_poll_failed", error=str(exc)[:200])
+                        events = []
+                        yield sse_util.format_heartbeat(note="db_temporarily_unavailable")
+                    for ev in events:
+                        yield sse_util.format_event(ev)
+                        at, eid = ev.recorded_at, ev.event_id
+                        sent += 1
+                        if limit and sent >= limit:
+                            yield sse_util.format_heartbeat(
+                                cursor=sse_util.encode_cursor(ev), note="limit_reached"
+                            )
+                            return
+                    now = _time.monotonic()
+                    if now - last_beat >= max(0.2, heartbeat_seconds):
+                        yield sse_util.format_heartbeat(
+                            cursor=f"at={at};eid={eid}" if at else None
+                        )
+                        last_beat = now
+                    await asyncio.sleep(max(0.05, poll_interval))
+            except asyncio.CancelledError:  # 客户端断开
+                return
+
+        return StreamingResponse(
+            generate(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache, no-transform",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
 
     from .routers import catalog, evidence, execution, intelligence, system
 

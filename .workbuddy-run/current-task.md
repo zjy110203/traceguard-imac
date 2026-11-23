@@ -25,3 +25,16 @@
 - 验证：224 passed、ruff 全绿、typecheck/build 通过、真实 Chromium 53/53、六档断点无溢出。
 - 证据：`docs/RUN-004-FE-IMPLEMENTATION-REPORT.md`、`docs/RUN-004-FE-UI-ACCEPTANCE.md`、`docs/assets/run004-fe/`。
 - 上方“下一步建议”第 1 项（LLM 适配器 / Benchmark 基线）已由 RUN-003-G 完成；本轮不再重复。其余项状态未变。
+
+---
+
+## RUN-005-CORE 更新（2026-11-23，追加）
+
+- 已完成（VERIFIED）：探针预算按 Run/Diagnosis 隔离与持久化；Active Diagnosis 真实闭环；
+  真实 SSE（Last-Event-ID/过滤/心跳/轮询降级）；Inbox 持久化状态机 + 时间线投影真实消费者；
+  Event Store 多进程序号原子分配。
+- 已完成（实现 + 真实冒烟）：LLM 编译器（三模式）、LLM 探针规划、LLM 修复规划、三类可观测性。
+- 已完成（编排/语义）：候选稳定性回放 F08（独立 Run + sandbox + Oracle 门槛 + 人工审核）。
+- 已完成（工程）：CI 三级门禁工作流、前端自动化验收脚本（30/30）、PG parity 测试（本地 skip）。
+- 未完成：Benchmark v3 多臂（BLOCKED）、60 分钟长稳（BLOCKED）、4 Worker 复验（PARTIAL）、
+  PG 本地实测（BLOCKED）、P03/P08（NEEDS_DECISION）。

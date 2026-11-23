@@ -32,18 +32,37 @@ class Database:
         self.url = url or settings.database_url
         connect_args: dict[str, Any] = {}
         kwargs: dict[str, Any] = {}
-        if self.url.startswith("sqlite"):
+        is_sqlite = self.url.startswith("sqlite")
+        if is_sqlite:
             connect_args["check_same_thread"] = False
+            # 多进程/多线程写竞争时等待而不是立刻报 "database is locked"
+            connect_args["timeout"] = 30.0
             if ":memory:" in self.url:
                 kwargs["poolclass"] = StaticPool
         self.engine: Engine = create_engine(
             self.url, echo=echo, future=True, connect_args=connect_args, **kwargs
         )
+        if is_sqlite and ":memory:" not in self.url:
+            self._enable_sqlite_concurrency()
         self.session_factory = sessionmaker(
             bind=self.engine, autoflush=False, autocommit=False, expire_on_commit=False
         )
         self._schema_lock = threading.RLock()
         self._schema_ready = False
+
+    def _enable_sqlite_concurrency(self) -> None:
+        """文件库启用 WAL + busy_timeout：允许并发读写，降低多进程写竞争失败率。"""
+        from sqlalchemy import event
+
+        @event.listens_for(self.engine, "connect")
+        def _set_pragmas(dbapi_conn, _record):  # type: ignore[no-untyped-def]
+            cur = dbapi_conn.cursor()
+            try:
+                cur.execute("PRAGMA journal_mode=WAL")
+                cur.execute("PRAGMA busy_timeout=30000")
+                cur.execute("PRAGMA synchronous=NORMAL")
+            finally:
+                cur.close()
 
     @contextmanager
     def session(self) -> Iterator[Session]:
@@ -156,6 +175,21 @@ MIGRATIONS: list[tuple[int, str, list[str]]] = [
         "step_primary_key_scoped_by_run",
         ["__CALLABLE__:_migrate_step_primary_key"],
     ),
+    (
+        5,
+        "consumer_inbox_states",
+        ["__CALLABLE__:_migrate_inbox_states"],
+    ),
+    (
+        6,
+        "producer_sequence_allocator",
+        [
+            "CREATE TABLE IF NOT EXISTS tg_producer_sequence ("
+            "producer_instance_id VARCHAR(120) PRIMARY KEY, "
+            "last_sequence BIGINT NOT NULL DEFAULT 0, "
+            "updated_at VARCHAR(40) NOT NULL DEFAULT '')",
+        ],
+    ),
 ]
 
 
@@ -201,7 +235,39 @@ def _migrate_step_primary_key(conn) -> None:  # type: ignore[no-untyped-def]
     conn.execute(text("DROP TABLE tg_step_legacy"))
 
 
-_MIGRATION_CALLABLES = {"_migrate_step_primary_key": _migrate_step_primary_key}
+def _migrate_inbox_states(conn) -> None:  # type: ignore[no-untyped-def]
+    """Consumer Inbox 补齐可靠消费语义所需的列（幂等）。
+
+    旧版本只有 PROCESSED 单一状态；新版本区分 PROCESSING / SUCCEEDED / FAILED / UNKNOWN，
+    并增加租约（claim_expires_at）以支持崩溃恢复与多进程抢占。
+    """
+    from sqlalchemy import inspect
+
+    inspector = inspect(conn)
+    if "tg_consumer_inbox" not in inspector.get_table_names():
+        return
+    cols = {c["name"] for c in inspector.get_columns("tg_consumer_inbox")}
+    additions = [
+        ("attempts", "INTEGER DEFAULT 0"),
+        ("claim_expires_at", "FLOAT DEFAULT 0"),
+        ("indeterminate", "BOOLEAN DEFAULT FALSE"),
+        ("last_error", "TEXT"),
+        ("updated_at", "VARCHAR(40) DEFAULT ''"),
+    ]
+    for name, ddl in additions:
+        if name in cols:
+            continue
+        conn.execute(text(f"ALTER TABLE tg_consumer_inbox ADD COLUMN {name} {ddl}"))
+    conn.execute(
+        text("UPDATE tg_consumer_inbox SET status='SUCCEEDED' WHERE status='PROCESSED'")
+    )
+
+
+#: 迁移语句中 `__CALLABLE__:<name>` 的注册表（必须在函数定义之后）
+_MIGRATION_CALLABLES = {
+    "_migrate_step_primary_key": _migrate_step_primary_key,
+    "_migrate_inbox_states": _migrate_inbox_states,
+}
 
 _lock = threading.RLock()
 _default_db: Database | None = None

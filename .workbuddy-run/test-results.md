@@ -131,3 +131,14 @@ Benchmark（真实）：
 - 端到端演示 `scripts/final_demo.py`：19 步全通过（执行/诊断/图/探针/自愈/晋升/回归/回滚/Benchmark）。
 
 新增：Flaky 特征测试（同版本 PASSED/FAILED 历史 → flaky 标记，不作为通过依据）。
+
+---
+
+## RUN-005（2026-11-23）
+
+- 全量：`285 passed, 5 skipped, 0 failed`（skip = PostgreSQL parity，本机无 PG）
+- 新增专项：61 passed（预算 15 / Inbox 9 / 事件并发 4 / LLM 顾问 10 / 探针服务 6 / SSE 7 / 时间线 3 / 回放 7）
+- 真实浏览器：3 个场景（PASSED/FAILED/FAILED）+ Benchmark v2 30/30
+- UI 验收：30/30（`docs/assets/run005/ui-acceptance.json`）
+- LLM 真实冒烟：compiler / probe_planner / repair_planner 各 1 次（`.workbuddy-run/llm-advisor-smoke.json`）
+- 未执行：PG（BLOCKED）、60 分钟长稳（BLOCKED）、多臂 Benchmark（BLOCKED）

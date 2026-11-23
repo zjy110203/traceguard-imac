@@ -14,6 +14,8 @@ from traceguard_api.services.exploration_service import ExplorationService
 from traceguard_api.services.graph_service import GraphService
 from traceguard_api.services.probe_service import ProbeService
 from traceguard_api.services.repair_service import RepairService
+from traceguard_api.services.stability_service import StabilityReplayService
+from traceguard_api.services.timeline_service import TimelineService
 
 
 @dataclass
@@ -24,6 +26,8 @@ class Services:
     probe: ProbeService
     repair: RepairService
     exploration: ExplorationService
+    timeline: TimelineService
+    stability: StabilityReplayService
 
 
 _services: Services | None = None
@@ -42,6 +46,8 @@ def get_services() -> Services:
                 probe=ProbeService(rt),
                 repair=RepairService(rt),
                 exploration=ExplorationService(rt),
+                timeline=TimelineService(rt),
+                stability=StabilityReplayService(rt),
             )
             # Benchmark 等横切组件通过 Runtime 访问服务（避免循环 import）
             rt.services_diagnosis = services.diagnosis  # type: ignore[attr-defined]

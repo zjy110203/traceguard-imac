@@ -22,7 +22,7 @@ from traceguard_core.ids import new_id, utc_now_iso
 from traceguard_core.logging import redact
 from traceguard_evidence.event_store import StoredEvent, _hash_payload
 from traceguard_evidence.evidence_manager import EvidenceRecord, _content_hash
-from traceguard_evidence.inbox import InboxRecord
+from traceguard_evidence.inbox import InboxOutcome, InboxRecord
 
 from .db import Database
 from .models import (
@@ -64,10 +64,22 @@ class PersistentEventStore:
         occurred_at: str | None = None,
         schema_version: str = "0.1.0",
     ) -> StoredEvent:
+        """追加事件。
+
+        并发语义（RUN-005 修复）：
+        - 序号由数据库侧原子分配器（tg_producer_sequence）递增，多进程并发不会重复；
+        - 幂等检查先于序号分配，正常的重复投递不会烧序号；
+        - 仍用唯一约束兜底：极端竞争下重试，绝不把正常竞争误报成业务冲突；
+        - 只有"同键异载荷"才报 CONFLICT 并审计。
+        """
         payload = payload or {}
         clean_payload = {k: v for k, v in payload.items() if k != "workspace_id"}
         phash = _hash_payload(clean_payload)
-        with self._lock:
+        attempts = 5
+        last_error: Exception | None = None
+
+        def _seen_existing() -> StoredEvent | None:
+            """幂等检查：命中则返回已有事件；同键异载荷则审计并抛 CONFLICT。"""
             with self.db.session() as s:
                 existing = s.scalar(
                     select(EventRow).where(
@@ -75,62 +87,83 @@ class PersistentEventStore:
                         EventRow.idempotency_key == idempotency_key,
                     )
                 )
-                if existing:
-                    if existing.payload_hash == phash:
-                        return _to_stored(existing)
-                    s.add(
-                        EventConflictRow(
-                            producer_id=producer_id,
-                            idempotency_key=idempotency_key,
-                            expected_hash=existing.payload_hash,
-                            got_hash=phash,
-                            at=utc_now_iso(),
-                        )
-                    )
-                    s.commit()
-                    raise AppError(ErrorCode.CONFLICT, "IDEMPOTENCY_KEY_PAYLOAD_CONFLICT")
+                if not existing:
+                    return None
+                if existing.payload_hash == phash:
+                    return _to_stored(existing)
+                self._record_conflict(
+                    s, producer_id, idempotency_key, existing.payload_hash, phash
+                )
+                s.commit()
+            raise AppError(ErrorCode.CONFLICT, "IDEMPOTENCY_KEY_PAYLOAD_CONFLICT")
 
-                last = s.scalar(
-                    select(EventRow.sequence)
-                    .where(EventRow.producer_instance_id == producer_instance_id)
-                    .order_by(EventRow.sequence.desc())
-                    .limit(1)
-                )
-                seq = int(last or 0) + 1
-                row = EventRow(
-                    event_id=new_id("evt"),
-                    event_type=event_type,
-                    schema_version=schema_version,
-                    workspace_id=server_workspace_id,
-                    context_refs=dict(context_refs or {}),
-                    producer_id=producer_id,
-                    producer_instance_id=producer_instance_id,
-                    sequence=seq,
-                    occurred_at=occurred_at or utc_now_iso(),
-                    observed_at=utc_now_iso(),
-                    idempotency_key=idempotency_key,
-                    payload=clean_payload,
-                    payload_hash=phash,
-                    recorded_at=utc_now_iso(),
-                )
-                s.add(row)
-                try:
-                    s.commit()
-                except IntegrityError as exc:
-                    s.rollback()
-                    # 并发下 seq 冲突：重试一次读取已有记录
-                    existing = s.scalar(
-                        select(EventRow).where(
-                            EventRow.producer_id == producer_id,
-                            EventRow.idempotency_key == idempotency_key,
-                        )
+        for _ in range(attempts):
+            hit = _seen_existing()
+            if hit is not None:
+                return hit
+            seq = self._next_sequence(producer_instance_id)
+            try:
+                with self.db.session() as s:
+                    row = EventRow(
+                        event_id=new_id("evt"),
+                        event_type=event_type,
+                        schema_version=schema_version,
+                        workspace_id=server_workspace_id,
+                        context_refs=dict(context_refs or {}),
+                        producer_id=producer_id,
+                        producer_instance_id=producer_instance_id,
+                        sequence=seq,
+                        occurred_at=occurred_at or utc_now_iso(),
+                        observed_at=utc_now_iso(),
+                        idempotency_key=idempotency_key,
+                        payload=clean_payload,
+                        payload_hash=phash,
+                        recorded_at=utc_now_iso(),
                     )
-                    if existing and existing.payload_hash == phash:
-                        return _to_stored(existing)
-                    raise AppError(
-                        ErrorCode.CONFLICT, f"event sequence conflict: {exc.orig}"
-                    ) from exc
-                return _to_stored(row)
+                    s.add(row)
+                    s.flush()  # 唯一约束在这里暴露，便于重试
+                    return _to_stored(row)
+            except IntegrityError as exc:
+                last_error = exc
+                continue
+        raise AppError(
+            ErrorCode.CONFLICT, f"event append failed after {attempts} attempts"
+        ) from last_error
+
+    def _next_sequence(self, producer_instance_id: str) -> int:
+        """原子分配实例内序号（SQLite / PostgreSQL 通用 upsert + RETURNING）。
+
+        分配与事件插入不在同一事务：极端情况下（例如幂等命中）会烧掉一个序号，
+        表现为合法跳号（不判丢失），但绝不会重复或倒退。
+        """
+        from sqlalchemy import text
+
+        sql = text(
+            "INSERT INTO tg_producer_sequence "
+            "(producer_instance_id, last_sequence, updated_at) "
+            "VALUES (:pid, 1, :ts) "
+            "ON CONFLICT (producer_instance_id) DO UPDATE "
+            "SET last_sequence = tg_producer_sequence.last_sequence + 1, updated_at = :ts "
+            "RETURNING last_sequence"
+        )
+        with self.db.session() as s:
+            value = s.execute(
+                sql, {"pid": producer_instance_id, "ts": utc_now_iso()}
+            ).scalar_one()
+            return int(value)
+
+    def _record_conflict(
+        self, s: Any, producer_id: str, idempotency_key: str, expected: str, got: str
+    ) -> None:
+        s.add(
+            EventConflictRow(
+                producer_id=producer_id,
+                idempotency_key=idempotency_key,
+                expected_hash=expected,
+                got_hash=got,
+                at=utc_now_iso(),
+            )
+        )
 
     def get(self, event_id: str) -> StoredEvent | None:
         with self.db.session() as s:
@@ -171,6 +204,61 @@ class PersistentEventStore:
         for a, b in zip(seqs, seqs[1:], strict=False):
             gaps.extend(range(a + 1, b))
         return gaps
+
+    def list_events_after(
+        self,
+        *,
+        after_at: str = "",
+        after_event_id: str = "",
+        workspace_id: str | None = None,
+        run_id: str | None = None,
+        event_type: str | None = None,
+        limit: int = 200,
+    ) -> list[StoredEvent]:
+        """按存储追加顺序（recorded_at, event_id）取游标之后的事件，用于 SSE 续传。
+
+        这是"追加顺序"，不是跨 producer 的全局业务顺序；同一 producer 实例内的
+        序号语义仍由 sequence 表达。
+        """
+        from sqlalchemy import and_, or_
+
+        with self.db.session() as s:
+            q = select(EventRow)
+            if after_at:
+                q = q.where(
+                    or_(
+                        EventRow.recorded_at > after_at,
+                        and_(
+                            EventRow.recorded_at == after_at,
+                            EventRow.event_id > after_event_id,
+                        ),
+                    )
+                )
+            if workspace_id:
+                q = q.where(EventRow.workspace_id == workspace_id)
+            if event_type:
+                q = q.where(EventRow.event_type == event_type)
+            # run 过滤在 JSON 列上跨方言不一致，统一在应用层过滤（同一 workspace 内数据量可控）
+            scan = max(limit * 10, 500) if run_id else limit
+            rows = list(
+                s.scalars(
+                    q.order_by(EventRow.recorded_at.asc(), EventRow.event_id.asc()).limit(scan)
+                )
+            )
+        out = [_to_stored(r) for r in rows]
+        if run_id:
+            out = [e for e in out if e.context_refs.get("run") == run_id]
+        return out[:limit]
+
+    def latest_event(self, workspace_id: str | None = None) -> StoredEvent | None:
+        with self.db.session() as s:
+            q = select(EventRow)
+            if workspace_id:
+                q = q.where(EventRow.workspace_id == workspace_id)
+            row = s.scalars(
+                q.order_by(EventRow.recorded_at.desc(), EventRow.event_id.desc()).limit(1)
+            ).first()
+            return _to_stored(row) if row else None
 
     def conflicts(self) -> list[dict[str, Any]]:
         with self.db.session() as s:
@@ -405,73 +493,226 @@ def _to_evidence(row: EvidenceRow) -> EvidenceRecord:
 
 # --------------------------------------------------------------------------- Inbox
 class PersistentConsumerInbox:
-    def __init__(self, db: Database) -> None:
-        self.db = db
+    """持久化 Consumer Inbox：与内存版同一状态机，支持多进程抢占与崩溃恢复。
 
+    语义（RUN-005 补齐）：
+    - `(consumer_id, event_id)` 唯一，成功消费不可重复执行；
+    - 抢占使用"唯一约束 + 租约"实现，不依赖单进程内存锁；
+    - PROCESSING 租约过期可被其他实例接管（崩溃恢复），attempts 递增；
+    - FAILED（确定失败）允许重试；UNKNOWN（外部副作用不确定）不得盲目重试；
+    - `consume_in_transaction()` 把本地副作用与消费记录放在同一事务提交。
+    """
+
+    def __init__(self, db: Database, *, clock: Any = None) -> None:
+        self.db = db
+        import time as _time
+
+        self._clock = clock or _time.time
+
+    # ------------------------------------------------------------------ helpers
+    def _to_record(self, row: InboxRow) -> InboxRecord:
+        return InboxRecord(
+            consumer_id=row.consumer_id,
+            event_id=row.event_id,
+            status=row.status,
+            attempts=int(row.attempts or 0),
+            result=row.result if row.result is not None else {},
+            error=row.last_error or "",
+            indeterminate=bool(row.indeterminate),
+            claim_expires_at=float(row.claim_expires_at or 0.0),
+            consumed_at=row.consumed_at or "",
+            updated_at=row.updated_at or "",
+        )
+
+    def _get_row(self, s: Any, consumer_id: str, event_id: str) -> InboxRow | None:
+        return s.scalar(
+            select(InboxRow).where(
+                InboxRow.consumer_id == consumer_id, InboxRow.event_id == event_id
+            )
+        )
+
+    # -------------------------------------------------------------------- claim
+    def claim(
+        self, consumer_id: str, event_id: str, *, lease_seconds: float = 60.0
+    ) -> tuple[InboxRecord, bool]:
+        now = self._clock()
+        with self.db.session() as s:
+            row = self._get_row(s, consumer_id, event_id)
+            if row is None:
+                row = InboxRow(
+                    consumer_id=consumer_id,
+                    event_id=event_id,
+                    status="PROCESSING",
+                    attempts=1,
+                    claim_expires_at=now + lease_seconds,
+                    result={},
+                    consumed_at=utc_now_iso(),
+                    updated_at=utc_now_iso(),
+                )
+                s.add(row)
+                try:
+                    s.flush()
+                except IntegrityError:
+                    # 另一实例抢到了同一 (consumer_id, event_id)
+                    s.rollback()
+                    existing = self._get_row(s, consumer_id, event_id)
+                    if existing is None:  # 极端竞态：再读一次
+                        raise
+                    return self._to_record(existing), False
+                return self._to_record(row), True
+
+            if row.status == "SUCCEEDED" or row.status == "UNKNOWN":
+                return self._to_record(row), False
+            if row.status == "FAILED" and row.indeterminate:
+                return self._to_record(row), False
+            if row.status == "PROCESSING" and float(row.claim_expires_at or 0) > now:
+                return self._to_record(row), False
+            # FAILED（确定失败可重试）或 PROCESSING 租约过期 → 接管
+            row.status = "PROCESSING"
+            row.attempts = int(row.attempts or 0) + 1
+            row.claim_expires_at = now + lease_seconds
+            row.updated_at = utc_now_iso()
+            s.flush()
+            return self._to_record(row), True
+
+    # ----------------------------------------------------------------- terminal
+    def complete(
+        self, consumer_id: str, event_id: str, result: Any = None
+    ) -> InboxRecord:
+        with self.db.session() as s:
+            row = self._get_row(s, consumer_id, event_id)
+            if row is None:
+                raise AppError(ErrorCode.NOT_FOUND, "inbox record not found")
+            if row.status != "SUCCEEDED":
+                row.status = "SUCCEEDED"
+                row.result = result if isinstance(result, dict) else {"value": result}
+                row.last_error = None
+                row.claim_expires_at = 0.0
+                row.updated_at = utc_now_iso()
+                s.flush()
+            return self._to_record(row)
+
+    def fail(
+        self,
+        consumer_id: str,
+        event_id: str,
+        error: str,
+        *,
+        indeterminate: bool = False,
+    ) -> InboxRecord:
+        with self.db.session() as s:
+            row = self._get_row(s, consumer_id, event_id)
+            if row is None:
+                raise AppError(ErrorCode.NOT_FOUND, "inbox record not found")
+            row.status = "UNKNOWN" if indeterminate else "FAILED"
+            row.indeterminate = bool(indeterminate)
+            row.last_error = error[:2000]
+            row.result = {"error": error[:2000], "indeterminate": bool(indeterminate)}
+            row.claim_expires_at = 0.0
+            row.updated_at = utc_now_iso()
+            s.flush()
+            return self._to_record(row)
+
+    # -------------------------------------------------------------------- run
+    def run(
+        self,
+        consumer_id: str,
+        event_id: str,
+        handler: Any,
+        *,
+        external_side_effect: bool = False,
+        lease_seconds: float = 60.0,
+    ) -> InboxOutcome:
+        rec, claimed = self.claim(consumer_id, event_id, lease_seconds=lease_seconds)
+        if not claimed:
+            reason = (
+                "ALREADY_SUCCEEDED"
+                if rec.status == "SUCCEEDED"
+                else ("INDETERMINATE_SIDE_EFFECT" if rec.status == "UNKNOWN" else "IN_FLIGHT")
+            )
+            return InboxOutcome(record=rec, executed=False, skipped_reason=reason)
+        try:
+            value = handler()
+        except Exception as exc:  # noqa: BLE001
+            rec = self.fail(
+                consumer_id,
+                event_id,
+                f"{type(exc).__name__}: {exc}",
+                indeterminate=external_side_effect,
+            )
+            return InboxOutcome(record=rec, executed=True, ok=False)
+        rec = self.complete(consumer_id, event_id, result=value)
+        return InboxOutcome(record=rec, executed=True, ok=True, value=value)
+
+    def consume_in_transaction(
+        self,
+        consumer_id: str,
+        event_id: str,
+        effect: Any,  # Callable[[Session], dict | None]
+        *,
+        external_side_effect: bool = False,
+        lease_seconds: float = 60.0,
+    ) -> InboxOutcome:
+        """本地副作用与消费记录在同一事务提交：要么都成功，要么都不生效。"""
+        rec, claimed = self.claim(consumer_id, event_id, lease_seconds=lease_seconds)
+        if not claimed:
+            reason = (
+                "ALREADY_SUCCEEDED"
+                if rec.status == "SUCCEEDED"
+                else ("INDETERMINATE_SIDE_EFFECT" if rec.status == "UNKNOWN" else "IN_FLIGHT")
+            )
+            return InboxOutcome(record=rec, executed=False, skipped_reason=reason)
+        try:
+            with self.db.session() as s:
+                value = effect(s)
+                row = self._get_row(s, consumer_id, event_id)
+                if row is None:
+                    raise AppError(ErrorCode.NOT_FOUND, "inbox record disappeared")
+                row.status = "SUCCEEDED"
+                row.result = value if isinstance(value, dict) else {"value": value}
+                row.last_error = None
+                row.claim_expires_at = 0.0
+                row.updated_at = utc_now_iso()
+                s.flush()
+        except Exception as exc:  # noqa: BLE001
+            # 事务已回滚：副作用未生效，消费记录回到可重试/不确定状态
+            rec = self.fail(
+                consumer_id,
+                event_id,
+                f"{type(exc).__name__}: {exc}",
+                indeterminate=external_side_effect,
+            )
+            return InboxOutcome(record=rec, executed=True, ok=False)
+        return InboxOutcome(
+            record=self.get(consumer_id, event_id) or rec, executed=True, ok=True, value=value
+        )
+
+    # 兼容旧接口
     def consume(
         self, consumer_id: str, event_id: str, result: dict[str, Any] | None = None
     ) -> InboxRecord:
-        with self.db.session() as s:
-            existing = s.scalar(
-                select(InboxRow).where(
-                    InboxRow.consumer_id == consumer_id, InboxRow.event_id == event_id
-                )
-            )
-            if existing:
-                return InboxRecord(
-                    consumer_id=existing.consumer_id,
-                    event_id=existing.event_id,
-                    status=existing.status,
-                    result=dict(existing.result or {}),
-                    consumed_at=existing.consumed_at,
-                )
-            row = InboxRow(
-                consumer_id=consumer_id,
-                event_id=event_id,
-                status="PROCESSED",
-                result=result or {},
-                consumed_at=utc_now_iso(),
-            )
-            s.add(row)
-            s.flush()
-            return InboxRecord(
-                consumer_id=row.consumer_id,
-                event_id=row.event_id,
-                status=row.status,
-                result=dict(row.result or {}),
-                consumed_at=row.consumed_at,
-            )
+        return self.consume_in_transaction(
+            consumer_id, event_id, lambda s: result or {}
+        ).record
 
     def get(self, consumer_id: str, event_id: str) -> InboxRecord | None:
         with self.db.session() as s:
-            row = s.scalar(
-                select(InboxRow).where(
-                    InboxRow.consumer_id == consumer_id, InboxRow.event_id == event_id
-                )
-            )
-            if not row:
-                return None
-            return InboxRecord(
-                consumer_id=row.consumer_id,
-                event_id=row.event_id,
-                status=row.status,
-                result=dict(row.result or {}),
-                consumed_at=row.consumed_at,
-            )
+            row = self._get_row(s, consumer_id, event_id)
+            return self._to_record(row) if row else None
 
     def list_for_event(self, event_id: str) -> list[InboxRecord]:
         with self.db.session() as s:
             rows = s.scalars(select(InboxRow).where(InboxRow.event_id == event_id)).all()
-            return [
-                InboxRecord(
-                    consumer_id=r.consumer_id,
-                    event_id=r.event_id,
-                    status=r.status,
-                    result=dict(r.result or {}),
-                    consumed_at=r.consumed_at,
-                )
-                for r in rows
-            ]
+            return [self._to_record(r) for r in rows]
+
+    def stats(self) -> dict[str, int]:
+        from sqlalchemy import func
+
+        with self.db.session() as s:
+            rows = s.execute(
+                select(InboxRow.status, func.count()).group_by(InboxRow.status)
+            ).all()
+            return {str(status): int(count) for status, count in rows}
 
 
 # --------------------------------------------------------------------------- Doc store

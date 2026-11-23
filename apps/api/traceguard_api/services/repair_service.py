@@ -94,6 +94,74 @@ class RepairService:
         )
         return doc
 
+    # --------------------------------------------------------- LLM 候选生成
+    def llm_suggest(
+        self,
+        *,
+        testcase_id: str,
+        base_version: int,
+        run_id: str | None = None,
+        diagnosis_id: str | None = None,
+        propose: bool = False,
+    ) -> dict[str, Any]:
+        """用 LLM 生成受限修复候选（不自动审批、不自动晋升）。
+
+        模型输出先经过本地白名单过滤，才交给 `propose()`；`propose()` 仍会执行
+        Diff Allowlist / Assertion Preservation / Oracle Integrity 校验。
+        """
+        base = self.rt.catalog.get_version(testcase_id, base_version)
+        if not base:
+            raise AppError(ErrorCode.NOT_FOUND, "base testcase version not found")
+        if not getattr(self.rt.settings, "llm_repair_planner_enabled", False):
+            return {"called": False, "reason": "disabled", "changes": []}
+        from traceguard_agents.gateway.llm_gateway import build_llm_stack
+        from traceguard_agents.gateway.llm_planners import LLMRepairAdvisor
+
+        stack = build_llm_stack(self.rt.settings, root_dir=".")
+        if not stack:
+            return {"called": False, "reason": "not_configured", "changes": []}
+
+        symptom = ""
+        if diagnosis_id:
+            rec = self.rt.docs.get(diagnosis_id)
+            symptom = str(((rec.doc if rec else {}) or {}).get("symptom", ""))
+        elif run_id:
+            run = self.rt.tasks.get_run(run_id) or {}
+            errors = ((run.get("report") or {}).get("errors") or [])[:3]
+            symptom = " | ".join(str(e)[:300] for e in errors)
+        advisor = LLMRepairAdvisor(
+            provider=stack["provider"],
+            router=stack["router"],
+            prompts=stack["prompts"],
+            tracker=stack.get("tracker"),
+            run_id=run_id or "",
+        )
+        advice = advisor.suggest(
+            symptom=symptom,
+            steps=base.get("steps") or [],
+            assertions=base.get("assertions") or [],
+            step_count=len(base.get("steps") or []),
+        )
+        out: dict[str, Any] = {
+            "called": advice.called,
+            "fallback": advice.fallback,
+            "error": advice.error,
+            "model": advice.model,
+            "prompt_version": "repair_planner@v1",
+            "changes": advice.changes,
+            "warnings": advice.warnings,
+            "note": "LLM 仅生成候选；必须经校验/沙箱/人工审批/CAS 才可能晋升",
+        }
+        if propose and advice.changes:
+            out["proposal"] = self.propose(
+                testcase_id=testcase_id,
+                base_version=base_version,
+                changes=advice.changes,
+                reason=f"LLM 修复候选（{advice.model}）",
+                created_by="agent:llm-repair-planner",
+            )
+        return out
+
     def get(self, proposal_id: str) -> dict[str, Any]:
         rec = self.rt.docs.get(proposal_id)
         if not rec or rec.kind != "repair":

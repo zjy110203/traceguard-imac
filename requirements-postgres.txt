@@ -1,0 +1,4 @@
+# PostgreSQL 真实运行所需驱动（项目级依赖，不做系统全局安装）
+# 本地：pip install -r requirements-postgres.txt ；CI：GitHub Actions PostgreSQL Service Container
+-r requirements.txt
+psycopg[binary]>=3.1,<4

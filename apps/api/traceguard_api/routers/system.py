@@ -116,6 +116,26 @@ async def llm_summary() -> dict[str, Any]:
             if advisor.get("skipped"):
                 advisor_skipped += 1
 
+    # RUN-005 WP2：三类扩展顾问的真实调用/兜底统计（来自文档，不臆测）
+    compiler_llm = compiler_fallback = 0
+    for rec in rt.docs.list(kind="exploration", limit=1000):
+        meta = ((rec.doc or {}).get("compiled") or {}).get("llm_meta") or {}
+        if meta.get("called"):
+            compiler_llm += 1
+        if meta.get("fallback"):
+            compiler_fallback += 1
+    probe_llm = probe_fallback = 0
+    for rec in rt.docs.list(kind="probe_plan", limit=500):
+        notes = (rec.doc or {}).get("llm_planner") or {}
+        if notes.get("called"):
+            probe_llm += 1
+        if notes.get("fallback"):
+            probe_fallback += 1
+    repair_llm = 0
+    for rec in rt.docs.list(kind="repair", limit=500):
+        if str((rec.doc or {}).get("created_by", "")).startswith("agent:llm"):
+            repair_llm += 1
+
     summary.update(
         {
             "configured": configured,
@@ -126,6 +146,12 @@ async def llm_summary() -> dict[str, Any]:
             "enabled": {
                 "explorer": configured and bool(s.llm_explorer_enabled),
                 "diagnosis": configured and bool(s.llm_diagnosis_enabled),
+                "compiler": configured
+                and bool(s.llm_compiler_enabled)
+                and str(s.llm_compiler_mode) != "rule_only",
+                "compiler_mode": str(s.llm_compiler_mode),
+                "probe_planner": configured and bool(s.llm_probe_planner_enabled),
+                "repair_planner": configured and bool(s.llm_repair_planner_enabled),
             },
             "decisions": {
                 "llm_calls_recorded": llm_calls,
@@ -133,7 +159,12 @@ async def llm_summary() -> dict[str, Any]:
                 "rule_explorations": rule_decisions,
                 "diagnosis_advisor_called": advisor_called,
                 "diagnosis_advisor_skipped": advisor_skipped,
-                "note": "engine 标记规划器配置，不等于每个动作都由 LLM 决策。",
+                "compiler_llm_calls": compiler_llm,
+                "compiler_fallbacks": compiler_fallback,
+                "probe_planner_calls": probe_llm,
+                "probe_planner_fallbacks": probe_fallback,
+                "repair_planner_proposals": repair_llm,
+                "note": "engine 标记规划器配置，不等于每个动作都由 LLM 决策；成本为应用侧估算。",
             },
         }
     )
