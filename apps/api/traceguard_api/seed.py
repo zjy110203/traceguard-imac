@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from traceguard_core.ids import utc_now_iso
@@ -451,10 +452,42 @@ def _create_flow(prefix: str, name_value: str, wait_ms: str = "1200") -> list[di
     ]
 
 
+#: Benchmark 场景的静态测试数据标记。
+#:
+#: RUN-007-FINALIZATION-2（WP1-A）：此前这里用的是 `utc_now_iso()[:19]` 当数据后缀，
+#: 导致每次 Seed 的步骤内容都不同 → 变更检测必然判"语义变化" → 每次都新建一个版本，
+#: 用例版本随时间无限增长。基准用的数据必须是**固定**的；确实需要动态值（时间戳/随机串）
+#: 时应在 Run 执行期生成，而不是固化进用例版本。
+BENCH_STATIC_DATA_TAG = "基准"
+
+
+def _bench_signature(doc: dict[str, Any]) -> tuple[list[Any], list[Any]]:
+    """用例语义指纹：标题无关，只看步骤/断言（含 Oracle 绑定）。
+
+    步骤按 action/value/target 三元组比较，断言按完整字段比较
+    （不只是 assertion_id 集合，避免 Oracle 绑定被改却漏检）。
+    """
+    steps = [
+        (s.get("action"), str(s.get("value")), str((s.get("target") or {}).get("value")))
+        for s in (doc.get("steps") or [])
+    ]
+    assertions = sorted(
+        (
+            str(a.get("assertion_id")),
+            str(a.get("kind")),
+            str(a.get("oracle_id")),
+            json.dumps(a.get("expected"), sort_keys=True, ensure_ascii=False),
+            bool(a.get("required", True)),
+        )
+        for a in (doc.get("assertions") or [])
+    )
+    return (steps, assertions)
+
+
 def _seed_bench_v2(rt: Any, base_url: str) -> int:
     """数据集 v2 的 30 场景资产（幂等）。"""
     created = 0
-    stamp = utc_now_iso()[:19]
+    stamp = BENCH_STATIC_DATA_TAG
 
     if not rt.catalog.get_intent("intent_tf_bench_v2"):
         rt.catalog.create_intent(
@@ -884,19 +917,19 @@ def _seed_bench_v2(rt: Any, base_url: str) -> int:
     for tc in bench:
         existing = rt.catalog.get_testcase(tc["testcase_id"])
         if existing:
-            latest = existing.get("latest") or {}
-            # 变更检测：断言 ID 集合或步骤序列变化 → 语义升级为新版本并重新审核
-            existing_steps = [
-                (s.get("action"), str(s.get("value")), str((s.get("target") or {}).get("value")))
-                for s in (latest.get("steps") or [])
-            ]
-            desired_steps = [
-                (s.get("action"), str(s.get("value")), str((s.get("target") or {}).get("value")))
-                for s in tc["steps"]
-            ]
-            existing_assertions = {a["assertion_id"] for a in (latest.get("assertions") or [])}
-            desired_assertions = {a["assertion_id"] for a in tc["assertions"]}
-            if existing_steps == desired_steps and existing_assertions == desired_assertions:
+            approved = rt.catalog.latest_approved_version(tc["testcase_id"])
+            latest_version = int(existing.get("latest_version") or 0)
+            approved_version = int((approved or {}).get("version") or 0)
+            # 幂等判定必须同时满足：
+            #   1) 当前最新版本就是正式版本（没有遗留的 PENDING/DRAFT 影子版本）；
+            #   2) 正式版本内容与静态基线语义一致。
+            # 只有 1) 2) 同时成立才跳过；否则走"新版本 + 人工审核"的正常流程恢复基线
+            # （Repair 改了定位器后再次 Seed 属于这种情况），绝不修改已存在的不可变版本。
+            if (
+                approved is not None
+                and approved_version == latest_version
+                and _bench_signature(approved) == _bench_signature(tc)
+            ):
                 continue
         payload = {
             "testcase_id": tc["testcase_id"],
