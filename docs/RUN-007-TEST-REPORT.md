@@ -184,3 +184,46 @@ Nightly 的 `head_sha` 与 Release 的 `github.sha` 严格相等。
 
 `docs/assets/run007/evidence-sha256.txt` 列出证据目录全部 94 个文件的 SHA-256（含 79 张 UI 截图），
 便于复核"交付的证据就是当时跑出来的证据"。
+
+---
+
+## 12. 第四轮（RUN-007-FINALIZATION-2，2026-11-24）
+
+本节结果**取代** §10 摘要中与自愈/口径相关的旧结论；§10 保留为上一轮原始记录，不改写。
+
+### 12.1 自动化测试
+
+| 项 | 上一轮（`fdbe0f5`） | 本轮 |
+|---|---|---|
+| pytest 全量 | 523 passed / 11 skipped | **546 passed / 11 skipped** |
+| 跳过原因 | 未配置 PG | 同（`test_postgres_parity.py` / `test_postgres_platform.py`） |
+| ruff check / format | 全绿 | 全绿 |
+| 前端 typecheck / build | 通过 | 通过 |
+
+新增测试：
+
+| 文件 | 数量 | 覆盖 |
+|---|---|---|
+| `tests/integration/test_seed_idempotency.py` | 2 | 两次 Seed 版本稳定、Repair 后恢复基线、历史版本不可变 |
+| `tests/integration/test_repair_receipt_identity.py` | 7 | 跨 Proposal/跨 kind/跨 workspace 复用键、补回执持久化、fail-closed |
+| `tests/integration/test_evidence_storage_integrity.py` | 6 | DB 重启复验、内容/附件篡改、派生来源、历史行 NOT_RUN |
+| `tests/integration/test_api_flow.py` | +1 | 验证接口服务端语义、旧请求分离、workspace 不符 |
+| `tests/unit/test_benchmark.py` | +3 | Macro-F1 真分子、缺失预测计 FN、数据集口径 |
+| `tests/unit/test_evidence.py` | 改写 4 + 新增 4 | 摘要语义分离、存储校验、来源比对不冒充完整性 |
+
+### 12.2 真实运行证据
+
+| 项 | 结果 | 证据 |
+|---|---|---|
+| E2E A/B/C/D（独立 Worker） | **56 步 / 0 失败** | `docs/assets/run007/e2e-run007-f2.json` |
+| Evidence 逐条服务端校验 | A 15/15、B 28/28 PASS；附件 36/36 字节一致；NOT_RUN 0 | 同上 |
+| 回滚内容级复核 | 指针/步骤/断言/Oracle 绑定全部恢复 | 同上 D17b |
+| Benchmark 两轮 | 76 次执行 / 661.2s / 每轮 19 个失败样本 | `benchmark-v3-f2.json` |
+| 自愈闭环 | 2/2（晋升→固定版本回归→回滚复核全通过） | 同上 `repair_records` |
+| 前端 15 视图 × 4 断点 | 75/75，0 溢出 / 0 console 错误 / 79 张截图 | `docs/assets/run007/ui-f2/` |
+
+### 12.3 仍然受限的项
+
+- 本机 **无 PostgreSQL 运行时**（无 psql/docker），PG 持续/并发验证仍 BLOCKED；
+  迁移 v9 只在 SQLite 上实测，CI `postgres:16` 是唯一 PG 覆盖路径。
+- 本轮 commit 的 Nightly / Release Gate **未手动 dispatch**，不宣称三级门禁在本 commit 全绿。

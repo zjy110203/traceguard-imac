@@ -466,7 +466,9 @@ def _verify_rollback_content(
     same_bindings = (restored.get("oracle_bindings") or []) == (
         base_doc.get("oracle_bindings") or []
     )
-    _assert(int(meta.get("latest_version") or 0) == int(restored_version), "正式版本指针未指向恢复版本")
+    _assert(
+        int(meta.get("latest_version") or 0) == int(restored_version), "正式版本指针未指向恢复版本"
+    )
     _assert(same_steps, "回滚后的步骤/定位器内容与基线不一致")
     _assert(same_assertions, "回滚后的断言与基线不一致")
     _assert(same_bindings, "回滚后的 Oracle 绑定与基线不一致")
@@ -725,9 +727,10 @@ def scenario_d(api: Api, teamflow: str, ex: Executor) -> dict[str, Any]:
             f"latest={after_rollback.get('latest_version')} restored={restored}",
         ),
     )
-    step("D17b 回滚必须证明内容真的恢复（不是只返回成功）", lambda: _verify_rollback_content(
-        api, base_case, restored, base_doc
-    ))
+    step(
+        "D17b 回滚必须证明内容真的恢复（不是只返回成功）",
+        lambda: _verify_rollback_content(api, base_case, restored, base_doc),
+    )
     verify = ex.execute(base_case, version=promoted_version)
     ver = verify.get("run") or verify
     step(

@@ -272,3 +272,20 @@ Flaky 重复 5 次保留原始、指标带分子/分母、LLM 与人工基线未
 6. **自愈未闭环**：定位器场景沙箱通过后 `/promote` 未返回 `promoted_version`，回归 `NOT_EVALUATED`（0/1）。见 `RUN-007-BENCHMARK-REPORT.md`。
 7. **D/E 臂无增益**：证据图与探针在 19 个失败样本上没有额外主因命中（Macro-F1 略降），不宣称提升。
 8. **CI 网络抖动**：本机经 HTTP 代理访问 `github.com` 间歇性 `Empty reply` / `CONNECT 502`，push 需重试；`api.github.com` 稳定。不影响已在 CI 侧获得的结论。
+
+## 10. RUN-007-FINALIZATION-2 追加实现（2026-11-24）
+
+完整报告：`docs/RUN-007-FINALIZATION-2-REPORT.md`。本节只列实现要点与入口：
+
+| 工作包 | 实现位置 | 备注 |
+|---|---|---|
+| Seed 幂等 | `apps/api/traceguard_api/seed.py` | 静态数据标签 + 语义指纹 + 新版本恢复基线 |
+| 回执身份 | `packages/persistence/.../catalog.py`、`services/repair_service.py` | 6 元组校验、`record_receipt()`、晋升 fail-closed |
+| Evidence 摘要 | `packages/evidence/.../evidence_manager.py`、`persistence/stores.py`、`models.py`、`db.py`（迁移 v9） | 来源/持久化/附件三种摘要；历史行 NOT_RUN |
+| 服务端验证 | `routers/evidence.py` | 读库内容重算 + 附件字节 + 派生来源 + workspace |
+| 执行链 | `packages/execution/.../pipeline.py` | 附件摘要随证据入库 |
+| Benchmark | `scripts/bench_run007.py` | 动态基线、固定版本回归、回滚内容验证、E 臂禁回退、`--repeats` |
+| E2E | `scripts/e2e_run007.py` | 逐条证据验证、回滚内容级复核 |
+| 评测口径 | `benchmark/.../evaluation.py`、`scenarios.py` | Macro-F1 浮点分子；四字段口径 |
+
+未做/受阻项与安全审查结论见该报告 §7、§9。
