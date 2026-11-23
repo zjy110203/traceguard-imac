@@ -102,16 +102,20 @@ class Database:
             if self._schema_ready:
                 return
             last_error: Exception | None = None
-            for attempt in range(6):
+            # 并发启动（API + N 个 Worker）时会同时建表：既可能撞"已存在"，
+            # 也可能撞 SQLite 的 DDL 排他锁（database is locked）。两类都重试，
+            # 退避采用指数形式，避免 CI 慢盘上 6 次×50ms 不够用。
+            for attempt in range(8):
                 try:
                     Base.metadata.create_all(self.engine)
                     last_error = None
                     break
-                except Exception as exc:  # noqa: BLE001 - 并发建表的重复 DDL
-                    if not _is_duplicate_ddl_error(exc) or attempt == 5:
+                except Exception as exc:  # noqa: BLE001 - 并发建表的重复 DDL/锁竞争
+                    retryable = _is_duplicate_ddl_error(exc) or _is_transient_lock_error(exc)
+                    if not retryable or attempt == 7:
                         raise
                     last_error = exc
-                    time.sleep(0.05 * (attempt + 1))
+                    time.sleep(min(0.1 * (2**attempt), 2.0))
             if last_error is not None:  # pragma: no cover - 重试耗尽才会到这里
                 raise last_error
             _apply_migrations(self)
@@ -130,6 +134,22 @@ def _is_duplicate_ddl_error(exc: BaseException) -> bool:
         or "duplicate key" in msg
         or "unique constraint" in msg
         or "duplicate column" in msg
+    )
+
+
+def _is_transient_lock_error(exc: BaseException) -> bool:
+    """并发 DDL 的暂时性锁冲突：不是"已存在"，但等待后重试即可成功。
+
+    SQLite 在多个连接同时执行 `CREATE TABLE` 时会抛 `database is locked`
+    （busy_timeout 只覆盖普通写事务，DDL 的排他锁竞争仍可能直接返回）；
+    PostgreSQL 在并发 DDL 下可能抛 `deadlock detected`。两者都属可重试。
+    """
+    msg = str(exc).lower()
+    return (
+        "database is locked" in msg
+        or "database table is locked" in msg
+        or "deadlock detected" in msg
+        or "could not obtain lock" in msg
     )
 
 

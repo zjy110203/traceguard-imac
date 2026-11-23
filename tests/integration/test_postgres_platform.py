@@ -246,6 +246,10 @@ def test_expired_lease_takeover_bumps_fencing_and_rejects_stale_submit(db: Datab
     # 旧 Worker 也不能续租
     assert TaskService(db).renew_lease("run_pg_takeover", "pg-w-old", 1) is False
 
+    # 真实 worker 流程是 claim → mark_running → 执行 → submit（见 pipeline.py:130）。
+    # 状态机不允许 PREPARING 直接跳 COMPLETED，必须显式推进到 RUNNING。
+    TaskService(db).mark_running("run_pg_takeover", "pg-w-new", 2, "auto")
+
     # 新代次提交成功
     TaskService(db).submit_result(
         "run_pg_takeover",

@@ -294,6 +294,10 @@ class TaskService:
                     or cand.lease_expires_at < now
                 ):
                     continue
+                # 必须在 UPDATE 之前取旧状态：ORM 对象在 UPDATE 后会被 expire，
+                # 再读 cand.execution_status 会重新 SELECT 拿到新值（PREPARING），
+                # previous_status 就变成"更新后的状态"，契约失真（PostgreSQL 上必现）。
+                previous_status = cand.execution_status
                 # 原子领取：条件 UPDATE + rowcount 判定，等价于对租约的 CAS
                 result = s.execute(
                     update(RunRow)
@@ -324,7 +328,7 @@ class TaskService:
                     "workspace_id": target.workspace_id,
                     "attempt": target.attempt,
                     "fencing_token": target.fencing_token,
-                    "previous_status": cand.execution_status,
+                    "previous_status": previous_status,
                     "lease_expires_at": target.lease_expires_at,
                     "ttl_s": ttl_seconds,
                 }

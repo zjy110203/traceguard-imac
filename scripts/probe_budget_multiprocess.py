@@ -28,17 +28,15 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 # pytest 靠 pyproject 的 `pythonpath` 注入本地包；独立脚本与 spawn 子进程没有这个机制，
-# 必须自行注入，否则子进程会 `ModuleNotFoundError: traceguard_api`（CI backend-full 曾因此失败）。
-for _pkg in (
-    "packages/core",
-    "packages/contracts",
-    "packages/execution",
-    "packages/persistence",
-    "apps/api",
-):
-    _path = str(ROOT / _pkg)
-    if _path not in sys.path:
-        sys.path.insert(0, _path)
+# 必须自行注入，否则子进程会 `ModuleNotFoundError`（CI backend-full 曾因此失败）。
+# 用目录扫描而非硬编码清单：`traceguard_persistence` 会间接 import `traceguard_evidence`，
+# 硬编码漏一个包就会在 CI 上炸。
+for _base in ("packages", "apps"):
+    _dir = ROOT / _base
+    if _dir.is_dir():
+        for _sub in sorted(_dir.iterdir()):
+            if _sub.is_dir() and str(_sub) not in sys.path:
+                sys.path.insert(0, str(_sub))
 
 
 def _child_main(cfg: dict[str, Any]) -> None:

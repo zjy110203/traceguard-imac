@@ -45,3 +45,18 @@
 | 12:30 | 凭据 | 未读取/输出 `.env`；LLM 调用沿用既有配置；日志与证据无密钥 ✅ |
 | 13:00 | 证据保留 | 旧 `e2e-run007.json` / `worker-fault-recovery.json` / `probe-budget-*.json` 原样保留，新证据另起文件名 ✅ |
 | 13:40 | 推送尝试 | `git push --dry-run` 因无凭据失败（`could not read Username`）；未使用任何绕过手段 ✅ |
+
+## RUN-007-RESUME GI 凭据使用记录（2026-11-23 22:24 起）
+
+| 时间 | 事项 | 处理 |
+|---|---|---|
+| 22:24 | 用户提供 fine-grained PAT（`traceguard-imac` 单仓库） | 写入 `~/.workbuddy/gh_token`（`chmod 600`），**未在任何命令或输出中回显** |
+| 22:24 | 权限核验 | `GET /user` → `zjy110203`；`GET /repos/...` → `admin/push`；记录到会话，不写 token 值 |
+| 22:29 | 首次推送 | 通过 `~/.workbuddy/git-cred.sh`（`chmod 700`，从文件读）注入，`d2e86ae` 推送成功 |
+| 22:44 | PR 创建 | PR #1（`d2e86ae → main@ac2876e`）；误建的 "probe" 标题已 PATCH 为正式标题/正文 |
+| 22:52 | Nightly dispatch | 首次真实运行 `45197639359` 失败，暴露 3 个真实缺陷（非凭据问题） |
+| 23:05 | 修复后重推 | `7fdd2e9`，PR 自动跟随 |
+| 待办 | **凭据回收** | 本轮收尾后 `rm ~/.workbuddy/gh_token ~/.workbuddy/git-cred.sh`，并提醒用户在 GitHub 撤销该 token（已出现在会话记录中） |
+
+约束确认：token 仅用于 `traceguard-imac` 的 push / PR / Actions 查询与 dispatch；
+未访问其它仓库，未改仓库设置，未删除分支，未创建 Release Tag。
