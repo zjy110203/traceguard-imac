@@ -17,6 +17,9 @@ jobs:
   backend-full:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      # 与 postgres job 同理：内联脚本 / 独立脚本不走 pytest 的 pythonpath。
+      PYTHONPATH: packages/core:packages/contracts:packages/execution:packages/agents:packages/evidence:packages/persistence:apps/api:apps/teamflow:apps/workers:benchmark
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -80,6 +83,9 @@ jobs:
           --health-retries 20
     env:
       TG_TEST_POSTGRES_URL: postgresql+psycopg://traceguard:traceguard_ci_only@127.0.0.1:5432/traceguard
+      # pytest 靠 pyproject 的 pythonpath 注入本地包；内联 `python - <<'PY'` 没有该机制，
+      # 必须显式给出，否则 ModuleNotFoundError: traceguard_persistence。
+      PYTHONPATH: packages/core:packages/contracts:packages/execution:packages/agents:packages/evidence:packages/persistence:apps/api:apps/teamflow:apps/workers:benchmark
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -122,7 +128,8 @@ jobs:
           admin = create_engine(base.set(database="postgres"), isolation_level="AUTOCOMMIT")
           with admin.connect() as c:
               c.execute(text(f'CREATE DATABASE "{name}"'))
-          url = str(base.set(database=name))
+          # 注意：str(URL) 默认 hide_password=True，会渲染成 `***`，连接必然认证失败。
+          url = base.set(database=name).render_as_string(hide_password=False)
           try:
               db = Database(url); db.create_schema(); db.create_schema()
               db.dispose()

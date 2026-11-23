@@ -30,6 +30,10 @@ jobs:
   full-verification:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    env:
+      # 内联 `python - <<'PY'` 不会继承 pytest 的 pythonpath（pyproject 配置），
+      # 必须显式提供，否则 import traceguard_persistence 失败。
+      PYTHONPATH: packages/core:packages/contracts:packages/execution:packages/agents:packages/evidence:packages/persistence:apps/api:apps/teamflow:apps/workers:benchmark
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
