@@ -112,9 +112,11 @@ jobs:
           fi
 
   llm-smoke:
-    if: ${{ secrets.DEEPSEEK_API_KEY != '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      TG_LLM_PROVIDER: deepseek
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -125,17 +127,11 @@ jobs:
           python -m venv .venv
           .venv/bin/pip install -r requirements.txt
           .venv/bin/pip install pytest
-      - name: LLM connectivity smoke (bounded budget)
-        env:
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-          TG_LLM_PROVIDER: deepseek
-        run: |
-          .venv/bin/python scripts/llm_smoke.py || echo "BLOCKED: LLM smoke failed; recorded, not disguised as pass"
-
-  blocked-note:
-    if: ${{ secrets.DEEPSEEK_API_KEY == '' }}
-    runs-on: ubuntu-latest
-    steps:
       - name: Record BLOCKED (no credentials)
+        if: ${{ env.DEEPSEEK_API_KEY == '' }}
         run: |
           echo "BLOCKED: DEEPSEEK_API_KEY 未配置，真实 LLM 夜间测试未执行（不得记为通过）"
+      - name: LLM connectivity smoke (bounded budget)
+        if: ${{ env.DEEPSEEK_API_KEY != '' }}
+        run: |
+          .venv/bin/python scripts/llm_smoke.py || echo "BLOCKED: LLM smoke failed; recorded, not disguised as pass"
