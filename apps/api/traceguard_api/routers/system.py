@@ -1,12 +1,15 @@
-"""系统 API：健康、浏览器自检、种子数据、运行统计。"""
+"""系统 API：健康、浏览器自检、种子数据、运行统计、模型运行摘要。"""
 
 from __future__ import annotations
 
+import os
 import threading
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Query
 from starlette.concurrency import run_in_threadpool
+from traceguard_agents.gateway.llm_gateway import TokenUsageTracker
 
 from ..seed import seed_teamflow_catalog
 from ..services import get_services
@@ -72,6 +75,69 @@ async def metrics() -> dict[str, Any]:
         "testcases": len(rt.catalog.list_testcases()),
         "intents": len(rt.catalog.list_intents()),
     }
+
+
+@router.get("/llm/summary")
+async def llm_summary() -> dict[str, Any]:
+    """只读模型运行摘要。
+
+    安全边界：不返回密钥、Prompt 原文、页面内容或逐条用量明细；
+    成本是应用侧估算；configured 是静态配置态，不等于真实连通。
+    """
+    rt = get_services().rt
+    s = rt.settings
+    configured = s.llm_provider.strip().lower() == "deepseek" and bool(s.deepseek_api_key)
+    usage_path = Path(os.environ.get("TG_TRACEGUARD_ROOT", ".")) / ".traceguard" / "llm_usage.jsonl"
+    tracker = TokenUsageTracker(path=str(usage_path), daily_budget_usd=float(s.llm_daily_budget_usd))
+    summary = tracker.summary()
+
+    # 规则兜底来自真实探索/诊断文档，不从用量文件臆测。
+    fallback_calls = 0
+    llm_calls = 0
+    rule_decisions = 0
+    advisor_called = 0
+    advisor_skipped = 0
+    for rec in rt.docs.list(kind="exploration", limit=1000):
+        doc = rec.doc or {}
+        engine = str(doc.get("engine") or "")
+        stats = doc.get("llm_stats") or {}
+        if isinstance(stats, dict):
+            fallback_calls += int(stats.get("fallback_calls") or 0)
+            llm_calls += int(stats.get("llm_calls") or 0)
+        if engine and not engine.startswith("llm:"):
+            # engine 只表示规划器配置，不把 engine=llm:* 的动作都算作 LLM 成功。
+            rule_decisions += 1
+    for rec in rt.docs.list(kind="diagnosis", limit=1000):
+        doc = rec.doc or {}
+        advisor = doc.get("llm_advisor") or {}
+        if isinstance(advisor, dict):
+            if advisor.get("called"):
+                advisor_called += 1
+            if advisor.get("skipped"):
+                advisor_skipped += 1
+
+    summary.update(
+        {
+            "configured": configured,
+            "connected": "unknown",  # 只读摘要不主动触网；连通性由独立自检给出
+            "provider": s.llm_provider or "none",
+            "default_model": s.llm_default_model if configured else "—",
+            "reasoning_model": s.llm_reasoning_model if configured else "—",
+            "enabled": {
+                "explorer": configured and bool(s.llm_explorer_enabled),
+                "diagnosis": configured and bool(s.llm_diagnosis_enabled),
+            },
+            "decisions": {
+                "llm_calls_recorded": llm_calls,
+                "fallback_calls": fallback_calls,
+                "rule_explorations": rule_decisions,
+                "diagnosis_advisor_called": advisor_called,
+                "diagnosis_advisor_skipped": advisor_skipped,
+                "note": "engine 标记规划器配置，不等于每个动作都由 LLM 决策。",
+            },
+        }
+    )
+    return summary
 
 
 @router.get("/config")

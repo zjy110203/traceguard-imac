@@ -13,7 +13,12 @@
 | GET | `/system/browser?probe=true` | 真实启动一次浏览器自检（渠道/版本/冒烟结果） |
 | GET | `/system/config` | 脱敏后的运行配置 |
 | GET | `/system/metrics` | 运行/证据/事件/诊断/修复统计 |
+| GET | `/system/llm/summary` | **RUN-004-FE 新增，只读**：Provider/模型配置、调用/错误/Token/估算成本/预算、by_agent、by_model、daily_series、延迟、决策来源、最近调用（安全元数据） |
 | POST | `/system/seed` | 幂等写入 TeamFlow 演示资产（需求/用例/Oracle） |
+
+`GET /system/llm/summary` 安全边界：不返回 API Key、完整 Prompt、页面内容、task_id/run_id 明细或原始凭证；
+成本是应用侧按牌价估算，不是 DeepSeek 平台账单；`configured` 是静态配置态，`connected` 恒为 `unknown`
+（该端点不主动触网，真实连通性由独立自检给出）。
 
 ## 2. 测试资产（Catalog）
 

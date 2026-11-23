@@ -133,8 +133,12 @@ TraceGuard 是面向研发与 QA 团队的 **Agentic Web UI 测试与质量情�
 
 ### 8.3 Agent 探索与编译中心（新增）
 列表（探索状态/动作数/编译产物）+ 详情抽屉（动作序列逐步输入输出、ToolGateway 审计、
-编译候选与警告）。**诚实标注**：当前规划器为规则实现（rule-based-v1），页面不得使用
-"LLM/智能体自主决策"等表述，直至真实模型接入并在 UI 上展示 model/prompt 版本。
+编译候选与警告）。**诚实标注**：页面不得把 engine 标记当成每一次动作都由 LLM 决策。
+
+RUN-004-FE 更新：RUN-003-G 已真实接入 DeepSeek，页面改为依据 API 返回的 `engine`、
+`prompt_version`、`llm_stats.llm_calls / fallback_calls / last_error` 动态展示 model/prompt
+版本，并区分“LLM 决策 / 规则决策 / LLM 失败后的规则兜底”。Compiler 仍为规则编译器。
+实现与验收见 `docs/RUN-004-FE-IMPLEMENTATION-REPORT.md`。
 
 ### 8.4 智能诊断与证据分析中心
 假设卡片（状态/域/机制/支持与反对证据）+ GraphView 增强（节点点击详情）。

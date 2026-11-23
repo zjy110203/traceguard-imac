@@ -2,7 +2,10 @@
 import { computed, onMounted, ref } from 'vue'
 import { api, fmtTime } from '../api'
 import AsyncBlock from '../components/AsyncBlock.vue'
+import CodeDiff from '../components/CodeDiff.vue'
+import ConfirmDialog from '../components/ConfirmDialog.vue'
 import ModalShell from '../components/ModalShell.vue'
+import PageHeader from '../components/PageHeader.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import { notify, notifyError } from '../toast'
 import type { Repair, TestCaseSummary, TestCaseVersion } from '../types'
@@ -19,6 +22,8 @@ const includeBench = ref(false)
 const reviewer = ref('role:qa-lead')
 
 const stepOptions = ref<{ index: number; action: string; target: string }[]>([])
+const baseDoc = ref<TestCaseVersion | null>(null)
+const pendingAction = ref<{ path: string; body?: Record<string, unknown>; label: string; danger: boolean; message: string } | null>(null)
 
 const form = ref({
   testcase_id: '',
@@ -78,6 +83,14 @@ async function selectById(proposalId: string) {
   } catch {
     selected.value = items.value.find((x) => x.proposal_id === proposalId) ?? null
   }
+  baseDoc.value = null
+  if (selected.value) {
+    try {
+      baseDoc.value = await api.get<TestCaseVersion>(
+        `/testcases/${selected.value.testcase_id}/versions/${selected.value.base_version}`,
+      )
+    } catch { /* 历史版本不可读时只展示结构化 diff */ }
+  }
 }
 
 async function select(r: Repair) {
@@ -128,24 +141,72 @@ const canApprove = computed(() => selected.value?.status === 'PENDING_APPROVAL')
 const canPromote = computed(() => selected.value?.status === 'APPROVED')
 const canRollback = computed(() => selected.value?.status === 'PROMOTED')
 
+/** 候选预览：仅根据后端 diff 字段叠加真实基线版本，不冒充已晋升版本。 */
+const candidatePreview = computed(() => {
+  const base = baseDoc.value
+  const r = selected.value
+  if (!base || !r) return null
+  const copy: any = JSON.parse(JSON.stringify(base))
+  for (const ch of r.diff || []) {
+    const idx = Number(ch.step_index)
+    const step = Number.isInteger(idx) ? copy.steps?.[idx] : undefined
+    if (!step) continue
+    if (String(ch.path || '').includes('target')) step.target = ch.to
+    else step.value = ch.to
+  }
+  return copy
+})
+
+const lifecycle = computed(() => {
+  const r = selected.value
+  const promoted = !!r?.promoted_version || !!Object.keys(r?.promotion_record || {}).length
+  const done = [
+    !!r,
+    !!r && !['DRAFT', 'PROPOSED', 'VALIDATION_FAILED'].includes(r.status),
+    r?.sandbox_status === 'PASSED',
+    !!r && ['APPROVED', 'PROMOTED', 'ROLLED_BACK'].includes(r.status),
+    promoted || r?.status === 'ROLLED_BACK',
+    promoted || r?.status === 'ROLLED_BACK',
+    r?.status === 'ROLLED_BACK' || !!Object.keys(r?.rollback_record || {}).length,
+  ]
+  let seenUndone = false
+  return ['Proposal', 'Rule Validation', 'Sandbox Run', 'Human Approval', 'Promotion', 'Regression', 'Rollback']
+    .map((label, i) => {
+      const state = done[i] && !seenUndone ? 'done' : 'todo'
+      if (!done[i]) seenUndone = true
+      return { label, state }
+    })
+})
+
+function ask(path: string, body: Record<string, unknown> | undefined, label: string, danger = false) {
+  pendingAction.value = {
+    path, body, label, danger,
+    message: danger
+      ? `${label} 会改变正式资产状态，全部权限与 CAS 校验由后端执行。请确认操作对象 ${selected.value?.proposal_id || ''}。`
+      : `确认执行「${label}」？后端将校验当前状态与权限。`,
+  }
+}
+async function confirmPending() {
+  const p = pendingAction.value
+  pendingAction.value = null
+  if (p) await action(p.path, p.body, p.label)
+}
+
 onMounted(load)
 </script>
 
 <template>
   <div>
-    <div class="page-head">
-      <div>
-        <h1>修复中心</h1>
-        <div class="sub">Oracle-Protected Self-Healing：只改定位/等待/数据引用，断言与 Oracle 不可触碰；沙箱必须真实再执行。</div>
-      </div>
-      <div class="actions">
+    <PageHeader eyebrow="Self-Healing Center" title="修复中心"
+      subtitle="Oracle-Protected Self-Healing：只改定位/等待/数据引用，断言与 Oracle 不可触碰；沙箱必须真实再执行。审批与晋升由后端鉴权，前端不绕过。">
+      <template #actions>
         <label class="flex small" style="gap: 5px; margin: 0">
           <input v-model="includeBench" type="checkbox" style="width: auto" @change="load" /> 包含 Benchmark
         </label>
         <button @click="load">刷新</button>
         <button class="primary" @click="showCreate = true">新建修复提案</button>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <div class="split">
       <div class="card">
@@ -175,6 +236,13 @@ onMounted(load)
             <div class="actions"><StatusBadge :value="selected.status" /><StatusBadge :value="selected.sandbox_status" /></div>
           </div>
           <div class="card-body">
+            <div class="lifecycle">
+              <template v-for="(s, i) in lifecycle" :key="s.label">
+                <span class="stage" :class="s.state">{{ s.label }}</span>
+                <span v-if="i < lifecycle.length - 1" class="arrow">→</span>
+              </template>
+            </div>
+            <div class="hr" />
             <div class="kv">
               <dt>用例</dt><dd class="mono small">{{ selected.testcase_id }} · base v{{ selected.base_version }}</dd>
               <dt>断言保持</dt><dd><StatusBadge :value="selected.assertion_preservation" /></dd>
@@ -193,18 +261,30 @@ onMounted(load)
               </dd>
             </div>
             <div class="hr" />
-            <div class="small muted" style="margin-bottom: 4px">Diff</div>
-            <pre class="json" style="max-height: 180px">{{ JSON.stringify(selected.diff || [], null, 2) }}</pre>
-            <div v-if="selected.failure_reason" class="small" style="color: var(--fail); margin-top: 6px">{{ selected.failure_reason }}</div>
+            <div class="section-title">变更 Diff（代码审查视图）</div>
+            <CodeDiff
+              v-if="baseDoc"
+              :before="baseDoc"
+              :after="candidatePreview || baseDoc"
+              label="基线版本 → 修复候选（按后端 diff 字段预览）"
+            />
+            <div v-else>
+              <div class="small muted" style="margin-bottom: 4px">结构化 Diff（基线版本暂不可读）</div>
+              <pre class="json" style="max-height: 180px">{{ JSON.stringify(selected.diff || [], null, 2) }}</pre>
+            </div>
+            <div v-for="d in selected.diff || []" :key="`${d.path}-${d.step_index}`" class="change-reason small">
+              <span class="mono">steps[{{ d.step_index }}].{{ d.path }}</span> · {{ d.reason || '未提供理由' }}
+            </div>
+            <div v-if="selected.failure_reason" class="small fail-text mt">{{ selected.failure_reason }}</div>
             <div class="hr" />
             <div class="flex wrap">
               <button class="sm" :disabled="busy === 'validate' || ['PROMOTED','PROMOTING','ROLLED_BACK','REJECTED','PENDING_APPROVAL','APPROVED'].includes(selected.status)" @click="action('validate', undefined, '规则校验')">规则校验</button>
               <button class="sm" :disabled="busy === 'sandbox-run' || selected.status !== 'VALIDATED'" @click="action('sandbox-run', undefined, '沙箱验证')">沙箱真实执行</button>
               <button class="sm" :disabled="busy === 'submit' || selected.status !== 'VALIDATED' || selected.sandbox_status !== 'PASSED'" @click="action('submit', undefined, '提交审批')">提交审批</button>
-              <button class="sm primary" :disabled="busy === 'approve' || !canApprove" @click="action('approve', { reviewer, note: '控制台审批' }, '审批')">批准</button>
-              <button class="sm danger" :disabled="busy === 'reject' || !canApprove" @click="action('reject', { reviewer, note: '控制台驳回' }, '驳回')">驳回</button>
-              <button class="sm primary" :disabled="busy === 'promote' || !canPromote" @click="action('promote', { idempotency_key: 'promo-' + selected.proposal_id }, '晋升')">晋升正式版本</button>
-              <button class="sm" :disabled="busy === 'rollback' || !canRollback" @click="action('rollback', { operator: reviewer, reason: '控制台回滚' }, '回滚')">回滚</button>
+              <button class="sm primary" :disabled="busy === 'approve' || !canApprove" @click="ask('approve', { reviewer, note: '控制台审批' }, '审批', true)">批准</button>
+              <button class="sm danger" :disabled="busy === 'reject' || !canApprove" @click="ask('reject', { reviewer, note: '控制台驳回' }, '驳回', true)">驳回</button>
+              <button class="sm primary" :disabled="busy === 'promote' || !canPromote" @click="ask('promote', { idempotency_key: 'promo-' + selected.proposal_id }, '晋升正式版本', true)">晋升正式版本</button>
+              <button class="sm danger" :disabled="busy === 'rollback' || !canRollback" @click="ask('rollback', { operator: reviewer, reason: '控制台回滚' }, '回滚', true)">回滚</button>
             </div>
             <div class="hr" />
             <label>审批人 / 操作者</label>
@@ -224,6 +304,16 @@ onMounted(load)
       </div>
       <div v-else class="card"><div class="card-body"><div class="empty">选择左侧提案查看生命周期</div></div></div>
     </div>
+
+    <ConfirmDialog
+      :open="!!pendingAction"
+      :title="pendingAction?.label || '确认操作'"
+      :message="pendingAction?.message || ''"
+      :confirm-label="pendingAction?.label || '确认'"
+      :danger="!!pendingAction?.danger"
+      @confirm="confirmPending"
+      @cancel="pendingAction = null"
+    />
 
     <ModalShell v-if="showCreate" title="新建修复提案" @close="showCreate = false">
       <div>

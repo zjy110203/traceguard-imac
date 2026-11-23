@@ -11,7 +11,7 @@ Agentic Web UI Testing & Quality Intelligence Platform（智能 Web UI 自动化
 - 对失败 Run 做 **证据驱动诊断**：多假设、确定性确认规则、处置分流，证据不足就是 `INCONCLUSIVE`；
 - 用 **只读探针** 补证据（五项校验 + 白名单 + 预算 + 审计）；
 - **Oracle-Protected Self-Healing**：只改定位/等待，真实沙箱验证，人工审批，CAS 晋升，可回滚；
-- 通过 **Vue 工作台** 完成全部操作：总览 / 需求 / 用例 / 执行 / Run 详情 / 诊断 / 修复 / Benchmark / 系统。
+- 通过 **Vue 工作台** 完成全部操作：质量总览 / 需求 / 用例 / Oracle / 执行 / Run 详情 / Agent Studio / 模型运行 / 诊断 / 修复 / Benchmark / 系统。
 
 ## 快速开始
 
@@ -64,7 +64,7 @@ open http://127.0.0.1:8000/
 
 ```
 apps/api          FastAPI 平台（routers + services + Runtime 组合根）
-apps/web          Vue3 + TS 工作台（9 页，真实 API）
+apps/web          Vue3 + TS 工作台（14 个视图，真实 API；RUN-004-FE 产品化设计系统）
 apps/teamflow     受控被测应用（页面 + 业务 API + 故障注入 + GT 隔离）
 apps/workers      独立 Worker（租约 + fencing + 优雅退出）
 packages/contracts    C01–C12 模型与枚举
@@ -85,7 +85,7 @@ docs                  架构 / API / 数据库 / Agent / Playwright / 安全 / �
 | 文档 | 说明 |
 |---|---|
 | [架构](docs/ARCHITECTURE.md) | 分层、链路、部署形态、与设计差异 |
-| [API](docs/API.md) | 81 个端点与语义约定 |
+| [API](docs/API.md) | API 端点与语义约定（含 RUN-004-FE 只读 LLM 摘要） |
 | [数据库](docs/DATABASE.md) | 表结构、约束、迁移 |
 | [Agent 与自愈](docs/AGENTS.md) | 探索/编译/诊断/修复机制 |
 | [Playwright](docs/PLAYWRIGHT.md) | 浏览器执行、采集、已修缺陷 |
@@ -93,7 +93,10 @@ docs                  架构 / API / 数据库 / Agent / Playwright / 安全 / �
 | [Benchmark](docs/BENCHMARK.md) | 真实实验与阻塞项 |
 | [安全](docs/SECURITY.md) | 威胁模型与测试 |
 | [性能与可靠性](docs/PERFORMANCE.md) | 实测延迟、吞吐、可靠性验证 |
-| [测试报告](docs/TEST-REPORT.md) | 206 测试与缺陷回归 |
+| [测试报告](docs/TEST-REPORT.md) | 测试与缺陷回归（RUN-004-FE 全量 224 passed） |
+| [RUN-004-FE 设计决策](docs/RUN-004-FE-DESIGN-DECISIONS.md) | 前端重构选型、设计系统与统计口径 |
+| [RUN-004-FE 实施报告](docs/RUN-004-FE-IMPLEMENTATION-REPORT.md) | 架构图、页面/API 变更、测试结果 |
+| [RUN-004-FE UI 验收](docs/RUN-004-FE-UI-ACCEPTANCE.md) | 真实浏览器截图与交互验收 |
 | [部署](docs/DEPLOYMENT.md) | 安装、配置、排错 |
 | [功能状态](docs/FEATURE-STATUS.md) | 已运行 / 未验证 / 阻塞 / 待决策 |
 | [最终交付报告](docs/FINAL/TraceGuard-Final-Delivery-Report.md) | 一页结论与交付索引 |
@@ -101,8 +104,7 @@ docs                  架构 / API / 数据库 / Agent / Playwright / 安全 / �
 ## 明确未完成
 
 - LLM：DeepSeek 双模型已接入（Explorer/Diagnosis）；Compiler/Repair 的 LLM 辅助未接入；
-- PostgreSQL 运行时未验证（BLOCKED：本机无实例）；
-- PostgreSQL 运行时未验证；Redis 未采用；MinIO/S3 未实现（本地内容寻址存储已实现完整性与篡改检测）；
+- PostgreSQL 运行时未验证（BLOCKED：本机无实例）；Redis 未采用；MinIO/S3 未实现（本地内容寻址存储已实现完整性与篡改检测）；
 - 外部站点泛化未授权（P-EXT）；
 - 认证/RBAC 未实现（本地单租户）；
 - P03 / P08 / 路线图冻结需负责人决策（见 `docs/decisions/`）。

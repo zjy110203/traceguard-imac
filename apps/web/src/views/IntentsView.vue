@@ -2,10 +2,11 @@
 import { computed, onMounted, ref } from 'vue'
 import { api, fmtTime } from '../api'
 import AsyncBlock from '../components/AsyncBlock.vue'
+import PageHeader from '../components/PageHeader.vue'
 import ModalShell from '../components/ModalShell.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import { notify, notifyError } from '../toast'
-import type { Intent } from '../types'
+import type { Intent, TestCaseSummary } from '../types'
 
 const items = ref<Intent[]>([])
 const loading = ref(true)
@@ -14,7 +15,8 @@ const busy = ref('')
 const showCreate = ref(false)
 const keyword = ref('')
 const form = ref({ title: '', description: '', owner: 'qa-team', candidate_assertions: '' })
-const lastCompiled = ref<{ intent_id: string; testcase_id: string } | null>(null)
+/** 候选用例链接来自真实 /testcases 列表，不再用页面内本地状态伪装持久结果。 */
+const compiledByIntent = ref<Record<string, string>>({})
 
 async function explore(intentId: string) {
   busy.value = intentId
@@ -26,7 +28,7 @@ async function explore(intentId: string) {
     const compiled = await api.post<{ compiled: { testcase_id: string; warnings: string[] } }>(
       `/explorations/${exp.exploration_id}/compile`,
     )
-    lastCompiled.value = { intent_id: intentId, testcase_id: compiled.compiled.testcase_id }
+    await load()
     notify(
       compiled.compiled.warnings.length
         ? `候选用例已生成（${compiled.compiled.warnings.length} 条待确认警告）`
@@ -46,7 +48,21 @@ const filtered = computed(() =>
 async function load() {
   loading.value = true
   try {
-    items.value = await api.get<Intent[]>('/intents')
+    const [intents, cases] = await Promise.all([
+      api.get<Intent[]>('/intents'),
+      api.get<TestCaseSummary[]>('/testcases?workspace_id=default'),
+    ])
+    items.value = intents
+    const map: Record<string, string> = {}
+    for (const c of cases) {
+      const key = c.intent_ref
+      if (!key) continue
+      const current = map[key]
+      if (!current || c.latest_version >= (cases.find((x) => x.testcase_id === current)?.latest_version ?? 0)) {
+        map[key] = c.testcase_id
+      }
+    }
+    compiledByIntent.value = map
     error.value = ''
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
@@ -100,16 +116,13 @@ onMounted(load)
 
 <template>
   <div>
-    <div class="page-head">
-      <div>
-        <h1>测试需求</h1>
-        <div class="sub">TestIntent 是测试资产的上游输入：需求 → 探索/编译 → 候选用例 → 人工审核。</div>
-      </div>
-      <div class="actions">
+    <PageHeader eyebrow="Catalog / Intents" title="测试需求"
+      subtitle="TestIntent 是测试资产的上游输入：需求 → 探索/编译 → 候选用例 → 人工审核。">
+      <template #actions>
         <button @click="load">刷新</button>
         <button class="primary" @click="showCreate = true">新建需求</button>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <div class="toolbar" style="margin-bottom: 12px">
       <input v-model="keyword" placeholder="搜索需求" style="max-width: 260px" />
@@ -143,8 +156,8 @@ onMounted(load)
                 <button v-if="i.status === 'DRAFT'" class="sm" :disabled="busy === i.intent_id" @click="setStatus(i.intent_id, 'REVIEW')">提交评审</button>
                 <button v-if="i.status === 'REVIEW'" class="sm primary" :disabled="busy === i.intent_id" @click="setStatus(i.intent_id, 'APPROVED')">通过</button>
                 <router-link
-                  v-if="lastCompiled && lastCompiled.intent_id === i.intent_id"
-                  :to="`/testcases/${lastCompiled.testcase_id}`"
+                  v-if="compiledByIntent[i.intent_id]"
+                  :to="`/testcases/${compiledByIntent[i.intent_id]}`"
                   class="sm"
                 >查看候选用例</router-link>
                 <button class="sm" :disabled="busy === i.intent_id" @click="explore(i.intent_id)">探索并生成候选</button>

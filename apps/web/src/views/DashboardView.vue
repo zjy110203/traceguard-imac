@@ -1,11 +1,17 @@
 <script setup lang="ts">
-/** 质量指挥中心：全部指标来自真实 API，不硬编码业务数字。 */
+/** 质量指挥中心：所有指标与趋势均从真实 API 数据计算，按真实时间分桶。 */
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { api, fmtDuration, fmtTime } from '../api'
+import { Activity, CircleAlert, Clock3, Play, RefreshCw, ShieldCheck, Users } from '@lucide/vue'
+import { api, fmtDuration, fmtPercent, fmtTime } from '../api'
 import AsyncBlock from '../components/AsyncBlock.vue'
-import Sparkline from '../components/Sparkline.vue'
+import BarChart from '../components/BarChart.vue'
+import ConfirmDialog from '../components/ConfirmDialog.vue'
+import DonutChart from '../components/DonutChart.vue'
+import MetricCard from '../components/MetricCard.vue'
+import PageHeader from '../components/PageHeader.vue'
 import StatusBadge from '../components/StatusBadge.vue'
+import TrendChart from '../components/TrendChart.vue'
 import { notify, notifyError } from '../toast'
 import type { Diagnosis, Run, TestCaseSummary } from '../types'
 
@@ -14,29 +20,25 @@ const runs = ref<Run[]>([])
 const cases = ref<TestCaseSummary[]>([])
 const diagnoses = ref<Diagnosis[]>([])
 const repairs = ref<Record<string, unknown>[]>([])
-const explorations = ref<Record<string, unknown>[]>([])
 const queue = ref<{ by_status: Record<string, number>; total: number; worker: { id: string; inline_running: boolean } } | null>(null)
 const loading = ref(true)
 const error = ref('')
 const busy = ref('')
+const confirmAll = ref(false)
+const lastUpdated = ref<number | null>(null)
 let timer: number | undefined
 
 async function load() {
   try {
-    const [r, c, d, p, ex, q] = await Promise.all([
-      api.get<Run[]>('/runs?limit=120&workspace_id=default'),
+    const [r, c, d, p, q] = await Promise.all([
+      api.get<Run[]>('/runs?limit=200&workspace_id=default'),
       api.get<TestCaseSummary[]>('/testcases?workspace_id=default'),
-      api.get<Diagnosis[]>('/diagnoses?limit=50&workspace_id=default'),
+      api.get<Diagnosis[]>('/diagnoses?limit=100&workspace_id=default'),
       api.get<Record<string, unknown>[]>('/repairs?workspace_id=default'),
-      api.get<Record<string, unknown>[]>('/explorations?workspace_id=default'),
       api.get<{ by_status: Record<string, number>; total: number; worker: { id: string; inline_running: boolean } }>('/queue/stats'),
     ])
-    runs.value = r
-    cases.value = c
-    diagnoses.value = d
-    repairs.value = p
-    explorations.value = ex
-    queue.value = q
+    runs.value = r; cases.value = c; diagnoses.value = d; repairs.value = p; queue.value = q
+    lastUpdated.value = Date.now()
     error.value = ''
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
@@ -45,282 +47,172 @@ async function load() {
   }
 }
 
-// ---- 结论统计（口径：test_verdict 非空即"有结论"；NOT_EVALUATED 单列不计入通过率分母） ----
 const finished = computed(() => runs.value.filter((r) => r.test_verdict && r.test_verdict !== 'NOT_EVALUATED'))
 const passed = computed(() => finished.value.filter((r) => r.test_verdict === 'PASSED').length)
 const failed = computed(() => finished.value.filter((r) => r.test_verdict === 'FAILED').length)
 const inconclusive = computed(() => finished.value.filter((r) => r.test_verdict === 'INCONCLUSIVE').length)
-const notEvaluated = computed(() => runs.value.filter((r) => !r.test_verdict || r.test_verdict === 'NOT_EVALUATED').length)
-const passRate = computed(() => (finished.value.length ? Math.round((passed.value / finished.value.length) * 100) : 0))
-
-const running = computed(() => runs.value.filter((r) => ['QUEUED', 'PREPARING', 'RUNNING'].includes(r.execution_status)))
+const notEvaluated = computed(() => runs.value.length - finished.value.length)
+const passRate = computed(() => (finished.value.length ? passed.value / finished.value.length : null))
+const runningNow = computed(() => runs.value.filter((r) => ['QUEUED', 'PREPARING', 'RUNNING', 'FINALIZING'].includes(r.execution_status)))
 const approvedCases = computed(() => cases.value.filter((c) => c.review_status === 'APPROVED'))
 
-// ---- 趋势（最近 20 个有结论 Run，按创建时间正序） ----
-const trendRuns = computed(() =>
-  finished.value
-    .slice()
-    .sort((a, b) => Number(a.created_at) - Number(b.created_at))
-    .slice(-20),
-)
-const trendSeries = computed(() => {
-  let p = 0
-  let f = 0
-  const pv: number[] = []
-  const fv: number[] = []
-  for (const r of trendRuns.value) {
-    if (r.test_verdict === 'PASSED') p++
-    else f++
-    pv.push(p)
-    fv.push(f)
+/** 近 7 个 UTC 自然日，按 Run.created_at 真实分桶；空桶保留，样本量可见。 */
+const daily = computed(() => {
+  const today = new Date()
+  const buckets = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() - 6 + i))
+    const key = d.toISOString().slice(0, 10)
+    return { key, label: key.slice(5), PASSED: 0, FAILED: 0, INCONCLUSIVE: 0, n: 0 }
+  })
+  for (const r of finished.value) {
+    const key = new Date(r.created_at * 1000).toISOString().slice(0, 10)
+    const bucket = buckets.find((b) => b.key === key)
+    if (!bucket || !r.test_verdict) continue
+    if (r.test_verdict === 'PASSED') bucket.PASSED += 1
+    else if (r.test_verdict === 'FAILED') bucket.FAILED += 1
+    else if (r.test_verdict === 'INCONCLUSIVE') bucket.INCONCLUSIVE += 1
+    bucket.n += 1
   }
-  return [
-    { label: 'PASSED（累计）', color: '#12b76a', values: pv },
-    { label: 'FAILED（累计）', color: '#f04438', values: fv },
-  ]
+  return buckets
 })
-
-// ---- 失败类型分布（来自真实诊断记录的 failure_domain 聚合） ----
+const trendSeries = computed(() => [
+  { label: 'PASSED', color: 'var(--pass)', values: daily.value.map((d) => d.PASSED) },
+  { label: 'FAILED', color: 'var(--fail)', values: daily.value.map((d) => d.FAILED) },
+  { label: 'INCONCLUSIVE', color: 'var(--incon)', values: daily.value.map((d) => d.INCONCLUSIVE) },
+])
+const segments = computed(() => [
+  { label: 'PASSED', value: passed.value, color: 'var(--pass)' },
+  { label: 'FAILED', value: failed.value, color: 'var(--fail)' },
+  { label: 'INCONCLUSIVE', value: inconclusive.value, color: 'var(--incon)' },
+  { label: 'NOT_EVALUATED', value: notEvaluated.value, color: 'var(--border-strong)' },
+])
 const failureDomains = computed(() => {
   const counts: Record<string, number> = {}
-  for (const d of diagnoses.value) {
-    for (const h of d.hypotheses ?? []) {
-      const dom = String(h.failure_domain ?? 'UNKNOWN')
-      counts[dom] = (counts[dom] ?? 0) + 1
-    }
+  for (const d of diagnoses.value) for (const h of d.hypotheses ?? []) {
+    const key = String(h.failure_domain || 'UNKNOWN')
+    counts[key] = (counts[key] || 0) + 1
   }
-  const total = Object.values(counts).reduce((a, b) => a + b, 0)
-  return { counts, total }
+  return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([label, value]) => ({ label, value, hint: `n=${value}` }))
 })
-
-// ---- 待办：失败 Run 中尚未诊断的 + 待审批修复 ----
 const diagnosedRunIds = computed(() => new Set(diagnoses.value.map((d) => d.run_id)))
-const pendingDiagnosis = computed(() =>
-  runs.value.filter((r) => r.test_verdict === 'FAILED' && !diagnosedRunIds.value.has(r.run_id)),
-)
-const pendingRepairApproval = computed(() =>
-  repairs.value.filter((r) => r.status === 'PENDING_APPROVAL' || r.status === 'VALIDATED'),
-)
-const recentErrors = computed(() =>
-  runs.value
-    .filter((r) => (r.report?.errors?.length ?? 0) > 0)
-    .slice(0, 4),
-)
-
-const dist = computed(() => {
-  const total = Math.max(runs.value.length, 1)
-  const seg = (n: number) => (n / total) * 100
-  return [
-    { key: 'PASSED', n: passed.value, w: seg(passed.value), c: '#12b76a' },
-    { key: 'FAILED', n: failed.value, w: seg(failed.value), c: '#f04438' },
-    { key: 'INCONCLUSIVE', n: inconclusive.value, w: seg(inconclusive.value), c: '#7a5af8' },
-    { key: 'NOT_EVALUATED', n: notEvaluated.value, w: seg(notEvaluated.value), c: '#98a2b3' },
-  ]
-})
+const pendingDiagnosis = computed(() => runs.value.filter((r) => r.test_verdict === 'FAILED' && !diagnosedRunIds.value.has(r.run_id)))
+const pendingRepairApproval = computed(() => repairs.value.filter((r) => ['PENDING_APPROVAL', 'VALIDATED'].includes(String(r.status))))
+const todoCount = computed(() => pendingDiagnosis.value.length + pendingRepairApproval.value.length)
+const latestEvents = computed(() => runs.value.slice().sort((a, b) => b.created_at - a.created_at).slice(0, 5))
+const recentErrors = computed(() => runs.value.filter((r) => (r.report?.errors?.length ?? 0) > 0).slice(0, 3))
 
 async function executeAll() {
+  confirmAll.value = false
   busy.value = 'all'
   try {
-    for (const c of approvedCases.value) {
-      await api.post(`/testcases/${c.testcase_id}/execute`, { sync: false })
-    }
+    for (const c of approvedCases.value) await api.post(`/testcases/${c.testcase_id}/execute`, { sync: false })
     notify(`已入队 ${approvedCases.value.length} 个已审核用例`)
     await load()
-  } catch (e) {
-    notifyError(e)
-  } finally {
-    busy.value = ''
-  }
+  } catch (e) { notifyError(e) } finally { busy.value = '' }
 }
+function drill(verdict: string) { void router.push({ path: '/runs', query: { verdict } }) }
 
-async function seed() {
-  busy.value = 'seed'
-  try {
-    const r = await api.post<{ created: number; skipped: number }>('/system/seed')
-    notify(`种子完成：新增 ${r.created}，跳过 ${r.skipped}`)
-    await load()
-  } catch (e) {
-    notifyError(e)
-  } finally {
-    busy.value = ''
-  }
-}
-
-onMounted(() => {
-  load()
-  timer = window.setInterval(load, 5000)
-})
+onMounted(() => { load(); timer = window.setInterval(load, 10000) })
 onUnmounted(() => window.clearInterval(timer))
 </script>
 
 <template>
   <div>
-    <div class="page-head">
-      <div>
-        <h1>质量指挥中心</h1>
-        <div class="sub">
-          全部指标来自真实执行数据 · 通过率口径：PASSED /（PASSED+FAILED+INCONCLUSIVE），NOT_EVALUATED 不计入
-        </div>
-      </div>
-      <div class="actions">
-        <button :disabled="busy === 'seed'" @click="seed">初始化演示资产</button>
-        <button class="primary" :disabled="busy === 'all' || approvedCases.length === 0" @click="executeAll">
-          执行全部已审核用例（{{ approvedCases.length }}）
+    <PageHeader eyebrow="Quality Command Center" title="质量指挥中心"
+      subtitle="第一屏回答：质量状况、执行中任务、失败项、待诊断、待审批修复、系统状态。口径与样本量随图表一起展示。">
+      <template #actions>
+        <button class="sm" type="button" @click="load"><RefreshCw :size="13" /> 刷新</button>
+        <button class="sm primary" type="button" :disabled="busy === 'all' || !approvedCases.length" @click="confirmAll = true">
+          <Play :size="13" /> 执行全部已审核用例（{{ approvedCases.length }}）
         </button>
-      </div>
-    </div>
+      </template>
+      <template #meta>
+        <div class="small muted mt">数据每 10 秒静默刷新 · 上次更新 {{ fmtTime(lastUpdated ? lastUpdated / 1000 : null) }} · 后端状态来自真实 API</div>
+      </template>
+    </PageHeader>
 
     <AsyncBlock :loading="loading" :error="error">
-      <div class="grid c4" style="margin-bottom: 14px">
-        <div class="metric">
-          <div class="label">通过率</div>
-          <div class="value" :style="passRate >= 80 ? 'color:var(--pass)' : passRate >= 50 ? 'color:var(--warn)' : 'color:var(--fail)'">
-            {{ finished.length ? passRate + '%' : '—' }}
-          </div>
-          <div class="hint">{{ passed }} 通过 / {{ finished.length }} 有结论</div>
-        </div>
-        <div class="metric">
-          <div class="label">失败 Run</div>
-          <div class="value" :style="failed ? 'color:var(--fail)' : 'color:var(--pass)'">{{ failed }}</div>
-          <div class="hint">待诊断 {{ pendingDiagnosis.length }} 个</div>
-        </div>
-        <div class="metric">
-          <div class="label">执行中 / 队列</div>
-          <div class="value">{{ running.length }}</div>
-          <div class="hint">
-            队列总计 {{ queue?.total ?? 0 }} · Worker {{ queue?.worker?.inline_running ? '运行中' : '空闲' }}
-          </div>
-        </div>
-        <div class="metric">
-          <div class="label">证据与探索</div>
-          <div class="value">{{ explorations.length }}</div>
-          <div class="hint">探索记录 · 待审批修复 {{ pendingRepairApproval.length }}</div>
-        </div>
+      <div class="metric-grid m5">
+        <MetricCard label="总 Run 数" :value="runs.length" :hint="`${approvedCases.length} 个已审核用例`" to="/runs" icon="activity" />
+        <MetricCard label="通过率" :value="fmtPercent(passRate)" :hint="`口径 PASSED / (PASSED+FAILED+INCONCLUSIVE) · n=${finished.length}`" tone="pass" icon="shield" />
+        <MetricCard label="FAILED" :value="failed" hint="点击查看失败执行" tone="fail" icon="alert" to="/runs?verdict=FAILED" />
+        <MetricCard label="INCONCLUSIVE" :value="inconclusive" hint="不等于 PASSED" tone="incon" icon="help" to="/runs?verdict=INCONCLUSIVE" />
+        <MetricCard label="待处理任务" :value="todoCount" :hint="`${pendingDiagnosis.length} 待诊断 · ${pendingRepairApproval.length} 待审批`" tone="warn" icon="gauge" to="/repairs" />
       </div>
 
-      <div class="split" style="margin-bottom: 14px">
-        <div class="card">
-          <div class="card-head">
-            <h2>结论趋势</h2>
-            <div class="actions"><span class="small muted">最近 {{ trendRuns.length }} 个有结论 Run</span></div>
-          </div>
-          <div class="card-body">
-            <Sparkline :series="trendSeries" :height="140" />
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-head"><h2>四态结论分布</h2></div>
-          <div class="card-body">
-            <div class="bar" style="height: 12px; margin-bottom: 12px">
-              <span v-for="d in dist" :key="d.key" :style="`width:${d.w}%;background:${d.c}`" />
+      <div class="grid c2 mt">
+        <section class="panel">
+          <div class="panel-head"><h2>测试结论趋势</h2><span class="small muted">近 7 个 UTC 自然日 · 真实时间分桶</span></div>
+          <div class="panel-body">
+            <TrendChart :series="trendSeries" :labels="daily.map((d) => d.label)" :height="200" @select="drill(['PASSED','FAILED','INCONCLUSIVE'][$event] || '')" />
+            <div class="sample-strip">
+              <span v-for="d in daily" :key="d.key" class="small muted"><b class="mono">{{ d.label }}</b> n={{ d.n }}</span>
             </div>
-            <div class="legend">
-              <span v-for="d in dist" :key="d.key">
-                <span class="swatch" :style="`background:${d.c}`" />{{ d.key }} {{ d.n }}
-              </span>
-            </div>
-            <div class="hr" />
-            <div class="kv">
-              <dt>诊断记录</dt><dd>{{ diagnoses.length }}（CONFIRMED 需确定性规则与可信证据）</dd>
-              <dt>INCONCLUSIVE</dt><dd>{{ inconclusive }} —— 证据不足不算通过</dd>
-              <dt>NOT_EVALUATED</dt><dd>{{ notEvaluated }} —— 未完成评估，单独列示</dd>
-            </div>
+            <p class="small muted mt">每桶按 Run 创建时间归类；空桶保留为 0，不把累计计数包装成通过率趋势。</p>
           </div>
-        </div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h2>四态分布</h2><span class="small muted">n={{ runs.length }}</span></div>
+          <div class="panel-body"><DonutChart :segments="segments" center-label="总 Run" @select="drill" /></div>
+        </section>
       </div>
 
-      <div class="split">
-        <div class="flex-col">
-          <div class="card">
-            <div class="card-head">
-              <h2>失败类型分布</h2>
-              <div class="actions"><span class="small muted">按诊断 failure_domain 聚合（{{ failureDomains.total }} 假设）</span></div>
+      <div class="grid c2 mt">
+        <section class="panel">
+          <div class="panel-head"><h2>失败类型分布</h2><span class="small muted">来自诊断假设 · n={{ diagnoses.reduce((s, d) => s + (d.hypotheses?.length || 0), 0) }}</span></div>
+          <div class="panel-body"><BarChart :items="failureDomains" @select="() => $router.push('/diagnoses')" /></div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h2>执行队列与 Worker</h2><span class="small muted">实时轮询</span></div>
+          <div class="panel-body">
+            <div class="status-cards">
+              <div><span class="small muted">QUEUED</span><strong>{{ queue?.by_status?.QUEUED || 0 }}</strong></div>
+              <div><span class="small muted">RUNNING</span><strong class="warn-text">{{ queue?.by_status?.RUNNING || 0 }}</strong></div>
+              <div><span class="small muted">执行中 Run</span><strong>{{ runningNow.length }}</strong></div>
+              <div><span class="small muted">Worker</span><strong class="small">{{ queue?.worker?.inline_running ? 'inline running' : 'idle' }}</strong></div>
             </div>
-            <div class="card-body">
-              <template v-if="failureDomains.total">
-                <div v-for="(n, dom) in failureDomains.counts" :key="dom" class="flex" style="margin-bottom: 6px">
-                  <span class="small" style="width: 130px">{{ dom }}</span>
-                  <div class="bar" style="flex: 1">
-                    <span :style="`width:${(Number(n) / failureDomains.total) * 100}%;background:#2f5bea`" />
-                  </div>
-                  <span class="small muted" style="width: 24px; text-align: right">{{ n }}</span>
-                </div>
-              </template>
-              <div v-else class="empty">暂无诊断记录，无失败类型可聚合</div>
-            </div>
+            <div class="small muted mt">Worker ID：<span class="mono">{{ queue?.worker?.id || '—' }}</span></div>
           </div>
+        </section>
+      </div>
 
-          <div class="card">
-            <div class="card-head"><h2>待办</h2></div>
-            <div class="card-body">
-              <div class="todo-item">
-                <span class="num" :style="pendingDiagnosis.length ? 'color:var(--fail)' : 'color:var(--text-3)'">{{ pendingDiagnosis.length }}</span>
-                <div style="flex: 1">
-                  <div class="strong small">失败 Run 待诊断</div>
-                  <div class="muted" style="font-size: 11.5px">失败但尚无诊断记录</div>
-                </div>
-                <router-link v-if="pendingDiagnosis.length" to="/diagnoses" class="small">去处理 →</router-link>
-              </div>
-              <div class="todo-item">
-                <span class="num" :style="pendingRepairApproval.length ? 'color:var(--warn)' : 'color:var(--text-3)'">{{ pendingRepairApproval.length }}</span>
-                <div style="flex: 1">
-                  <div class="strong small">修复提案待审批</div>
-                  <div class="muted" style="font-size: 11.5px">沙箱验证通过，等待具名人工审批</div>
-                </div>
-                <router-link v-if="pendingRepairApproval.length" to="/repairs" class="small">去审批 →</router-link>
-              </div>
-            </div>
+      <div class="grid c3 mt">
+        <section class="panel">
+          <div class="panel-head"><h2>最近执行</h2><router-link class="small" to="/runs">全部 →</router-link></div>
+          <div class="panel-body tight scroll-x">
+            <table><thead><tr><th>Run</th><th>结论</th><th>时间</th></tr></thead><tbody>
+              <tr v-for="r in latestEvents" :key="r.run_id" class="row-click" @click="$router.push(`/runs/${r.run_id}`)">
+                <td class="mono small">{{ r.run_id.slice(-12) }}</td>
+                <td><StatusBadge :value="r.test_verdict" /></td>
+                <td class="small muted nowrap">{{ fmtTime(r.created_at) }}</td>
+              </tr>
+              <tr v-if="!latestEvents.length"><td colspan="3"><div class="empty small">暂无执行记录</div></td></tr>
+            </tbody></table>
           </div>
-        </div>
-
-        <div class="flex-col">
-          <div class="card">
-            <div class="card-head">
-              <h2>最近执行</h2>
-              <div class="actions"><router-link to="/runs" class="small">查看全部 →</router-link></div>
-            </div>
-            <div class="card-body tight scroll-x">
-              <table>
-                <thead>
-                  <tr><th>用例</th><th>结论</th><th>执行</th><th>模式</th><th>耗时</th><th>时间</th></tr>
-                </thead>
-                <tbody>
-                  <tr v-for="r in runs.slice(0, 8)" :key="r.run_id" class="row-click" @click="router.push(`/runs/${r.run_id}`)">
-                    <td>
-                      <div class="strong">{{ r.report?.testcase_id || r.testcase_version_id }}</div>
-                      <div class="mono muted" style="font-size: 10.5px">{{ r.run_id.slice(-12) }}</div>
-                    </td>
-                    <td><StatusBadge :value="r.test_verdict" /></td>
-                    <td><StatusBadge :value="r.execution_status" /></td>
-                    <td class="small">{{ r.observer_mode || '—' }}</td>
-                    <td class="small nowrap">{{ fmtDuration(r.report?.duration_ms) }}</td>
-                    <td class="small muted nowrap">{{ fmtTime(r.created_at) }}</td>
-                  </tr>
-                  <tr v-if="runs.length === 0">
-                    <td colspan="6"><div class="empty">还没有执行记录，点击右上角执行用例</div></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h2>待办</h2><span class="small muted">{{ todoCount }} 项</span></div>
+          <div class="panel-body">
+            <div class="todo-item"><span class="num warn-text">{{ pendingDiagnosis.length }}</span><div><b>待诊断</b><div class="small muted">FAILED 且尚无诊断记录</div></div><button class="sm right" @click="$router.push('/diagnoses')">查看</button></div>
+            <div class="todo-item"><span class="num warn-text">{{ pendingRepairApproval.length }}</span><div><b>待审批修复</b><div class="small muted">PENDING_APPROVAL / VALIDATED</div></div><button class="sm right" @click="$router.push('/repairs')">查看</button></div>
+            <div class="todo-item"><span class="num">{{ runs.filter((r) => r.execution_status === 'COMPLETED' && !r.report).length }}</span><div><b>报告缺失</b><div class="small muted">COMPLETED 但无 report</div></div></div>
           </div>
-
-          <div class="card">
-            <div class="card-head"><h2>最近异常</h2></div>
-            <div class="card-body">
-              <template v-if="recentErrors.length">
-                <div v-for="r in recentErrors" :key="r.run_id" style="margin-bottom: 8px">
-                  <router-link :to="`/runs/${r.run_id}`" class="mono small">{{ r.run_id.slice(-12) }}</router-link>
-                  <div v-for="e in r.report?.errors?.slice(0, 2)" :key="e" class="small mono truncate" style="color: var(--fail); max-width: 480px">
-                    {{ e }}
-                  </div>
-                </div>
-              </template>
-              <div v-else class="empty">近期没有执行异常</div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h2>最近重要事件</h2><span class="small muted">执行错误</span></div>
+          <div class="panel-body">
+            <div v-for="r in recentErrors" :key="r.run_id" class="todo-item">
+              <Activity :size="14" class="warn-text" />
+              <div class="truncate"><b class="mono small">{{ r.run_id.slice(-10) }}</b><div class="small muted truncate">{{ r.report?.errors?.[0] || r.error || '未知错误' }}</div></div>
             </div>
+            <div v-if="!recentErrors.length" class="empty small">最近没有执行错误</div>
           </div>
-        </div>
+        </section>
       </div>
     </AsyncBlock>
+
+    <ConfirmDialog :open="confirmAll" title="执行全部已审核用例" danger
+      :message="`将向队列提交 ${approvedCases.length} 个已审核用例。每个执行都会产生新的 Run，不会覆盖历史。`"
+      confirm-label="确认入队" @confirm="executeAll" @cancel="confirmAll = false" />
   </div>
 </template>

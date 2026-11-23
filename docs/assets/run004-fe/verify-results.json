@@ -1,0 +1,273 @@
+{
+  "base": "http://127.0.0.1:8021",
+  "checks": [
+    {
+      "name": "render:/",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "screenshot:dashboard.png",
+      "ok": true,
+      "detail": "247486 bytes"
+    },
+    {
+      "name": "render:/explorer",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "screenshot:explorer.png",
+      "ok": true,
+      "detail": "208915 bytes"
+    },
+    {
+      "name": "render:/models",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "screenshot:models.png",
+      "ok": true,
+      "detail": "294066 bytes"
+    },
+    {
+      "name": "render:/runs",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "screenshot:runs.png",
+      "ok": true,
+      "detail": "2516759 bytes"
+    },
+    {
+      "name": "render:/intents",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "screenshot:intents.png",
+      "ok": true,
+      "detail": "222507 bytes"
+    },
+    {
+      "name": "render:/testcases",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "screenshot:testcases.png",
+      "ok": true,
+      "detail": "641582 bytes"
+    },
+    {
+      "name": "render:/oracles",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "screenshot:oracles.png",
+      "ok": true,
+      "detail": "177509 bytes"
+    },
+    {
+      "name": "render:/benchmark",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "screenshot:benchmark.png",
+      "ok": true,
+      "detail": "431000 bytes"
+    },
+    {
+      "name": "render:/repairs",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "screenshot:repairs.png",
+      "ok": true,
+      "detail": "329302 bytes"
+    },
+    {
+      "name": "render:/diagnoses",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "screenshot:diagnoses.png",
+      "ok": true,
+      "detail": "528353 bytes"
+    },
+    {
+      "name": "render:/system",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "screenshot:system.png",
+      "ok": true,
+      "detail": "262947 bytes"
+    },
+    {
+      "name": "global-search",
+      "ok": true,
+      "detail": "1 results"
+    },
+    {
+      "name": "search-esc",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "dashboard-four-states",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "dashboard-sample-size",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "chart-drilldown",
+      "ok": true,
+      "detail": "http://127.0.0.1:8021/runs?verdict=PASSED"
+    },
+    {
+      "name": "explorer-engine",
+      "ok": true,
+      "detail": "ENGINE llm:deepseek PROMPT deepseek:deepseek-flash:explorer_planner@v1 LLM / 兜底 4 / 0 停止原因 BLOCKED: INVALID_PARAMS 耗时 7."
+    },
+    {
+      "name": "explorer-llm-stats",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "explorer-no-hardcoded-rule-text",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "explorer-step-detail",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "explorer-compile",
+      "ok": true,
+      "detail": "已编译记录"
+    },
+    {
+      "name": "run-detail-header",
+      "ok": true,
+      "detail": "Run 2c4442166c36"
+    },
+    {
+      "name": "screenshot:run-detail.png",
+      "ok": true,
+      "detail": "290681 bytes"
+    },
+    {
+      "name": "run-evidence-tab",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "evidence-graph-controls",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "diagnosis-chain",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "diagnosis-advisor",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "screenshot:diagnosis-detail.png",
+      "ok": true,
+      "detail": "383379 bytes"
+    },
+    {
+      "name": "repair-lifecycle",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "repair-diff",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "benchmark-comparison",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "benchmark-verification",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "models-real-data",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "models-no-key",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "system-health",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "dark-theme",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "screenshot:dashboard-dark.png",
+      "ok": true,
+      "detail": "250735 bytes"
+    },
+    {
+      "name": "mobile-menu-visible",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile-no-overflow",
+      "ok": true,
+      "detail": "overflow=0px"
+    },
+    {
+      "name": "mobile-drawer",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "screenshot:mobile-dashboard.png",
+      "ok": true,
+      "detail": "187525 bytes"
+    },
+    {
+      "name": "mobile-drawer-esc",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "failed": [],
+  "console_errors": [],
+  "passed": 53
+}

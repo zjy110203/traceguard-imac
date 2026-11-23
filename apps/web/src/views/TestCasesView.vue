@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, fmtTime } from '../api'
 import AsyncBlock from '../components/AsyncBlock.vue'
+import PageHeader from '../components/PageHeader.vue'
 import ModalShell from '../components/ModalShell.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import { notify, notifyError } from '../toast'
@@ -120,16 +121,13 @@ onMounted(load)
 
 <template>
   <div>
-    <div class="page-head">
-      <div>
-        <h1>测试资产</h1>
-        <div class="sub">TestIntent → TestCase 版本 / 审核 → 正式执行。只有 APPROVED 版本可执行。</div>
-      </div>
-      <div class="actions">
+    <PageHeader eyebrow="Catalog / Test Assets" title="测试资产"
+      subtitle="TestIntent → TestCase 版本 / 审核 → 正式执行。只有 APPROVED 版本可执行。">
+      <template #actions>
         <button @click="load">刷新</button>
         <button class="primary" @click="showCreate = true">新建用例</button>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <div class="card">
       <div class="card-head">

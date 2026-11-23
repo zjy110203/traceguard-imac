@@ -1,19 +1,23 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { api, fmtDuration, fmtTime } from '../api'
 import AsyncBlock from '../components/AsyncBlock.vue'
+import MetricCard from '../components/MetricCard.vue'
+import PageHeader from '../components/PageHeader.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import type { Run } from '../types'
 
 const router = useRouter()
+const route = useRoute()
 const runs = ref<Run[]>([])
 const loading = ref(true)
 const error = ref('')
-const verdict = ref('')
+const verdict = ref(String(route.query.verdict ?? ''))
 const includeBench = ref(false)
 const status = ref('')
 let timer: number | undefined
+watch(() => route.query.verdict, (v) => { verdict.value = String(v ?? '') })
 
 const filtered = computed(() =>
   runs.value.filter((r) => (!verdict.value || r.test_verdict === verdict.value) && (!status.value || r.execution_status === status.value)),
@@ -46,27 +50,25 @@ function verdictCount(v: string) {
 
 <template>
   <div>
-    <div class="page-head">
-      <div>
-        <h1>执行中心</h1>
-        <div class="sub">每次执行是一个 Run；重试产生新 Run，历史不被覆盖。模式区分 playwright 与 http-fallback。</div>
-      </div>
-      <div class="actions">
+    <PageHeader eyebrow="Execution" title="执行中心"
+      subtitle="每次执行是一个 Run；重试产生新 Run，历史不被覆盖。模式区分 playwright 与 http-fallback。">
+      <template #actions>
         <span v-if="active" class="badge warn"><span class="spinner" style="width: 10px; height: 10px; border-width: 1.5px" /> 有执行中的 Run</span>
         <button @click="load">刷新</button>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
-    <div class="grid c4" style="margin-bottom: 14px">
-      <div class="metric"><div class="label">总 Run</div><div class="value">{{ runs.length }}</div></div>
-      <div class="metric"><div class="label">PASSED</div><div class="value" style="color: var(--pass)">{{ verdictCount('PASSED') }}</div></div>
-      <div class="metric"><div class="label">FAILED</div><div class="value" style="color: var(--fail)">{{ verdictCount('FAILED') }}</div></div>
-      <div class="metric"><div class="label">NOT_EVALUATED</div><div class="value">{{ verdictCount('NOT_EVALUATED') }}</div></div>
+    <div class="metric-grid m5" style="margin-bottom: 14px">
+      <MetricCard label="总 Run" :value="runs.length" hint="当前可见范围" icon="activity" />
+      <MetricCard label="PASSED" :value="verdictCount('PASSED')" tone="pass" icon="shield" />
+      <MetricCard label="FAILED" :value="verdictCount('FAILED')" tone="fail" icon="alert" />
+      <MetricCard label="INCONCLUSIVE" :value="verdictCount('INCONCLUSIVE')" tone="incon" icon="help" />
+      <MetricCard label="NOT_EVALUATED" :value="verdictCount('NOT_EVALUATED')" hint="不计入通过率分母" icon="layers" />
     </div>
 
     <div class="card">
       <div class="card-head">
-        <div class="toolbar">
+        <div class="filter-bar">
           <select v-model="verdict">
             <option value="">全部结论</option>
             <option value="PASSED">PASSED</option>

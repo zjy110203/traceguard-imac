@@ -1,5 +1,7 @@
 /** 统一 API 客户端：真实后端调用，不做任何 Mock。 */
 
+import type { BrowserHealth, LLMUsageSummary, SystemHealth } from './types'
+
 const BASE = '/api/v1'
 
 export class ApiError extends Error {
@@ -87,4 +89,34 @@ export function fmtBytes(n: number | undefined): string {
   if (n < 1024) return `${n} B`
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`
   return `${(n / 1024 / 1024).toFixed(1)} MB`
+}
+
+/** 语义化端点：避免在视图中散落字符串路径。 */
+export const endpoints = {
+  systemHealth: () => api.get<SystemHealth>('/system/health'),
+  browserHealth: (probe = false) => api.get<BrowserHealth>(`/system/browser?probe=${probe}`),
+  llmSummary: () => api.get<LLMUsageSummary>('/system/llm/summary'),
+  queueStats: () => api.get<{ by_status: Record<string, number>; total: number; worker: Record<string, unknown> }>('/queue/stats'),
+}
+
+export function fmtNumber(n: number | null | undefined): string {
+  if (n === null || n === undefined) return '—'
+  return n.toLocaleString('zh-CN')
+}
+
+export function fmtTokens(n: number | null | undefined): string {
+  if (n === null || n === undefined) return '—'
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`
+  return String(n)
+}
+
+export function fmtUsd(n: number | null | undefined): string {
+  if (n === null || n === undefined) return '未知'
+  return `$${n < 0.01 ? n.toFixed(5) : n.toFixed(3)}`
+}
+
+export function fmtPercent(n: number | null | undefined, digits = 1): string {
+  if (n === null || n === undefined || !Number.isFinite(n)) return '—'
+  return `${(n * 100).toFixed(digits)}%`
 }

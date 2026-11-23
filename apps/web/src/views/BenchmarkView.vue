@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { api, fmtTime } from '../api'
 import AsyncBlock from '../components/AsyncBlock.vue'
+import BarChart from '../components/BarChart.vue'
+import PageHeader from '../components/PageHeader.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import { notify, notifyError } from '../toast'
 import type { BenchmarkExperiment } from '../types'
@@ -53,24 +55,46 @@ const grouped = computed(() => {
   return out
 })
 const baselines = computed(() => Array.from(new Set((selected.value?.metrics ?? []).map((m) => m.baseline))))
+const metricNames = computed(() => Object.keys(grouped.value))
+const chosenMetric = ref('')
+watch(selected, () => { chosenMetric.value = metricNames.value[0] || '' })
+const activeMetric = computed(() => (chosenMetric.value && grouped.value[chosenMetric.value]) ? chosenMetric.value : metricNames.value[0] || '')
+const comparison = computed(() => baselines.value.map((b) => {
+  const cell = grouped.value[activeMetric.value]?.[b]
+  return {
+    label: b,
+    value: cell?.value ?? 0,
+    hint: cell?.d ? `n=${cell.n ?? '—'}/${cell.d}` : '无样本',
+    color: b.toLowerCase().includes('llm') ? 'var(--incon)' : 'var(--brand)',
+  }
+}))
+const minSample = computed(() => {
+  const ns = (selected.value?.metrics ?? []).map((m) => m.denominator).filter((n): n is number => typeof n === 'number')
+  return ns.length ? Math.min(...ns) : null
+})
+const formatPct = (v: number) => `${(v * 100).toFixed(1)}%`
+const verification = computed(() => {
+  const s = selected.value
+  if (!s) return '未验证'
+  if (s.blocked_baselines?.length || s.status === 'BLOCKED') return 'BLOCKED'
+  if (minSample.value !== null && minSample.value < 10) return '样本不足'
+  return s.status === 'COMPLETED' ? '已验证' : '未验证'
+})
 
 onMounted(load)
 </script>
 
 <template>
   <div>
-    <div class="page-head">
-      <div>
-        <h1>UI-FaultBench</h1>
-        <div class="sub">真实执行产出的对照实验：固定数据集、GT 隔离、分子/分母可核、LLM 基线缺失时明确标记 BLOCKED。</div>
-      </div>
-      <div class="actions">
-        <button :disabled="!!busy" @click="run('A')">运行实验 A · 用例生成</button>
-        <button :disabled="!!busy" @click="run('B')">运行实验 B · 故障诊断</button>
-        <button :disabled="!!busy" @click="run('C')">运行实验 C · 测试自愈</button>
+    <PageHeader eyebrow="UI-FaultBench" title="Benchmark 实验对照"
+      subtitle="真实执行产出的对照实验：固定数据集、GT 隔离、分子/分母可核。已验证 / 未验证 / BLOCKED / 样本不足严格区分，不以小样本宣称统计显著。">
+      <template #actions>
+        <button :disabled="!!busy" @click="run('A')">实验 A · 用例生成</button>
+        <button :disabled="!!busy" @click="run('B')">实验 B · 故障诊断</button>
+        <button :disabled="!!busy" @click="run('C')">实验 C · 自愈</button>
         <button @click="load">刷新</button>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <div class="bench-grid">
       <div class="card">
@@ -100,14 +124,40 @@ onMounted(load)
         <div class="card">
           <div class="card-head">
             <h2>{{ selected.name }}</h2>
-            <div class="actions"><StatusBadge :value="selected.status" /><span class="badge neutral">{{ selected.dataset }}</span></div>
+            <div class="actions">
+              <StatusBadge :value="selected.status" />
+              <span class="badge" :class="verification === '已验证' ? 'pass' : verification === 'BLOCKED' ? 'fail' : 'warn'">{{ verification }}</span>
+              <span class="badge neutral">{{ selected.dataset }}</span>
+            </div>
           </div>
           <div class="card-body">
             <div class="kv">
-              <dt>数据集</dt><dd class="mono small">{{ selected.dataset }}</dd>
+              <dt>Experiment ID</dt><dd class="mono small">{{ selected.experiment_id }}</dd>
+              <dt>数据集版本</dt><dd class="mono small">{{ selected.dataset }}</dd>
+              <dt>实验类型</dt><dd class="mono small">{{ selected.kind }}</dd>
+              <dt>基线 / 模型</dt><dd class="mono small">{{ baselines.join(' · ') || '—' }}</dd>
+              <dt>最小样本量</dt><dd class="mono small">{{ minSample ?? '—' }}</dd>
               <dt>配置</dt><dd class="mono small">{{ JSON.stringify(selected.config) }}</dd>
               <dt>说明</dt><dd class="small">{{ selected.notes || '—' }}</dd>
             </div>
+            <div v-if="minSample !== null && minSample < 10" class="alert-line warn mt">
+              样本不足：最小分母 n={{ minSample }}。结果仅作为观察，不做统计显著性结论。
+            </div>
+          </div>
+        </div>
+
+        <div class="card" v-if="comparison.length">
+          <div class="card-head">
+            <h2>多组对比</h2>
+            <div class="actions">
+              <select v-model="chosenMetric" aria-label="选择对比指标" style="width: 220px">
+                <option v-for="m in metricNames" :key="m" :value="m">{{ m }}</option>
+              </select>
+            </div>
+          </div>
+          <div class="panel-body">
+            <BarChart :items="comparison" :max="1" :format="formatPct" />
+            <p class="small muted mt">口径：{{ activeMetric }} · 分子/分母与 Wilson CI 见下方指标矩阵；BLOCKED 组不产生数值。</p>
           </div>
         </div>
 

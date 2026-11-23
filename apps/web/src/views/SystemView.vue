@@ -2,6 +2,8 @@
 import { onMounted, ref } from 'vue'
 import { api, fmtBytes } from '../api'
 import AsyncBlock from '../components/AsyncBlock.vue'
+import MetricCard from '../components/MetricCard.vue'
+import PageHeader from '../components/PageHeader.vue'
 import { notify, notifyError } from '../toast'
 import type { BrowserHealth, SystemHealth } from '../types'
 
@@ -65,44 +67,21 @@ onMounted(() => load())
 
 <template>
   <div>
-    <div class="page-head">
-      <div>
-        <h1>系统与运行环境</h1>
-        <div class="sub">数据库、浏览器、Worker、产物存储的真实状态（不是配置文件的自我描述）。</div>
-      </div>
-      <div class="actions">
+    <PageHeader eyebrow="Runtime / System" title="系统与运行环境"
+      subtitle="数据库、浏览器、Worker、产物存储的真实状态（不是配置文件的自我描述）。浏览器状态需主动自检，配置成功不等于连通成功。">
+      <template #actions>
         <button :disabled="busy === 'browser'" @click="probeBrowser">真实启动浏览器自检</button>
         <button :disabled="busy === 'seed'" @click="seed">写入演示资产</button>
         <button @click="load()">刷新</button>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <AsyncBlock :loading="loading" :error="error">
-      <div class="grid c4" style="margin-bottom: 14px">
-        <div class="metric">
-          <div class="label">数据库</div>
-          <div class="value" :style="health?.database.ok ? 'color:var(--pass)' : 'color:var(--fail)'">
-            {{ health?.database.ok ? 'OK' : 'FAIL' }}
-          </div>
-          <div class="hint">{{ health?.database.dialect }}<span v-if="health?.database.error"> · {{ health?.database.error }}</span></div>
-        </div>
-        <div class="metric">
-          <div class="label">Worker</div>
-          <div class="value">{{ health?.worker?.inline_running ? 'RUNNING' : 'IDLE' }}</div>
-          <div class="hint mono">{{ health?.worker?.id }}</div>
-        </div>
-        <div class="metric">
-          <div class="label">浏览器</div>
-          <div class="value" :style="browser?.available ? 'color:var(--pass)' : 'color:var(--fail)'">
-            {{ browser?.available ? 'READY' : 'N/A' }}
-          </div>
-          <div class="hint">{{ browser?.channel }} {{ browser?.version }}</div>
-        </div>
-        <div class="metric">
-          <div class="label">产物目录</div>
-          <div class="value" style="font-size: 15px; word-break: break-all">{{ health?.artifact_dir }}</div>
-          <div class="hint">{{ artifacts.length }} 个最近产物</div>
-        </div>
+      <div class="metric-grid m5" style="margin-bottom: 14px">
+        <MetricCard label="数据库" :value="health?.database.ok ? 'OK' : 'FAIL'" :hint="`${health?.database.dialect || '—'}${health?.database.error ? ' · ' + health.database.error : ''}`" :tone="health?.database.ok ? 'pass' : 'fail'" icon="shield" />
+        <MetricCard label="Worker" :value="health?.worker?.inline_running ? 'RUNNING' : 'IDLE'" :hint="health?.worker?.id || '—'" :tone="health?.worker?.inline_running ? 'pass' : 'neutral'" icon="activity" />
+        <MetricCard label="浏览器" :value="browser?.available ? 'READY' : 'N/A'" :hint="`${browser?.channel || '—'} ${browser?.version || ''}`" :tone="browser?.available ? 'pass' : 'warn'" icon="gauge" />
+        <MetricCard label="最近产物" :value="artifacts.length" hint="真实落盘文件" icon="layers" />
       </div>
 
       <div class="split">

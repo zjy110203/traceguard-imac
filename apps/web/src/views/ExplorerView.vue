@@ -1,12 +1,15 @@
 <script setup lang="ts">
-/** Agent 探索与编译中心：Explorer 轨迹 / ToolGateway 审计 / Compiler 候选。
- *  诚实标注：当前规划器为规则实现（rule-based-v1），不是 LLM。 */
+/** Agent Studio：探索轨迹 / ToolGateway 审计 / 编译候选。所有模型信息来自真实 API。 */
 import { computed, onMounted, ref } from 'vue'
-import { api, fmtTime } from '../api'
+import { Bot, ChevronRight, CircleAlert, Cpu, FileCode2, GitBranch, Play, RefreshCw, Search, ShieldCheck } from '@lucide/vue'
+import { api, fmtDuration, fmtTime } from '../api'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import JsonBlock from '../components/JsonBlock.vue'
+import MetricCard from '../components/MetricCard.vue'
+import PageHeader from '../components/PageHeader.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import { notify, notifyError } from '../toast'
+import type { ExplorationAction, ExplorationDetail } from '../types'
 
 interface ExplorationRow {
   exploration_id: string
@@ -14,42 +17,13 @@ interface ExplorationRow {
   status: string
   action_count: number
   stop_reason: string
+  engine?: string
   compiled?: { testcase_id: string; version: number; warnings: string[]; compiler_version: string; prompt_version: string; model_version: string } | null
   created_at: string
 }
+interface IntentRow { intent_id: string; title?: string; description?: string; review_status?: string }
 
-interface ActionItem {
-  action: string
-  params: Record<string, unknown>
-  result?: string
-  reason?: string
-  gateway: string
-  error?: string
-}
-
-interface ExplorationDetail extends ExplorationRow {
-  workspace_id: string
-  error: string
-  trace: {
-    exploration_id: string
-    agent_version?: string
-    prompt_version?: string
-    tool_version?: string
-    browser_version?: string
-    application_version?: string
-    stop_reason?: string
-    action_sequence: ActionItem[]
-    page_state_refs: string[]
-  }
-  gateway_audit: Record<string, unknown>[]
-}
-
-interface IntentRow {
-  intent_id: string
-  title?: string
-  description?: string
-  review_status?: string
-}
+type Source = 'llm' | 'rule' | 'fallback'
 
 const rows = ref<ExplorationRow[]>([])
 const intents = ref<IntentRow[]>([])
@@ -58,6 +32,11 @@ const error = ref('')
 const selected = ref<ExplorationDetail | null>(null)
 const detailLoading = ref(false)
 const busy = ref('')
+const filter = ref('')
+const statusFilter = ref('ALL')
+const chosenIntent = ref('')
+const maxSteps = ref(8)
+const activeStep = ref(0)
 
 async function load() {
   try {
@@ -67,6 +46,7 @@ async function load() {
     ])
     rows.value = e
     intents.value = i
+    if (!chosenIntent.value && i.length) chosenIntent.value = i[0].intent_id
     error.value = ''
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
@@ -77,6 +57,7 @@ async function load() {
 
 async function open(row: ExplorationRow) {
   detailLoading.value = true
+  activeStep.value = 0
   try {
     selected.value = await api.get<ExplorationDetail>(`/explorations/${row.exploration_id}`)
   } catch (e) {
@@ -87,14 +68,14 @@ async function open(row: ExplorationRow) {
 }
 
 function intentTitle(intentId: string): string {
-  const it = intents.value.find((x) => x.intent_id === intentId)
-  return it?.title || intentId
+  return intents.value.find((x) => x.intent_id === intentId)?.title || intentId
 }
 
-async function explore(intentId: string) {
-  busy.value = 'explore:' + intentId
+async function explore() {
+  if (!chosenIntent.value) return
+  busy.value = 'explore'
   try {
-    const doc = await api.post<{ exploration_id: string }>(`/intents/${intentId}/explore?max_steps=8`)
+    const doc = await api.post<{ exploration_id: string }>(`/intents/${chosenIntent.value}/explore?max_steps=${maxSteps.value}`)
     notify('探索完成：' + doc.exploration_id.slice(-10))
     await load()
     const row = rows.value.find((r) => r.exploration_id === doc.exploration_id)
@@ -107,7 +88,7 @@ async function explore(intentId: string) {
 }
 
 async function compile(explorationId: string) {
-  busy.value = 'compile:' + explorationId
+  busy.value = 'compile'
   try {
     const doc = await api.post<ExplorationDetail>(`/explorations/${explorationId}/compile`)
     notify('已生成候选用例（PENDING，需人工审核）')
@@ -120,11 +101,36 @@ async function compile(explorationId: string) {
   }
 }
 
-const statusTone = (s: string) => (s === 'COMPILED' ? 'pass' : s === 'FAILED' ? 'fail' : s === 'COMPLETED' ? 'info' : 'neutral')
+const filtered = computed(() => rows.value.filter((r) => {
+  const q = filter.value.trim().toLowerCase()
+  return (statusFilter.value === 'ALL' || r.status === statusFilter.value)
+    && (!q || r.exploration_id.toLowerCase().includes(q) || intentTitle(r.intent_id).toLowerCase().includes(q))
+}))
+const actions = computed<ExplorationAction[]>(() => selected.value?.trace?.action_sequence ?? [])
+const currentStep = computed(() => actions.value[activeStep.value] ?? null)
+const engine = computed(() => selected.value?.engine || selected.value?.trace?.agent_version || '未记录')
+const promptVersion = computed(() => selected.value?.trace?.prompt_version || '—')
+const stats = computed(() => selected.value?.llm_stats ?? null)
+const llmEnabled = computed(() => String(engine.value).startsWith('llm:'))
+const fallbackCount = computed(() => stats.value?.fallback_calls ?? 0)
+const llmCallCount = computed(() => stats.value?.llm_calls ?? 0)
 
-const auditPairs = computed(() => {
-  const a = selected.value?.gateway_audit ?? []
-  return a.slice(0, 30)
+function sourceOf(action: ExplorationAction | null): Source {
+  if (!action) return 'rule'
+  const reason = String(action.reason || '')
+  if (reason.startsWith('fallback(rule)') || reason.includes('fallback(rule)')) return 'fallback'
+  if (llmEnabled.value && llmCallCount.value > 0 && String(promptVersion.value).startsWith('deepseek:')) return 'llm'
+  if (llmEnabled.value && fallbackCount.value > 0 && llmCallCount.value === 0) return 'fallback'
+  return 'rule'
+}
+const sourceLabel: Record<Source, string> = { llm: 'LLM 决策', rule: '规则决策', fallback: '规则兜底' }
+const statusTone = (s: string) => (s === 'COMPILED' ? 'pass' : s === 'FAILED' ? 'fail' : s === 'RUNNING' ? 'warn' : 'neutral')
+const stepTone = (a: ExplorationAction) => a.gateway === 'denied' || a.error ? 'fail' : a.gateway === 'allowed' ? 'pass' : 'neutral'
+const started = computed(() => selected.value?.trace?.started_at || selected.value?.created_at)
+const elapsed = computed(() => {
+  if (!started.value || !selected.value?.compiled) return null
+  const ms = new Date(selected.value.created_at).getTime() - new Date(started.value).getTime()
+  return Number.isFinite(ms) && ms >= 0 ? fmtDuration(ms) : null
 })
 
 onMounted(load)
@@ -132,144 +138,169 @@ onMounted(load)
 
 <template>
   <div>
-    <div class="page-head">
-      <div>
-        <h1>Agent 探索与编译</h1>
-        <div class="sub">
-          Explorer 真实浏览器探索 → Compiler 候选用例。
-          当前规划器：<b>规则实现（rule-based-v1）</b>，不是 LLM；接入真实模型后此处将展示 model/prompt 版本。
+    <PageHeader eyebrow="Agent Studio" title="探索与编译中心"
+      subtitle="真实浏览器探索 → ToolGateway 权限检查 → 规则编译器候选。模型信息以 API 返回的 engine / llm_stats 为准，不用 engine 标记代替每次决策的真实性。">
+      <template #actions>
+        <button class="sm" type="button" :disabled="loading" @click="load"><RefreshCw :size="13" /> 刷新</button>
+        <button class="sm primary" type="button" :disabled="busy === 'explore' || !chosenIntent" @click="explore">
+          <Play :size="13" /> {{ busy === 'explore' ? '探索中…' : '发起探索' }}
+        </button>
+      </template>
+      <template #meta>
+        <div class="toolbar mt">
+          <select v-model="chosenIntent" aria-label="选择测试需求" style="max-width: 320px">
+            <option value="" disabled>选择测试需求…</option>
+            <option v-for="it in intents" :key="it.intent_id" :value="it.intent_id">{{ it.title || it.intent_id }}</option>
+          </select>
+          <select v-model.number="maxSteps" aria-label="最大步数" style="width: 110px">
+            <option :value="4">4 步</option><option :value="8">8 步</option><option :value="12">12 步</option>
+          </select>
+          <span class="small muted">最多 {{ maxSteps }} 步 · 全部需求可选</span>
         </div>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <AsyncBlock :loading="loading" :error="error">
-      <div class="master-detail">
-        <div class="card">
-          <div class="card-head">
-            <h2>探索记录（{{ rows.length }}）</h2>
-          </div>
-          <div class="card-body tight scroll-x">
-            <table>
-              <thead>
-                <tr><th>探索 ID</th><th>测试需求</th><th>状态</th><th>动作</th><th>停止原因</th><th>编译产物</th><th>时间</th></tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="r in rows"
-                  :key="r.exploration_id"
-                  class="row-click"
-                  :class="{ selected: selected?.exploration_id === r.exploration_id }"
-                  @click="open(r)"
-                >
-                  <td class="mono small">{{ r.exploration_id.slice(-14) }}</td>
-                  <td class="small truncate" style="max-width: 220px">{{ intentTitle(r.intent_id) }}</td>
-                  <td><span class="badge" :class="statusTone(r.status)">{{ r.status }}</span></td>
-                  <td class="small">{{ r.action_count }}</td>
-                  <td class="small mono truncate" style="max-width: 180px">{{ r.stop_reason || '—' }}</td>
-                  <td class="small">
-                    <template v-if="r.compiled">
-                      <router-link :to="`/testcases/${r.compiled.testcase_id}`" @click.stop>
-                        v{{ r.compiled.version }} ↗
-                      </router-link>
-                    </template>
-                    <span v-else class="muted">—</span>
-                  </td>
-                  <td class="small muted nowrap">{{ fmtTime(r.created_at) }}</td>
-                </tr>
-                <tr v-if="rows.length === 0">
-                  <td colspan="7"><div class="empty">暂无探索记录。在下方选择测试需求发起探索。</div></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+      <div class="metric-grid m5">
+        <MetricCard label="探索记录" :value="rows.length" hint="当前 Workspace" icon="activity" />
+        <MetricCard label="LLM 引擎" :value="llmEnabled ? 'DEEPSEEK' : 'RULE'" :hint="engine" :tone="llmEnabled ? 'info' : 'neutral'" icon="layers" />
+        <MetricCard label="LLM 调用" :value="llmCallCount" hint="本次探索真实计数" :tone="llmCallCount ? 'pass' : 'neutral'" icon="activity" />
+        <MetricCard label="规则兜底" :value="fallbackCount" hint="LLM 失败/预算熔断后" :tone="fallbackCount ? 'warn' : 'neutral'" icon="alert" />
+        <MetricCard label="编译候选" :value="selected?.compiled ? 1 : 0" hint="PENDING · 需人工审核" :tone="selected?.compiled ? 'pass' : 'neutral'" icon="shield" />
+      </div>
 
-        <div class="flex-col">
-          <div class="card">
-            <div class="card-head"><h2>发起探索</h2></div>
-            <div class="card-body flex-col">
-              <div v-for="it in intents.slice(0, 6)" :key="it.intent_id" class="flex" style="justify-content: space-between">
-                <div style="min-width: 0">
-                  <div class="truncate small strong">{{ it.title || it.intent_id }}</div>
-                  <div class="muted" style="font-size: 11px">{{ it.intent_id }}</div>
+      <div class="agent-studio mt">
+        <!-- 左：任务列表 -->
+        <section class="panel">
+          <div class="panel-head">
+            <h2>探索任务 <span class="muted small">({{ filtered.length }})</span></h2>
+          </div>
+          <div class="panel-body" style="display: grid; gap: 10px">
+            <div class="filter-bar">
+              <div class="grow"><input v-model="filter" placeholder="搜索探索 ID / 需求" aria-label="搜索探索" /></div>
+              <select v-model="statusFilter" aria-label="按状态筛选" style="width: 118px">
+                <option value="ALL">全部状态</option><option value="COMPLETED">COMPLETED</option>
+                <option value="COMPILED">COMPILED</option><option value="FAILED">FAILED</option>
+              </select>
+            </div>
+            <div class="explore-list">
+              <button v-for="r in filtered" :key="r.exploration_id" type="button" class="explore-row"
+                :class="{ selected: selected?.exploration_id === r.exploration_id }" @click="open(r)">
+                <div class="flex" style="justify-content: space-between">
+                  <span class="small strong truncate">{{ intentTitle(r.intent_id) }}</span>
+                  <StatusBadge :value="r.status" />
                 </div>
-                <button class="sm" :disabled="busy === 'explore:' + it.intent_id" @click="explore(it.intent_id)">
-                  {{ busy === 'explore:' + it.intent_id ? '探索中…' : '探索' }}
-                </button>
-              </div>
-              <div v-if="intents.length === 0" class="empty">暂无测试需求，请先到「测试需求」创建</div>
+                <div class="small mono muted truncate">{{ r.exploration_id }}</div>
+                <div class="flex wrap small muted">
+                  <span>{{ r.action_count }} 动作</span>
+                  <span v-if="r.engine" class="source-tag" :class="String(r.engine).startsWith('llm:') ? 'llm' : 'rule'">{{ r.engine }}</span>
+                  <span v-if="r.compiled" class="source-tag">已编译 v{{ r.compiled.version }}</span>
+                  <span class="right">{{ fmtTime(r.created_at) }}</span>
+                </div>
+              </button>
+              <div v-if="!filtered.length" class="empty small">暂无探索记录。选择需求并点击「发起探索」。</div>
             </div>
           </div>
+        </section>
 
-          <div class="card" v-if="selected">
-            <div class="card-head">
-              <h2>探索详情</h2>
-              <div class="actions">
-                <span class="badge" :class="statusTone(selected.status)">{{ selected.status }}</span>
-                <button
-                  v-if="selected.trace?.action_sequence?.length && !selected.compiled"
-                  class="sm primary"
-                  :disabled="busy === 'compile:' + selected.exploration_id"
-                  @click="compile(selected.exploration_id)"
-                >
-                  编译候选用例
-                </button>
+        <!-- 中：执行轨迹 -->
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Agent 执行轨迹</h2>
+            <span class="small muted">{{ actions.length }} 步</span>
+          </div>
+          <div class="panel-body" style="max-height: 720px; overflow: auto">
+            <div v-if="detailLoading" class="state"><span class="spinner" /></div>
+            <template v-else-if="selected">
+              <div class="run-meta">
+                <div><span class="config-label">Engine</span><strong class="mono">{{ engine }}</strong></div>
+                <div><span class="config-label">Prompt</span><strong class="mono truncate" :title="promptVersion">{{ promptVersion }}</strong></div>
+                <div><span class="config-label">LLM / 兜底</span><strong class="mono">{{ llmCallCount }} / {{ fallbackCount }}</strong></div>
+                <div><span class="config-label">停止原因</span><strong class="mono truncate" :title="selected.stop_reason || selected.trace?.stop_reason">{{ selected.stop_reason || selected.trace?.stop_reason || '—' }}</strong></div>
+                <div><span class="config-label">耗时</span><strong class="mono">{{ elapsed || '未记录结束时间' }}</strong></div>
               </div>
-            </div>
-            <div class="card-body" style="max-height: 560px; overflow: auto">
-              <div v-if="detailLoading" class="state"><span class="spinner" /></div>
-              <template v-else>
-                <div class="detail-section">
-                  <div class="sec-title">版本与边界</div>
-                  <div class="kv">
-                    <dt>Agent 版本</dt><dd class="mono">{{ selected.trace?.agent_version || '—' }}</dd>
-                    <dt>Prompt 版本</dt><dd class="mono">{{ selected.trace?.prompt_version || '—' }}（规则实现）</dd>
-                    <dt>工具网关</dt><dd class="mono">{{ selected.trace?.tool_version || '—' }}</dd>
-                    <dt>停止原因</dt><dd class="mono">{{ selected.trace?.stop_reason || selected.stop_reason || '—' }}</dd>
-                  </div>
-                  <div v-if="selected.error" class="small mono" style="color: var(--fail); margin-top: 6px">{{ selected.error }}</div>
-                </div>
+              <div v-if="selected.error" class="alert-line"><CircleAlert :size="13" /> {{ selected.error }}</div>
+              <div v-if="selected.llm_stats?.last_error" class="alert-line warn"><CircleAlert :size="13" /> last_error: {{ selected.llm_stats.last_error }}</div>
 
-                <div class="detail-section">
-                  <div class="sec-title">动作序列（{{ selected.trace?.action_sequence?.length ?? 0 }}）</div>
-                  <div v-for="(a, i) in selected.trace?.action_sequence ?? []" :key="i" class="action-item">
+              <div class="timeline mt">
+                <div v-for="(a, i) in actions" :key="i" class="timeline-item">
+                  <div class="timeline-dot" :class="stepTone(a)">{{ i + 1 }}</div>
+                  <div class="timeline-body action-item" :class="{ selected: activeStep === i }" @click="activeStep = i">
                     <div class="act-head">
-                      <span class="badge" :class="a.gateway === 'allowed' ? 'pass' : 'fail'">{{ a.gateway }}</span>
-                      <span class="mono strong">{{ a.action }}</span>
-                      <span v-if="a.params?.test_id" class="code-inline">{{ a.params.test_id }}</span>
+                      <span class="source-tag" :class="sourceOf(a)">{{ sourceLabel[sourceOf(a)] }}</span>
+                      <strong class="mono">{{ a.action }}</strong>
+                      <span class="badge" :class="a.gateway === 'allowed' ? 'pass' : 'fail'">{{ a.gateway || '未记录' }}</span>
                     </div>
-                    <div v-if="a.reason" class="small muted" style="margin-top: 3px">理由：{{ a.reason }}</div>
-                    <div v-if="a.result" class="small mono muted" style="margin-top: 2px">→ {{ a.result }}</div>
-                    <div v-if="a.error" class="small mono" style="margin-top: 2px; color: var(--fail)">✗ {{ a.error }}</div>
+                    <div class="small muted mt" style="margin-top: 4px">{{ a.reason || '—' }}</div>
+                    <div v-if="a.error" class="small fail-text mono">{{ a.error }}</div>
                   </div>
-                  <div v-if="!selected.trace?.action_sequence?.length" class="empty">轨迹为空</div>
                 </div>
+                <div v-if="!actions.length" class="empty small">轨迹为空：本次探索没有记录动作。</div>
+              </div>
 
-                <div class="detail-section">
-                  <div class="sec-title">ToolGateway 审计（{{ auditPairs.length }} 条）</div>
-                  <JsonBlock :data="selected.gateway_audit" />
-                </div>
-
-                <div class="detail-section" v-if="selected.compiled">
-                  <div class="sec-title">编译产物</div>
-                  <div class="kv">
-                    <dt>候选用例</dt>
-                    <dd><router-link :to="`/testcases/${selected.compiled.testcase_id}`" class="mono">{{ selected.compiled.testcase_id }}</router-link>（PENDING，需人工审核）</dd>
-                    <dt>Compiler</dt><dd class="mono">{{ selected.compiled.compiler_version }}</dd>
-                    <dt>Prompt</dt><dd class="mono">{{ selected.compiled.prompt_version }}</dd>
-                  </div>
-                  <div v-if="selected.compiled.warnings?.length" style="margin-top: 8px">
-                    <div class="small" style="color: var(--warn); font-weight: 550">诚实警告（诚实标注生成局限）</div>
-                    <div v-for="w in selected.compiled.warnings" :key="w" class="small mono" style="color: var(--warn); margin-top: 2px">· {{ w }}</div>
-                  </div>
-                </div>
-              </template>
+              <div class="detail-section mt">
+                <div class="sec-title">ToolGateway 审计（{{ selected.gateway_audit?.length || 0 }} 条）</div>
+                <JsonBlock :data="selected.gateway_audit ?? []" label="Gateway audit" />
+              </div>
+            </template>
+            <div v-else class="empty">
+              <div class="empty-icon"><GitBranch :size="20" /></div>
+              <div class="title">选择一次探索</div>
+              <div class="small">从左侧列表选择记录，查看真实执行轨迹与模型决策来源。</div>
             </div>
           </div>
-          <div class="card" v-else>
-            <div class="card-body"><div class="empty">点击左侧记录查看探索轨迹与审计</div></div>
+        </section>
+
+        <!-- 右：步骤详情 + 编译产物 -->
+        <section class="panel">
+          <div class="panel-head">
+            <h2>步骤详情与编译</h2>
+            <button v-if="selected && actions.length" class="sm primary right" type="button"
+              :disabled="busy === 'compile'" @click="compile(selected.exploration_id)">
+              {{ busy === 'compile' ? '编译中…' : selected.compiled ? '重新编译' : '编译候选用例' }}
+            </button>
           </div>
-        </div>
+          <div class="panel-body" style="max-height: 720px; overflow: auto">
+            <template v-if="currentStep">
+              <div class="section-title">步骤 {{ activeStep + 1 }} · {{ currentStep.action }}</div>
+              <div class="kv">
+                <dt>决策来源</dt><dd><span class="source-tag" :class="sourceOf(currentStep)">{{ sourceLabel[sourceOf(currentStep)] }}</span></dd>
+                <dt>参数</dt><dd><code class="code-inline">{{ JSON.stringify(currentStep.params || {}) }}</code></dd>
+                <dt>Reason</dt><dd class="mono">{{ currentStep.reason || '—' }}</dd>
+                <dt>结果</dt><dd class="mono">{{ currentStep.result || '—' }}</dd>
+                <dt>Gateway</dt><dd><StatusBadge :value="currentStep.gateway === 'denied' ? 'DENIED' : currentStep.gateway === 'allowed' ? 'ALLOWED' : 'NOT_EVALUATED'" /></dd>
+                <dt>错误</dt><dd class="mono fail-text">{{ currentStep.error || '—' }}</dd>
+                <dt>页面状态</dt><dd class="mono">{{ (currentStep.page_state_refs || []).join(', ') || selected?.trace?.page_state_refs?.[activeStep] || '—' }}</dd>
+                <dt>关联证据</dt><dd class="mono">{{ (currentStep.evidence_refs || []).join(', ') || '—' }}</dd>
+              </div>
+            </template>
+            <div v-else class="empty small">点击中间轨迹中的步骤查看详情。</div>
+
+            <div class="detail-section mt" v-if="selected?.compiled">
+              <div class="sec-title">编译产物（规则编译器）</div>
+              <div class="kv">
+                <dt>候选用例</dt><dd><router-link :to="`/testcases/${selected.compiled.testcase_id}`" class="mono">{{ selected.compiled.testcase_id }}</router-link> · PENDING</dd>
+                <dt>Compiler</dt><dd class="mono">{{ selected.compiled.compiler_version }}</dd>
+                <dt>Model Version</dt><dd class="mono">{{ selected.compiled.model_version }}</dd>
+                <dt>Prompt</dt><dd class="mono">{{ selected.compiled.prompt_version }}</dd>
+              </div>
+              <div v-if="selected.compiled.warnings?.length" class="warning-box mt">
+                <div class="small strong">编译 Warning</div>
+                <div v-for="w in selected.compiled.warnings" :key="w" class="small mono">· {{ w }}</div>
+              </div>
+            </div>
+            <div v-else-if="selected" class="empty small">尚未编译。编译产物是 PENDING 候选，必须经人工审核才能成为正式用例。</div>
+
+            <div class="detail-section mt">
+              <div class="sec-title">模型信息边界</div>
+              <p class="small muted">
+                <Cpu :size="12" /> engine 标记规划器配置，不代表每个动作都由 LLM 决策。
+                只有 <b>llm_calls &gt; 0</b> 且 prompt 版本来自 deepseek 的动作标记为 LLM 决策；
+                fallback(rule) 或 llm_calls=0 的动作标记为规则兜底。Compiler 保持规则实现。
+              </p>
+            </div>
+          </div>
+        </section>
       </div>
     </AsyncBlock>
   </div>

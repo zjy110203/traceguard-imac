@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { api, fmtTime } from '../api'
 import AsyncBlock from '../components/AsyncBlock.vue'
+import PageHeader from '../components/PageHeader.vue'
 import ModalShell from '../components/ModalShell.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import { notify, notifyError } from '../toast'
@@ -89,15 +90,19 @@ onMounted(load)
 
 <template>
   <div>
-    <div class="page-head">
-      <div>
-        <h1>Oracle 契约</h1>
-        <div class="sub">Oracle 是判定的唯一依据：未审批的 Oracle 不参与判定；Agent 不能自批。</div>
-      </div>
-      <div class="actions">
+    <PageHeader eyebrow="Catalog / Oracle Contract" title="Oracle 契约"
+      subtitle="Oracle 是判定的唯一依据：未审批的 Oracle 不参与判定，Agent 不能自批。每个 Oracle 都关联 Assertion，具备独立版本与可追溯来源。">
+      <template #actions>
         <button @click="load">刷新</button>
         <button class="primary" @click="showCreate = true">新建 Oracle</button>
-      </div>
+      </template>
+    </PageHeader>
+    <div class="oracle-primer panel">
+      <span><b>是什么</b>：独立、可追溯的判定契约</span>
+      <span><b>关联</b>：Assertion ID</span>
+      <span><b>版本</b>：审批后参与正式判定</span>
+      <span><b>来源</b>：需求 / 规则 / 人工</span>
+      <span><b>状态</b>：APPROVED 可用，PENDING 不参与判定</span>
     </div>
 
     <div class="toolbar" style="margin-bottom: 12px">

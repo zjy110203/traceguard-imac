@@ -65,3 +65,16 @@
 | B-02 | 本机无 Docker / PostgreSQL 服务 | 无法实测 PG 集群行为 | 持久层保持 PG 方言兼容 + 提供 compose；以 SQLite 实测 + 单测覆盖 PG 生成 SQL |
 | B-03 | 外部应用泛化未授权（P-EXT） | 阶段12 真实外部站点验证 | 仅本地受控站点/TeamFlow |
 | B-04 | P03/P08/路线冻结需负责人批准 | 契约冻结 | 输出决策文档，不擅自冻结 |
+
+## 4. RUN-004-FE 新增条目（2026-11-23，追加）
+
+| 编号 | 任务 | 状态 | 证据 |
+|---|---|---|---|
+| T-20 | 统一设计系统与 AppShell（Token / 图标 / 组件 / 移动抽屉） | PASS | `RUN-004-FE-IMPLEMENTATION-REPORT.md`、15 张截图 |
+| T-21 | Explorer 真实 LLM 信息展示（engine / llm_stats / 三类决策来源） | PASS | 浏览器检查 `explorer-engine`、`explorer-llm-stats`、`explorer-no-hardcoded-rule-text` |
+| T-22 | 模型运行中心与只读汇总 API | PASS | `/models`、`GET /system/llm/summary`、2 项新增测试 |
+| T-23 | Dashboard 真实时间分桶趋势与四态统计口径 | PASS | `dashboard.png`、`sample-strip` 样本量 |
+| T-24 | Diagnosis / Graph / Repair / Benchmark 展示升级 | PASS | 53/53 浏览器检查 |
+| T-25 | 响应式与深色主题 | PASS | 六档断点无溢出；12 路由深色无浅色残留 |
+
+状态说明：B-01 的历史描述保留为 RUN-002 时点快照；LLM 基线已由 RUN-003-G 解锁，B-01 不再适用于当前状态。

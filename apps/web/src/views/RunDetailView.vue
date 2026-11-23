@@ -8,6 +8,8 @@ import AsyncBlock from '../components/AsyncBlock.vue'
 import EvidenceGallery from '../components/EvidenceGallery.vue'
 import GraphView from '../components/GraphView.vue'
 import JsonBlock from '../components/JsonBlock.vue'
+import MetricCard from '../components/MetricCard.vue'
+import PageHeader from '../components/PageHeader.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import { notify, notifyError } from '../toast'
 import type { Diagnosis, EventRow, Evidence, EvidenceGraph, GraphNode, Run, StepRow } from '../types'
@@ -209,46 +211,39 @@ onUnmounted(() => window.clearInterval(timer))
   <div>
     <AsyncBlock :loading="loading" :error="error">
       <div v-if="run">
-        <div class="page-head">
-          <div>
-            <div class="flex">
-              <h1>Run 详情</h1>
+        <PageHeader :eyebrow="`Execution / ${run.observer_mode || 'run'}`" :title="`Run ${run.run_id.slice(-12)}`"
+          :subtitle="`task ${run.task_id} · attempt ${run.attempt} · ${fmtTime(run.created_at)}`">
+          <template #actions>
+            <button @click="router.push('/runs')">返回执行中心</button>
+            <button :disabled="busy === 'graph'" @click="buildGraph">生成证据图</button>
+            <button :disabled="busy === 'diag' || run.test_verdict === 'PASSED'" @click="diagnose">诊断</button>
+            <button :disabled="running || busy === 'retry'" @click="retry">重试</button>
+          </template>
+          <template #meta>
+            <div class="flex wrap mt">
               <StatusBadge :value="run.test_verdict" />
               <StatusBadge :value="run.execution_status" />
               <span v-if="run.observer_mode" class="badge info">{{ run.observer_mode }}</span>
               <span v-if="running" class="badge warn"><span class="spinner" style="width: 10px; height: 10px; border-width: 1.5px" /> 执行中</span>
+              <span class="badge neutral">错误 {{ report?.errors?.length ?? 0 }}</span>
             </div>
-            <div class="sub mono">{{ run.run_id }} · task {{ run.task_id }} · attempt {{ run.attempt }}</div>
-          </div>
-          <div class="actions">
-            <button @click="router.push('/runs')">返回</button>
-            <button :disabled="busy === 'graph'" @click="buildGraph">生成证据图</button>
-            <button :disabled="busy === 'diag' || run.test_verdict === 'PASSED'" @click="diagnose">诊断</button>
-            <button :disabled="running || busy === 'retry'" @click="retry">重试</button>
-          </div>
+          </template>
+        </PageHeader>
+
+        <div class="metric-grid m5" style="margin-bottom: 14px">
+          <MetricCard label="断言通过率" :value="`${passRate}%`" :hint="`${report?.summary?.passed ?? 0} / ${report?.summary?.total ?? 0} 通过`" :tone="passRate === 100 ? 'pass' : 'fail'" icon="shield" />
+          <MetricCard label="步骤" :value="steps.length" :hint="`失败 ${failedSteps} 步`" :tone="failedSteps ? 'fail' : 'neutral'" icon="activity" />
+          <MetricCard label="耗时" :value="fmtDuration(report?.duration_ms)" :hint="report?.observer_mode || '真实执行'" icon="gauge" />
+          <MetricCard label="证据" :value="evidence.length" hint="不可变 · SHA-256 完整性校验" icon="layers" />
+          <MetricCard label="Oracle" :value="report?.assertion_outcomes?.some((a) => a.oracle_available) ? 'available' : 'unavailable'" hint="未审批 Oracle 不参与判定" :tone="report?.assertion_outcomes?.some((a) => a.oracle_available) ? 'pass' : 'warn'" icon="shield" />
         </div>
 
-        <div class="grid c4" style="margin-bottom: 14px">
-          <div class="metric">
-            <div class="label">断言通过率</div>
-            <div class="value" :style="passRate === 100 ? 'color:var(--pass)' : 'color:var(--fail)'">{{ passRate }}%</div>
-            <div class="hint">{{ report?.summary?.passed ?? 0 }} / {{ report?.summary?.total ?? 0 }} 通过</div>
-          </div>
-          <div class="metric">
-            <div class="label">步骤</div>
-            <div class="value">{{ steps.length }}</div>
-            <div class="hint">失败 {{ failedSteps }} 步</div>
-          </div>
-          <div class="metric">
-            <div class="label">耗时</div>
-            <div class="value">{{ fmtDuration(report?.duration_ms) }}</div>
-            <div class="hint">{{ fmtTime(run.created_at) }}</div>
-          </div>
-          <div class="metric">
-            <div class="label">证据</div>
-            <div class="value">{{ evidence.length }}</div>
-            <div class="hint">不可变 · SHA-256 完整性校验</div>
-          </div>
+        <div class="context-strip panel">
+          <span class="small muted">执行上下文</span>
+          <router-link v-if="run.report?.testcase_id" :to="`/testcases/${run.report.testcase_id}`" class="small">用例 {{ run.report.testcase_id }} ↗</router-link>
+          <span class="small muted">版本 {{ run.report?.testcase_version ?? '—' }}</span>
+          <router-link v-if="run.report?.task_id" to="/runs" class="small">Task {{ run.report.task_id }} ↗</router-link>
+          <span class="small muted">Assertion {{ report?.summary?.inconclusive ?? 0 }} INCONCLUSIVE · {{ report?.summary?.not_evaluated ?? 0 }} NOT_EVAL</span>
         </div>
 
         <div v-if="report?.errors?.length" class="card" style="border-color:#fecdca; margin-bottom: 14px">

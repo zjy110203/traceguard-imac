@@ -3,6 +3,8 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, fmtTime } from '../api'
 import AsyncBlock from '../components/AsyncBlock.vue'
+import MetricCard from '../components/MetricCard.vue'
+import PageHeader from '../components/PageHeader.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import type { Diagnosis, Disposition } from '../types'
 
@@ -42,12 +44,9 @@ onMounted(load)
 
 <template>
   <div>
-    <div class="page-head">
-      <div>
-        <h1>诊断中心</h1>
-        <div class="sub">确定性规则 + 可信证据裁决。没有足够证据就是 INCONCLUSIVE，不会被包装成 PASSED。</div>
-      </div>
-      <div class="actions">
+    <PageHeader eyebrow="Intelligence / Diagnosis" title="诊断中心"
+      subtitle="确定性规则 + 可信证据裁决。没有足够证据就是 INCONCLUSIVE，不会被包装成 PASSED；LLM 候选不会被确认。">
+      <template #actions>
         <label class="flex small" style="gap: 5px; margin: 0">
           <input v-model="includeBench" type="checkbox" style="width: auto" @change="load" /> 包含 Benchmark
         </label>
@@ -58,13 +57,14 @@ onMounted(load)
           <option value="INCONCLUSIVE">INCONCLUSIVE</option>
         </select>
         <button @click="load">刷新</button>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
-    <div class="grid c3" style="margin-bottom: 14px">
-      <div class="metric"><div class="label">诊断总数</div><div class="value">{{ items.length }}</div></div>
-      <div class="metric"><div class="label">已确认根因</div><div class="value" style="color: var(--fail)">{{ items.filter((d) => d.outcome === 'CONFIRMED').length }}</div></div>
-      <div class="metric"><div class="label">证据不足</div><div class="value" style="color: var(--warn)">{{ items.filter((d) => d.outcome === 'INCONCLUSIVE').length }}</div></div>
+    <div class="metric-grid m5" style="margin-bottom: 14px">
+      <MetricCard label="诊断总数" :value="items.length" icon="activity" />
+      <MetricCard label="已确认根因" :value="items.filter((d) => d.outcome === 'CONFIRMED').length" hint="仅确定性规则可确认" tone="pass" icon="shield" />
+      <MetricCard label="证据不足" :value="items.filter((d) => d.outcome === 'INCONCLUSIVE').length" tone="incon" icon="help" />
+      <MetricCard label="可能根因" :value="items.filter((d) => d.outcome === 'PROBABLE').length" tone="warn" icon="alert" />
     </div>
 
     <div class="card">

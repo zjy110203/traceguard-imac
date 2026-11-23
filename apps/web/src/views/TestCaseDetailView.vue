@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, fmtDuration, fmtTime } from '../api'
 import AsyncBlock from '../components/AsyncBlock.vue'
+import PageHeader from '../components/PageHeader.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import { notify, notifyError } from '../toast'
 import type { Run, TestCaseDetail, TestCaseVersion } from '../types'
@@ -33,7 +34,7 @@ async function load() {
     ])
     detail.value = d
     versions.value = v
-    runs.value = r.filter((x) => x.testcase_version_id.startsWith(id))
+    runs.value = r.filter((x) => String(x.testcase_version_id).split('@')[0] === id)
     if (!activeVersion.value) activeVersion.value = d.latest_version
     error.value = ''
   } catch (e) {
@@ -87,16 +88,20 @@ onMounted(load)
   <div>
     <AsyncBlock :loading="loading" :error="error">
       <div v-if="detail">
-        <div class="page-head">
-          <div>
-            <h1>{{ detail.title }}</h1>
-            <div class="sub mono">{{ detail.testcase_id }} · 来源 {{ detail.compile_source }} · 关联需求 {{ detail.intent_ref || '—' }}</div>
-          </div>
-          <div class="actions">
+        <PageHeader eyebrow="Catalog / Test Case" :title="detail.title"
+          :subtitle="`${detail.testcase_id} · 来源 ${detail.compile_source} · 关联需求 ${detail.intent_ref || '—'}`">
+          <template #actions>
             <button @click="router.push('/testcases')">返回列表</button>
             <button class="primary" :disabled="detail.review_status !== 'APPROVED' || busy === 'exec'" @click="execute">执行当前版本</button>
-          </div>
-        </div>
+          </template>
+          <template #meta>
+            <div class="flex wrap mt">
+              <StatusBadge :value="detail.review_status" />
+              <span class="badge neutral">最新版本 v{{ detail.latest_version }}</span>
+              <span class="badge neutral">{{ detail.step_count }} 步 / {{ detail.assertion_count }} 断言</span>
+            </div>
+          </template>
+        </PageHeader>
 
         <div class="split">
           <div class="flex-col">

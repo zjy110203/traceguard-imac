@@ -163,6 +163,105 @@ class TokenUsageTracker:
             "price_confirmed": cost_known,
         }
 
+    def summary(self, *, day: str | None = None) -> dict[str, Any]:
+        """只读取用聚合（管理视图专用）。
+
+        只返回聚合数字与计数，不返回逐条 UsageRecord、Prompt 正文、密钥或页面内容。
+        成本永远是应用侧按牌价估算，不等于平台账单。
+        """
+        day = day or datetime.now(UTC).strftime("%Y-%m-%d")
+        with self._lock:
+            records = list(self._records)
+
+        def aggregate(recs: list[UsageRecord]) -> dict[str, Any]:
+            calls = errors = total_in = total_out = retries = 0
+            cost = 0.0
+            cost_known = True
+            latencies: list[int] = []
+            for r in recs:
+                calls += 1
+                if r.request_status != "ok":
+                    errors += 1
+                total_in += r.input_tokens
+                total_out += r.output_tokens
+                retries += r.retry_count
+                if r.estimated_cost_usd is None:
+                    cost_known = False
+                else:
+                    cost += float(r.estimated_cost_usd)
+                if r.latency_ms > 0:
+                    latencies.append(r.latency_ms)
+            latencies.sort()
+            avg_latency = sum(latencies) / len(latencies) if latencies else 0.0
+            p95_latency = latencies[max(0, min(len(latencies) - 1, int(len(latencies) * 0.95) - 1))] if latencies else 0
+            return {
+                "calls": calls,
+                "errors": errors,
+                "input_tokens": total_in,
+                "output_tokens": total_out,
+                "estimated_cost_usd": round(cost, 6) if cost_known else None,
+                "cost_is_estimated": True,
+                "retries": retries,
+                "avg_latency_ms": round(avg_latency, 1),
+                "p95_latency_ms": p95_latency,
+                "latency_sample": len(latencies),
+            }
+
+        by_agent: dict[str, dict[str, Any]] = {}
+        by_model: dict[str, dict[str, Any]] = {}
+        by_day: dict[str, list[UsageRecord]] = {}
+        prompt_versions: dict[str, int] = {}
+        today_records = [r for r in records if r.ts.startswith(day)]
+        for r in today_records:
+            by_agent.setdefault(r.agent or "unknown", []).append(r)
+            by_model.setdefault(r.model or "unknown", []).append(r)
+        for r in records:
+            by_day.setdefault(r.ts[:10] or "unknown", []).append(r)
+            if r.prompt_version:
+                prompt_versions[r.prompt_version] = prompt_versions.get(r.prompt_version, 0) + 1
+
+        today = aggregate(today_records)
+        today["date"] = day
+        today["budget_usd"] = self.daily_budget_usd
+        today["budget_exceeded"] = bool(
+            today["estimated_cost_usd"] is not None
+            and float(today["estimated_cost_usd"]) >= self.daily_budget_usd
+        )
+        return {
+            "data_available": bool(records),
+            "record_count": len(records),
+            "date": day,
+            **today,
+            "total": aggregate(records),
+            "by_agent": {k: aggregate(v) for k, v in sorted(by_agent.items())},
+            "by_model": {k: aggregate(v) for k, v in sorted(by_model.items())},
+            "daily_series": [
+                {"date": d, **aggregate(by_day[d])} for d in sorted(by_day)
+            ],
+            "latency_summary": {
+                "avg_ms": today["avg_latency_ms"],
+                "p95_ms": today["p95_latency_ms"],
+                "sample": today["latency_sample"],
+            },
+            "prompt_versions": dict(sorted(prompt_versions.items())),
+            # 最近调用只暴露安全元数据；不含 task_id/run_id/prompt/页面内容/密钥。
+            "recent_calls": [
+                {
+                    "ts": r.ts,
+                    "model": r.model,
+                    "agent": r.agent,
+                    "request_status": r.request_status,
+                    "error_kind": r.error_kind,
+                    "latency_ms": r.latency_ms,
+                    "input_tokens": r.input_tokens,
+                    "output_tokens": r.output_tokens,
+                }
+                for r in reversed(records[-10:])
+            ],
+            "generated_at": datetime.now(UTC).isoformat(),
+            "note": "应用侧按公开牌价估算的成本，非 DeepSeek 平台账单；未包含密钥、Prompt 原文或页面内容。",
+        }
+
     def should_skip_llm(self) -> bool:
         """当日预算已达阈值（应用侧目标，非平台硬性封顶）→ 暂停新的非必要模型调用。"""
         usage = self.usage_for_date()

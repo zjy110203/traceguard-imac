@@ -16,3 +16,12 @@
 3. PG 实测、Worker 心跳续租、多实例压测；
 4. P08 RBAC 落地；P03 契约调整（待批准）；
 5. 前端 SSE 与图交互增强。
+
+---
+
+## RUN-004-FE 更新（2026-11-23，追加，不改写上方 RUN-002 历史记录）
+
+- 已完成：前端产品化重构（统一设计系统 / AppShell / 14 视图）、Explorer 真实 LLM 信息展示、新增 `/models` 与只读 `GET /api/v1/system/llm/summary`。
+- 验证：224 passed、ruff 全绿、typecheck/build 通过、真实 Chromium 53/53、六档断点无溢出。
+- 证据：`docs/RUN-004-FE-IMPLEMENTATION-REPORT.md`、`docs/RUN-004-FE-UI-ACCEPTANCE.md`、`docs/assets/run004-fe/`。
+- 上方“下一步建议”第 1 项（LLM 适配器 / Benchmark 基线）已由 RUN-003-G 完成；本轮不再重复。其余项状态未变。

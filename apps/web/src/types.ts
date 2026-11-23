@@ -226,6 +226,13 @@ export interface Diagnosis {
   evidence_refs: string[]
   flaky_characteristic: boolean
   engine: string
+  llm_advisor?: {
+    called?: boolean
+    skipped?: string
+    added?: string[]
+    error?: string
+    model?: string
+  } | null
   created_at: string
   disposition_id?: string
 }
@@ -348,4 +355,118 @@ export interface BrowserHealth {
   smoke?: boolean
   config?: Record<string, unknown>
   error?: string
+}
+
+/** RUN-004-FE：GET /api/v1/system/llm/summary 的只读聚合视图。 */
+export interface LLMUsageBucket {
+  calls: number
+  errors: number
+  input_tokens: number
+  output_tokens: number
+  estimated_cost_usd: number | null
+  cost_is_estimated: boolean
+  retries?: number
+  avg_latency_ms?: number
+  p95_latency_ms?: number
+  latency_sample?: number
+  date?: string
+  budget_usd?: number
+  budget_exceeded?: boolean
+}
+
+export interface LLMUsageSummary {
+  data_available: boolean
+  record_count: number
+  date: string
+  configured: boolean
+  connected: 'unknown' | 'ok' | 'error'
+  provider: string
+  default_model: string
+  reasoning_model: string
+  enabled: { explorer: boolean; diagnosis: boolean }
+  note: string
+  generated_at: string
+  calls: number
+  errors: number
+  input_tokens: number
+  output_tokens: number
+  estimated_cost_usd: number | null
+  cost_is_estimated: boolean
+  budget_usd: number
+  budget_exceeded: boolean
+  retries: number
+  avg_latency_ms: number
+  p95_latency_ms: number
+  latency_sample: number
+  total: LLMUsageBucket
+  by_agent: Record<string, LLMUsageBucket>
+  by_model: Record<string, LLMUsageBucket>
+  daily_series: LLMUsageBucket[]
+  latency_summary: { avg_ms: number; p95_ms: number; sample: number }
+  prompt_versions: Record<string, number>
+  recent_calls: {
+    ts: string
+    model: string
+    agent: string
+    request_status: string
+    error_kind: string
+    latency_ms: number
+    input_tokens: number
+    output_tokens: number
+  }[]
+  decisions: {
+    llm_calls_recorded: number
+    fallback_calls: number
+    rule_explorations: number
+    diagnosis_advisor_called: number
+    diagnosis_advisor_skipped: number
+    note: string
+  }
+}
+
+export interface ExplorationAction {
+  action: string
+  params: Record<string, unknown>
+  reason?: string
+  result?: string
+  gateway?: string
+  error?: string
+  evidence_refs?: string[]
+  page_state_refs?: string[]
+}
+
+export interface ExplorationDetail {
+  exploration_id: string
+  intent_id: string
+  workspace_id: string
+  status: string
+  error?: string
+  engine?: string
+  llm_stats?: { llm_calls: number; fallback_calls: number; last_error: string } | null
+  action_count: number
+  stop_reason: string
+  created_at: string
+  trace?: {
+    exploration_id?: string
+    agent_version?: string
+    prompt_version?: string
+    tool_version?: string
+    browser_version?: string
+    application_version?: string
+    stop_reason?: string
+    action_sequence: ExplorationAction[]
+    page_state_refs?: string[]
+    event_refs?: string[]
+    evidence_refs?: string[]
+    started_at?: string
+  }
+  gateway_audit?: Record<string, unknown>[]
+  compiled?: {
+    testcase_id: string
+    version: number
+    warnings: string[]
+    compiler_version: string
+    prompt_version: string
+    model_version: string
+  } | null
 }

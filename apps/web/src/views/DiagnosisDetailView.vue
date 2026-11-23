@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, artifactUrl, fmtTime } from '../api'
 import AsyncBlock from '../components/AsyncBlock.vue'
+import PageHeader from '../components/PageHeader.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import { notify, notifyError } from '../toast'
 import type { Diagnosis, Disposition, Evidence, ProbeExecution } from '../types'
@@ -90,20 +91,25 @@ onMounted(load)
   <div>
     <AsyncBlock :loading="loading" :error="error">
       <div v-if="diag">
-        <div class="page-head">
-          <div>
-            <div class="flex">
-              <h1>诊断详情</h1>
+        <PageHeader eyebrow="Diagnosis Intelligence" title="诊断详情"
+          :subtitle="`${diag.diagnosis_id} · run ${diag.run_id} · engine ${diag.engine}`">
+          <template #actions>
+            <button @click="router.push('/diagnoses')">返回诊断列表</button>
+            <button @click="router.push(`/runs/${diag.run_id}`)">查看 Run</button>
+          </template>
+          <template #meta>
+            <div class="flex wrap mt">
               <StatusBadge :value="diag.outcome" />
               <StatusBadge :value="diag.disposition" />
+              <span class="badge neutral">根因 {{ diag.root_causes.length }}</span>
+              <span class="badge neutral">假设 {{ diag.hypotheses.length }}</span>
             </div>
-            <div class="sub mono">{{ diag.diagnosis_id }} · run {{ diag.run_id }}</div>
-          </div>
-          <div class="actions">
-            <button @click="router.push('/diagnoses')">返回</button>
-            <button @click="router.push(`/runs/${diag.run_id}`)">查看 Run</button>
-          </div>
-        </div>
+            <div class="reasoning-chain">
+              <span>症状</span><b>→</b><span>候选假设</span><b>→</b><span>支持 / 反驳证据</span><b>→</b>
+              <span>确定性规则验证</span><b>→</b><span>根因结论</span><b>→</b><span>Disposition</span>
+            </div>
+          </template>
+        </PageHeader>
 
         <div class="split">
           <div class="flex-col">
@@ -122,7 +128,8 @@ onMounted(load)
                       <StatusBadge :value="h.status" />
                       <span class="badge neutral">{{ h.failure_domain }}</span>
                       <span class="badge neutral">{{ h.failure_mechanism }}</span>
-                      <span class="badge neutral">by {{ h.suggested_by }}</span>
+                      <span v-if="String(h.suggested_by || '').startsWith('llm:')" class="source-tag llm">LLM 候选 · {{ h.suggested_by }} · 未确认</span>
+                      <span v-else class="source-tag rule">规则生成 · {{ h.suggested_by || 'rule-v1' }}</span>
                       <span v-if="h.flaky_characteristic" class="badge warn">flaky</span>
                     </div>
                     <div class="strong" style="margin-top: 6px">{{ h.description }}</div>
@@ -173,6 +180,19 @@ onMounted(load)
           </div>
 
           <div class="flex-col">
+            <div class="card">
+              <div class="card-head"><h2>LLM 顾问调用状态</h2><span class="small muted">候选不等于 CONFIRMED</span></div>
+              <div class="card-body">
+                <div class="kv">
+                  <dt>是否调用</dt><dd>{{ diag.llm_advisor?.called ? '是' : '否' }}</dd>
+                  <dt>跳过原因</dt><dd class="mono">{{ diag.llm_advisor?.skipped || '—' }}</dd>
+                  <dt>新增候选</dt><dd>{{ diag.llm_advisor?.added?.length ?? 0 }} 条</dd>
+                  <dt>错误</dt><dd class="mono fail-text">{{ diag.llm_advisor?.error || '—' }}</dd>
+                </div>
+                <p class="small muted mt">LLM 候选仅以 <b>suggested_by=llm:*</b> 与 <b>CANDIDATE</b> 进入假设池；任何 CONFIRMED 只来自确定性规则与可信证据。</p>
+              </div>
+            </div>
+
             <div class="card">
               <div class="card-head"><h2>处置（Disposition）</h2></div>
               <div class="card-body">

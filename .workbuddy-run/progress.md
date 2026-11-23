@@ -117,3 +117,8 @@
 - C：沙箱 1/1、断言保持 1/1、无保护对照 0/1、回归失败 0/1。
 - A：人工 4/4、编译器 2/2 执行成功；无可评估断言（Oracle 未绑定）。
 - LLM / 手工基线 BLOCKED，不产生数值。
+
+### 里程碑 G/H：RUN-003-G LLM 接入 + RUN-004-FE 前端产品化（PASS）
+- RUN-003-G：DeepSeek Flash/Pro 真实接入 Explorer/Diagnosis；Benchmark 三组真实对照（详见 RUN-003-G 报告）。
+- RUN-004-FE：14 视图产品化升级、Explorer 展示真实 engine/llm_stats、新增 `/models` 与只读汇总 API。
+- 验收：224 passed（含新增 2 项）、ruff 全绿、typecheck/build 通过、真实 Chromium 53/53、截图 15 张。
