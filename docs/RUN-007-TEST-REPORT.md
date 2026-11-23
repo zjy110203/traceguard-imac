@@ -226,4 +226,6 @@ Nightly 的 `head_sha` 与 Release 的 `github.sha` 严格相等。
 
 - 本机 **无 PostgreSQL 运行时**（无 psql/docker），PG 持续/并发验证仍 BLOCKED；
   迁移 v9 只在 SQLite 上实测，CI `postgres:16` 是唯一 PG 覆盖路径。
-- 本轮 commit 的 Nightly / Release Gate **未手动 dispatch**，不宣称三级门禁在本 commit 全绿。
+- 本轮 commit `023f688` 的 **PR Gate 已真实通过**（push #11 `45224414344` 46s；
+  PR #12 `45224428962` 47s，backend/frontend 全绿）；
+  Nightly / Release Gate **未手动 dispatch**，故不宣称三级门禁在本 commit 全绿。

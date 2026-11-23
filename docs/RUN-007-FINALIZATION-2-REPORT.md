@@ -34,7 +34,7 @@
 | WP5 PostgreSQL | 本机 **BLOCKED**（无 psql/docker）；CI 的 `postgres:16` job 为唯一真实覆盖 | §7.2、§9 |
 | WP6 前端关键交互 | 75/75 检查通过（15 视图 × 4 断点 + 明暗主题），0 console 错误 | `docs/assets/run007/ui-f2/ui-review.json` |
 | WP7 最终回归 | **546 passed / 11 skipped**；ruff check + format 全绿 | §7.4 |
-| WP8 CI / PR | PR Gate 由 push 自动触发（结果见 §7.5）；Nightly/Release 需手动 dispatch，本轮**未执行** | §9 |
+| WP8 CI / PR | **PR Gate 在 `023f688` 上真实成功**（push #11 46s / PR #12 47s）；Nightly/Release 未 dispatch | §7.5 |
 
 ---
 
@@ -318,11 +318,20 @@ E2E 总计 **56 步 / 0 失败**（含场景 D 新增的 D17b 回滚内容级复
 
 ### 7.5 CI / PR
 
-- push 到 `workbuddy/run007-resume-20261123` 会自动触发 **PR Gate**（`pr-gate.yml` 的 push 分支规则）；
-- Nightly Gate 只有 `schedule`（北京时间 02:00）与 `workflow_dispatch`；
-  Release Gate 只有 tag 与 dispatch。**本轮未手动 dispatch**，
-  因此不能声称"三级门禁在本轮 commit 上全绿"——上一轮的 `fdbe0f5` 三级结论不可移植到新 commit。
-- PR #1 会随 push 自动更新提交列表；PR 描述/评论未自动追加（无 gh CLI，未使用临时 token）。
+push 到 `workbuddy/run007-resume-20261123` 自动触发 PR Gate，**在最终代码提交 `023f688` 上真实通过**：
+
+| 门禁 | 事件 | 运行 | 结论 | 明细 |
+|---|---|---|---|---|
+| PR Gate #11 | push（`023f688`） | [45224414344](https://github.com/zjy110203/traceguard-imac/actions/runs/45224414344) | **success（46s）** | backend 43s（ruff/format/单测/契约/关键集成）、frontend 24s（typecheck+build） |
+| PR Gate #12 | pull_request #1（synchronize） | [45224428962](https://github.com/zjy110203/traceguard-imac/actions/runs/45224428962) | **success（47s）** | backend 45s、frontend 25s |
+
+仅有的 2 条 annotation 是 Node.js 20 deprecated（actions 版本被强升 Node24），非阻断。
+
+- **Nightly Gate / Release Gate 未在本轮 commit 上 dispatch**（只有 `schedule` / `workflow_dispatch` / tag 触发）。
+  因此本报告**不声称**"三级门禁在本轮 commit 全绿"；上一轮 `fdbe0f5` 的
+  Nightly/Release 绿灯属于那一个 commit，不能移植。
+- PR #1 已随 push 自动更新提交列表（13 → 19 commits）。PR 描述仍是上一轮内容，本轮结论见本报告；
+  未使用临时 token 写评论（避免再次暴露凭据）。
 
 ---
 
@@ -344,9 +353,10 @@ E2E 总计 **56 步 / 0 失败**（含场景 D 新增的 D17b 回滚内容级复
 
 1. **PostgreSQL 本地持续运行与并发验证 BLOCKED**：本机无 PG 运行时，只能依赖 CI `postgres:16`；
    迁移 v9 未在 PG 上实测。
-2. **三级 CI 未在本轮 commit 上真实跑通**：PR Gate 随 push 自动触发（结果待查）；
-   Nightly / Release 需手动 dispatch 且需要带 Actions 权限的凭据，本轮未执行。
-   上一轮 `cc3339d`/`fdbe0f5` 的绿灯**不能**作为本轮验收证据。
+2. **Nightly / Release Gate 未在本轮 commit 上运行**：PR Gate 已在 `023f688` 上真实通过（§7.5），
+   但 Nightly（含 `postgres:16`、真实浏览器 E2E、Benchmark）与 Release（attestation）
+   需要 `workflow_dispatch` 且需要带 Actions 权限的凭据，本轮未执行。
+   上一轮 `cc3339d`/`fdbe0f5` 的 Nightly/Release 绿灯**不能**作为本轮验收证据。
 3. **诊断覆盖率被产品策略限制**：4 个 `NOT_EVALUATED` 场景诊断接口返回 412，
    这是产品规则（执行中断不下结论），不是本轮可改的缺陷；覆盖率上限 15/19。
 4. **D/E 臂无增益**：结论是负结果，不做有利解释；探针/图的价值需要多源冲突数据集才可能体现。
