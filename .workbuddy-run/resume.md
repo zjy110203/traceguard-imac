@@ -101,3 +101,26 @@ curl -X POST "http://127.0.0.1:8010/api/v1/runs/<run_id>/probe-plan?diagnosis_id
 - 不要声称 P03/P06/P08 已决策、路线图已冻结。
 - 不要把 skip 当 passed，不要把 PARTIAL/BLOCKED 写成成功，不要为过测试削弱断言。
 - 不要把顶层 302 说成"请求已被阻断"——它只是"落地被拒绝"。
+
+## RUN-007-RESUME 关键记忆（2026-11-23）
+
+- 执行归属：E2E/沙箱/回归一律 `{"sync": false}` 入队 + 轮询 `GET /runs/{id}`；
+  校验点是 `lease_owner` 非空且不等于 API Worker ID、`fencing_token >= 1`。
+- 证据来源：`report.evidence_ids` 可能为空，**必须**用 `GET /runs/{id}/evidence`，
+  再校验证据图里有对应 `Evidence` 节点与来源关系。
+- 缓存生存期：`RunPipeline._state_cache` 只允许活一个 Run（`execute()` 开头清空），否则常驻 Worker 会漏检假通过。
+- 沙箱：`RepairService` 不再 `execute_run`，改 `wait_for_run`；无 Worker → `PRECONDITION_FAILED`，Run 保持 QUEUED。
+- 建表并发：`create_schema` 必须容忍 "already exists"；迁移每条语句用 `conn.begin_nested()`（PG aborted 事务）。
+- 长稳：`teamflow_ok` 必须是真实 `ok is True` + 有 `count`；SSE 要统计事件/心跳/retry 帧并做 `Last-Event-ID` 续传。
+- 故障恢复：接管验证必须"同 Run + `fencing_token` 严格递增 + `attempt` 不变"；`killed_after_s` 必须来自真实计时。
+- UI 暗色：前端主题由 `localStorage['tg-theme']` 决定，**不是** `prefers-color-scheme`；
+  必须 `add_init_script` 写入后再截图，并用亮度断言验证（否则会交付"假深色"证据）。
+- 沙箱限制：`ps` 被禁止、无 `/proc`；`_proc_stats` 已回退为存活探测并标 `source=liveness_only`，资源字段为 `null`。
+- 无 Git 凭据：https 无 keychain、无 SSH key、无 `gh`/token → push/PR/CI 触发全部 BLOCKED。
+
+## 不要做的事（RUN-007 追加）
+
+- 不要覆盖 `docs/assets/run007/e2e-run007.json`（第五轮旧证据）。
+- 不要用 `use_llm=false` 的结果冒充 LLM 能力；LLM 候选状态是 CANDIDATE，不能当根因。
+- 不要把 PG 用例的 skip 写成 pass；不要声称 CI 门禁"已通过"。
+- 不要在长稳运行期间跑故障注入（会污染 TeamFlow 状态与周期判定）。

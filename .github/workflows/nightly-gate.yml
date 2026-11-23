@@ -1,6 +1,7 @@
-# Nightly Gate（三级门禁之二）：真实依赖（PostgreSQL Service Container）+ 全量测试 + 安全专项。
+# Nightly Gate（三级门禁之二）：真实依赖（PostgreSQL 16 Service Container）+ 全量测试 + 安全专项。
 # 关键失败（PostgreSQL / SSE / Inbox / Worker / 安全）必须阻断后续 Release。
 # 真实 LLM 测试只在配置了仓库 Secret 时执行；未配置则显式记录 BLOCKED，不伪装通过。
+# 原则：任何"装了但没装成功 / 跑了但失败"的步骤都必须让 Job 真实失败，不用 `|| true`、`|| echo` 掩盖。
 name: Nightly Gate
 
 on:
@@ -25,7 +26,19 @@ jobs:
         run: |
           python -m venv .venv
           .venv/bin/pip install -r requirements-dev.txt
-          .venv/bin/python -m playwright install --with-deps chromium || true
+      - name: Install Playwright chromium (must succeed)
+        # 不得使用 `|| true`：浏览器装不上时，后续真实浏览器用例会以假跳过/假通过掩盖问题。
+        run: |
+          .venv/bin/python -m playwright install --with-deps chromium
+          .venv/bin/python - <<'PY'
+          import pathlib, sys
+          roots = [pathlib.Path.home() / ".cache" / "ms-playwright"]
+          found = [p.name for r in roots if r.exists() for p in r.iterdir() if "chromium" in p.name]
+          if not found:
+              print("BLOCKED: playwright chromium 未安装成功（目录为空）", file=sys.stderr)
+              sys.exit(1)
+          print("playwright chromium installed:", found)
+          PY
       - name: Full backend suite (SQLite)
         run: .venv/bin/pytest -q
       - name: Worker / event / inbox concurrency (real processes)
@@ -33,7 +46,10 @@ jobs:
           .venv/bin/pytest -q \
             tests/unit/test_event_concurrency.py \
             tests/unit/test_inbox_persistence.py \
-            tests/unit/test_probe_budget.py
+            tests/unit/test_probe_budget.py \
+            tests/integration/test_probe_budget_multiprocess.py \
+            tests/integration/test_sandbox_worker_queue.py \
+            tests/unit/test_pipeline_state_cache.py
       - name: Upload pytest artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -45,6 +61,7 @@ jobs:
           retention-days: 7
 
   postgres:
+    # WP4-01：PostgreSQL 16 Service Container 上的扩展验证（不只是"能连上"）。
     runs-on: ubuntu-latest
     timeout-minutes: 30
     services:
@@ -73,11 +90,57 @@ jobs:
           python -m venv .venv
           .venv/bin/pip install -r requirements-postgres.txt
           .venv/bin/pip install pytest httpx
-      - name: PostgreSQL parity tests
-        run: .venv/bin/pytest -q tests/integration/test_postgres_parity.py
-      - name: Note on migration on fresh database
+      - name: PostgreSQL server version must be 16
         run: |
-          echo "fresh schema + migrations verified by Database.create_schema() in the test above"
+          .venv/bin/python - <<'PY'
+          import os, sys
+          from sqlalchemy import create_engine, text
+          engine = create_engine(os.environ["TG_TEST_POSTGRES_URL"])
+          with engine.connect() as conn:
+              v = conn.execute(text("SHOW server_version")).scalar_one()
+          print("server_version =", v)
+          if not str(v).startswith("16"):
+              sys.exit(f"BLOCKED: 期望 PostgreSQL 16，实际 {v}")
+          PY
+      - name: PostgreSQL parity tests (stores)
+        run: .venv/bin/pytest -q tests/integration/test_postgres_parity.py
+      - name: PostgreSQL platform tests (migrations v8 / lease fencing / CAS / receipts)
+        # 覆盖：迁移 v8 幂等 + 并发启动、claim 原子性、租约接管代次、旧代次提交拒绝、
+        #       晋升 CAS 单赢家 + 幂等回执、生产方序列不重号。
+        run: .venv/bin/pytest -q tests/integration/test_postgres_platform.py -rs
+      - name: Migration idempotency on a fresh PostgreSQL database
+        run: |
+          .venv/bin/python - <<'PY'
+          import os, uuid
+          from sqlalchemy import create_engine, text
+          from sqlalchemy.engine import make_url
+          from traceguard_persistence import Database
+          from traceguard_persistence.db import MIGRATIONS
+
+          base = make_url(os.environ["TG_TEST_POSTGRES_URL"])
+          name = f"tg_mig_{uuid.uuid4().hex[:8]}"
+          admin = create_engine(base.set(database="postgres"), isolation_level="AUTOCOMMIT")
+          with admin.connect() as c:
+              c.execute(text(f'CREATE DATABASE "{name}"'))
+          url = str(base.set(database=name))
+          try:
+              db = Database(url); db.create_schema(); db.create_schema()
+              db.dispose()
+              db2 = Database(url); db2.create_schema()
+              with db2.session() as s:
+                  rows = [(int(r[0]), str(r[1])) for r in s.execute(text("SELECT version, name FROM tg_schema_migration")).all()]
+              expected = {v for v, _n, _m in MIGRATIONS}
+              got = [v for v, _n in rows]
+              assert sorted(got) == sorted(expected), (got, sorted(expected))
+              assert len(got) == len(set(got)), f"迁移被重复应用: {got}"
+              assert (8, "promotion_receipts") in rows
+              print("fresh PostgreSQL migration OK:", rows)
+              db2.dispose()
+          finally:
+              with admin.connect() as c:
+                  c.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
+              admin.dispose()
+          PY
 
   security:
     runs-on: ubuntu-latest
@@ -87,18 +150,47 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: npm audit (high/critical 阻断)
+      - name: npm audit (区分工具错误与漏洞；High/Critical 阻断)
         working-directory: apps/web
         run: |
           npm ci
-          npm audit --json > audit.json || true
-          node -e '
-            const a = require("./audit.json");
-            const v = a.metadata?.vulnerabilities || {};
-            const high = (v.high || 0) + (v.critical || 0);
-            console.log(JSON.stringify(v));
-            if (high > 0) { console.error("HIGH/CRITICAL vulnerabilities: " + high); process.exit(1); }
-          '
+          set +e
+          npm audit --json > audit.json 2> audit.stderr
+          audit_code=$?
+          set -e
+          node - <<'JS'
+          const fs = require("fs");
+          let raw;
+          try {
+            raw = fs.readFileSync("audit.json", "utf8");
+          } catch (e) {
+            console.error("AUDIT_TOOL_ERROR: npm audit 未产出 JSON 报告（无法证明无高危漏洞）");
+            process.exit(1);
+          }
+          let a;
+          try {
+            a = JSON.parse(raw);
+          } catch (e) {
+            console.error("AUDIT_TOOL_ERROR: npm audit 报告不是合法 JSON（工具/网络故障），不能当作通过");
+            console.error(raw.slice(0, 400));
+            process.exit(1);
+          }
+          if (!a.metadata || !a.metadata.vulnerabilities) {
+            console.error("AUDIT_TOOL_ERROR: 报告缺少 metadata.vulnerabilities（审计未真正完成）");
+            process.exit(1);
+          }
+          const v = a.metadata.vulnerabilities;
+          const high = (v.high || 0) + (v.critical || 0);
+          console.log("audit vulnerabilities =", JSON.stringify(v));
+          if (high > 0) {
+            console.error(`VULNERABILITIES: HIGH/CRITICAL = ${high}（阻断）`);
+            process.exit(1);
+          }
+          console.log("audit OK: no high/critical vulnerabilities");
+          JS
+          if [ "$audit_code" -ne 0 ] && [ "$audit_code" -ne 1 ]; then
+            echo "AUDIT_TOOL_ERROR: npm audit 退出码 $audit_code（非'发现漏洞'的 1）"; exit 1
+          fi
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -107,7 +199,7 @@ jobs:
           if grep -rInE "(sk-[A-Za-z0-9]{20,}|DEEPSEEK_API_KEY=[^[:space:]]+)" \
               --exclude-dir=.github \
               --include="*.py" --include="*.ts" --include="*.vue" --include="*.yml" --include="*.md" .; then
-            echo "potential secret pattern found"; exit 1
+            echo "SECRET_PATTERN_FOUND"; exit 1
           else
             echo "no secret pattern found"
           fi
@@ -118,6 +210,8 @@ jobs:
     env:
       DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
       TG_LLM_PROVIDER: deepseek
+    outputs:
+      llm_status: ${{ steps.llm.outputs.status }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -128,11 +222,50 @@ jobs:
           python -m venv .venv
           .venv/bin/pip install -r requirements.txt
           .venv/bin/pip install pytest
-      - name: Record BLOCKED (no credentials)
-        if: ${{ env.DEEPSEEK_API_KEY == '' }}
+      - name: LLM smoke (真实调用；缺 Secret 记 BLOCKED，有 Secret 失败即失败)
+        id: llm
         run: |
-          echo "BLOCKED: DEEPSEEK_API_KEY 未配置，真实 LLM 夜间测试未执行（不得记为通过）"
-      - name: LLM connectivity smoke (bounded budget)
-        if: ${{ env.DEEPSEEK_API_KEY != '' }}
+          if [ -z "${DEEPSEEK_API_KEY:-}" ]; then
+            echo "status=BLOCKED" >> "$GITHUB_OUTPUT"
+            {
+              echo "### LLM Smoke: BLOCKED"
+              echo "DEEPSEEK_API_KEY 未配置，真实 LLM 夜间测试未执行。"
+              echo "**不得记为通过**，Release Gate 会据此判定证据缺失。"
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "BLOCKED: DEEPSEEK_API_KEY 未配置，真实 LLM 夜间测试未执行（不得记为通过）"
+            exit 0
+          fi
+          # 有凭据：真实执行，失败必须真实失败（不吞异常、不降级为"通过"）
+          .venv/bin/python scripts/llm_smoke.py
+          echo "status=PASSED" >> "$GITHUB_OUTPUT"
+          echo "### LLM Smoke: PASSED" >> "$GITHUB_STEP_SUMMARY"
+
+  gate-verdict:
+    # 汇总门禁结论：任一关键 Job 失败即失败；LLM 缺凭据显式标 BLOCKED（不算通过）。
+    needs: [backend-full, postgres, security, llm-smoke]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summarize and enforce
         run: |
-          .venv/bin/python scripts/llm_smoke.py || echo "BLOCKED: LLM smoke failed; recorded, not disguised as pass"
+          {
+            echo "### Nightly Gate 结论（commit ${{ github.sha }}）"
+            echo ""
+            echo "| Job | 结果 |"
+            echo "| --- | --- |"
+            echo "| backend-full | ${{ needs.backend-full.result }} |"
+            echo "| postgres (PG16) | ${{ needs.postgres.result }} |"
+            echo "| security | ${{ needs.security.result }} |"
+            echo "| llm-smoke | ${{ needs.llm-smoke.result }} / ${{ needs.llm-smoke.outputs.llm_status }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          failed=0
+          for r in "${{ needs.backend-full.result }}" "${{ needs.postgres.result }}" "${{ needs.security.result }}"; do
+            if [ "$r" != "success" ]; then failed=1; fi
+          done
+          if [ "${{ needs.llm-smoke.result }}" != "success" ]; then
+            echo "LLM smoke 真实失败（有凭据时不允许掩盖）"; failed=1
+          fi
+          if [ "${{ needs.llm-smoke.outputs.llm_status }}" = "BLOCKED" ]; then
+            echo "::warning::LLM smoke BLOCKED（缺 Secret）；该证据不得用于 Release 放行"
+          fi
+          exit $failed

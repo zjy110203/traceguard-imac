@@ -1,0 +1,105 @@
+# RUN-007 证据文件 SHA-256（生成于最终验收后）
+
+文件数：94
+
+| 文件 | 字节 | SHA-256 |
+|---|---|---|
+| `docs/assets/run007/benchmark/benchmark-v3.json` | 21885 | `ef78070f1c4c2dde4a2a56e1e953682196fc38ba2e1f698b92b54816d73b9fb6` |
+| `docs/assets/run007/benchmark/llm-arm-flash-routed.json` | 34797 | `24589b26450d3591ffb2578b11b862c59a604dcb8641073010f2df33d111de85` |
+| `docs/assets/run007/benchmark/llm-arm-pro.json` | 18835 | `81295d9c9e492cafe55488bb9fc6f1803a8d022fa4e7e57353aec5977a5ca6ca` |
+| `docs/assets/run007/benchmark/samples.jsonl` | 577906 | `2f0b62bd349f4b48f67585873aaf143304253ba0fec556879b27d835bc809aa5` |
+| `docs/assets/run007/e2e-run007.json` | 10442 | `da6456d818c534ad76a97fb650814d6d9a6cb6b67b23ee30cb2668f9ecdbfb03` |
+| `docs/assets/run007/e2e-worker-run007.json` | 29733 | `0e77c17885af4da9ad6943f7b8898e28c37db9680d4017ad49d0f1eb33b863f5` |
+| `docs/assets/run007/network-boundary.json` | 2836 | `4c14d5b4be1b6d3894809618cd8ed2e50711b263dfa475212ffda669813ff59d` |
+| `docs/assets/run007/probe-budget-closed.json` | 2214 | `23c06c587c16e0629ab8f7f8bd7cee2bcd2125e5171cbe1ce93d7a6f62239eb9` |
+| `docs/assets/run007/probe-budget-kill.json` | 2236 | `515398027c8fab03ac365ce160c9e72e13a14de847fe504e2f22977b7140542e` |
+| `docs/assets/run007/probe-budget-multiprocess.json` | 2476 | `c798cc8f92b97d16a25bde15573e0c784944b16fc15e79e1ed41e6ebe18e3589` |
+| `docs/assets/run007/soak-60min.json` | 2076 | `7a2f3a64fb3391ef14f6c1fa9d65a5876005733f27ef6f6ba2ea8916288ffdd0` |
+| `docs/assets/run007/soak-samples.jsonl` | 97730 | `abdb4b4cd51a3d0a4032fdca92791c00b7d61588201a6c7241a8b9b8575a82e1` |
+| `docs/assets/run007/ui/ui-review.json` | 24846 | `cefa16849f7f7a3e3958c21f94f1129797c6939ae988d2e101a0bd2c23a55de0` |
+| `docs/assets/run007/worker-fault-recovery-verified.json` | 3839 | `9117090242348bd1af0c263df68d204d0bd7de2934bd67208df0e984aff75e71` |
+| `docs/assets/run007/worker-fault-recovery.json` | 1535 | `236b1693293d9d0741136674ddb3981ab71de7cacd2fc724964fd2ea77cb5e66` |
+
+截图（79 张）逐张哈希见下：
+
+| 文件 | SHA-256 |
+|---|---|
+| `docs/assets/run007/ui/01-dashboard-1024.png` | `798a8b7417c2897176524d92a0182e013d190dd4b335244ae2e6b97d8254dd42` |
+| `docs/assets/run007/ui/01-dashboard-1440.png` | `fd686ecb1bbccf571000c1ff64da5ffdef4f92f361b483426ce35b24e1f80a6b` |
+| `docs/assets/run007/ui/01-dashboard-390.png` | `de61acff69eb3754f6510dcbca6273ce9c5ec43ead3a6956e2be1029e83806cb` |
+| `docs/assets/run007/ui/01-dashboard-768.png` | `ce95c73b680b4e1420c712acd2655368a8c63f66b2b4787b6f70de89f0524857` |
+| `docs/assets/run007/ui/01-dashboard-dark.png` | `9fdf9dd40af7c9c9b4fcad794f6bf61d3aecc6fbbd52f1cf23844c1450412d3f` |
+| `docs/assets/run007/ui/02-intents-1024.png` | `d21bb05abe57986b13a5b7331aa405743fe237f7f37c8fb2ae2c0c8568a00335` |
+| `docs/assets/run007/ui/02-intents-1440.png` | `9eba6ae43b2d12b85ba602dfbcef955a0d65079eec4c0ef4e5fb3c5254d3271a` |
+| `docs/assets/run007/ui/02-intents-390.png` | `14a2573e89d128c3a72e760a3c83cfd7a653fdcbe413a72b2223a76873742803` |
+| `docs/assets/run007/ui/02-intents-768.png` | `fc00a2eeea4ed6c0863bdf39c5bb132462ca3a418f01ab6595c56727a8582a70` |
+| `docs/assets/run007/ui/02-intents-dark.png` | `73b7ede82448cbc59c43921ca7753b741733d7ec6bec2111f241ec0153f941ce` |
+| `docs/assets/run007/ui/03-testcases-1024.png` | `d8fe2056a59f4c21bd3412d57a3069ddf2d3e631623518b1d5f22639efad9a12` |
+| `docs/assets/run007/ui/03-testcases-1440.png` | `74dc3285053719d8cad3c0309ea5f9068ff55d485159c16bf94888e4bc7c3be2` |
+| `docs/assets/run007/ui/03-testcases-390.png` | `234df182eeec77dc18ad4a87a1f4a776b3f6f21591c070450accd6b83935a14a` |
+| `docs/assets/run007/ui/03-testcases-768.png` | `0dffe59ac2ab04f3f9868adef6b3f7d233e0cd40460ada3021b66edd0b536cb9` |
+| `docs/assets/run007/ui/03-testcases-dark.png` | `eace3edcd07a2e3a9776ea9bff4074515c00a695d7a388f023897b893f2a26d5` |
+| `docs/assets/run007/ui/04-testcase-detail-1024.png` | `b8bc5e7d59cc97a153f92b4a8037e2c638c33ca8322aa8155593193ee016ce02` |
+| `docs/assets/run007/ui/04-testcase-detail-1440.png` | `604bbe3e332223e6e600a58cbfaaea00f846e591b4250cbaeff7d5218248e68f` |
+| `docs/assets/run007/ui/04-testcase-detail-390.png` | `c42860c9eed539d51b6826011b1d436e98ea47e7fb1c7595b00b78f79ee29946` |
+| `docs/assets/run007/ui/04-testcase-detail-768.png` | `b6141504035a8f37b73b2f1f7e6107a98fe83d2d1c1e883ee975a56f17090e3b` |
+| `docs/assets/run007/ui/04-testcase-detail-dark.png` | `acc379ed4e2e5381e016190c17d2a7308f3b2384f76ecefc0b99559c6645fad1` |
+| `docs/assets/run007/ui/05-oracles-1024.png` | `79a9a4e00b13f08f1c14287679ad591166b8fe099687397a170b0447fc574f95` |
+| `docs/assets/run007/ui/05-oracles-1440.png` | `0e3bc1a30c890c3471f29009b16e70db597e660d4afc9a2471176f5d195c911d` |
+| `docs/assets/run007/ui/05-oracles-390.png` | `924cbf6e1a56c7285aadf64190afe242de2810be0c221ea71a3f0c54b100f0e6` |
+| `docs/assets/run007/ui/05-oracles-768.png` | `455ad327b1d34819bdc1f4918d31728a4f823ddedb74ec8a3a1dda7de16fe211` |
+| `docs/assets/run007/ui/05-oracles-dark.png` | `1cff3587ce3158facddd78d5c6067f32bad88258d5eef28f240fed221b147b91` |
+| `docs/assets/run007/ui/06-runs-1024.png` | `72f333cff113de9b99c9410be8e6e81daf08995166836f875c0722fb1d7ccb44` |
+| `docs/assets/run007/ui/06-runs-1440.png` | `015560e074103d8578eb75b7844d02a211249d273c221ef70460e5e93c6dc160` |
+| `docs/assets/run007/ui/06-runs-390.png` | `abf7dfd9da36ddaa363e2169cc85bcc2caf1fafc811f85adef55165f82cfbdda` |
+| `docs/assets/run007/ui/06-runs-768.png` | `c39af0611b44558442a8b48b9caaadc25c2ca6ce66c9721d56cab4e731aa1933` |
+| `docs/assets/run007/ui/06-runs-dark.png` | `06f75750f5c09f72b641acbc306e285a1b479d60dbd3b6eeb39f6963ab546dda` |
+| `docs/assets/run007/ui/07-run-detail-1024.png` | `b5345e26e3840e0ce828e3d616fc2c63bf45a11b92bb20023b5aafc42880173d` |
+| `docs/assets/run007/ui/07-run-detail-1440.png` | `6fdc5cc01ead22d0a76b3d72a263eecea45beb2af80aa31fed5bd4852a70d60e` |
+| `docs/assets/run007/ui/07-run-detail-390.png` | `4222ed61f71fcab6835acaa9699b6a1558726748dd26cb5f44375f95002f79ee` |
+| `docs/assets/run007/ui/07-run-detail-768.png` | `2129c2bbe0f3970a2a4d76326e031d9442f871d676c96cfb96f6bd3b4917032e` |
+| `docs/assets/run007/ui/07-run-detail-dark.png` | `0186a54787f031b8857364d87087230b2eec0f851f6c0fca57f0db338478e543` |
+| `docs/assets/run007/ui/08-run-evidence-graph-1024.png` | `b15fdb59267c2320dce7348d00bb9ae8d9625a457fc44f739e43432bc1b48463` |
+| `docs/assets/run007/ui/08-run-evidence-graph-1440.png` | `79dda69ca1aeea6cfd8d6ec47f04ca173e54d7b321ce2f2ac06b3b1eeef152e1` |
+| `docs/assets/run007/ui/08-run-evidence-graph-390.png` | `7cac71d54767ad9b615349ab22cf9fcf6982953bb721918685464b683eab5bcf` |
+| `docs/assets/run007/ui/08-run-evidence-graph-768.png` | `33422412b8d2f73e3b83e4baa163e04537adf0f701172e3e91109abe98682015` |
+| `docs/assets/run007/ui/08-run-evidence-graph-dark.png` | `9300977f7de86bef033a9b5210464a9bab211237a4780f20f5233cd53b5e4a72` |
+| `docs/assets/run007/ui/09-explorer-1024.png` | `6b91aef9afcd566095ce662e4da2495b3831b49a18fdd0cb912ff8459940dfd8` |
+| `docs/assets/run007/ui/09-explorer-1440.png` | `2aad92b57def1c18d01346161f50a75b40cb276bb58bdf5c02cfb6dce0135a1b` |
+| `docs/assets/run007/ui/09-explorer-390.png` | `697e2b3c6aa629fc3e048b478294563cd010a6f19311d1df6e5a6844f4864a5b` |
+| `docs/assets/run007/ui/09-explorer-768.png` | `e804993c56e464176201edbfed46c75821be372b31991b19fcea8488f1950b3a` |
+| `docs/assets/run007/ui/09-explorer-dark.png` | `b11d17b76d3757d089dbdecba1829c7be0a71babe859e8cfa15f361fbabc0b77` |
+| `docs/assets/run007/ui/10-models-1024.png` | `70c3e53c5c967d02d706b72effce3c700a148f17cbb876e41c1061863682e692` |
+| `docs/assets/run007/ui/10-models-1440.png` | `b08e1bc333e4e7bee19ae4161112ff5c11a7f316be4bd12d3ef3b6d3bc25a9e3` |
+| `docs/assets/run007/ui/10-models-390.png` | `31832c16e8469021810ec1d7fdb0536ea28addba8bd6cf8fe655d1c016f4e4a3` |
+| `docs/assets/run007/ui/10-models-768.png` | `9aea28be1556334b218880f01ecef126e5e553ccd3e527773b9060ab0d6fb83a` |
+| `docs/assets/run007/ui/10-models-dark.png` | `840b270565060f47445a7408b7911adf4da6789b358a1ecf5d897843b76e8c20` |
+| `docs/assets/run007/ui/11-diagnoses-1024.png` | `d998168796fb3a4c74a2157c27af825ffb81bac1d8a529dd9755ef84033f3c60` |
+| `docs/assets/run007/ui/11-diagnoses-1440.png` | `a4c9465b190dfad0893aa34e3321d3be718979881fb3c7a73f1344ace03b2258` |
+| `docs/assets/run007/ui/11-diagnoses-390.png` | `4d98ad4ec6fb9bc9b9262d3c3063d0bc5f845f06e0761a1f05e1c3c9e04701e8` |
+| `docs/assets/run007/ui/11-diagnoses-768.png` | `ab992bea3b813cacd03da423a436640c39fea2aa975111cffb845127edbfecaf` |
+| `docs/assets/run007/ui/11-diagnoses-dark.png` | `93813f70603cfacf498f10cc8e408c1204f68b731a0f7949c16e6bf8d9c7158c` |
+| `docs/assets/run007/ui/12-diagnosis-detail-1024.png` | `0f6c211a7387fa7f1fd431f81b91a719011cc5143fd6ef589a7ce9713f8ca7d6` |
+| `docs/assets/run007/ui/12-diagnosis-detail-1440.png` | `bebf7f53e652562723d40bf73118f48b0eba23093a3ec0ccde9acb1df65cf4dd` |
+| `docs/assets/run007/ui/12-diagnosis-detail-390.png` | `293a48624d37dceafba9bf87a295ef66836185aea3ccfce9167704bec4a2c529` |
+| `docs/assets/run007/ui/12-diagnosis-detail-768.png` | `b09df8c4196a2d12e5d494a51981c66f7a19474a0a5c54d11e61a2a1825d8cbb` |
+| `docs/assets/run007/ui/12-diagnosis-detail-dark.png` | `c59cb460ee7bdfc64029195b298f2a3f27b7f84763b49d63a02547f475860beb` |
+| `docs/assets/run007/ui/13-repairs-1024.png` | `ca3db79de96959b0c6d662f30d1909ef071d4c3ba9840f2173d38bf3302cb514` |
+| `docs/assets/run007/ui/13-repairs-1440.png` | `05479b4695118512b25ee1709837691442cea8a5b0c6f76e5a1d7453c289538a` |
+| `docs/assets/run007/ui/13-repairs-390.png` | `80920626d1dd5872d6c8a7df725ca38a5c6b8a9304d50c9a61e66b8c1fffaadb` |
+| `docs/assets/run007/ui/13-repairs-768.png` | `aa1fc3f8175b71f66c0c0050e97c70dd6ce750ad1141fccbaad3e7e775eeba1f` |
+| `docs/assets/run007/ui/13-repairs-dark.png` | `0bbbd357a4c6fc8ae4cf9cb428a2bd5c364727746ef79a9a1b01147055dbbf9c` |
+| `docs/assets/run007/ui/14-benchmark-1024.png` | `a7c1b63b7ace78f69f58b14a92c4e24c1e2ea97943a560ce5863d36e564f4e07` |
+| `docs/assets/run007/ui/14-benchmark-1440.png` | `75d09f0d3dc54001a533f83febba22210d65117ca9c92fe433c8f24032092082` |
+| `docs/assets/run007/ui/14-benchmark-390.png` | `25615bfd2f549c31ee86990e8f10d01f23114b6d0ad928cbabd7250963ab8669` |
+| `docs/assets/run007/ui/14-benchmark-768.png` | `8626f1357493c12f05dee5df7faac001cadcc868e7db2974e5bcac4f686cee0b` |
+| `docs/assets/run007/ui/14-benchmark-dark.png` | `7e296ffeafdf8dbc9b275754927bf3279b8a11e5088e438e698952680b185743` |
+| `docs/assets/run007/ui/15-system-1024.png` | `cee13b881a4f96287f327b65119b02b3220ac39cf361151ed5ac22511d5db9e5` |
+| `docs/assets/run007/ui/15-system-1440.png` | `a126ad9f51741a780a7cc0fabbbb8663c8ec9727bca41a6c09ef68e06b74c8c8` |
+| `docs/assets/run007/ui/15-system-390.png` | `691013e7e011b5da7e92ed9483e2bfc41fb63050bff4a179539e26a9e0114892` |
+| `docs/assets/run007/ui/15-system-768.png` | `5c9e342f91cfe72810b27706cd15a9cfba45330c75c3740165bc7127239f7fa7` |
+| `docs/assets/run007/ui/15-system-dark.png` | `aa9024c0d0398829729a39cd1257ce3b27824d1d5a9f18cc5f08c18f02282289` |
+| `docs/assets/run007/ui/state-empty-runs.png` | `630e8c23858c3b6a0cd02b7b621b5d38c16669d7f70e1e2fe736f448848b4021` |
+| `docs/assets/run007/ui/state-error-missing-run.png` | `7ccc1e1393e9f5fd723418c312db92bcec81ed9b7d305349d123c453ee84dde2` |
+| `docs/assets/run007/ui/state-loading-runs.png` | `284655f0d883f5a86dfde01852aa768eb3898030e0e0de6a99f654f81db9012a` |
+| `docs/assets/run007/ui/state-success-dashboard.png` | `9d2812d5309fdee89feb6b84f4bff2ec4876d168f5469095063e19b7eca40fea` |

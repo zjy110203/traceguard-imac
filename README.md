@@ -50,6 +50,32 @@ Agentic Web UI Testing & Quality Intelligence Platform（智能 Web UI 自动化
 交付文档：`docs/RUN-006-BASELINE.md`、`RUN-006-IMPLEMENTATION-REPORT.md`、`RUN-006-TEST-REPORT.md`、
 `RUN-006-SECURITY-RELIABILITY.md`、`RUN-006-DECISION-REQUESTS.md`；证据：`docs/assets/run006/`。
 
+## RUN-007 续跑新增能力（2026-11-23）
+
+- **执行归属可见**：Run 详情新增「执行归属」条（`Worker` / `attempt` / `fencing token` / 队列状态 / 租约），
+  质量总览明确区分「独立 Worker / 内嵌 Worker」并显示 API Worker ID、数据库状态与 dialect。
+- **E2E 改为真正消费队列**：`TG_INLINE_WORKER=0` + 4 个独立 Worker + `sync:false` 轮询，
+  四场景（正常 / 假成功 / 探针闭环 / 修复全链）**55 步 0 失败**；证据页改为
+  `GET /runs/{id}/evidence` 并校验证据图节点与关系（不再依赖空的 `report.evidence_ids`）。
+- **两个真实缺陷修复**：① 常驻 Worker 复用 pipeline 导致业务状态缓存**跨 Run 泄漏**（假通过漏检）；
+  ② 沙箱曾在 API 进程内执行（改为入队 + 无 Worker 时 fail-closed）；
+  另外修复 API + 多 Worker **并发启动建表非原子**导致的随机崩溃。
+- **前端 15 视图 × 4 断点 + 深色 + 四态真实截图验收**：75 项检查全通过，
+  并修掉证据图裁切、390px 筛选栏错位、暗色截图实际是浅色三处问题（见 `docs/RUN-007-UI-REVIEW.md`）。
+- **CI 三级门禁去掩盖**：PR Gate 分支过滤修正；Nightly 删除 `|| true` / `|| echo`，
+  LLM 缺 Secret 记 BLOCKED、有 Secret 失败即失败，npm audit 区分工具错误与漏洞；
+  Release Gate 去除 RUN-005 依赖，改用 Actions API 校验 Nightly 的 `head_sha` 严格等于当前 commit。
+- **可靠性实验**：Worker 被杀接管（真实计时 + 同 Run 代次递增 + 陈旧代次拒绝）、
+  60 分钟长稳（独立 API + 4 Worker + 真实 SSE 续传 + 19 项完整性检查）、
+  UI-FaultBench v3 四臂（A/C/D/E）30 场景与 LLM 对照臂。
+
+> 已知阻塞：本机无 GitHub 凭据 → 分支无法推送、PR 无法创建、CI 无法真实触发；
+> 本机无 Docker/PostgreSQL → PG16 验证在 CI 作业中就绪但未本地执行。均已在报告中标注 BLOCKED。
+
+交付文档：`docs/RUN-007-BASELINE.md`、`RUN-007-IMPLEMENTATION-REPORT.md`、`RUN-007-TEST-REPORT.md`、
+`RUN-007-SECURITY-RELIABILITY.md`、`RUN-007-UI-REVIEW.md`、`RUN-007-BENCHMARK-REPORT.md`、
+`RUN-007-DECISION-REQUESTS.md`；证据：`docs/assets/run007/`。
+
 ## 快速开始
 
 ```bash

@@ -107,9 +107,7 @@ def test_last_event_id_resumes_without_duplicates(client) -> None:
 
 
 def test_workspace_filter_isolates_streams(client) -> None:
-    with client.stream(
-        "GET", "/events/stream?workspace_id=ws2&limit=1&poll_interval=0.05"
-    ) as resp:
+    with client.stream("GET", "/events/stream?workspace_id=ws2&limit=1&poll_interval=0.05") as resp:
         events = _read_event_lines(resp, limit=1)
     assert [e["data"]["workspace_id"] for e in events] == ["ws2"]
 

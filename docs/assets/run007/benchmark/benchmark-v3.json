@@ -1,0 +1,880 @@
+{
+  "round": "RUN-007-RESUME",
+  "dataset": "teamflow-faultbench-v2",
+  "dataset_version": "v3-experiment",
+  "scenarios": 30,
+  "runs_executed": 38,
+  "started_at": "2026-11-23T13:39:02Z",
+  "duration_s": 631.0,
+  "api": "http://127.0.0.1:8020",
+  "execution_mode": "independent-worker-queue",
+  "api_inline_worker": false,
+  "failure_samples": 19,
+  "gt_isolated": true,
+  "metrics": [
+    {
+      "metric": "primary_cause_accuracy[A_raw_report]",
+      "value": 0.1579,
+      "numerator": 3,
+      "denominator": 19,
+      "note": "主因类别命中/失败样本数"
+    },
+    {
+      "metric": "diagnosis_coverage[A_raw_report]",
+      "value": 1.0,
+      "numerator": 19,
+      "denominator": 19,
+      "note": "给出确定结论的样本/失败样本数"
+    },
+    {
+      "metric": "selective_accuracy[A_raw_report]",
+      "value": 0.1579,
+      "numerator": 3,
+      "denominator": 19,
+      "note": "在有结论的样本里主因正确/有结论样本数（须与 coverage 同看）"
+    },
+    {
+      "metric": "false_pass_rate[A_raw_report]",
+      "value": 1.0,
+      "numerator": 4,
+      "denominator": 4,
+      "note": "持久化故障中被判 PASSED 的比例"
+    },
+    {
+      "metric": "macro_f1[A_raw_report]",
+      "value": 0.075,
+      "numerator": 0,
+      "denominator": 8,
+      "excluded": 0,
+      "note": "各类别F1宏平均；分母=类别数；缺失预测计为该类别FN"
+    },
+    {
+      "metric": "primary_cause_accuracy[C_rule]",
+      "value": 0.5263,
+      "numerator": 10,
+      "denominator": 19,
+      "note": "主因类别命中/失败样本数"
+    },
+    {
+      "metric": "diagnosis_coverage[C_rule]",
+      "value": 0.6842,
+      "numerator": 13,
+      "denominator": 19,
+      "note": "给出确定结论的样本/失败样本数"
+    },
+    {
+      "metric": "selective_accuracy[C_rule]",
+      "value": 0.7692,
+      "numerator": 10,
+      "denominator": 13,
+      "note": "在有结论的样本里主因正确/有结论样本数（须与 coverage 同看）"
+    },
+    {
+      "metric": "false_pass_rate[C_rule]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 4,
+      "note": "持久化故障中被判 PASSED 的比例"
+    },
+    {
+      "metric": "macro_f1[C_rule]",
+      "value": 0.3056,
+      "numerator": 2,
+      "denominator": 8,
+      "excluded": 0,
+      "note": "各类别F1宏平均；分母=类别数；缺失预测计为该类别FN"
+    },
+    {
+      "metric": "primary_cause_accuracy[D_graph]",
+      "value": 0.5263,
+      "numerator": 10,
+      "denominator": 19,
+      "note": "主因类别命中/失败样本数"
+    },
+    {
+      "metric": "diagnosis_coverage[D_graph]",
+      "value": 0.6842,
+      "numerator": 13,
+      "denominator": 19,
+      "note": "给出确定结论的样本/失败样本数"
+    },
+    {
+      "metric": "selective_accuracy[D_graph]",
+      "value": 0.7692,
+      "numerator": 10,
+      "denominator": 13,
+      "note": "在有结论的样本里主因正确/有结论样本数（须与 coverage 同看）"
+    },
+    {
+      "metric": "false_pass_rate[D_graph]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 4,
+      "note": "持久化故障中被判 PASSED 的比例"
+    },
+    {
+      "metric": "macro_f1[D_graph]",
+      "value": 0.3056,
+      "numerator": 2,
+      "denominator": 8,
+      "excluded": 0,
+      "note": "各类别F1宏平均；分母=类别数；缺失预测计为该类别FN"
+    },
+    {
+      "metric": "primary_cause_accuracy[E_probe]",
+      "value": 0.5263,
+      "numerator": 10,
+      "denominator": 19,
+      "note": "主因类别命中/失败样本数"
+    },
+    {
+      "metric": "diagnosis_coverage[E_probe]",
+      "value": 0.7368,
+      "numerator": 14,
+      "denominator": 19,
+      "note": "给出确定结论的样本/失败样本数"
+    },
+    {
+      "metric": "selective_accuracy[E_probe]",
+      "value": 0.7143,
+      "numerator": 10,
+      "denominator": 14,
+      "note": "在有结论的样本里主因正确/有结论样本数（须与 coverage 同看）"
+    },
+    {
+      "metric": "false_pass_rate[E_probe]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 4,
+      "note": "持久化故障中被判 PASSED 的比例"
+    },
+    {
+      "metric": "macro_f1[E_probe]",
+      "value": 0.2992,
+      "numerator": 2,
+      "denominator": 8,
+      "excluded": 0,
+      "note": "各类别F1宏平均；分母=类别数；缺失预测计为该类别FN"
+    },
+    {
+      "metric": "time_to_diagnosis_s",
+      "value": 10.73,
+      "median": 12.15,
+      "numerator": 15,
+      "denominator": 19,
+      "note": "从调用诊断接口到返回结论的秒数（不含执行时间）"
+    },
+    {
+      "metric": "probe_count_per_failure",
+      "value": 2.58,
+      "numerator": 49,
+      "denominator": 19,
+      "note": "E 臂在每个失败样本上真实执行的只读探针数"
+    },
+    {
+      "metric": "evidence_coverage_per_failure",
+      "value": 28.84,
+      "numerator": 548,
+      "denominator": 19,
+      "note": "每个失败样本关联的真实 Evidence 数（平均）"
+    }
+  ],
+  "repair_metrics": [
+    {
+      "metric": "assertion_preservation_rate",
+      "value": 1.0,
+      "numerator": 2,
+      "denominator": 2,
+      "excluded": 0,
+      "note": "保持必需断言不变的修复数/总修复数"
+    },
+    {
+      "metric": "acceptance_rate",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 2,
+      "excluded": 0,
+      "note": "审批通过且回归通过的修复数/总修复提案数；无保护LLM不得晋升"
+    },
+    {
+      "metric": "repair_regression_pass_rate",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 1,
+      "note": "晋升后回归执行 PASSED 的比例（样本量小，不作外推）"
+    }
+  ],
+  "repair_records": [
+    {
+      "scenario": "TF-LOC-001",
+      "testcase_id": "tcase_bench_loc001",
+      "proposal_id": "repair_1795441728957827464563af9",
+      "validation": "VALIDATED",
+      "assertion_preservation": "PASS",
+      "oracle_integrity": "PASS",
+      "sandbox_status": "PASSED",
+      "sandbox_worker": "run007-w2",
+      "promoted_version": null,
+      "regression_verdict": "NOT_EVALUATED",
+      "regression_worker": "run007-w1",
+      "outcome": "REGRESSION_FAILED",
+      "error": "POST /repairs/repair_1795441728957827464563af9/rollback -> 412: {\"detail\":{\"code\":\"PRECONDITION_FAILED\",\"message\":\"提案缺少 promoted_version，无法回滚\"}}"
+    },
+    {
+      "scenario": "TF-LOC-002",
+      "testcase_id": "tcase_bench_loc002",
+      "proposal_id": "repair_17954417466487f7642987e32",
+      "validation": "VALIDATED",
+      "assertion_preservation": "PASS",
+      "oracle_integrity": "PASS",
+      "sandbox_status": "FAILED",
+      "sandbox_worker": "run007-w3"
+    }
+  ],
+  "arm_predictions": {
+    "A_raw_report": [
+      {
+        "scenario": "TF-DB-001",
+        "gt": "PERSISTENCE",
+        "pred": "NONE",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-DB-002",
+        "gt": "PERSISTENCE",
+        "pred": "NONE",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-DB-004",
+        "gt": "TIMING",
+        "pred": "NONE",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-UI-001",
+        "gt": "UI_RENDERING",
+        "pred": "UI_RENDERING",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-UI-002",
+        "gt": "UI_RENDERING",
+        "pred": "UI_RENDERING",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-UI-003",
+        "gt": "UI_RENDERING",
+        "pred": "UI_RENDERING",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-API-001",
+        "gt": "API",
+        "pred": "NONE",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-API-002",
+        "gt": "API",
+        "pred": "UI_RENDERING",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-NET-002",
+        "gt": "NETWORK",
+        "pred": "UI_RENDERING",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-LOC-001",
+        "gt": "LOCATOR",
+        "pred": "NONE",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-LOC-002",
+        "gt": "LOCATOR",
+        "pred": "NONE",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-TIME-003",
+        "gt": "TIMING",
+        "pred": "NONE",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-SEC-001",
+        "gt": "AUTHORIZATION",
+        "pred": "UI_RENDERING",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-SEC-002",
+        "gt": "AUTHORIZATION",
+        "pred": "UI_RENDERING",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-COMP-001",
+        "gt": "API",
+        "pred": "NONE",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-COMP-002",
+        "gt": "PERSISTENCE",
+        "pred": "NONE",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-COMP-003",
+        "gt": "LOCATOR",
+        "pred": "NONE",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-FLAKY-001",
+        "gt": "PERSISTENCE",
+        "pred": "NONE",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-FLAKY-002",
+        "gt": "API",
+        "pred": "NONE",
+        "conclusive": true
+      }
+    ],
+    "C_rule": [
+      {
+        "scenario": "TF-DB-001",
+        "gt": "PERSISTENCE",
+        "pred": "PERSISTENCE",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-DB-002",
+        "gt": "PERSISTENCE",
+        "pred": "PERSISTENCE",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-DB-004",
+        "gt": "TIMING",
+        "pred": "PERSISTENCE",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-UI-001",
+        "gt": "UI_RENDERING",
+        "pred": "UI_RENDERING",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-UI-002",
+        "gt": "UI_RENDERING",
+        "pred": "UNKNOWN",
+        "conclusive": false
+      },
+      {
+        "scenario": "TF-UI-003",
+        "gt": "UI_RENDERING",
+        "pred": "UI_RENDERING",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-API-001",
+        "gt": "API",
+        "pred": "API",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-API-002",
+        "gt": "API",
+        "pred": "API",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-NET-002",
+        "gt": "NETWORK",
+        "pred": "UNKNOWN",
+        "conclusive": false
+      },
+      {
+        "scenario": "TF-LOC-001",
+        "gt": "LOCATOR",
+        "pred": "UNKNOWN",
+        "conclusive": false
+      },
+      {
+        "scenario": "TF-LOC-002",
+        "gt": "LOCATOR",
+        "pred": "UNKNOWN",
+        "conclusive": false
+      },
+      {
+        "scenario": "TF-TIME-003",
+        "gt": "TIMING",
+        "pred": "UNKNOWN",
+        "conclusive": false
+      },
+      {
+        "scenario": "TF-SEC-001",
+        "gt": "AUTHORIZATION",
+        "pred": "API",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-SEC-002",
+        "gt": "AUTHORIZATION",
+        "pred": "UI_RENDERING",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-COMP-001",
+        "gt": "API",
+        "pred": "API",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-COMP-002",
+        "gt": "PERSISTENCE",
+        "pred": "PERSISTENCE",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-COMP-003",
+        "gt": "LOCATOR",
+        "pred": "UNKNOWN",
+        "conclusive": false
+      },
+      {
+        "scenario": "TF-FLAKY-001",
+        "gt": "PERSISTENCE",
+        "pred": "PERSISTENCE",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-FLAKY-002",
+        "gt": "API",
+        "pred": "API",
+        "conclusive": true
+      }
+    ],
+    "D_graph": [
+      {
+        "scenario": "TF-DB-001",
+        "gt": "PERSISTENCE",
+        "pred": "PERSISTENCE",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-DB-002",
+        "gt": "PERSISTENCE",
+        "pred": "PERSISTENCE",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-DB-004",
+        "gt": "TIMING",
+        "pred": "PERSISTENCE",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-UI-001",
+        "gt": "UI_RENDERING",
+        "pred": "UI_RENDERING",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-UI-002",
+        "gt": "UI_RENDERING",
+        "pred": "UNKNOWN",
+        "conclusive": false
+      },
+      {
+        "scenario": "TF-UI-003",
+        "gt": "UI_RENDERING",
+        "pred": "UI_RENDERING",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-API-001",
+        "gt": "API",
+        "pred": "API",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-API-002",
+        "gt": "API",
+        "pred": "API",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-NET-002",
+        "gt": "NETWORK",
+        "pred": "UNKNOWN",
+        "conclusive": false
+      },
+      {
+        "scenario": "TF-LOC-001",
+        "gt": "LOCATOR",
+        "pred": "UNKNOWN",
+        "conclusive": false
+      },
+      {
+        "scenario": "TF-LOC-002",
+        "gt": "LOCATOR",
+        "pred": "UNKNOWN",
+        "conclusive": false
+      },
+      {
+        "scenario": "TF-TIME-003",
+        "gt": "TIMING",
+        "pred": "UNKNOWN",
+        "conclusive": false
+      },
+      {
+        "scenario": "TF-SEC-001",
+        "gt": "AUTHORIZATION",
+        "pred": "API",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-SEC-002",
+        "gt": "AUTHORIZATION",
+        "pred": "UI_RENDERING",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-COMP-001",
+        "gt": "API",
+        "pred": "API",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-COMP-002",
+        "gt": "PERSISTENCE",
+        "pred": "PERSISTENCE",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-COMP-003",
+        "gt": "LOCATOR",
+        "pred": "UNKNOWN",
+        "conclusive": false
+      },
+      {
+        "scenario": "TF-FLAKY-001",
+        "gt": "PERSISTENCE",
+        "pred": "PERSISTENCE",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-FLAKY-002",
+        "gt": "API",
+        "pred": "API",
+        "conclusive": true
+      }
+    ],
+    "E_probe": [
+      {
+        "scenario": "TF-DB-001",
+        "gt": "PERSISTENCE",
+        "pred": "PERSISTENCE",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-DB-002",
+        "gt": "PERSISTENCE",
+        "pred": "PERSISTENCE",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-DB-004",
+        "gt": "TIMING",
+        "pred": "PERSISTENCE",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-UI-001",
+        "gt": "UI_RENDERING",
+        "pred": "UI_RENDERING",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-UI-002",
+        "gt": "UI_RENDERING",
+        "pred": "PERSISTENCE",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-UI-003",
+        "gt": "UI_RENDERING",
+        "pred": "UI_RENDERING",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-API-001",
+        "gt": "API",
+        "pred": "API",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-API-002",
+        "gt": "API",
+        "pred": "API",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-NET-002",
+        "gt": "NETWORK",
+        "pred": "PERSISTENCE",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-LOC-001",
+        "gt": "LOCATOR",
+        "pred": "UNKNOWN",
+        "conclusive": false
+      },
+      {
+        "scenario": "TF-LOC-002",
+        "gt": "LOCATOR",
+        "pred": "UNKNOWN",
+        "conclusive": false
+      },
+      {
+        "scenario": "TF-TIME-003",
+        "gt": "TIMING",
+        "pred": "UNKNOWN",
+        "conclusive": false
+      },
+      {
+        "scenario": "TF-SEC-001",
+        "gt": "AUTHORIZATION",
+        "pred": "UNKNOWN",
+        "conclusive": false
+      },
+      {
+        "scenario": "TF-SEC-002",
+        "gt": "AUTHORIZATION",
+        "pred": "UI_RENDERING",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-COMP-001",
+        "gt": "API",
+        "pred": "API",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-COMP-002",
+        "gt": "PERSISTENCE",
+        "pred": "PERSISTENCE",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-COMP-003",
+        "gt": "LOCATOR",
+        "pred": "UNKNOWN",
+        "conclusive": false
+      },
+      {
+        "scenario": "TF-FLAKY-001",
+        "gt": "PERSISTENCE",
+        "pred": "PERSISTENCE",
+        "conclusive": true
+      },
+      {
+        "scenario": "TF-FLAKY-002",
+        "gt": "API",
+        "pred": "API",
+        "conclusive": true
+      }
+    ]
+  },
+  "flaky_repeats": {
+    "TF-FLAKY-001": [
+      {
+        "run_id": "run_1795441389490d36016e72b83",
+        "verdict": "FAILED"
+      },
+      {
+        "run_id": "run_1795441394435d80df22ccdd6",
+        "verdict": "PASSED"
+      },
+      {
+        "run_id": "run_17954413993735ff8f788999f",
+        "verdict": "PASSED"
+      },
+      {
+        "run_id": "run_1795441404275d3680ababd42",
+        "verdict": "PASSED"
+      },
+      {
+        "run_id": "run_17954414091956347bfabd294",
+        "verdict": "PASSED"
+      }
+    ],
+    "TF-FLAKY-002": [
+      {
+        "run_id": "run_179544141411746ea71a30449",
+        "verdict": "FAILED"
+      },
+      {
+        "run_id": "run_17954414194582c02371d840e",
+        "verdict": "FAILED"
+      },
+      {
+        "run_id": "run_1795441424369efcdd05c3792",
+        "verdict": "FAILED"
+      },
+      {
+        "run_id": "run_1795441429678fc267329b766",
+        "verdict": "FAILED"
+      },
+      {
+        "run_id": "run_179544143461556aeb95d4b0e",
+        "verdict": "FAILED"
+      }
+    ]
+  },
+  "flaky_note": "Flaky 场景重复 5 次，保留每次真实 verdict，不取平均、不删样本",
+  "verdict_mismatch": [
+    {
+      "scenario": "TF-LOC-001",
+      "expected": "FAILED",
+      "got": "NOT_EVALUATED",
+      "execution_status": "FAILED"
+    },
+    {
+      "scenario": "TF-LOC-002",
+      "expected": "FAILED",
+      "got": "NOT_EVALUATED",
+      "execution_status": "FAILED"
+    },
+    {
+      "scenario": "TF-COMP-003",
+      "expected": "FAILED",
+      "got": "NOT_EVALUATED",
+      "execution_status": "FAILED"
+    }
+  ],
+  "verdict_distribution": {
+    "TF-NORMAL-001:PASSED": 1,
+    "TF-NORMAL-002:PASSED": 1,
+    "TF-DB-001:FAILED": 1,
+    "TF-DB-002:FAILED": 1,
+    "TF-DB-003:PASSED": 1,
+    "TF-DB-004:FAILED": 1,
+    "TF-DB-005:PASSED": 1,
+    "TF-UI-001:FAILED": 1,
+    "TF-UI-002:FAILED": 1,
+    "TF-UI-003:FAILED": 1,
+    "TF-UI-004:PASSED": 1,
+    "TF-API-001:FAILED": 1,
+    "TF-API-002:FAILED": 1,
+    "TF-API-003:PASSED": 1,
+    "TF-API-004:PASSED": 1,
+    "TF-NET-001:PASSED": 1,
+    "TF-NET-001-FAST:PASSED": 1,
+    "TF-NET-002:FAILED": 1,
+    "TF-LOC-001:NOT_EVALUATED": 1,
+    "TF-LOC-002:NOT_EVALUATED": 1,
+    "TF-TIME-001:PASSED": 1,
+    "TF-TIME-002:PASSED": 1,
+    "TF-TIME-003:NOT_EVALUATED": 1,
+    "TF-SEC-001:FAILED": 1,
+    "TF-SEC-002:FAILED": 1,
+    "TF-COMP-001:FAILED": 1,
+    "TF-COMP-002:FAILED": 1,
+    "TF-COMP-003:NOT_EVALUATED": 1,
+    "TF-FLAKY-001:FAILED": 1,
+    "TF-FLAKY-001:PASSED": 4,
+    "TF-FLAKY-002:FAILED": 5
+  },
+  "blocked": [
+    {
+      "name": "人工修复基线",
+      "status": "BLOCKED",
+      "reason": "无真实人类工程师参与，不产生人工基线数值"
+    },
+    {
+      "name": "人工修复基线",
+      "status": "BLOCKED",
+      "reason": "无真实人类工程师参与，不产生人工基线数值"
+    },
+    {
+      "name": "Routed 臂单列",
+      "status": "PARTIAL",
+      "reason": "本轮未触发 reasoning 升级，无法把 Routed 与 Flash 分离；见 llm_arms.routed"
+    }
+  ],
+  "limitations": [
+    "单机 SQLite + 单浏览器实例；并发与资源竞争未做生产级压测",
+    "每场景 1 个计分样本（Flaky 5 次重复），置信区间宽，不做强外推",
+    "诊断耗时只覆盖规则/图/探针路径，不含 LLM 顾问"
+  ],
+  "samples_file": "docs/assets/run007/benchmark/samples.jsonl",
+  "llm_arms": {
+    "note": "LLM 对照在独立文件中，全部为真实调用；不并入 A/C/D/E 指标（口径不同）",
+    "flash_routed": {
+      "file": "docs/assets/run007/benchmark/llm-arm-flash-routed.json",
+      "subset": 19,
+      "llm_candidate_accuracy": {
+        "num": 8,
+        "den": 19,
+        "value": 0.4211
+      },
+      "final_diagnosis_accuracy": {
+        "num": 10,
+        "den": 19,
+        "value": 0.5263
+      },
+      "models_seen": {
+        "deepseek-flash": 12,
+        "unknown": 7
+      },
+      "llm_calls_total": 22,
+      "llm_not_called": 7
+    },
+    "pro": {
+      "file": "docs/assets/run007/benchmark/llm-arm-pro.json",
+      "subset": 8,
+      "llm_candidate_accuracy": {
+        "num": 5,
+        "den": 8,
+        "value": 0.625
+      },
+      "final_diagnosis_accuracy": {
+        "num": 6,
+        "den": 8,
+        "value": 0.75
+      },
+      "models_seen": {
+        "deepseek-v4-pro": 8
+      },
+      "llm_calls_total": 8,
+      "llm_not_called": 0
+    },
+    "same_subset_8": {
+      "note": "两臂在相同的 8 个故障场景上对比（DB-001/002/004、UI-001/002/003、API-001/002）",
+      "flash": {
+        "num": 5,
+        "den": 8
+      },
+      "pro": {
+        "num": 5,
+        "den": 8
+      }
+    },
+    "routed": {
+      "status": "PARTIAL",
+      "reason": "路由升级未在本轮触发：flash 臂 models_seen 仅 deepseek-flash + 无候选；无法与 Flash/Pro 分离，故不单列 Routed 数字"
+    }
+  }
+}

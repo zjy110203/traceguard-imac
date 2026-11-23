@@ -30,3 +30,14 @@
 | B-08 | P03/P06/P08 未批准 | 冲突裁决、预算数值、RBAC 不能冻结 | 决策请求已产出，保持现状 |
 | B-09 | 无身份认证基础设施 | 审批人身份不可强验证 | 仅主体类型门禁，安全文档明确披露（D-01） |
 | B-10 | 前端工作包仅部分排期 | 诊断视图已升级并验收；其余 13 视图未审查 | 标 PARTIAL，不声称全面改善 |
+
+## RUN-007-RESUME 更新
+
+| 编号 | 阻塞 | 影响 | 处理 |
+|---|---|---|---|
+| B-11 | 本机无 GitHub 凭据（无 token / SSH key / `gh`） | 分支无法推送、PR 无法创建、CI 无法触发 | 本地提交保留；请求授权（D-02）；报告中标 BLOCKED |
+| B-12 | 本机无 Docker / PostgreSQL | PG16 平台用例无法本地执行 | 6 用例 + Nightly PG16 作业就绪；本地 skip 并打印原因 |
+| B-13 | 沙箱禁止 `ps` 且 macOS 无 `/proc` | 长稳无法采集 CPU/RSS | 回退为存活探测并标注 `source=liveness_only`；不伪造 0 |
+| B-14 | 前端主题走 localStorage | 只设 `prefers-color-scheme` 会得到假深色截图 | 已修：init script 写入 + 亮度断言 |
+| B-15 | 人工诊断基线无人力 | Benchmark 少一条对照臂 | 标 BLOCKED，不用 Mock 补齐 |
+| B-16 | LLM 模型由服务端路由决定 | 无法在同一进程内切 Flash/Pro | 按批次重启 + 记录实际 `models_seen`；不外推 |

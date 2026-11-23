@@ -1,12 +1,18 @@
 # PR Gate（三级门禁之一）：快速、确定性、可在 PR 内跑完。
-# 职责：Ruff / 格式 / 单元 + 契约 / 关键服务集成（SSE、探针预算、Inbox 投影、稳定性回放）/ 前端 typecheck + build。
+# 职责：Ruff / 格式 / 单元 + 契约 / 关键服务集成（SSE、探针预算、Inbox 投影、稳定性回放、
+#       Worker 队列沙箱、Run 隔离）/ 前端 typecheck + build。
 # 不要求真实 API Key；不跑 Benchmark 与真实浏览器全量 E2E（Nightly / Release 负责）。
 name: PR Gate
 
 on:
   pull_request:
   push:
-    branches: [workbuddy/traceguard-autonomous]
+    # RUN-007 起工作分支改名为 workbuddy/run007-resume-<日期>；旧分支名保留以兼容历史提交。
+    branches:
+      - main
+      - "workbuddy/run007-resume-*"
+      - "workbuddy/run007-*"
+      - workbuddy/traceguard-autonomous
 
 concurrency:
   group: pr-gate-${{ github.ref }}
@@ -15,6 +21,7 @@ concurrency:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -31,16 +38,25 @@ jobs:
       - name: Unit + Contract tests
         run: .venv/bin/pytest tests/unit tests/contracts -q
       - name: Fast service integration
+        # 这些用例覆盖 SSE 续传、探针预算、时间线投影、稳定性回放、LLM 摘要、
+        # 沙箱走 Worker 队列（无 Worker 时 fail-closed）与 Run 级状态隔离。
         run: |
           .venv/bin/pytest -q \
             tests/integration/test_sse.py \
             tests/integration/test_probe_service.py \
             tests/integration/test_timeline_projection.py \
             tests/integration/test_stability_replay.py \
-            tests/integration/test_llm_summary.py
+            tests/integration/test_llm_summary.py \
+            tests/integration/test_sandbox_worker_queue.py \
+            tests/unit/test_pipeline_state_cache.py
+      - name: Gate result
+        if: always()
+        run: |
+          echo "PR Gate backend: job status = ${{ job.status }}"
 
   frontend:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

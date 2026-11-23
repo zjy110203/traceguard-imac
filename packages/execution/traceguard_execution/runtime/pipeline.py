@@ -89,10 +89,15 @@ class RunPipeline:
         self.worker_id = worker_id
         self.options = options or ExecutionOptions()
         self._producer_instance = events.new_producer_instance(worker_id)
+        #: 单次 Run 内的业务状态读取缓存（避免同一 Run 重复打被测应用状态接口）。
+        #: **必须每次 execute 清空**：常驻 Worker 复用同一 pipeline 实例跨 Run 使用，
+        #: 若跨 Run 复用缓存，断言会读到上一次 Run 的业务状态（RUN-007-RESUME 实测缺陷：
+        #: 假通过检测因此在长驻 Worker 上被判为 PASSED）。
         self._state_cache: dict[str, dict[str, Any]] = {}
 
     # ------------------------------------------------------------------ public
     def execute(self, run_id: str, *, lease: dict[str, Any] | None = None) -> RunOutcome:
+        self._state_cache.clear()  # 状态缓存的生存期严格等于一次 Run
         run = self.tasks.get_run(run_id)
         if not run:
             raise AppError(ErrorCode.NOT_FOUND, f"run {run_id} not found")

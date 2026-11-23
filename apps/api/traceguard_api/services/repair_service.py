@@ -25,12 +25,15 @@ from traceguard_core.ids import new_id, utc_now_iso
 from traceguard_core.logging import get_logger
 from traceguard_persistence.catalog import require_human_actor
 
-from traceguard_api.runtime import Runtime
+from traceguard_api.runtime import TERMINAL_RUN_STATUSES, Runtime
 
 logger = get_logger("traceguard.service.repair")
 
 
 class RepairService:
+    #: 沙箱 Run 的等待上限（秒）：必须由独立 Worker 真实执行完，超时即失败而非伪造结论
+    _sandbox_timeout_s: float = 300.0
+
     def __init__(self, rt: Runtime) -> None:
         self.rt = rt
 
@@ -230,14 +233,25 @@ class RepairService:
             mode="sandbox",
         )
         run = self.rt.tasks.create_run(task["task_id"], f"{sandbox_case_id}@{version}")
-        outcome = self.rt.execute_run(run["run_id"])
-        doc["sandbox_run_id"] = outcome["run_id"]
+        # RUN-007-RESUME：沙箱属于正式执行，必须由独立 Worker 消费队列，
+        # 不在 API 线程里直接 execute_run（否则等于"API 线程池冒充 Worker"）。
+        final = self.rt.wait_for_run(run["run_id"], timeout_s=self._sandbox_timeout_s)
+        status = str((final or {}).get("execution_status") or "")
+        if status not in TERMINAL_RUN_STATUSES:
+            raise AppError(
+                ErrorCode.PRECONDITION_FAILED,
+                f"沙箱 Run 在 {self._sandbox_timeout_s:.0f}s 内未被 Worker 执行完成"
+                f"（当前状态 {status or 'UNKNOWN'}）：请确认独立 Worker 已启动",
+            )
+        doc["sandbox_run_id"] = final["run_id"]
         doc["sandbox_testcase_id"] = sandbox_case_id
-        doc["sandbox_status"] = "PASSED" if outcome["test_verdict"] == "PASSED" else "FAILED"
-        doc["sandbox_verdict"] = outcome["test_verdict"]
-        doc["sandbox_observer_mode"] = outcome["observer_mode"]
-        if outcome["test_verdict"] != "PASSED":
-            doc["failure_reason"] = f"SANDBOX_{outcome['test_verdict']}"
+        doc["sandbox_status"] = "PASSED" if final["test_verdict"] == "PASSED" else "FAILED"
+        doc["sandbox_verdict"] = final["test_verdict"]
+        doc["sandbox_observer_mode"] = final.get("observer_mode", "")
+        doc["sandbox_executed_by"] = final.get("lease_owner") or ""
+        doc["sandbox_fencing_token"] = final.get("fencing_token")
+        if final["test_verdict"] != "PASSED":
+            doc["failure_reason"] = f"SANDBOX_{final['test_verdict']}"
         doc["candidate_version"] = version
         return self._save(doc)
 

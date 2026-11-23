@@ -21,6 +21,7 @@ const cases = ref<TestCaseSummary[]>([])
 const diagnoses = ref<Diagnosis[]>([])
 const repairs = ref<Record<string, unknown>[]>([])
 const queue = ref<{ by_status: Record<string, number>; total: number; worker: { id: string; inline_running: boolean } } | null>(null)
+const health = ref<{ status?: string; database?: { ok: boolean; dialect: string; error?: string }; worker?: { id: string; inline_running: boolean }; counts?: Record<string, number> } | null>(null)
 const loading = ref(true)
 const error = ref('')
 const busy = ref('')
@@ -30,14 +31,15 @@ let timer: number | undefined
 
 async function load() {
   try {
-    const [r, c, d, p, q] = await Promise.all([
+    const [r, c, d, p, q, h] = await Promise.all([
       api.get<Run[]>('/runs?limit=200&workspace_id=default'),
       api.get<TestCaseSummary[]>('/testcases?workspace_id=default'),
       api.get<Diagnosis[]>('/diagnoses?limit=100&workspace_id=default'),
       api.get<Record<string, unknown>[]>('/repairs?workspace_id=default'),
       api.get<{ by_status: Record<string, number>; total: number; worker: { id: string; inline_running: boolean } }>('/queue/stats'),
+      api.get<{ status?: string; database?: { ok: boolean; dialect: string }; worker?: { id: string; inline_running: boolean } }>('/system/health'),
     ])
-    runs.value = r; cases.value = c; diagnoses.value = d; repairs.value = p; queue.value = q
+    runs.value = r; cases.value = c; diagnoses.value = d; repairs.value = p; queue.value = q; health.value = h
     lastUpdated.value = Date.now()
     error.value = ''
   } catch (e) {
@@ -169,9 +171,18 @@ onUnmounted(() => window.clearInterval(timer))
               <div><span class="small muted">QUEUED</span><strong>{{ queue?.by_status?.QUEUED || 0 }}</strong></div>
               <div><span class="small muted">RUNNING</span><strong class="warn-text">{{ queue?.by_status?.RUNNING || 0 }}</strong></div>
               <div><span class="small muted">执行中 Run</span><strong>{{ runningNow.length }}</strong></div>
-              <div><span class="small muted">Worker</span><strong class="small">{{ queue?.worker?.inline_running ? 'inline running' : 'idle' }}</strong></div>
+              <div><span class="small muted">执行模式</span><strong class="small">{{ queue?.worker?.inline_running ? '内嵌 Worker' : '独立 Worker' }}</strong></div>
             </div>
-            <div class="small muted mt">Worker ID：<span class="mono">{{ queue?.worker?.id || '—' }}</span></div>
+            <div class="small muted mt">API Worker ID：<span class="mono">{{ queue?.worker?.id || '—' }}</span></div>
+            <div class="small muted mt">
+              数据库
+              <span class="badge" :class="health?.database?.ok ? 'pass' : 'fail'">{{ health?.database?.ok ? '正常' : '异常' }}</span>
+              <span class="mono">{{ health?.database?.dialect || '—' }}</span>
+              · 服务
+              <span class="badge" :class="health?.status === 'ok' ? 'pass' : 'fail'">{{ health?.status || 'unknown' }}</span>
+            </div>
+            <div v-if="health?.database?.ok === false" class="small fail-text mt">数据库错误：{{ health?.database?.error || '未知' }}</div>
+            <p class="small muted mt">「独立 Worker」表示 API 未启用内嵌执行器，Run 由外部 Worker 进程消费队列。</p>
           </div>
         </section>
       </div>

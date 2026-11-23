@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import threading
+import time
 from collections.abc import Callable, Generator, Iterator
 from contextlib import contextmanager
 from typing import Any
@@ -89,18 +90,47 @@ class Database:
             s.close()
 
     def create_schema(self) -> None:
-        """建表 + 应用迁移（幂等）。"""
+        """建表 + 应用迁移（幂等，且**并发启动安全**）。
+
+        多进程同时启动（API + 多个 Worker 指向同一个库）时，`create_all` 内部的
+        "先检查再建" 不是原子的，可能抛出 `table ... already exists`；迁移记录的
+        `INSERT` 也可能撞主键。这里显式重试 + 容忍重复，避免启动期随机崩溃。
+        """
         from . import models  # noqa: F401  确保模型注册到 metadata
 
         with self._schema_lock:
             if self._schema_ready:
                 return
-            Base.metadata.create_all(self.engine)
+            last_error: Exception | None = None
+            for attempt in range(6):
+                try:
+                    Base.metadata.create_all(self.engine)
+                    last_error = None
+                    break
+                except Exception as exc:  # noqa: BLE001 - 并发建表的重复 DDL
+                    if not _is_duplicate_ddl_error(exc) or attempt == 5:
+                        raise
+                    last_error = exc
+                    time.sleep(0.05 * (attempt + 1))
+            if last_error is not None:  # pragma: no cover - 重试耗尽才会到这里
+                raise last_error
             _apply_migrations(self)
             self._schema_ready = True
 
     def dispose(self) -> None:
         self.engine.dispose()
+
+
+def _is_duplicate_ddl_error(exc: BaseException) -> bool:
+    """并发建表/建索引时的"已存在"错误：可以容忍并重试。"""
+    msg = str(exc).lower()
+    return (
+        "already exists" in msg
+        or "duplicate table" in msg
+        or "duplicate key" in msg
+        or "unique constraint" in msg
+        or "duplicate column" in msg
+    )
 
 
 def _apply_migrations(db: Database) -> None:
@@ -127,24 +157,31 @@ def _apply_migrations(db: Database) -> None:
                 statement = statement.strip()
                 if not statement:
                     continue
-                if statement.startswith("__CALLABLE__:"):
-                    _MIGRATION_CALLABLES[statement.split(":", 1)[1]](conn)
-                    continue
+                # 每个 DDL 包在 SAVEPOINT 里：PostgreSQL 下普通语句报错会让整个事务
+                # 进入 aborted 状态，必须回滚到保存点才能继续执行后续迁移。
                 try:
-                    conn.execute(text(statement))
+                    with conn.begin_nested():
+                        if statement.startswith("__CALLABLE__:"):
+                            _MIGRATION_CALLABLES[statement.split(":", 1)[1]](conn)
+                        else:
+                            conn.execute(text(statement))
                 except Exception as exc:  # noqa: BLE001 - 并发启动下的重复 DDL
-                    if (
-                        "already exists" not in str(exc).lower()
-                        and "duplicate" not in str(exc).lower()
-                    ):
+                    if not _is_duplicate_ddl_error(exc):
                         raise
-            conn.execute(
-                text(
-                    "INSERT INTO tg_schema_migration (version, name, applied_at) "
-                    "VALUES (:v, :n, :a)"
-                ),
-                {"v": version, "n": name, "a": _now()},
-            )
+            # 记录迁移版本：并发启动时可能已被另一进程写入同一 version（主键冲突），
+            # 属于正常竞争，吞掉即可（绝不能因此启动失败）。
+            try:
+                with conn.begin_nested():
+                    conn.execute(
+                        text(
+                            "INSERT INTO tg_schema_migration (version, name, applied_at) "
+                            "VALUES (:v, :n, :a)"
+                        ),
+                        {"v": version, "n": name, "a": _now()},
+                    )
+            except Exception as exc:  # noqa: BLE001
+                if not _is_duplicate_ddl_error(exc):
+                    raise
 
 
 def _now() -> str:

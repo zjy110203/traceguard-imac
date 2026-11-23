@@ -272,6 +272,16 @@ onUnmounted(() => {
           <span class="small muted">Assertion {{ report?.summary?.inconclusive ?? 0 }} INCONCLUSIVE · {{ report?.summary?.not_evaluated ?? 0 }} NOT_EVAL</span>
         </div>
 
+        <div class="context-strip panel" style="margin-top: 8px">
+          <span class="small muted">执行归属</span>
+          <span class="small">Worker <span class="mono">{{ run.lease_owner || '尚未被领取' }}</span></span>
+          <span class="small muted">attempt {{ run.attempt }}</span>
+          <span class="small muted">fencing token {{ run.fencing_token }}</span>
+          <span class="small muted">队列状态 {{ run.execution_status }}</span>
+          <span v-if="run.lease_expires_at && running" class="small muted">租约到期 {{ fmtTime(run.lease_expires_at) }}</span>
+          <span v-else-if="run.lease_owner" class="small muted">租约已释放（执行结束）</span>
+        </div>
+
         <div v-if="report?.errors?.length" class="card" style="border-color:#fecdca; margin-bottom: 14px">
           <div class="card-body" style="background:var(--fail-weak); border-radius:8px">
             <div class="strong" style="color:var(--fail)">执行错误</div>

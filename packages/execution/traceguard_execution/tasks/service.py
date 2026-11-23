@@ -288,7 +288,11 @@ class TaskService:
                 .limit(5)
             ).all()
             for cand in candidates:
-                if not (cand.execution_status == "QUEUED" or not cand.lease_owner or cand.lease_expires_at < now):
+                if not (
+                    cand.execution_status == "QUEUED"
+                    or not cand.lease_owner
+                    or cand.lease_expires_at < now
+                ):
                     continue
                 # 原子领取：条件 UPDATE + rowcount 判定，等价于对租约的 CAS
                 result = s.execute(

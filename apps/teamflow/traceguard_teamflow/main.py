@@ -74,7 +74,11 @@ GT_SEEDS = [
     GroundTruthRecord(
         scenario_id="TF-API-003",
         fault_mechanism_id="TF-API-003",
-        expected_business_state={"update_applied": False, "api_status": 500, "ui_feedback": "edit-error 可见"},
+        expected_business_state={
+            "update_applied": False,
+            "api_status": 500,
+            "ui_feedback": "edit-error 可见",
+        },
         expected_failure_class="NONE",
         notes="更新接口 500：UI 正确展示错误反馈（回归场景，预期通过）",
     ),
@@ -88,7 +92,11 @@ GT_SEEDS = [
     GroundTruthRecord(
         scenario_id="TF-DB-002",
         fault_mechanism_id="TF-DB-002",
-        expected_business_state={"ui_success": True, "project_persisted": False, "trigger": "duplicate_name"},
+        expected_business_state={
+            "ui_success": True,
+            "project_persisted": False,
+            "trigger": "duplicate_name",
+        },
         expected_failure_class="PRODUCT_DEFECT / PERSISTENCE",
         notes="重名写入静默失败但 API 谎报成功（False Pass 变体）",
     ),
@@ -165,7 +173,11 @@ GT_SEEDS = [
     GroundTruthRecord(
         scenario_id="TF-COMP-001",
         fault_mechanism_id="TF-COMP-001",
-        expected_business_state={"project_persisted": False, "api_status": 500, "ui_feedback": "misleading_success"},
+        expected_business_state={
+            "project_persisted": False,
+            "api_status": 500,
+            "ui_feedback": "misleading_success",
+        },
         expected_failure_class="PRODUCT_DEFECT / API",
         notes="复合：API 500 + 错误提示被误导为成功（主因 API，次因 UI 掩盖）",
     ),
@@ -179,7 +191,11 @@ GT_SEEDS = [
     GroundTruthRecord(
         scenario_id="TF-COMP-003",
         fault_mechanism_id="TF-COMP-003",
-        expected_business_state={"project_persisted": False, "submit_locator_changed": True, "ui_feedback": None},
+        expected_business_state={
+            "project_persisted": False,
+            "submit_locator_changed": True,
+            "ui_feedback": None,
+        },
         expected_failure_class="TEST_ASSET / LOCATOR",
         notes="复合：定位器失效 + 静默忽略（主因 LOCATOR）",
     ),
@@ -214,7 +230,11 @@ GT_SEEDS = [
     GroundTruthRecord(
         scenario_id="TF-API-004",
         fault_mechanism_id="TF-API-004",
-        expected_business_state={"update_applied": False, "api_status": 503, "ui_feedback": "edit-error 可见"},
+        expected_business_state={
+            "update_applied": False,
+            "api_status": 503,
+            "ui_feedback": "edit-error 可见",
+        },
         expected_failure_class="NONE",
         notes="更新接口 503：UI 正确展示错误反馈（回归场景，预期通过）",
     ),

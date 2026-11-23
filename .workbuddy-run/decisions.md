@@ -61,3 +61,14 @@
 | B-06 | 晋升/回滚改为单事务条件更新 | 原实现跨事务比较后写入存在真实竞态 | 并发仅一个成功，另一个 VERSION_CONFLICT |
 | B-07 | 新增统一 `TargetPolicy`，Explorer 与 Runner 共用 | 原两套策略，Runner 无管控 | 绝对 URL/协议相对/重定向/内网统一拒绝 |
 | B-08 | 顶层 302 出站限制如实记录为已知限制 | route 不拦顶层跳转，不能假装已阻断 | 落地复核使步骤失败；网络层强制阻断列为后续 |
+
+## RUN-007-RESUME 新增决策记录
+
+| 编号 | 决策 | 依据 | 影响 |
+|---|---|---|---|
+| D7-01 | 沙箱/回归执行改走独立 Worker 队列，无 Worker 时 fail-closed | 指令要求"独立 Worker 消费队列"，API 内嵌执行不可作为证据 | 本地/CI 必须同时起 Worker；测试覆盖两种情况 |
+| D7-02 | `create_schema` 对"已存在"类错误重试 + SAVEPOINT + 迁移记录容忍主键冲突 | 并发启动是真实部署形态（API + N Worker） | 启动期不再随机崩溃；PG 事务语义兼容 |
+| D7-03 | E2E 证据改读 `/runs/{id}/evidence` 并校验图绑定 | `report.evidence_ids` 为空是**报告字段**问题，不是"没有证据" | 不允许用空数组证明"无证据" |
+| D7-04 | 暗色验收增加"真实亮度断言" | 首轮 15 个暗色检查全失败，暴露截图假深色 | 视觉证据必须可自证，不能只信标签 |
+| D7-05 | Release Gate 以 Actions API 的 `head_sha` 作为 RC 归属唯一依据 | 旧 commit 的通过不得冒充新 RC | 找不到匹配运行即 BLOCKED（fail-closed） |
+| D7-06 | Benchmark LLM 臂限定故障子集并记录实际模型 | 日预算 1 USD + 路由决定模型 | 只报子集准确率，禁止外推；Pro/Routed 全量标 BLOCKED |
