@@ -32,7 +32,7 @@
 - 顶层 302 跳转的**出站请求会到达目标**（route 不拦顶层跳转）；产品保证是"落地拒绝 + 步骤失败"。
 - 预算跨进程一致性用两个 Registry 实例验证，**未做双 OS 进程压测**。
 - PostgreSQL 行锁/迁移 v7 未实测；4 Worker、60 分钟长稳未执行；CI 未真实触发。
-- 前端本轮零改动（WP3 NOT_IMPLEMENTED）；Benchmark v3 未做（不得引用历史数字）。
+- 前端只改了诊断视图（PARTIAL）：30/30 UI 验收、4 断点 + 深色截图；其余 13 视图未审查。Benchmark v3 未做。
 
 ## 环境
 
@@ -77,7 +77,7 @@ curl -X POST "http://127.0.0.1:8010/api/v1/runs/<run_id>/probe-plan?diagnosis_id
    `promote_version_cas` 行锁行为（决策请求 D-07）。
 2. **60 分钟长稳 + 4 Worker 故障恢复**：独立时间窗，脚本化采集指标并归档原始 JSON（D-08）。
 3. **完整端到端全链**：Intent → … → Repair 晋升 → 回归 → 回滚，全部走真实 API/DB/浏览器/Worker（WP2-02）。
-4. **前端工作包**：14 视图信息层级、失败步骤与证据联动、冲突/排除状态可视、SSE 真实连接状态（WP3）。
+4. **前端工作包（剩余）**：其余 13 视图信息层级、Run 详情失败步骤↔证据联动、Evidence Graph 交互、SSE 断线状态（WP3）。
 5. **决策落地**：D-01（认证）、D-02（P08 角色）、D-05（vite 升级）、D-06（队列）——需负责人批准。
 6. **Benchmark v3 多臂**：A/C/D/E + LLM 分批，报告分子分母与样本量（WP6）。
 

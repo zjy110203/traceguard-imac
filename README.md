@@ -43,6 +43,9 @@ Agentic Web UI Testing & Quality Intelligence Platform（智能 Web UI 自动化
   绝对越权 URL、逐跳重定向校验、内网阻断），浏览器层对未授权请求在发出前 abort。
   已知限制：顶层 302 跳转的出站请求会到达目标，产品保证是"落地拒绝 + 步骤失败"。
 
+前端：诊断详情页新增 **冲突提示 / 探针回灌记录 / 主动诊断闭环入口**，390px 表格优化；`ui_acceptance.py` **30/30** 通过，
+1440/1024/768/390 无横向溢出，深色主题可读（截图见 `docs/assets/run006/`）。
+
 本轮测试：**367 passed / 5 skipped**（起点 285）；真实 Chromium E2E **11 passed**。
 交付文档：`docs/RUN-006-BASELINE.md`、`RUN-006-IMPLEMENTATION-REPORT.md`、`RUN-006-TEST-REPORT.md`、
 `RUN-006-SECURITY-RELIABILITY.md`、`RUN-006-DECISION-REQUESTS.md`；证据：`docs/assets/run006/`。

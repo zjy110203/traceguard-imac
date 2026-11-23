@@ -1,0 +1,158 @@
+{
+  "base_url": "http://127.0.0.1:8010",
+  "generated_at": "2026-11-23T07:09:25Z",
+  "checks": [
+    {
+      "check": "page:dashboard",
+      "status": "PASS",
+      "detail": "title='总览 · TraceGuard'"
+    },
+    {
+      "check": "console:dashboard",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "page:intents",
+      "status": "PASS",
+      "detail": "title='测试需求 · TraceGuard'"
+    },
+    {
+      "check": "console:intents",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "page:testcases",
+      "status": "PASS",
+      "detail": "title='测试资产 · TraceGuard'"
+    },
+    {
+      "check": "console:testcases",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "page:oracles",
+      "status": "PASS",
+      "detail": "title='Oracle 契约 · TraceGuard'"
+    },
+    {
+      "check": "console:oracles",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "page:runs",
+      "status": "PASS",
+      "detail": "title='执行中心 · TraceGuard'"
+    },
+    {
+      "check": "console:runs",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "page:explorer",
+      "status": "PASS",
+      "detail": "title='Agent Studio · TraceGuard'"
+    },
+    {
+      "check": "console:explorer",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "page:models",
+      "status": "PASS",
+      "detail": "title='模型运行中心 · TraceGuard'"
+    },
+    {
+      "check": "console:models",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "page:diagnoses",
+      "status": "PASS",
+      "detail": "title='诊断中心 · TraceGuard'"
+    },
+    {
+      "check": "console:diagnoses",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "page:repairs",
+      "status": "PASS",
+      "detail": "title='修复中心 · TraceGuard'"
+    },
+    {
+      "check": "console:repairs",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "page:benchmark",
+      "status": "PASS",
+      "detail": "title='Benchmark · TraceGuard'"
+    },
+    {
+      "check": "console:benchmark",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "page:system",
+      "status": "PASS",
+      "detail": "title='系统与运行环境 · TraceGuard'"
+    },
+    {
+      "check": "console:system",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "runs:table",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "runs:filter",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "run-detail:loaded",
+      "status": "PASS",
+      "detail": "run_1795417215470ce7b6a83e748"
+    },
+    {
+      "check": "run-detail:sse-badge",
+      "status": "PASS",
+      "detail": "SSE 通道状态可见（不是静默失败）"
+    },
+    {
+      "check": "run-detail:events-tab",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "error-state:not-found",
+      "status": "PASS",
+      "detail": "错误提示可见"
+    },
+    {
+      "check": "mobile:nav-open",
+      "status": "PASS",
+      "detail": "移动端导航可展开"
+    },
+    {
+      "check": "theme:dark",
+      "status": "PASS",
+      "detail": "深色媒体查询下页面可渲染"
+    }
+  ],
+  "passed": 30,
+  "failed": 0
+}

@@ -150,6 +150,8 @@ Benchmark（真实）：
 | `.venv/bin/python -m pytest -q` | **367 passed, 5 skipped, 0 failed**（30.0s） | skip 全部为 PG parity（无 `TG_TEST_POSTGRES_URL`） |
 | `.venv/bin/python -m pytest tests/e2e -q` | **11 passed**（16.1s） | 真实 Chromium |
 | `.venv/bin/ruff check packages apps tests` | All checks passed | — |
+| `npm run typecheck` / `npm run build` | 通过 | 前端诊断视图改动 |
+| `scripts/ui_acceptance.py` | **30/30 passed** | 4 断点无横向溢出；深色主题可读 |
 | 真实环境（隔离库 `.traceguard/run006/`） | 正常 PASSED / TF-DB-001 FAILED / 诊断 CONFIRMED / probe-plan STOP_CONFIRMED(0 探针) / 真实 http_state 回灌使假设被排除 | `docs/assets/run006/*.json` |
 
 未执行（不得视为通过）：PostgreSQL 运行时、4 Worker 故障恢复、60 分钟长稳、CI 真实 Actions、前端截图验收、Benchmark v3。

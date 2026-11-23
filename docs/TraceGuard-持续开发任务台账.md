@@ -131,7 +131,8 @@
 | R6-16 | 顶层 302 越权落地拒绝 | PARTIAL（拒绝继续，但请求已出站） | `test_redirect_landing_on_unsanctioned_origin_is_refused` |
 | R6-17 | 真实环境正常/故障链路 | VERIFIED（单场景） | `docs/assets/run006/real-env-run-summary.json` |
 | R6-18 | 完整端到端全链（含修复晋升回归） | PARTIAL | 未在本轮走完 |
-| R6-19 | 前端 14 视图体验升级 | NOT_IMPLEMENTED（本轮） | 未改前端 |
+| R6-19 | 前端诊断视图（冲突/回灌/闭环） | VERIFIED（仅该视图） | `DiagnosisDetailView` + `types.ts`；30/30 UI 验收；4 断点 + 深色截图 |
+| R6-19b | 前端其余 13 视图体验审查 | NOT_IMPLEMENTED（本轮） | 未审查 |
 | R6-20 | PostgreSQL 实测 / 4 Worker / 60 分钟长稳 | BLOCKED | 环境与时间窗限制 |
 | R6-21 | CI 三级门禁真实运行 | BLOCKED | 未触发真实 Actions |
 | R6-22 | UI-FaultBench 深化（30 场景多臂） | NOT_IMPLEMENTED（本轮） | 不引用历史数字 |

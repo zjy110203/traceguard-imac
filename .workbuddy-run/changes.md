@@ -51,3 +51,5 @@
 - `packages/execution/.../runtime/pipeline.py` | 修改 | 按 pinned Oracle 版本加载、按模型字段过滤文档
 - 测试 | 新增 6 文件 | 62 个测试函数 / 82 采集用例
 - `docs/RUN-006-*.md` + `docs/assets/run006/` | 新增 | 交付文档与证据
+- `apps/web/src/views/DiagnosisDetailView.vue` | 修改 | 冲突提示、探针回灌展示、主动闭环入口、预算语义提示、390px 表格优化
+- `apps/web/src/types.ts` | 修改 | `probe_feedback`/`excluded_by`/`unresolved_conflicts`/`evaluation_history`/`ProbePlan` 类型

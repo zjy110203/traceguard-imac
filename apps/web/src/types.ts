@@ -211,6 +211,16 @@ export interface Hypothesis {
   contributing_factors: string[]
   flaky_characteristic: boolean
   suggested_by: string
+  // RUN-006：探针证据回灌记录与排除依据
+  probe_feedback?: {
+    probe_id: string
+    execution_id: string
+    relation: string
+    confirming: boolean
+    exclude: boolean
+    reason: string
+  }[]
+  excluded_by?: { probe_id: string; evidence_id: string; reason: string }[]
 }
 
 export interface Diagnosis {
@@ -235,6 +245,42 @@ export interface Diagnosis {
   } | null
   created_at: string
   disposition_id?: string
+  // RUN-006：未解决冲突（同一假设同时有可信支持与反驳证据）
+  unresolved_conflicts?: string[]
+  probe_feedback?: Record<string, unknown>[]
+  evaluation_history?: {
+    at: string
+    trigger: string
+    probes: string[]
+    outcome_before: string
+    outcome_after: string
+    root_causes_after: string[]
+    unresolved_conflicts: string[]
+  }[]
+}
+
+export interface ProbePlan {
+  plan_id: string
+  run_id: string
+  diagnosis_id?: string | null
+  stop_reason: string
+  stop_detail: string
+  steps: {
+    iteration: number
+    probe_id: string
+    status: string
+    reason: string
+    score: number
+    applied_to_diagnosis: boolean
+    evidence_ids: string[]
+    hypothesis_updates?: { hypothesis_id: string; relation: string; exclude: boolean; reason: string }[]
+    diagnosis_after?: { outcome: string; root_causes: string[]; unresolved_conflicts: string[] }
+  }[]
+  diagnosis_before?: { outcome: string } | null
+  diagnosis_after?: { outcome: string } | null
+  unresolved_conflicts?: string[]
+  budget: { scope_key: string; probes_used: number; probes_left: number; time_left: number }
+  llm_planner?: { called?: boolean; effect?: string; params_used_in_execution?: boolean }
 }
 
 export interface Disposition {

@@ -161,10 +161,35 @@ DNS/网络层强制阻断（如解析白名单、出网代理）列入后续工�
 |---|---|---|
 | WP2-01 稳定性回放 F08 完善 | PARTIAL（继承 RUN-005） | 本轮未改；下一步补"真实浏览器多次回放 + 门禁校验" |
 | WP2-02 完整端到端真实验收 | PARTIAL | 正常/故障场景真实跑通；修复→晋升→回归全链未在本轮走完 |
-| WP3 前端产品体验升级 | NOT_IMPLEMENTED（本轮） | 未改前端，不声称任何 UI 改善；需独立工作包 |
+| WP3 前端产品体验升级 | PARTIAL（仅诊断视图，见 §7） | 14 视图全面审查未做；本轮只改 1 个视图并有真实浏览器验收 |
 | WP4-01 PostgreSQL | BLOCKED | 本机无 Docker/psql |
 | WP4-02 4 Worker 故障恢复 | PARTIAL（历史证据） | 未在本版本重跑 |
 | WP4-03 60 分钟长稳 | BLOCKED | 未执行 |
 | WP4-04 异常恢复注入 | PARTIAL | 部分覆盖（预算/DB 异常单测），未做服务级注入 |
 | WP5 CI 三级门禁真实运行 | BLOCKED | 工作流在库，未在真实 GitHub 触发 |
 | WP6 UI-FaultBench 深化 | NOT_IMPLEMENTED（本轮） | 未追加实验，不引用历史数字冒充本轮 |
+
+
+---
+
+## 7. WP3 前端（PARTIAL：只做诊断视图，不声称全面升级）
+
+本轮把 WP1 的新语义接到前端最小可用面上，避免"后端有冲突/回灌，界面看不见"：
+
+| 变更 | 位置 | 说明 |
+|---|---|---|
+| 冲突提示 | `DiagnosisDetailView.vue` | 顶部展示"证据冲突未裁决"与受影响假设，说明系统不自动裁决（P03 未决策） |
+| 探针回灌可视化 | 同上 | 每条假设显示 `probe_feedback`（支持/反驳/排除 + 依据）与 `excluded_by`（被谁排除） |
+| 主动诊断闭环入口 | 同上 | "运行主动诊断闭环"按钮调用 `POST /runs/{id}/probe-plan`，卡片展示停止原因、结论变化、回灌情况、LLM 是否参与 |
+| 预算语义提示 | 同上 | 预算相关停止时提示 P06 provisional（50 次 / 60 秒）且已关闭不可绕过 |
+| 表格可读性 | 同上 | 评分列与操作列不换行；390px 隐藏"目的"列，保留探针/状态/执行 |
+| 类型 | `types.ts` | `Hypothesis.probe_feedback/excluded_by`、`Diagnosis.unresolved_conflicts/evaluation_history`、`ProbePlan` |
+
+验证（真实构建 + 真实浏览器）：
+- `npm run typecheck` 通过；`npm run build` 通过；
+- `python scripts/ui_acceptance.py` → **30/30 passed**（含 11 个页面、深色主题、移动端、错误/空状态）；
+- 断点实测：1440 / 1024 / 768 / 390 `scrollWidth-clientWidth = 0`，无横向溢出；深色主题文字可读；
+- 截图：`docs/assets/run006/diagnosis-{1440,1024,768,390}.png`、`diagnosis-dark.png`、`diagnosis-active-loop.png`。
+
+明确未做：其余 13 个视图的信息层级审查、Run 详情失败步骤↔证据联动、Evidence Graph 交互、SSE 断线状态真实呈现、
+全站 Loading/Empty/Error 一致性复核 —— 这些属于完整 WP3，需要独立工作包与逐页截图审查。

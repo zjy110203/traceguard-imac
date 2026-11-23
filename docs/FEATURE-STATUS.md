@@ -183,7 +183,8 @@
 | 身份认证 / RBAC | **NOT_IMPLEMENTED** | 仍为单机可信；主体类型门禁 ≠ 身份认证（NEEDS_DECISION R1） |
 | 完整端到端全链（含修复晋升） | **PARTIAL** | 正常/故障场景真跑；修复全链未走完 |
 | 稳定性回放 F08 | **PARTIAL（继承）** | 本轮未改 |
-| 前端体验升级 | **NOT_IMPLEMENTED（本轮）** | 零改动，不声称任何 UI 改善 |
+| 前端诊断视图（冲突/回灌/闭环入口） | **VERIFIED** | `DiagnosisDetailView` 显示冲突、`probe_feedback`、`excluded_by`、主动闭环停止原因；30/30 UI 验收 |
+| 前端其余 13 视图体验审查 | **NOT_IMPLEMENTED（本轮）** | 未审查，不声称改善 |
 | PostgreSQL / 4 Worker / 60 分钟长稳 | **BLOCKED** | 环境/时间窗限制 |
 | CI 三级门禁真实运行 | **BLOCKED** | 未触发真实 Actions |
 | Benchmark v3 | **NOT_IMPLEMENTED（本轮）** | 不引用历史数字 |

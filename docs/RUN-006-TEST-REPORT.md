@@ -16,7 +16,9 @@
 | `.venv/bin/python -m pytest tests/e2e -q` | **11 passed** | 16.1s |
 | `.venv/bin/ruff check packages apps tests` | All checks passed | <1s |
 | `ruff format`（仅本轮改动文件） | 已格式化 | — |
-| `vue-tsc` / `vite build` | **本轮未执行**（前端零改动，不作为验收证据） | — |
+| `npm run typecheck`（vue-tsc） | 通过 | 3s |
+| `npm run build`（vite） | 通过（dist 已刷新） | 2.1s |
+| `scripts/ui_acceptance.py` | **30/30 passed** | 约 40s |
 
 基线对比：`dadb4ae` 时 285 passed / 5 skipped → 本轮 **+82 个采集用例**（62 个测试函数，含参数化）。
 skip 的 5 项全部是 `tests/integration/test_postgres_parity.py`（`TG_TEST_POSTGRES_URL` 未配置）。
@@ -66,6 +68,18 @@ skip 的 5 项全部是 `tests/integration/test_postgres_parity.py`（`TG_TEST_P
 - `evidence-graph-with-probe-nodes.json`
 - `sha256-key-files.json`（关键文件 SHA-256）
 
+## 3.1 前端验收（真实浏览器，本轮）
+
+| 项 | 结果 |
+|---|---|
+| 类型检查 / 构建 | `vue-tsc` 通过 / `vite build` 通过 |
+| 自动化验收 | `scripts/ui_acceptance.py` → **30 passed / 0 failed** |
+| 断点 | 1440 / 1024 / 768 / 390 均无横向溢出（`scrollWidth-clientWidth=0`） |
+| 深色主题 | 切换 `data-theme=dark` 后文字可读（截图核验） |
+| 控制台 | 诊断页 console error 0 |
+| 交互 | "运行主动诊断闭环"按钮真实触发 API 并渲染停止原因/回灌结果 |
+| 截图 | `docs/assets/run006/diagnosis-*.png`、`diagnosis-dark.png`、`diagnosis-active-loop.png` |
+
 ## 4. 覆盖到的关键不变量（本轮）
 
 1. Oracle：必需断言无合法 Oracle → **不可 APPROVED**；版本在审核时固定，历史用例复现不跟随最新版本。
@@ -85,6 +99,6 @@ skip 的 5 项全部是 `tests/integration/test_postgres_parity.py`（`TG_TEST_P
 | 60 分钟长稳 | **未执行** | 无独立时间窗；禁止用短测冒充 |
 | API/DB/Worker/SSE 故障注入 | **部分** | 仅有预算与 DB 读写的单测级故障；无服务级注入 |
 | CI PR / Nightly / Release 真实运行 | **未执行** | 工作流在库，未触发真实 Actions |
-| 前端类型检查/构建/截图验收 | **未执行（本轮）** | 前端零改动；不作为本轮证据 |
+| 前端 13 个视图的逐页体验审查 | **未执行** | 本轮只改诊断视图；其余视图未审查 |
 | UI-FaultBench 多臂实验 | **未执行（本轮）** | 不引用历史数字 |
 | 真实浏览器故障场景下的"探针改变结论" | **PARTIAL** | 见实施报告 §2 的诚实边界 |

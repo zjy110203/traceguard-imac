@@ -87,7 +87,8 @@
 | WP1-05 目标域名与网络管控 | **VERIFIED（子资源）/ PARTIAL（顶层 302）** | 18 单测 + 4 真实浏览器 e2e |
 | WP2 稳定性回放 F08 | **PARTIAL（继承 RUN-005）** | 本轮未改 |
 | WP2 完整端到端真实验收 | **PARTIAL** | 正常/故障场景真跑，修复全链未走完 |
-| WP3 前端体验升级 | **NOT_IMPLEMENTED（本轮）** | 零改动 |
+| WP3 前端（诊断视图） | **VERIFIED（仅该视图）** | 冲突/回灌/闭环入口 + 390px 表格；30/30 UI 验收；4 断点无溢出 |
+| WP3 前端（其余 13 视图） | **NOT_IMPLEMENTED（本轮）** | 未审查 |
 | WP4 PostgreSQL / Worker / 长稳 | **BLOCKED** | 环境与时间窗 |
 | WP5 CI 三级门禁真实运行 | **BLOCKED** | 未触发真实 Actions |
 | WP6 UI-FaultBench 深化 | **NOT_IMPLEMENTED（本轮）** | 未追加实验 |
