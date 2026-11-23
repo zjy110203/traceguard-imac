@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from traceguard_core.errors import AppError, ErrorCode
 from traceguard_core.ids import new_id, utc_now_iso
@@ -91,9 +91,7 @@ class PersistentEventStore:
                     return None
                 if existing.payload_hash == phash:
                     return _to_stored(existing)
-                self._record_conflict(
-                    s, producer_id, idempotency_key, existing.payload_hash, phash
-                )
+                self._record_conflict(s, producer_id, idempotency_key, existing.payload_hash, phash)
                 s.commit()
             raise AppError(ErrorCode.CONFLICT, "IDEMPOTENCY_KEY_PAYLOAD_CONFLICT")
 
@@ -147,9 +145,7 @@ class PersistentEventStore:
             "RETURNING last_sequence"
         )
         with self.db.session() as s:
-            value = s.execute(
-                sql, {"pid": producer_instance_id, "ts": utc_now_iso()}
-            ).scalar_one()
+            value = s.execute(sql, {"pid": producer_instance_id, "ts": utc_now_iso()}).scalar_one()
             return int(value)
 
     def _record_conflict(
@@ -576,9 +572,7 @@ class PersistentConsumerInbox:
             return self._to_record(row), True
 
     # ----------------------------------------------------------------- terminal
-    def complete(
-        self, consumer_id: str, event_id: str, result: Any = None
-    ) -> InboxRecord:
+    def complete(self, consumer_id: str, event_id: str, result: Any = None) -> InboxRecord:
         with self.db.session() as s:
             row = self._get_row(s, consumer_id, event_id)
             if row is None:
@@ -691,9 +685,7 @@ class PersistentConsumerInbox:
     def consume(
         self, consumer_id: str, event_id: str, result: dict[str, Any] | None = None
     ) -> InboxRecord:
-        return self.consume_in_transaction(
-            consumer_id, event_id, lambda s: result or {}
-        ).record
+        return self.consume_in_transaction(consumer_id, event_id, lambda s: result or {}).record
 
     def get(self, consumer_id: str, event_id: str) -> InboxRecord | None:
         with self.db.session() as s:
@@ -709,9 +701,7 @@ class PersistentConsumerInbox:
         from sqlalchemy import func
 
         with self.db.session() as s:
-            rows = s.execute(
-                select(InboxRow.status, func.count()).group_by(InboxRow.status)
-            ).all()
+            rows = s.execute(select(InboxRow.status, func.count()).group_by(InboxRow.status)).all()
             return {str(status): int(count) for status, count in rows}
 
 
@@ -759,16 +749,75 @@ class DocStore:
         status: str = "",
         version: int | None = None,
     ) -> DocRecord:
+        """写入/更新聚合文档。
+
+        RUN-007 WP1-04 修复：`version` 的 CAS 必须是**原子条件 UPDATE**。
+        旧实现是"先 SELECT 到 ORM 对象、在 Python 里比较版本、再无条件 UPDATE"，
+        在真正多进程并发下会 lost update（两个进程都读到 v5，都写成功），
+        ProbeBudget / 幂等回执都依赖这里，所以必须修在存储层。
+
+        语义：
+        - `version=None`：无条件写（普通文档更新）；
+        - `version=N` 且行存在：只有当前版本仍是 N 才写成功，否则抛 CONFLICT；
+        - `version=N` 且行不存在：插入（并发插入由主键冲突转成 CONFLICT）。
+        """
+        now = utc_now_iso()
         with self.db.session() as s:
+            if version is not None:
+                result = s.execute(
+                    update(DocRow)
+                    .where(DocRow.id == doc_id, DocRow.version == version)
+                    .values(
+                        doc=doc,
+                        version=DocRow.version + 1,
+                        status=status or DocRow.status,
+                        ref_id=ref_id if ref_id is not None else DocRow.ref_id,
+                        updated_at=now,
+                    )
+                )
+                if result.rowcount == 1:
+                    row = s.get(DocRow, doc_id)
+                    assert row is not None
+                    return _to_doc(row)
+                if s.get(DocRow, doc_id) is not None:
+                    actual = s.scalar(select(DocRow.version).where(DocRow.id == doc_id))
+                    raise AppError(
+                        ErrorCode.CONFLICT,
+                        f"doc version CAS failed: expected {version}, actual {actual}",
+                    )
+                try:
+                    with s.begin_nested():
+                        s.add(
+                            DocRow(
+                                id=doc_id,
+                                kind=kind,
+                                workspace_id=workspace_id,
+                                ref_id=ref_id,
+                                version=version or 1,
+                                status=status,
+                                doc=doc,
+                                created_at=now,
+                                updated_at=now,
+                            )
+                        )
+                except IntegrityError as exc:
+                    raise AppError(
+                        ErrorCode.CONFLICT,
+                        f"doc create conflict: {doc_id} 已被并发创建",
+                    ) from exc
+                s.flush()
+                row = s.get(DocRow, doc_id)
+                assert row is not None
+                return _to_doc(row)
+
             row = s.get(DocRow, doc_id)
-            now = utc_now_iso()
             if row is None:
                 row = DocRow(
                     id=doc_id,
                     kind=kind,
                     workspace_id=workspace_id,
                     ref_id=ref_id,
-                    version=version or 1,
+                    version=1,
                     status=status,
                     doc=doc,
                     created_at=now,
@@ -776,14 +825,7 @@ class DocStore:
                 )
                 s.add(row)
             else:
-                if version is not None and row.version != version:
-                    raise AppError(
-                        ErrorCode.CONFLICT,
-                        f"doc version CAS failed: expected {version}, actual {row.version}",
-                    )
                 row.doc = doc
-                if version is not None:
-                    row.version = version + 1
                 row.status = status or row.status
                 row.ref_id = ref_id or row.ref_id
                 row.updated_at = now
