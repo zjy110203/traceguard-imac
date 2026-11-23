@@ -1,0 +1,56 @@
+{
+  "started_at": "2026-11-23T09:11:01Z",
+  "db": "/Users/dlp--test/Desktop/traceguard/.traceguard/run007/workers.db",
+  "procs": 4,
+  "queued_runs": 3,
+  "killed_pid": 52368,
+  "killed_worker_id": "204deiMac.local-52368",
+  "killed_after_s": 0.0,
+  "runs": [
+    {
+      "run_id": "run_1795425040677e5cf09032f47",
+      "execution_status": "COMPLETED",
+      "test_verdict": "PASSED",
+      "attempt": 1,
+      "fencing_token": 2,
+      "final_owner": "204deiMac.local-52369"
+    },
+    {
+      "run_id": "run_1795425040679f284a097d8be",
+      "execution_status": "COMPLETED",
+      "test_verdict": "PASSED",
+      "attempt": 1,
+      "fencing_token": 1,
+      "final_owner": "204deiMac.local-52371"
+    },
+    {
+      "run_id": "run_1795425040680da7b5369be9f",
+      "execution_status": "COMPLETED",
+      "test_verdict": "PASSED",
+      "attempt": 1,
+      "fencing_token": 1,
+      "final_owner": "204deiMac.local-52370"
+    }
+  ],
+  "evidence_counts": {
+    "run_1795425040677e5cf09032f47": 24,
+    "run_1795425040679f284a097d8be": 19,
+    "run_1795425040680da7b5369be9f": 24
+  },
+  "step_counts": {
+    "run_1795425040677e5cf09032f47": 8,
+    "run_1795425040679f284a097d8be": 8,
+    "run_1795425040680da7b5369be9f": 8
+  },
+  "duplicate_event_keys": [],
+  "checks": {
+    "all_runs_terminal": true,
+    "worker_was_killed_midrun": true,
+    "takeover_happened": true,
+    "fencing_token_incremented": true,
+    "no_duplicate_events": true,
+    "evidence_persisted": true,
+    "final_state_matches_db": true
+  },
+  "passed": true
+}
