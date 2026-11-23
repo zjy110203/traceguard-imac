@@ -272,7 +272,36 @@ MIGRATIONS: list[tuple[int, str, list[str]]] = [
             "ON tg_promotion_receipt (testcase_id)",
         ],
     ),
+    (
+        9,
+        "evidence_digest_semantics",
+        ["__CALLABLE__:_migrate_evidence_digest_semantics"],
+    ),
 ]
+
+
+def _migrate_evidence_digest_semantics(conn) -> None:  # type: ignore[no-untyped-def]
+    """区分"原始来源摘要"与"持久化内容摘要"（RUN-007-FINALIZATION-2 / WP2）。
+
+    历史行的 `sha256` 是脱敏前原始内容的摘要，而库里存的是脱敏后内容：
+    两者混用会使"服务端用持久化内容重算摘要"必然对不上。新增列并存，
+    历史行标记为 `legacy_backfilled`（内容摘要无法回溯证明，校验时如实报 NOT_RUN）。
+    """
+    from sqlalchemy import inspect
+
+    inspector = inspect(conn)
+    if "tg_evidence" not in inspector.get_table_names():
+        return
+    cols = {c["name"] for c in inspector.get_columns("tg_evidence")}
+    additions = [
+        ("stored_content_sha256", "VARCHAR(64) DEFAULT ''"),
+        ("attachment_sha256", "VARCHAR(64) DEFAULT ''"),
+        ("integrity_detail", "JSON"),
+    ]
+    for name, ddl in additions:
+        if name in cols:
+            continue
+        conn.execute(text(f"ALTER TABLE tg_evidence ADD COLUMN {name} {ddl}"))
 
 
 def _migrate_step_primary_key(conn) -> None:  # type: ignore[no-untyped-def]
@@ -363,6 +392,7 @@ _MIGRATION_CALLABLES = {
     "_migrate_step_primary_key": _migrate_step_primary_key,
     "_migrate_inbox_states": _migrate_inbox_states,
     "_migrate_review_revision": _migrate_review_revision,
+    "_migrate_evidence_digest_semantics": _migrate_evidence_digest_semantics,
 }
 
 _lock = threading.RLock()

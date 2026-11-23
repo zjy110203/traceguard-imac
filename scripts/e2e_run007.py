@@ -27,6 +27,7 @@ D 完整自愈：Repair Proposal → Diff 校验 → 沙箱真实执行（Worker
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import time
 import urllib.error
@@ -441,6 +442,43 @@ def scenario_c(api: Api, failed_run_id: str, diagnosis_id: str) -> dict[str, Any
     }
 
 
+def _verify_rollback_content(
+    api: Api, testcase_id: str, restored_version: int, base_doc: dict[str, Any]
+) -> dict[str, Any]:
+    """回滚内容级验证：指针、步骤/定位器、断言、Oracle 绑定都必须回到基线。"""
+    _assert(bool(restored_version), "回滚记录缺少 restored_version")
+    restored = api.call("GET", f"/testcases/{testcase_id}/versions/{int(restored_version)}")
+    meta = api.call("GET", f"/testcases/{testcase_id}")
+    same_steps = [
+        (s.get("step_id"), s.get("action"), (s.get("target") or {}).get("value"), s.get("value"))
+        for s in restored.get("steps") or []
+    ] == [
+        (s.get("step_id"), s.get("action"), (s.get("target") or {}).get("value"), s.get("value"))
+        for s in base_doc.get("steps") or []
+    ]
+    same_assertions = [
+        (a.get("assertion_id"), a.get("oracle_id"), json.dumps(a.get("expected"), sort_keys=True))
+        for a in restored.get("assertions") or []
+    ] == [
+        (a.get("assertion_id"), a.get("oracle_id"), json.dumps(a.get("expected"), sort_keys=True))
+        for a in base_doc.get("assertions") or []
+    ]
+    same_bindings = (restored.get("oracle_bindings") or []) == (
+        base_doc.get("oracle_bindings") or []
+    )
+    _assert(int(meta.get("latest_version") or 0) == int(restored_version), "正式版本指针未指向恢复版本")
+    _assert(same_steps, "回滚后的步骤/定位器内容与基线不一致")
+    _assert(same_assertions, "回滚后的断言与基线不一致")
+    _assert(same_bindings, "回滚后的 Oracle 绑定与基线不一致")
+    return {
+        "restored_version": int(restored_version),
+        "latest_version": meta.get("latest_version"),
+        "steps_restored": same_steps,
+        "assertions_restored": same_assertions,
+        "oracle_bindings_restored": same_bindings,
+    }
+
+
 def _setup_locator_case(api: Api, teamflow: str) -> tuple[str, int]:
     """创建场景 D 专用用例：第一步激活 TF-LOC-001（随用例自带，不受全局 pre-reset 清掉）。"""
     testcase = api.call(
@@ -547,6 +585,7 @@ def scenario_d(api: Api, teamflow: str, ex: Executor) -> dict[str, Any]:
     base_case, base_version = step(
         "D0 创建场景 D 用例（自带故障激活步骤）", lambda: _setup_locator_case(api, teamflow)
     )
+    base_doc = api.call("GET", f"/testcases/{base_case}/versions/{base_version}")
 
     base_run = ex.execute(base_case, version=base_version)
     base_exec = base_run.get("run") or base_run
@@ -686,6 +725,9 @@ def scenario_d(api: Api, teamflow: str, ex: Executor) -> dict[str, Any]:
             f"latest={after_rollback.get('latest_version')} restored={restored}",
         ),
     )
+    step("D17b 回滚必须证明内容真的恢复（不是只返回成功）", lambda: _verify_rollback_content(
+        api, base_case, restored, base_doc
+    ))
     verify = ex.execute(base_case, version=promoted_version)
     ver = verify.get("run") or verify
     step(
@@ -778,7 +820,14 @@ def _assert_review_evidence(
 
 
 def _verify_evidence(api: Api, run_id: str, *, expect_steps: bool = False) -> dict[str, Any]:
-    """真实证据链核对：Evidence 数量 > 0、ID 真实、归属本 Run、Step 落库、事件存在。"""
+    """逐条验证真实 Evidence（服务端存储完整性），不再只统计历史状态。
+
+    RUN-007-FINALIZATION-2（WP2/C4）：
+    - 每条 Evidence 调用 `POST /evidence/{id}/verify`，由服务端读取持久化记录与真实内容重算摘要；
+    - 有附件时下载字节重算 SHA-256，并与记录摘要比对；
+    - 派生证据校验来源引用（raw_ref / 同工作区 / derivation_rule）；
+    - 统计 PASS / FAIL / NOT_RUN，NOT_RUN 绝不计入 PASS。
+    """
     _assert(bool(run_id), "run_id 为空，无法核对证据")
     evds = api.call("GET", f"/runs/{run_id}/evidence", timeout=120) or []
     steps = api.call("GET", f"/runs/{run_id}/steps", timeout=120) or []
@@ -789,12 +838,93 @@ def _verify_evidence(api: Api, run_id: str, *, expect_steps: bool = False) -> di
     _assert(len(set(ids)) == len(ids), "evidence_id 重复")
     bad_owner = [e.get("evidence_id") for e in evds if e.get("run_id") not in (None, run_id)]
     _assert(not bad_owner, f"Evidence 归属错误：{bad_owner[:5]}")
+
     kinds: dict[str, int] = {}
     sources: dict[str, int] = {}
+    results: list[dict[str, Any]] = []
+    derived_checks: list[dict[str, Any]] = []
     for e in evds:
+        eid = str(e.get("evidence_id"))
         kinds[str(e.get("kind"))] = kinds.get(str(e.get("kind")), 0) + 1
         src = str(e.get("source_type"))
         sources[src] = sources.get(src, 0) + 1
+        try:
+            verified = api.call("POST", f"/evidence/{eid}/verify", {}, timeout=120)
+            storage = verified.get("storage_integrity") or {}
+            status = str(verified.get("integrity_check") or "NOT_RUN")
+        except Exception as exc:  # noqa: BLE001
+            verified, storage, status = {}, {}, "FAIL"
+            verified["error"] = str(exc)[:200]
+        checks = storage.get("checks") or {}
+        attachment: dict[str, Any] = {}
+        if e.get("attachment_ref"):
+            try:
+                data, headers = _download(api, f"/evidence/{eid}/download")
+                actual = hashlib.sha256(data).hexdigest()
+                attachment = {
+                    "artifact_id": e.get("attachment_ref"),
+                    "bytes": len(data),
+                    "sha256": actual,
+                    "header_sha256": headers.get("X-TraceGuard-SHA256", ""),
+                    "recorded_sha256": e.get("attachment_sha256", ""),
+                    "match": bool(
+                        actual
+                        and actual
+                        == (
+                            headers.get("X-TraceGuard-SHA256", "") or e.get("attachment_sha256", "")
+                        )
+                    ),
+                }
+            except Exception as exc:  # noqa: BLE001
+                attachment = {"error": str(exc)[:200], "match": False}
+        if e.get("kind") == "derived":
+            derived_checks.append(
+                {
+                    "evidence_id": eid,
+                    "raw_ref": e.get("raw_ref"),
+                    "source_exists": checks.get("derived_source_exists"),
+                    "source_is_raw": checks.get("derived_source_is_raw"),
+                    "same_workspace": checks.get("derived_source_same_workspace"),
+                    "rule_recorded": checks.get("derivation_rule_recorded"),
+                }
+            )
+        results.append(
+            {
+                "evidence_id": eid,
+                "kind": e.get("kind"),
+                "source_type": e.get("source_type"),
+                "status": status,
+                "reasons": storage.get("reasons") or [],
+                "stored_content_match": checks.get("stored_content_match"),
+                "redacted": bool(e.get("redacted")),
+                "source_sha256_recorded": bool(e.get("sha256")),
+                "stored_content_sha256_recorded": bool(e.get("stored_content_sha256")),
+                "attachment": attachment,
+            }
+        )
+
+    pass_n = sum(1 for r in results if r["status"] == "PASS")
+    fail_n = sum(1 for r in results if r["status"] == "FAIL")
+    not_run_n = sum(1 for r in results if r["status"] == "NOT_RUN")
+    with_attachment = [r for r in results if r["attachment"]]
+    attach_ok = sum(1 for r in with_attachment if r["attachment"].get("match"))
+    source_recheckable = sum(
+        1 for r in results if r["source_sha256_recorded"] and not r["redacted"]
+    )
+    derived_ok = sum(
+        1
+        for d in derived_checks
+        if d["source_exists"] and d["source_is_raw"] and d["same_workspace"] and d["rule_recorded"]
+    )
+
+    _assert(
+        fail_n == 0,
+        f"存储完整性校验 FAIL：{[r['evidence_id'] for r in results if r['status'] == 'FAIL'][:5]}",
+    )
+    _assert(pass_n > 0, "没有任何 Evidence 通过服务端存储完整性校验")
+    _assert(not_run_n == 0, f"{not_run_n} 条 Evidence 无法证明完整性（NOT_RUN 不计 PASS）")
+    _assert(len(with_attachment) == attach_ok, "附件字节摘要与记录不一致")
+    _assert(len(derived_checks) == derived_ok, "派生证据来源引用不完整")
     if expect_steps:
         _assert(len(steps) > 0, f"Run {run_id} 没有任何 Step 记录")
     _assert(len(events) > 0, f"Run {run_id} 没有任何 Event 记录")
@@ -804,11 +934,41 @@ def _verify_evidence(api: Api, run_id: str, *, expect_steps: bool = False) -> di
         "evidence_ids": ids,
         "evidence_kinds": kinds,
         "evidence_sources": sources,
+        "verification": {
+            "total": len(results),
+            "pass": pass_n,
+            "fail": fail_n,
+            "not_run": not_run_n,
+            "service_side": True,
+            "per_evidence": results,
+        },
+        "attachment_verification": {
+            "with_attachment": len(with_attachment),
+            "bytes_sha256_match": attach_ok,
+        },
+        "source_digest": {
+            "recorded": len(results),
+            "recheckable_without_original": source_recheckable,
+            "redacted_original_not_retained": sum(1 for r in results if r["redacted"]),
+            "note": "原始来源摘要仅可对未脱敏证据直接复核；脱敏证据以持久化内容摘要为准",
+        },
+        "derived_evidence": {
+            "count": len(derived_checks),
+            "source_integrity_ok": derived_ok,
+            "details": derived_checks,
+        },
         "step_count": len(steps),
         "event_count": len(events),
-        "with_attachment": sum(1 for e in evds if e.get("attachment_ref")),
-        "integrity_pass": sum(1 for e in evds if e.get("integrity_check") == "PASS"),
     }
+
+
+def _download(api: Api, path: str, timeout: int = 120) -> tuple[bytes, dict[str, str]]:
+    req = urllib.request.Request(api.base + path, method="GET")
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
+            return resp.read(), {k: v for k, v in resp.headers.items()}
+    except urllib.error.HTTPError as exc:
+        raise RuntimeError(f"GET {path} -> {exc.code}") from exc
 
 
 def _verify_graph_binds_evidence(

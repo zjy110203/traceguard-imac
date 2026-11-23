@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from traceguard_core.errors import AppError
 from traceguard_evidence.event_store import EventStore
-from traceguard_evidence.evidence_manager import EvidenceManager
+from traceguard_evidence.evidence_manager import EvidenceManager, _content_hash
 from traceguard_evidence.inbox import ConsumerInbox
 
 
@@ -154,10 +154,13 @@ def test_evidence_raw_hash_and_integrity() -> None:
     content = {"text": "screenshot-data", "token": "secret123"}
     rec = em.add_raw("evd1", "browser", "step_1", "ws-1", content, do_redact=False)
     assert len(rec.sha256) == 64
+    assert rec.stored_content_sha256 == rec.sha256  # 未脱敏时两者一致
     assert em.verify_integrity("evd1", content) is True
+    assert em.get("evd1").integrity_detail["source_payload_match"] == "PASS"
+    storage = em.verify_storage_integrity("evd1", expected_workspace="ws-1")
+    assert storage["status"] == "PASS"
     assert em.get("evd1").integrity_check == "PASS"
     assert em.verify_integrity("evd1", {"text": "tampered"}) is False
-    assert em.get("evd1").integrity_check == "FAIL"
 
 
 def test_evidence_redaction_and_hash_based_on_original() -> None:
@@ -166,14 +169,54 @@ def test_evidence_redaction_and_hash_based_on_original() -> None:
     rec = em.add_raw("evd1", "api", "req_1", "ws-1", original, do_redact=True)
     assert rec.redacted is True
     assert rec.content["password"] == "***REDACTED***"
-    # SHA-256 基于脱敏前原始内容
+    # 来源摘要基于脱敏前原始内容
+    assert rec.sha256 == _content_hash(original)
     assert em.verify_integrity("evd1", original) is True
+    # 持久化内容摘要基于脱敏后内容：两者必须不同，不能混用
+    assert rec.stored_content_sha256 != rec.sha256
+    assert em.verify_storage_integrity("evd1")["status"] == "PASS"
+
+
+def test_storage_integrity_detects_tampered_persisted_content() -> None:
+    em = EvidenceManager()
+    em.add_raw("evd1", "api", "req_1", "ws-1", {"v": 1}, do_redact=False)
+    rec = em.get("evd1")
+    assert rec is not None
+    rec.content = {"v": 2}  # 模拟库内内容被改动
+    result = em.verify_storage_integrity("evd1")
+    assert result["status"] == "FAIL"
+    assert "STORED_CONTENT_MISMATCH" in result["reasons"]
+
+
+def test_storage_integrity_not_run_for_legacy_rows() -> None:
+    em = EvidenceManager()
+    rec = em.add_raw("evd1", "api", "req_1", "ws-1", {"v": 1}, do_redact=False)
+    rec.stored_content_sha256 = ""  # 历史行没有记录持久化摘要
+    result = em.verify_storage_integrity("evd1")
+    assert result["status"] == "NOT_RUN"
+    assert "STORED_DIGEST_NOT_RECORDED_AT_CAPTURE" in result["reason"]
+
+
+def test_storage_integrity_checks_workspace_ownership() -> None:
+    em = EvidenceManager()
+    em.add_raw("evd1", "api", "req_1", "ws-1", {"v": 1})
+    result = em.verify_storage_integrity("evd1", expected_workspace="ws-2")
+    assert result["status"] == "FAIL"
+    assert result["checks"]["workspace_match"] is False
+
+
+def test_source_check_alone_does_not_claim_storage_integrity() -> None:
+    """来源内容比对 ≠ 存储完整性：不能只凭调用者提交内容就给 PASS。"""
+    em = EvidenceManager()
+    em.add_raw("evd1", "api", "req_1", "ws-1", {"v": 1}, do_redact=False)
+    assert em.verify_integrity("evd1", {"v": 1}) is True
+    assert em.get("evd1").integrity_check == "NOT_RUN"
 
 
 def test_evidence_integrity_and_trust_are_independent() -> None:
     em = EvidenceManager()
     rec = em.add_raw("evd1", "agent", "a1", "ws-1", {"x": 1}, source_trust="UNTRUSTED")
-    em.verify_integrity("evd1", {"x": 1})
+    em.verify_storage_integrity("evd1")
     assert rec.integrity_check == "PASS"  # 完整性通过
     assert rec.source_trust == "UNTRUSTED"  # 但来源不可信（独立维度）
 
@@ -194,6 +237,9 @@ def test_derived_evidence_must_reference_raw() -> None:
     assert d.derivation_rule == "rule-v1" and d.model_version == "model-1"
     # 派生证据不能冒充原始
     assert d.kind != "raw"
+    result = em.verify_storage_integrity("evd_derived")
+    assert result["status"] == "PASS"
+    assert result["checks"]["derived_source_is_raw"] is True
 
 
 def test_derived_from_non_raw_rejected() -> None:

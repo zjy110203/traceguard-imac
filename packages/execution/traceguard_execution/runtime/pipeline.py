@@ -601,6 +601,7 @@ class RunPipeline:
                     do_redact=True,
                     run_id=run_id,
                     attachment_ref=art.get("artifact_id"),
+                    attachment_sha256=str(art.get("sha256") or ""),
                 )
                 ids.append(evd_id)
             except Exception as exc:  # noqa: BLE001

@@ -198,10 +198,16 @@ class EvidenceRow(Base):
     run_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     kind: Mapped[str] = mapped_column(String(20), index=True)
     source_type: Mapped[str] = mapped_column(String(30), index=True)
+    #: 原始来源 payload（脱敏前）的摘要，兼容历史字段名
     sha256: Mapped[str] = mapped_column(String(64))
+    #: 实际持久化内容（脱敏后）的摘要：服务端完整性校验必须以它为准
+    stored_content_sha256: Mapped[str] = mapped_column(String(64), default="")
+    #: 附件的摘要（ArtifactStore 落盘内容的 SHA-256）
+    attachment_sha256: Mapped[str] = mapped_column(String(64), default="")
     attachment_ref: Mapped[str | None] = mapped_column(String(200), nullable=True)
     source_trust: Mapped[str] = mapped_column(String(20), default="UNKNOWN")
     integrity_check: Mapped[str] = mapped_column(String(12), default="NOT_RUN")
+    integrity_detail: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     redacted: Mapped[bool] = mapped_column(Boolean, default=False)
     doc: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     captured_at: Mapped[str] = mapped_column(String(40), default=utc_now_iso)

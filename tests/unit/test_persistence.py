@@ -128,7 +128,13 @@ def test_evidence_immutable_and_derived(db: Database) -> None:
     assert derived.raw_ref == eid
     assert em.verify_integrity(eid, {"text": "hello", "password": "p@ss"}) is True
     assert em.verify_integrity(eid, {"text": "tampered"}) is False
-    assert em.get(eid).integrity_check == "FAIL"
+    # RUN-007-FINALIZATION-2：来源内容比对不再冒充存储完整性
+    rec_after = em.get(eid)
+    assert rec_after.integrity_detail["source_payload_match"] == "FAIL"
+    assert rec_after.integrity_check == "NOT_RUN"
+    storage = em.verify_storage_integrity(eid, artifacts=None)
+    assert storage["status"] == "PASS"  # 库里内容仍与保存时一致
+    assert em.get(eid).integrity_check == "PASS"
 
 
 def test_evidence_survives_restart(work_tmp) -> None:  # type: ignore[no-untyped-def]
