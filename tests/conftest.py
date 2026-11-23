@@ -2,7 +2,15 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _ensure_basetemp_parent() -> None:
+    """CI 全新 checkout 时 --basetemp 的父目录不存在，pytest 的 tmp_path 会 mkdir 失败。"""
+    Path(".pytest-tmp").mkdir(parents=True, exist_ok=True)
 
 
 @pytest.fixture(autouse=True)
