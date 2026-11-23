@@ -1,0 +1,97 @@
+{
+  "started_at": "2026-11-23T08:29:47Z",
+  "allowed_base": "http://127.0.0.1:54144",
+  "forbidden_port": 54143,
+  "allowed_hits": [
+    "/page",
+    "/redirect",
+    "/page"
+  ],
+  "forbidden_hits": [],
+  "scenarios": [
+    {
+      "name": "cross_origin_fetch",
+      "blocked_records": [
+        {
+          "url": "http://127.0.0.1:54143/steal",
+          "reason": "PORT_NOT_ALLOWED",
+          "method": "GET",
+          "resource_type": "fetch",
+          "at_ms": 1795422583179
+        }
+      ],
+      "forbidden_hits_after": 0
+    },
+    {
+      "name": "top_level_302",
+      "step_error": "TargetAccessDenied: TARGET_NOT_ALLOWED: REDIRECT_LOCATION_NOT_ALLOWED:PORT_NOT_ALLOWED",
+      "redirect_checks": [
+        {
+          "from": "http://127.0.0.1:54144/redirect",
+          "status": 302,
+          "location": "http://127.0.0.1:54143/steal",
+          "resolved": "http://127.0.0.1:54143/steal",
+          "decision": "BLOCKED",
+          "reason": "PORT_NOT_ALLOWED"
+        }
+      ],
+      "blocked_records": [
+        {
+          "url": "http://127.0.0.1:54143/steal",
+          "reason": "REDIRECT_LOCATION_NOT_ALLOWED:PORT_NOT_ALLOWED",
+          "method": "GET",
+          "resource_type": "document",
+          "at_ms": 1795422583950
+        }
+      ],
+      "forbidden_hits_after": 0,
+      "forbidden_new_hits": 0
+    },
+    {
+      "name": "click_navigation",
+      "step_error": "TargetAccessDenied: TARGET_NOT_ALLOWED: LANDED_URL_NOT_ALLOWED:SCHEME_NOT_ALLOWED",
+      "blocked_records": [
+        {
+          "url": "http://127.0.0.1:54143/steal",
+          "reason": "PORT_NOT_ALLOWED",
+          "method": "GET",
+          "resource_type": "fetch",
+          "at_ms": 1795422584824
+        },
+        {
+          "url": "http://127.0.0.1:54143/steal",
+          "reason": "PORT_NOT_ALLOWED",
+          "method": "GET",
+          "resource_type": "document",
+          "at_ms": 1795422585711
+        }
+      ],
+      "forbidden_new_hits": 0
+    },
+    {
+      "name": "dns_rebinding",
+      "pinned": {
+        "teamflow.example": [
+          "203.0.113.10"
+        ]
+      },
+      "before": {
+        "allowed": true,
+        "reason": "ALLOWED"
+      },
+      "after": {
+        "allowed": false,
+        "reason": "DNS_REBINDING_DETECTED"
+      }
+    }
+  ],
+  "checks": {
+    "cross_origin_fetch_blocked": true,
+    "top_level_302_blocked": true,
+    "click_navigation_blocked": true,
+    "dns_rebinding_detected": true,
+    "unauthorized_server_zero_requests": true
+  },
+  "passed": true,
+  "limitation": "本检查证明：跨域 fetch / 顶层 302 / 点击跳转都不再产生到达未授权目标的出站请求；DNS 部分由策略层注入 resolver 确定性验证。用户态无法接管系统 DNS，生产环境应叠加受控出站代理（见 docs/RUN-007-SECURITY-RELIABILITY.md）。"
+}

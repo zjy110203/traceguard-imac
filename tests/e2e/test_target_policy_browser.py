@@ -41,6 +41,7 @@ def _make_server(recorder: _Recorder, *, redirect_to: str = "") -> tuple[Any, in
                 return
             body = (
                 "<html><body><h1 id='t'>allowed</h1>"
+                "<a id='out' data-testid='out' href='" + (redirect_to or "") + "/steal'>out</a>"
                 "<script>fetch('" + (redirect_to or "") + "/steal').catch(()=>{});</script>"
                 "</body></html>"
             ).encode()
@@ -122,10 +123,9 @@ def test_redirect_landing_on_unsanctioned_origin_is_refused(
 ) -> None:
     """顶层导航被 302 到未授权 origin 时，Runner 必须拒绝继续（步骤失败）。
 
-    已知限制（如实记录，不假装已完全阻断）：Playwright 的 route 拦截不会对
-    服务端 302 顶层跳转再触发一次可拦截的请求，因此这一次出站请求确实到达了
-    目标服务器；产品保证是"落地地址复核 → TargetAccessDenied → 步骤失败，
-    绝不会判 PASSED"。DNS/网络层强制阻断列入后续工作。
+    RUN-007 WP1-05 修复：不再依赖"落地地址复核"的事后判断，而是在路由层用
+    `route.fetch(max_redirects=0)` 自己取 3xx，检查 Location 后直接返回合成 403，
+    因此**未授权目标服务器收到的请求数必须为 0**（此前会收到 1 次）。
     """
     from traceguard_contracts.models import TestStep
     from traceguard_execution.runtime.playwright_observer import PlaywrightObserver
@@ -145,6 +145,8 @@ def test_redirect_landing_on_unsanctioned_origin_is_refused(
             ),
             {},
         )
+        redirects = [r for r in observer.session.redirect_checks if r["resolved"]]
+        assert redirects and redirects[-1]["decision"] == "BLOCKED", redirects
     finally:
         observer.teardown()
 
@@ -153,6 +155,39 @@ def test_redirect_landing_on_unsanctioned_origin_is_refused(
     assert record.observation.get("timed_out") is not True
     # 未授权目标仍应被记录在证据里（可审计），且步骤不可能是成功
     assert "page_url" in record.observation
+    # 关键验收：未授权目标服务器没有收到任何请求
+    assert servers["forbidden_hits"].hits == [], servers["forbidden_hits"].hits
+
+
+def test_click_navigation_to_unsanctioned_origin_is_blocked(
+    servers: dict[str, Any], manager: BrowserManager
+) -> None:
+    """点击链接跳转到未授权 origin：请求级 abort，目标服务器收到 0 请求。"""
+    from traceguard_contracts.models import TestStep
+    from traceguard_execution.runtime.playwright_observer import PlaywrightObserver
+
+    observer = PlaywrightObserver(
+        manager, capture_screenshot=False, capture_dom=False, capture_aria=False
+    )
+    observer.setup({"base_url": servers["allowed_base"], "run_id": "policy-click", "trace": False})
+    try:
+        observer.observe(
+            TestStep(step_id="s1", action="navigate", value=f"{servers['allowed_base']}/page"), {}
+        )
+        record = observer.observe(
+            TestStep(
+                step_id="s2",
+                action="click",
+                target={"strategy": "test_id", "value": "out"},
+            ),
+            {},
+        )
+    finally:
+        observer.teardown()
+
+    assert record.error, record.observation
+    assert "TARGET_NOT_ALLOWED" in record.error
+    assert servers["forbidden_hits"].hits == [], servers["forbidden_hits"].hits
 
 
 def test_allowed_origin_still_works(servers: dict[str, Any], manager: BrowserManager) -> None:

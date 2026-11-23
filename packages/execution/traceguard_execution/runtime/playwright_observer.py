@@ -119,6 +119,7 @@ class PlaywrightObserver(Observer):
         obs: dict[str, Any] = {}
         err: str | None = None
         timed_out = False
+        blocked_off = len(session.blocked_requests)
 
         try:
             action = step.action
@@ -136,6 +137,9 @@ class PlaywrightObserver(Observer):
                 session.wait_network_settle()
                 # 重定向后的落地地址必须仍在授权范围（不能靠 302 绕过）
                 session.check_target(session.current_url(), landed=True)
+                # RUN-007：3xx 的 Location 指向未授权地址时，路由层会拦成 403，
+                # 此时浏览器"导航成功"但语义上必须判为步骤失败。
+                self._raise_if_redirect_blocked(session, blocked_off)
                 obs = {
                     "url": session.current_url(),
                     "title": session.title(),
@@ -155,6 +159,7 @@ class PlaywrightObserver(Observer):
                 session.wait_network_settle()
                 # 点击可能触发跳转：落地地址同样要复核
                 session.check_target(session.current_url(), landed=True)
+                self._raise_if_redirect_blocked(session, blocked_off)
                 obs = {
                     "clicked": step.target.value if step.target else "",
                     "url": session.current_url(),
@@ -247,6 +252,15 @@ class PlaywrightObserver(Observer):
         )
 
     # ---------------------------------------------------------------- helpers
+    @staticmethod
+    def _raise_if_redirect_blocked(session: Any, blocked_off: int) -> None:
+        """3xx 的 Location 被策略拒绝时，把"导航看似成功"纠正为步骤失败。"""
+        new_blocks = session.blocked_requests[blocked_off:]
+        for item in new_blocks:
+            reason = str(item.get("reason") or "")
+            if reason.startswith("REDIRECT_LOCATION_NOT_ALLOWED"):
+                raise TargetAccessDenied(reason, str(item.get("url") or ""))
+
     def _safe_url(self) -> str:
         try:
             return self.session.current_url() if self.session else ""
