@@ -465,6 +465,9 @@ class PersistentEvidenceManager:
         if rec.attachment_ref:
             checks["attachment_present"] = True
             checks["attachment_digest_recorded"] = bool(rec.attachment_sha256)
+            if not rec.attachment_sha256:
+                # 历史行没记附件摘要：既不能证明，也不能判成"已篡改"
+                reasons.append("ATTACHMENT_DIGEST_NOT_RECORDED_AT_CAPTURE")
             if artifacts is None:
                 checks["attachment_readable"] = None
                 reasons.append("ARTIFACT_STORE_UNAVAILABLE")
@@ -478,14 +481,15 @@ class PersistentEvidenceManager:
                 else:
                     actual = hashlib.sha256(data).hexdigest()
                     checks["attachment_readable"] = True
-                    checks["attachment_sha256_match"] = actual == rec.attachment_sha256
-                    if not checks["attachment_sha256_match"]:
-                        reasons.append("ATTACHMENT_TAMPERED")
-                    checks["attachment_meta_sha256_match"] = (
-                        meta.get("sha256") == rec.attachment_sha256
-                    )
-                    if not checks["attachment_meta_sha256_match"]:
-                        reasons.append("ATTACHMENT_META_MISMATCH")
+                    if rec.attachment_sha256:
+                        checks["attachment_sha256_match"] = actual == rec.attachment_sha256
+                        if not checks["attachment_sha256_match"]:
+                            reasons.append("ATTACHMENT_TAMPERED")
+                        checks["attachment_meta_sha256_match"] = (
+                            meta.get("sha256") == rec.attachment_sha256
+                        )
+                        if not checks["attachment_meta_sha256_match"]:
+                            reasons.append("ATTACHMENT_META_MISMATCH")
 
         if rec.kind == "derived":
             raw = self.get(rec.raw_ref or "")
@@ -504,10 +508,15 @@ class PersistentEvidenceManager:
                 if checks[key] is False:
                     reasons.append(key.upper())
 
-        if any(v is False for v in checks.values()):
+        # FAIL 只表示"发现不一致/被篡改"；"缺少记录、无法证明"一律 NOT_RUN。
+        # attachment_digest_recorded=False 属于"记录缺失"，不是"检测到篡改"。
+        soft_missing = {"attachment_digest_recorded"}
+        hard_false = [k for k, v in checks.items() if v is False and k not in soft_missing]
+        if hard_false:
             status = "FAIL"
-        elif checks.get("stored_content_match") is None or (
-            "attachment_readable" in checks and checks["attachment_readable"] is None
+        elif (
+            any(v is None for v in checks.values())
+            or checks.get("attachment_digest_recorded", True) is False
         ):
             status = "NOT_RUN"
         else:
@@ -606,9 +615,8 @@ def _to_evidence(row: EvidenceRow) -> EvidenceRecord:
         raw_ref=doc.get("raw_ref"),
         derivation_rule=doc.get("derivation_rule"),
         model_version=doc.get("model_version"),
-        stored_content_sha256=row.stored_content_sha256
-        or str(doc.get("stored_content_sha256") or ""),
-        attachment_sha256=row.attachment_sha256 or str(doc.get("attachment_sha256") or ""),
+        stored_content_sha256=row.stored_content_sha256 or "",
+        attachment_sha256=row.attachment_sha256 or "",
         integrity_detail=dict(row.integrity_detail or doc.get("integrity_detail") or {}),
         attachment_ref=row.attachment_ref,
         integrity_check=row.integrity_check,

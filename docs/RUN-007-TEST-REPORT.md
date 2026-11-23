@@ -195,7 +195,7 @@ Nightly 的 `head_sha` 与 Release 的 `github.sha` 严格相等。
 
 | 项 | 上一轮（`fdbe0f5`） | 本轮 |
 |---|---|---|
-| pytest 全量 | 523 passed / 11 skipped | **546 passed / 11 skipped** |
+| pytest 全量 | 523 passed / 11 skipped | **547 passed / 11 skipped** |
 | 跳过原因 | 未配置 PG | 同（`test_postgres_parity.py` / `test_postgres_platform.py`） |
 | ruff check / format | 全绿 | 全绿 |
 | 前端 typecheck / build | 通过 | 通过 |
@@ -206,7 +206,7 @@ Nightly 的 `head_sha` 与 Release 的 `github.sha` 严格相等。
 |---|---|---|
 | `tests/integration/test_seed_idempotency.py` | 2 | 两次 Seed 版本稳定、Repair 后恢复基线、历史版本不可变 |
 | `tests/integration/test_repair_receipt_identity.py` | 7 | 跨 Proposal/跨 kind/跨 workspace 复用键、补回执持久化、fail-closed |
-| `tests/integration/test_evidence_storage_integrity.py` | 6 | DB 重启复验、内容/附件篡改、派生来源、历史行 NOT_RUN |
+| `tests/integration/test_evidence_storage_integrity.py` | 7 | DB 重启复验、内容/附件篡改、派生来源、历史行 NOT_RUN |
 | `tests/integration/test_api_flow.py` | +1 | 验证接口服务端语义、旧请求分离、workspace 不符 |
 | `tests/unit/test_benchmark.py` | +3 | Macro-F1 真分子、缺失预测计 FN、数据集口径 |
 | `tests/unit/test_evidence.py` | 改写 4 + 新增 4 | 摘要语义分离、存储校验、来源比对不冒充完整性 |

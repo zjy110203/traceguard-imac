@@ -23,7 +23,7 @@
 | WP1-A 固定版本回归 | **已验证**：`?version=promoted_version`，`run.testcase_version_id` 严格等于预期 | `regression.version_binding_ok=true` |
 | WP1-A 回滚内容级验证 | **已验证**：指针/步骤/断言/Oracle 绑定全部恢复 | `rollback.checks` 全 true |
 | WP1-B 回执身份绑定 | **已修复**：跨 Proposal/跨 kind/跨 workspace 复用键显式冲突 | `test_repair_receipt_identity.py`（7 项） |
-| WP2 Evidence 摘要语义 | **已修复**：来源/持久化内容/附件三种摘要分离（迁移 v9） | `test_evidence_storage_integrity.py`（6 项） |
+| WP2 Evidence 摘要语义 | **已修复**：来源/持久化内容/附件三种摘要分离（迁移 v9） | `test_evidence_storage_integrity.py`（7 项） |
 | WP2 服务端验证 | **已实现**：读库内内容重算 + 附件字节重算 + 派生来源；旧请求单列 | `test_api_flow.py::test_evidence_verify_is_server_side...` |
 | WP2 E2E 逐条验收 | **已实现**：A 15/15、B 28/28 PASS，附件 36/36 字节一致，NOT_RUN 0 | `e2e-run007-f2.json` |
 | WP3 Macro-F1 | **已修复**：浮点分子（各类别 F1 之和）+ 类别数 + 各类别明细 | `test_macro_f1_numerator_is_real_f1_sum_not_fake_int` |
@@ -33,7 +33,7 @@
 | WP4 安全审查 | 无真实密钥入库、`.env` 未跟踪；npm audit high=0、moderate=3（dev-only） | §7.1 |
 | WP5 PostgreSQL | 本机 **BLOCKED**（无 psql/docker）；CI 的 `postgres:16` job 为唯一真实覆盖 | §7.2、§9 |
 | WP6 前端关键交互 | 75/75 检查通过（15 视图 × 4 断点 + 明暗主题），0 console 错误 | `docs/assets/run007/ui-f2/ui-review.json` |
-| WP7 最终回归 | **546 passed / 11 skipped**；ruff check + format 全绿 | §7.4 |
+| WP7 最终回归 | **547 passed / 11 skipped**；ruff check + format 全绿 | §7.4 |
 | WP8 CI / PR | **PR Gate 在 `023f688` 上真实成功**（push #11 46s / PR #12 47s）；Nightly/Release 未 dispatch | §7.5 |
 
 ---
@@ -161,6 +161,7 @@
 | `test_storage_verify_detects_attachment_tampering` | 改磁盘字节 → FAIL/`ATTACHMENT_TAMPERED` |
 | `test_derived_evidence_source_integrity` | 派生来源删除 → FAIL |
 | `test_legacy_rows_are_not_run_not_pass` | 历史行 → NOT_RUN |
+| `test_legacy_attachment_without_digest_is_not_run_not_fail` | 旧附件无摘要 → NOT_RUN（不是 FAIL） |
 | `test_evidence_verify_is_server_side_and_keeps_legacy_separate` | 接口层：服务端验证 / 旧请求分离 / workspace 不符 FAIL |
 
 ### 4.4 E2E 逐条验收（`docs/assets/run007/e2e-run007-f2.json`）
@@ -308,7 +309,7 @@ E2E 总计 **56 步 / 0 失败**（含场景 D 新增的 D17b 回滚内容级复
 
 | 项 | 结果 |
 |---|---|
-| `pytest` 全量 | **546 passed / 11 skipped**（跳过全部为未配置 PG 的 parity/platform 用例） |
+| `pytest` 全量 | **547 passed / 11 skipped**（跳过全部为未配置 PG 的 parity/platform 用例） |
 | `ruff check` | 全绿 |
 | `ruff format --check` | 全绿 |
 | 前端 `typecheck` | 通过 |
@@ -363,7 +364,8 @@ push 到 `workbuddy/run007-resume-20261123` 自动触发 PR Gate，**在最终�
 5. **派生证据在 E2E 中未产生**：该维度由集成测试覆盖，E2E 报告 0 条不代表通过。
 6. **Flaky 场景**仍是 5 次重复后取首个匹配样本，统计置信区间宽；不做强外推。
 7. **Evidence 历史行**（本轮之前入库）无法回溯来源与持久化摘要一致性 → 如实 NOT_RUN，
-   未做"看起来通过"的回填。
+   未做"看起来通过"的回填。已用仓库内旧库副本实测：迁移 v9 正常加列，3 条历史证据全部 NOT_RUN
+   （`STORED_DIGEST_NOT_RECORDED_AT_CAPTURE`），不缺记录时不会误报 FAIL。
 
 ---
 

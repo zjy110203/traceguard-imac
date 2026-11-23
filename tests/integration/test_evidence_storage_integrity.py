@@ -162,3 +162,16 @@ def test_legacy_rows_are_not_run_not_pass(env) -> None:  # type: ignore[no-untyp
     result = rt.evidence.verify_storage_integrity(evd_id, artifacts=rt.artifacts)
     assert result["status"] == "NOT_RUN"
     assert "STORED_DIGEST_NOT_RECORDED_AT_CAPTURE" in result["reasons"]
+
+
+def test_legacy_attachment_without_digest_is_not_run_not_fail(env) -> None:  # type: ignore[no-untyped-def]
+    """旧行有附件但没有记录附件摘要：无法证明，也不能判成"已篡改"。"""
+    rt, _, _ = env
+    evd_id, _ = _add_with_attachment(rt)
+    with rt.db.session() as s:
+        row = s.get(EvidenceRow, evd_id)
+        assert row is not None
+        row.attachment_sha256 = ""
+    result = rt.evidence.verify_storage_integrity(evd_id, artifacts=rt.artifacts)
+    assert result["status"] == "NOT_RUN"
+    assert "ATTACHMENT_DIGEST_NOT_RECORDED_AT_CAPTURE" in result["reasons"]
