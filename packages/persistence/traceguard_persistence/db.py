@@ -190,6 +190,11 @@ MIGRATIONS: list[tuple[int, str, list[str]]] = [
             "updated_at VARCHAR(40) NOT NULL DEFAULT '')",
         ],
     ),
+    (
+        7,
+        "testcase_review_revision",
+        ["__CALLABLE__:_migrate_review_revision"],
+    ),
 ]
 
 
@@ -258,8 +263,21 @@ def _migrate_inbox_states(conn) -> None:  # type: ignore[no-untyped-def]
         if name in cols:
             continue
         conn.execute(text(f"ALTER TABLE tg_consumer_inbox ADD COLUMN {name} {ddl}"))
+    conn.execute(text("UPDATE tg_consumer_inbox SET status='SUCCEEDED' WHERE status='PROCESSED'"))
+
+
+def _migrate_review_revision(conn) -> None:  # type: ignore[no-untyped-def]
+    """为用例版本表增加审核修订号（并发审核 CAS 令牌），幂等。"""
+    from sqlalchemy import inspect
+
+    inspector = inspect(conn)
+    if "tg_testcase_version" not in inspector.get_table_names():
+        return
+    cols = {c["name"] for c in inspector.get_columns("tg_testcase_version")}
+    if "review_revision" in cols:
+        return
     conn.execute(
-        text("UPDATE tg_consumer_inbox SET status='SUCCEEDED' WHERE status='PROCESSED'")
+        text("ALTER TABLE tg_testcase_version ADD COLUMN review_revision INTEGER DEFAULT 0")
     )
 
 
@@ -267,6 +285,7 @@ def _migrate_inbox_states(conn) -> None:  # type: ignore[no-untyped-def]
 _MIGRATION_CALLABLES = {
     "_migrate_step_primary_key": _migrate_step_primary_key,
     "_migrate_inbox_states": _migrate_inbox_states,
+    "_migrate_review_revision": _migrate_review_revision,
 }
 
 _lock = threading.RLock()

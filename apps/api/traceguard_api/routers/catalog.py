@@ -121,6 +121,7 @@ class AssertionReq(BaseModel):
     required: bool = True
     expected: dict[str, Any] = {}
     oracle_id: str | None = None
+    oracle_version: int | None = None
 
 
 class TestCaseReq(BaseModel):
@@ -202,6 +203,23 @@ async def review(testcase_id: str, version: int, req: ReviewReq) -> dict[str, An
     try:
         return get_services().rt.catalog.review_testcase(
             testcase_id, version, req.decision, req.reviewer, req.note
+        )
+    except AppError as exc:
+        raise _handle(exc) from exc
+
+
+class OracleBindingReq(BaseModel):
+    """Oracle 绑定请求：assertion_id -> {oracle_id, oracle_version?}。"""
+
+    bindings: dict[str, dict[str, Any]]
+    actor: str
+
+
+@router.post("/testcases/{testcase_id}/versions/{version}/oracle-bindings")
+async def bind_oracles(testcase_id: str, version: int, req: OracleBindingReq) -> dict[str, Any]:
+    try:
+        return get_services().rt.catalog.bind_oracles(
+            testcase_id, version, req.bindings, actor=req.actor
         )
     except AppError as exc:
         raise _handle(exc) from exc

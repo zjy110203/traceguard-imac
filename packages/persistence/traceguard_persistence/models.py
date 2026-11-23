@@ -75,6 +75,8 @@ class TestCaseVersionRow(Base):
     workspace_id: Mapped[str] = mapped_column(String(64), index=True)
     version: Mapped[int] = mapped_column(Integer)
     review_status: Mapped[str] = mapped_column(String(20), default="DRAFT")
+    #: 审核修订号：并发审核的 CAS 令牌（RUN-006 WP1-01）
+    review_revision: Mapped[int] = mapped_column(Integer, default=0)
     immutable: Mapped[bool] = mapped_column(Boolean, default=True)
     doc: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     created_at: Mapped[str] = mapped_column(String(40), default=utc_now_iso)

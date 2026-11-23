@@ -204,6 +204,57 @@ class GraphService:
                             workspace_id=ws,
                         )
 
+        # 探针执行 → 证据 → 假设（RUN-006 WP1-02）
+        hypothesis_nodes: set[str] = set()
+        for rec_d in diag_recs:
+            for h in rec_d.doc.get("hypotheses", []):
+                hypothesis_nodes.add(f"node_hyp_{h['hypothesis_id']}")
+        probe_recs = self.rt.docs.list(kind="probe_execution", ref_id=run_id, limit=200)
+        for rec in probe_recs:
+            p = rec.doc
+            pn = g.add_node(
+                "ProbeExecution",
+                p.get("execution_id", rec.id),
+                node_id=f"node_probe_{p.get('execution_id', rec.id)}",
+                probe_id=p.get("probe_id"),
+                status=p.get("status"),
+                budget_scope=p.get("budget_scope"),
+                diagnosis_id=p.get("diagnosis_id"),
+            )
+            g.add_edge(
+                pn.node_id,
+                run_node.node_id,
+                "same_execution_context",
+                basis="probe_execution.run_id == run.run_id",
+                workspace_id=ws,
+            )
+            for eid in p.get("evidence_refs") or []:
+                if eid in ev_nodes:
+                    # 证据由该探针产生（派生关系，不是因果）
+                    g.add_edge(
+                        ev_nodes[eid],
+                        pn.node_id,
+                        "derived_from",
+                        basis=f"probe_execution.evidence_refs={eid}",
+                        workspace_id=ws,
+                    )
+            # 探针评估了哪些假设：按假设引用的探针证据反查
+            for rec_d in diag_recs:
+                for h in rec_d.doc.get("hypotheses", []):
+                    refs = {x["id"] for x in h.get("supporting", [])} | {
+                        x["id"] for x in h.get("contradicting", [])
+                    }
+                    if refs & set(p.get("evidence_refs") or []):
+                        hid = f"node_hyp_{h['hypothesis_id']}"
+                        if hid in hypothesis_nodes:
+                            g.add_edge(
+                                pn.node_id,
+                                hid,
+                                "evaluates",
+                                basis="hypothesis 引用了该探针产生的证据",
+                                workspace_id=ws,
+                            )
+
         snapshot = g.to_dict()
         snapshot.update(
             {

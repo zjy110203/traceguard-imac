@@ -145,3 +145,13 @@
 | WP6 | 集成验收 | 隔离库真实执行 3 个场景（PASSED/FAILED/FAILED）+ 诊断 + 探针闭环 |
 
 累计回归：285 passed / 5 skipped / 0 failed。
+
+---
+
+## RUN-006（2026-11-23）核心正确性与安全性
+
+- 起点：285 passed / 5 skipped（指令基线 `dadb4ae`）。
+- 终点：**367 passed / 5 skipped / 0 failed**；`ruff check` 全绿；真实 Chromium E2E 11 passed。
+- 交付：`docs/RUN-006-BASELINE.md`、`RUN-006-IMPLEMENTATION-REPORT.md`、`RUN-006-TEST-REPORT.md`、
+  `RUN-006-SECURITY-RELIABILITY.md`、`RUN-006-DECISION-REQUESTS.md`；证据 `docs/assets/run006/`。
+- WP1 五项均落地并有可复核证据；WP2–WP6 按实际状态标 PARTIAL/BLOCKED/NOT_IMPLEMENTED，未虚报。

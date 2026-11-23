@@ -48,3 +48,16 @@
 - P11：无压测，不提出 SLO。
 - 依赖漏洞处置：vite 是否升级到 8（破坏性）或豁免 dev-only 并定期限。
 详见 `docs/RUN-005-DECISION-PACKAGE.md`。
+
+## RUN-006 决策
+
+| 编号 | 决策 | 理由 | 影响 |
+|---|---|---|---|
+| B-01 | Oracle 绑定门禁默认严格（required assertion 必须有已审批 Oracle） | 指令 WP1-01 明确要求 | 既有测试改为"先绑定后审核"，属收紧而非放宽 |
+| B-02 | Oracle 的 `assertion_id` 与目标断言不一致时记录 warning 而非拒绝 | 数据中真实存在跨断言语义复用；不静默通过但也不阻断 | 绑定记录含 `assertion_id_mismatch` 与 `oracle_assertion_id` |
+| B-03 | 审核身份校验用"主体类型（命名空间）"而非身份认证 | 无认证基础设施，且不得宣称 RBAC | `agent:*`/`llm:*`/`system:*` 一律拒绝；局限写入安全文档 |
+| B-04 | 探针证据只通过确定性规则影响假设 | Agent 不是事实层 | LLM 假设永不 CONFIRMED（前缀漏洞已修） |
+| B-05 | 预算读/写失败一律 fail-closed | 失败续跑等于凭空多发配额 | 探针 BLOCKED，原因 `PROBE_BUDGET_UNAVAILABLE` |
+| B-06 | 晋升/回滚改为单事务条件更新 | 原实现跨事务比较后写入存在真实竞态 | 并发仅一个成功，另一个 VERSION_CONFLICT |
+| B-07 | 新增统一 `TargetPolicy`，Explorer 与 Runner 共用 | 原两套策略，Runner 无管控 | 绝对 URL/协议相对/重定向/内网统一拒绝 |
+| B-08 | 顶层 302 出站限制如实记录为已知限制 | route 不拦顶层跳转，不能假装已阻断 | 落地复核使步骤失败；网络层强制阻断列为后续 |

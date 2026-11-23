@@ -23,6 +23,7 @@ from traceguard_contracts.models import TestCaseVersion
 from traceguard_core.errors import AppError, ErrorCode
 from traceguard_core.ids import new_id, utc_now_iso
 from traceguard_core.logging import get_logger
+from traceguard_persistence.catalog import require_human_actor
 
 from traceguard_api.runtime import Runtime
 
@@ -242,14 +243,12 @@ class RepairService:
         return self._save(doc)
 
     def approve(self, proposal_id: str, approver: str, note: str = "") -> dict[str, Any]:
-        if not approver or any(x in approver.lower() for x in ("agent", "llm")):
-            raise AppError(ErrorCode.AUTHORIZATION_ERROR, "AGENT_CANNOT_SELF_APPROVE_REPAIR")
+        # 主体类型校验（拒绝 agent:*/llm:*/system:*），而不是"包含 agent 字样"的模糊匹配
+        actor = require_human_actor(approver, field="approver")
         doc = self.get(proposal_id)
         self._transition(doc, RepairStatus.APPROVED)
-        doc["approval_ref"] = f"approval:{proposal_id}:{approver}:{utc_now_iso()}:{note}".rstrip(
-            ":"
-        )
-        doc["approved_by"] = approver
+        doc["approval_ref"] = f"approval:{proposal_id}:{actor}:{utc_now_iso()}:{note}".rstrip(":")
+        doc["approved_by"] = actor
         return self._save(doc)
 
     def reject(
@@ -270,33 +269,37 @@ class RepairService:
             return doc  # 幂等重放
         self._transition(doc, RepairStatus.PROMOTING)
 
-        latest = self.rt.catalog.latest_approved_version(doc["testcase_id"])
-        current_version = latest["version"] if latest else 0
-        if current_version != doc["base_version"]:
+        # WP1-04：比较 + 写入在同一个数据库事务内完成（真正原子 CAS）
+        try:
+            created = self.rt.catalog.promote_version_cas(
+                doc["testcase_id"],
+                base_version=int(doc["base_version"]),
+                candidate=doc["candidate_doc"],
+                workspace_id=doc["workspace_id"],
+                title=f"{doc['testcase_id']} (healed)",
+            )
+        except AppError as exc:
+            if exc.code is not ErrorCode.CONFLICT:
+                raise
+            current = self.rt.catalog.approved_version_number(doc["testcase_id"])
             doc["failure_reason"] = "VERSION_CONFLICT"
             doc["promotion_record"] = {
                 "idempotency_key": idempotency_key,
                 "result": "VERSION_CONFLICT",
-                "current_version": current_version,
+                "current_version": current,
                 "base_version": doc["base_version"],
+                "detail": exc.message,
                 "at": utc_now_iso(),
             }
             self._transition(doc, RepairStatus.PROMOTION_FAILED)
             return self._save(doc)
 
-        candidate = dict(doc["candidate_doc"])
-        candidate["version"] = current_version + 1
-        created = self.rt.catalog.create_testcase(
-            candidate,
-            title=f"{doc['testcase_id']} (healed)",
-            workspace_id=doc["workspace_id"],
-            review_status="APPROVED",
-        )
         doc["promotion_record"] = {
             "idempotency_key": idempotency_key,
             "target_version": created["version"],
             "operator": "system:promotion",
             "check": "CAS_OK",
+            "atomic": True,
             "at": utc_now_iso(),
         }
         doc["promoted_version"] = created["version"]
@@ -307,23 +310,37 @@ class RepairService:
         doc = self.get(proposal_id)
         if doc["status"] != "PROMOTED":
             raise AppError(ErrorCode.PRECONDITION_FAILED, "只有 PROMOTED 提案可回滚")
+        actor = require_human_actor(operator, field="operator")
+        promoted_version = int(doc.get("promoted_version") or 0)
+        if not promoted_version:
+            raise AppError(ErrorCode.PRECONDITION_FAILED, "提案缺少 promoted_version，无法回滚")
         base = doc["base_doc"]
-        latest = self.rt.catalog.latest_approved_version(doc["testcase_id"])
-        next_version = (latest["version"] if latest else doc["base_version"]) + 1
-        restored = dict(base)
-        restored["version"] = next_version
-        created = self.rt.catalog.create_testcase(
-            restored,
-            title=f"{doc['testcase_id']} (rolled back)",
-            workspace_id=doc["workspace_id"],
-            review_status="APPROVED",
-        )
+        try:
+            created = self.rt.catalog.rollback_version_cas(
+                doc["testcase_id"],
+                promoted_version=promoted_version,
+                restored=base,
+                workspace_id=doc["workspace_id"],
+                title=f"{doc['testcase_id']} (rolled back)",
+            )
+        except AppError as exc:
+            if exc.code is not ErrorCode.CONFLICT:
+                raise
+            # 当前正式版本已被他人推进：不允许用旧提案覆盖
+            raise AppError(
+                ErrorCode.CONFLICT,
+                f"ROLLBACK_CONFLICT: 当前正式版本已不是本提案晋升的 v{promoted_version}",
+            ) from exc
         doc["rollback_record"] = {
-            "target_version": f"{doc['testcase_id']}:v{next_version}",
-            "operator": operator,
+            "target_version": f"{doc['testcase_id']}:v{promoted_version}",
+            "restored_version": created["version"],
+            "operator": actor,
             "reason": reason,
             "at": utc_now_iso(),
-            "restored_version": created["version"],
+        }
+        doc["promotion_record"] = {
+            **(doc.get("promotion_record") or {}),
+            "rollback": doc["rollback_record"],
         }
         self._transition(doc, RepairStatus.ROLLED_BACK)
         return self._save(doc)

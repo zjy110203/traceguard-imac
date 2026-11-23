@@ -26,6 +26,27 @@ Agentic Web UI Testing & Quality Intelligence Platform（智能 Web UI 自动化
 - **候选稳定性回放（F08）**：独立 Run、sandbox 入口、不稳定不晋升、Oracle 不完整不得宣称业务已验证。
 - **工程门禁**：PR / Nightly / Release 三级 GitHub Actions；前端验收脚本（30 项）；PG parity 测试。
 
+## RUN-006 新增能力（2026-11-23）
+
+- **Oracle 闭环**：新增 Oracle 绑定接口；`APPROVED` 前强制校验全部 required assertion 的 Oracle
+  （存在 / 已审批 / 同 Workspace / 版本明确），审核通过时把 `oracle_version` 固定到断言，
+  历史用例复现不会静默跟随"最新 Oracle"版本。
+- **审批主体门禁**：`agent:*` / `llm:*` / `system:*` / `bot:*` / `service:*` 一律不能审核用例、
+  审批 Oracle、审批或回滚修复（按主体命名空间判断，不再是字符串精确匹配）。
+  注意：这**不是**身份认证，当前仍是单机可信部署（详见 `docs/RUN-006-SECURITY-RELIABILITY.md`）。
+- **Active Diagnosis 真正闭环**：探针证据会回灌到假设（支持 / 反驳 / 排除），重新裁决并留痕
+  `evaluation_history`；证据冲突 → `STOP_CONFLICT_UNRESOLVED` 并转人工，不再硬编码 `False`；
+  探针失败/超时**不会**被当成目标系统故障证据。
+- **预算与版本安全**：探针预算读/写失败一律阻断（fail-closed），扣减用文档版本 CAS 支持跨进程；
+  修复晋升/回滚改为单事务"比较 + 条件更新 + 插入版本"，并发冲突只允许一个成功。
+- **统一网络管控**：Explorer 与正式 Runner 共用同一份 `TargetPolicy`（origin 白名单、拒绝协议相对/
+  绝对越权 URL、逐跳重定向校验、内网阻断），浏览器层对未授权请求在发出前 abort。
+  已知限制：顶层 302 跳转的出站请求会到达目标，产品保证是"落地拒绝 + 步骤失败"。
+
+本轮测试：**367 passed / 5 skipped**（起点 285）；真实 Chromium E2E **11 passed**。
+交付文档：`docs/RUN-006-BASELINE.md`、`RUN-006-IMPLEMENTATION-REPORT.md`、`RUN-006-TEST-REPORT.md`、
+`RUN-006-SECURITY-RELIABILITY.md`、`RUN-006-DECISION-REQUESTS.md`；证据：`docs/assets/run006/`。
+
 ## 快速开始
 
 ```bash

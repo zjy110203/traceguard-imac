@@ -17,15 +17,14 @@
 
 from __future__ import annotations
 
-import ipaddress
 import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
-from urllib.parse import urlparse
 
 from traceguard_core.errors import AppError, ErrorCode
+from traceguard_core.security.target_policy import TargetPolicy
 
 
 @dataclass
@@ -52,6 +51,7 @@ class GatewayDecision:
     allowed: bool
     reason: str
     checks: dict[str, bool] = field(default_factory=dict)
+    detail: str = ""
 
 
 class ToolGateway:
@@ -71,6 +71,8 @@ class ToolGateway:
         allowed_hosts: set[str] | None = None,
         allowed_ports: set[int] | None = None,
         budget: Budget | None = None,
+        target_policy: TargetPolicy | None = None,
+        base_url: str = "",
     ) -> None:
         self.allowed_tools = allowed_tools or set(self.ALLOWED_TOOLS)
         self.allowed_hosts = allowed_hosts or set(self.ALLOWED_HOSTS)
@@ -83,28 +85,36 @@ class ToolGateway:
         self.executors: dict[str, Callable[[dict[str, Any]], Any]] = {}
         # 明确禁止的工具（即使调用方尝试加入白名单）
         self.FORBIDDEN = {"shell", "exec", "file_read", "file_write", "arbitrary_http"}
+        # 与正式 Playwright Runner 共用同一份目标策略：不能一边严一边松
+        self.base_url = base_url.rstrip("/")
+        if target_policy is not None:
+            self.policy = target_policy
+        else:
+            origins = [f"http://{h}:{p}" for h in self.allowed_hosts for p in self.allowed_ports]
+            self.policy = TargetPolicy.from_origins(origins)
 
     def register_executor(self, tool: str, fn: Callable[[dict[str, Any]], Any]) -> None:
         self.executors[tool] = fn
 
     def _check_host(self, url: str) -> bool:
-        """域名/IP 白名单 + 内网/回环之外的阻断 + DNS rebinding 防护提示。"""
-        try:
-            parsed = urlparse(url)
-            host = parsed.hostname or ""
-            port = parsed.port or (80 if parsed.scheme == "http" else 443)
-            # 内网/回环地址：仅允许明确列入白名单的 host:port（TeamFlow）
-            try:
-                ip = ipaddress.ip_address(host)
-                if ip.is_private or ip.is_loopback or ip.is_link_local:
-                    return host in self.allowed_hosts and port in self.allowed_ports
-            except ValueError:
-                pass  # 域名：必须精确在白名单
-            if host not in self.allowed_hosts:
-                return False
-            return port in self.allowed_ports if host in ("127.0.0.1", "localhost") else True
-        except Exception:  # noqa: BLE001
-            return False
+        """兼容入口：统一委托给 TargetPolicy（不得与正式 Runner 出现两套规则）。"""
+        return self.policy.check(url).allowed
+
+    def check_landed_url(self, url: str) -> dict[str, Any]:
+        """跳转/重定向后的落地地址复核（Explorer 侧）。"""
+        decision = self.policy.check_landed_url(url)
+        if not decision.allowed:
+            with self._lock:
+                self._audit.append(
+                    {
+                        "tool": "landed_url",
+                        "url": url,
+                        "allowed": False,
+                        "reason": decision.reason,
+                        "at": time.time(),
+                    }
+                )
+        return {"allowed": decision.allowed, "reason": decision.reason, "url": url}
 
     def check(self, call: ToolCall) -> GatewayDecision:
         checks: dict[str, bool] = {}
@@ -127,12 +137,15 @@ class ToolGateway:
         if not checks["params"]:
             return GatewayDecision(False, "INVALID_PARAMS", checks)
 
-        # 3. 域名/范围检查（navigate 类工具）
+        # 3. 域名/范围检查（navigate 类工具；与正式 Playwright Runner 同一策略）
         checks["scope"] = True
-        if call.tool == "navigate" and "url" in call.params:
-            checks["scope"] = self._check_host(str(call.params["url"]))
+        if call.tool == "navigate":
+            raw = str(call.params.get("url", ""))
+            decision = self.policy.resolve(raw, self.base_url or self.policy.base_url)
+            checks["scope"] = decision.allowed
             if not checks["scope"]:
-                return GatewayDecision(False, "UNAUTHORIZED_TARGET", checks)
+                # 相对路径按 base 解析，协议相对与绝对 URL 都必须重新过白名单
+                return GatewayDecision(False, "UNAUTHORIZED_TARGET", checks, detail=decision.reason)
 
         # 4. 风险检查（写操作限定在可清理测试数据）
         checks["risk"] = True

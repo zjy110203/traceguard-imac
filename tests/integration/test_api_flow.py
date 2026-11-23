@@ -89,18 +89,52 @@ def test_health_and_catalog_flow(client) -> None:  # type: ignore[no-untyped-def
     assert blocked.status_code == 412
     assert blocked.json()["detail"]["code"] == "TESTCASE_NOT_APPROVED"
 
-    # Agent 不能审核
-    bad = client.post(
+    # Agent 不能审核（主体类型校验：agent / agent:xxx 都不行）
+    for actor in ("agent", "agent:gpt", "llm:deepseek", "system:promotion"):
+        bad = client.post(
+            f"/api/v1/testcases/{tc['testcase_id']}/versions/1/review",
+            json={"decision": "APPROVED", "reviewer": actor},
+        )
+        assert bad.status_code in (403, 412), actor
+
+    # RUN-006 WP1-01：没有合法 Oracle 的必需断言不得被批准
+    no_oracle = client.post(
         f"/api/v1/testcases/{tc['testcase_id']}/versions/1/review",
-        json={"decision": "APPROVED", "reviewer": "agent"},
+        json={"decision": "APPROVED", "reviewer": "role:qa-lead"},
     )
-    assert bad.status_code in (403, 412)
+    assert no_oracle.status_code == 412
+    assert "MISSING_ORACLE" in no_oracle.json()["detail"]["message"]
+
+    # 正式流程：创建并审批 Oracle → 绑定到断言 → 人工审核
+    oracle = client.post(
+        "/api/v1/oracles",
+        json={
+            "oracle_id": "oracle_flow_a1",
+            "assertion_id": "a1",
+            "expected_behavior": "项目列表页标题存在",
+            "requirement_ref": "REQ-API-FLOW-1",
+            "approved": True,
+            "approved_by": "role:qa-lead",
+        },
+    )
+    assert oracle.status_code == 201, oracle.text
+    binding = client.post(
+        f"/api/v1/testcases/{tc['testcase_id']}/versions/1/oracle-bindings",
+        json={"bindings": {"a1": {"oracle_id": "oracle_flow_a1"}}, "actor": "role:qa-lead"},
+    )
+    assert binding.status_code == 200, binding.text
+    assert binding.json()["oracle_bindings"]["a1"]["oracle_version"] == 1
 
     ok = client.post(
         f"/api/v1/testcases/{tc['testcase_id']}/versions/1/review",
         json={"decision": "APPROVED", "reviewer": "role:qa-lead"},
     )
     assert ok.status_code == 200 and ok.json()["review_status"] == "APPROVED"
+
+    # 审核通过后 Oracle 版本已固定（执行端不会静默改用"最新版本"）
+    version_doc = client.get(f"/api/v1/testcases/{tc['testcase_id']}/versions/1").json()
+    assert version_doc["assertions"][0]["oracle_version"] == 1
+    assert version_doc["oracle_binding_frozen"] is True
 
     queued = client.post(f"/api/v1/testcases/{tc['testcase_id']}/execute", json={"sync": False})
     assert queued.status_code == 201
@@ -121,7 +155,10 @@ def test_oracle_agent_cannot_approve(client) -> None:  # type: ignore[no-untyped
         "approved_by": "agent",
     }
     r = client.post("/api/v1/oracles", json=payload)
-    assert r.status_code == 412
+    # 主体类型校验：非人类主体审批 → 403（比"字符串精确匹配"更强）
+    assert r.status_code == 403, r.text
+    payload["approved_by"] = "agent:gpt-4"
+    assert client.post("/api/v1/oracles", json=payload).status_code == 403
     payload["approved_by"] = "role:qa-lead"
     assert client.post("/api/v1/oracles", json=payload).status_code == 201
 

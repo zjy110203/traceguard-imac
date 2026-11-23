@@ -1,0 +1,14 @@
+{
+  "packages/core/traceguard_core/security/target_policy.py": "053171691409a69a34e80799abbac1e20f142c409a95d7cb380aca25e31f8687",
+  "packages/evidence/traceguard_evidence/probe/feedback.py": "ee9bc705b1faad91c64c91b66a2ea4cda9cca17a9a374a2986ad1162a29cba27",
+  "packages/evidence/traceguard_evidence/probe/planner.py": "1def52577b994c70d51edc57560b6b2377cee607e98476f37eb5cf5dead79518",
+  "packages/evidence/traceguard_evidence/diagnosis/engine.py": "af6ceaf658556f78bf8bce9792c5b09c831f77327f7294c469efd41eed9016b3",
+  "packages/persistence/traceguard_persistence/catalog.py": "a61863665305d27a7ee2b58e0bb50d83d237f2c8cde25479dda50d831438b8e3",
+  "apps/api/traceguard_api/services/probe_service.py": "6428d8e1b1c32cba9cec467bcce6a302b5927fbff3ad3579b8284dfd3908a2f8",
+  "apps/api/traceguard_api/services/diagnosis_service.py": "3c04f6d0be203e32b3269292f2bd070b0a0ffe9df3a34988f64f6de6c8ee1283",
+  "apps/api/traceguard_api/services/repair_service.py": "a8375abd2b1a13250bb2a4cf6eaa1cc8ed14f5d0728597083c255de2eefc5661",
+  "apps/api/traceguard_api/services/graph_service.py": "e810463f249653e91d66b7080ffa3021b610480d2b768bf47a8f7569e229599c",
+  "packages/execution/traceguard_execution/runtime/playwright_observer.py": "44c6de3f71a88df804a29822d81b56c7d065c3bbf73862befd3c4e1c25a6e5e5",
+  "packages/execution/traceguard_execution/runtime/pipeline.py": "0a2905f46722d3aa487667cc83124d143fea74b5f911db2f4d810d5e71b19a98",
+  "packages/execution/traceguard_execution/browser/session.py": "9e042d5e69ecd2109cbf9ab9f7dd6c839b3c0d5e6bdfccac8d6a02380e66333b"
+}

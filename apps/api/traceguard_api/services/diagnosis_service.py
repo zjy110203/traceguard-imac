@@ -23,6 +23,7 @@ from traceguard_evidence.diagnosis.engine import (
     Hypothesis,
     HypothesisStatus,
 )
+from traceguard_evidence.probe.feedback import ProbeSignal, merge_signals
 
 from traceguard_api.runtime import Runtime
 
@@ -308,12 +309,17 @@ class DiagnosisService:
             "outcome": result.outcome.value,
             "disposition": result.disposition.value,
             "root_causes": result.root_causes,
+            "unresolved_conflicts": result.unresolved_conflicts,
             "hypotheses": [h.to_dict() for h in hypotheses],
             "evidence_refs": list(
                 dict.fromkeys([r["id"] for h in hypotheses for r in h.to_dict()["supporting"]])
             ),
             "flaky_characteristic": flaky,
-            "engine": ("rule-v1+llm-advisor" if llm_advisor_notes and llm_advisor_notes.get("called") else "rule-v1"),
+            "engine": (
+                "rule-v1+llm-advisor"
+                if llm_advisor_notes and llm_advisor_notes.get("called")
+                else "rule-v1"
+            ),
             "llm_advisor": llm_advisor_notes,
             "strategy_version": "v1",
             "created_at": utc_now_iso(),
@@ -329,6 +335,125 @@ class DiagnosisService:
         disp = self._create_disposition(doc)
         doc["disposition_id"] = disp["disposition_id"]
         return doc
+
+    # ---------------------------------------------------- probe 回灌与重诊断
+    def reassess(
+        self,
+        diagnosis_id: str,
+        signals: list[ProbeSignal],
+        *,
+        run_report: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """把探针证据回灌到原有假设，并重新裁决（CONTINUE/STOP 由调用方决定）。
+
+        不变量：
+        - 探针失败/被拒绝不产生任何支持或反驳证据；
+        - CONFIRMED 仍只由确定性规则 + TRUSTED 确认证据产生，LLM 假设不会被升级；
+        - 每次重诊断都留痕（evaluation_history），不覆盖历史结论。
+        """
+        rec = self.rt.docs.get(diagnosis_id)
+        if not rec or rec.kind != "diagnosis":
+            raise AppError(ErrorCode.NOT_FOUND, "diagnosis not found")
+        doc = dict(rec.doc or {})
+        before = {
+            "outcome": doc.get("outcome"),
+            "root_causes": list(doc.get("root_causes") or []),
+            "disposition": doc.get("disposition"),
+            "unresolved_conflicts": list(doc.get("unresolved_conflicts") or []),
+        }
+        run = self.rt.tasks.get_run(doc.get("run_id", "")) or {}
+        report = run_report if run_report is not None else (run.get("report") or {})
+
+        merged, results = merge_signals(doc.get("hypotheses") or [], signals, report)
+        hypotheses = [_hypothesis_from_dict(h) for h in merged]
+        result = self.engine.diagnose(doc.get("symptom", ""), hypotheses)
+
+        doc["hypotheses"] = [h.to_dict() for h in hypotheses]
+        doc["outcome"] = result.outcome.value
+        doc["disposition"] = result.disposition.value
+        doc["root_causes"] = result.root_causes
+        doc["unresolved_conflicts"] = result.unresolved_conflicts
+        doc["probe_feedback"] = [r.to_dict() for r in results]
+        doc["probe_evidence_ids"] = list(
+            dict.fromkeys(eid for r in results for u in r.updates for eid in u.evidence_ids)
+        )
+        doc["evidence_refs"] = list(
+            dict.fromkeys(
+                [r["id"] for h in doc["hypotheses"] for r in h.get("supporting", [])]
+                + [r["id"] for h in doc["hypotheses"] for r in h.get("contradicting", [])]
+            )
+        )
+        doc["engine"] = "rule-v1+probe-feedback"
+        doc["updated_at"] = utc_now_iso()
+        doc["evaluation_history"] = list(doc.get("evaluation_history") or []) + [
+            {
+                "at": doc["updated_at"],
+                "trigger": "probe_evidence",
+                "probes": [r.probe_id for r in results],
+                "outcome_before": before["outcome"],
+                "outcome_after": doc["outcome"],
+                "root_causes_after": list(result.root_causes),
+                "unresolved_conflicts": list(result.unresolved_conflicts),
+            }
+        ]
+        self.rt.docs.put(
+            doc_id=diagnosis_id,
+            kind="diagnosis",
+            doc=doc,
+            workspace_id=doc.get("workspace_id", "default"),
+            ref_id=doc.get("run_id", ""),
+            status=doc["outcome"],
+        )
+        doc["disposition_id"] = self._refresh_disposition(doc)
+        return {
+            "diagnosis": doc,
+            "feedback": [r.to_dict() for r in results],
+            "before": before,
+            "after": {
+                "outcome": doc["outcome"],
+                "root_causes": list(doc["root_causes"]),
+                "unresolved_conflicts": list(doc["unresolved_conflicts"]),
+            },
+        }
+
+    def _refresh_disposition(self, diagnosis: dict[str, Any]) -> str:
+        """诊断结论变化后刷新 Disposition（保留历史，不静默改写旧记录）。"""
+        existing = self.rt.docs.list(kind="disposition", ref_id=diagnosis["diagnosis_id"], limit=5)
+        kind = DISPOSITION_MAP.get(diagnosis["disposition"], "MANUAL_REVIEW")
+        target = _route_target(kind)
+        reason = _route_reason(kind, diagnosis)
+        if existing:
+            rec = existing[0]
+            doc = dict(rec.doc or {})
+            if doc.get("kind") == kind and doc.get("route_target") == target:
+                return rec.id
+            doc.setdefault("history", []).append(
+                {
+                    "kind": doc.get("kind"),
+                    "route_target": doc.get("route_target"),
+                    "reason": doc.get("reason"),
+                    "at": utc_now_iso(),
+                }
+            )
+            doc.update(
+                {
+                    "kind": kind,
+                    "route_target": target,
+                    "reason": reason,
+                    "review_status": "PENDING",
+                    "updated_at": utc_now_iso(),
+                }
+            )
+            self.rt.docs.put(
+                doc_id=rec.id,
+                kind="disposition",
+                doc=doc,
+                workspace_id=diagnosis.get("workspace_id", "default"),
+                ref_id=diagnosis["diagnosis_id"],
+                status="PENDING",
+            )
+            return rec.id
+        return self._create_disposition(diagnosis)["disposition_id"]
 
     # ---------------------------------------------------------------- helpers
     _LLM_DOMAIN_MAP: dict[str, tuple[Any, Any]] = {}
@@ -484,7 +609,7 @@ class DiagnosisService:
             "disposition_id": disposition_id,
             "diagnosis_id": diagnosis["diagnosis_id"],
             "run_id": diagnosis["run_id"],
-            "workspace_id": diagnosis["workspace_id"],
+            "workspace_id": diagnosis.get("workspace_id", "default"),
             "kind": kind,
             "route_target": _route_target(kind),
             "review_status": "PENDING",
@@ -495,7 +620,7 @@ class DiagnosisService:
             doc_id=disposition_id,
             kind="disposition",
             doc=doc,
-            workspace_id=diagnosis["workspace_id"],
+            workspace_id=diagnosis.get("workspace_id", "default"),
             ref_id=diagnosis["diagnosis_id"],
             status="PENDING",
         )
@@ -536,3 +661,38 @@ def _route_reason(kind: str, diagnosis: dict[str, Any]) -> str:
     if kind == "TEST_ASSET":
         return "疑似用例资产问题，可进入 Repair 候选（需人工审批）"
     return "需人工分流"
+
+
+def _enum(cls: Any, value: Any, fallback: Any) -> Any:
+    try:
+        return cls(value)
+    except Exception:  # noqa: BLE001
+        return fallback
+
+
+def _hypothesis_from_dict(h: dict[str, Any]) -> Hypothesis:
+    """把持久化的假设文档还原成领域对象（探针回灌后重新裁决用）。"""
+    return Hypothesis(
+        hypothesis_id=str(h["hypothesis_id"]),
+        description=str(h.get("description", "")),
+        failure_domain=_enum(FailureDomain, h.get("failure_domain"), FailureDomain.UNKNOWN),
+        failure_mechanism=_enum(
+            FailureMechanism, h.get("failure_mechanism"), FailureMechanism.UNKNOWN
+        ),
+        supporting=[
+            EvidenceRef(str(x["id"]), str(x.get("trust", "UNKNOWN")), bool(x.get("confirming")))
+            for x in h.get("supporting") or []
+            if x.get("id")
+        ],
+        contradicting=[
+            EvidenceRef(str(x["id"]), str(x.get("trust", "UNKNOWN")), False)
+            for x in h.get("contradicting") or []
+            if x.get("id")
+        ],
+        status=_enum(HypothesisStatus, h.get("status"), HypothesisStatus.CANDIDATE),
+        contributing_factors=list(h.get("contributing_factors") or []),
+        flaky_characteristic=bool(h.get("flaky_characteristic")),
+        suggested_by=str(h.get("suggested_by") or "rule"),
+        probe_feedback=list(h.get("probe_feedback") or []),
+        excluded_by=list(h.get("excluded_by") or []),
+    )

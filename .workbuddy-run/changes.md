@@ -28,3 +28,26 @@
 - 提交 fc1397c
 
 （后续每次重要修改追加）
+
+## RUN-006（2026-11-23）
+
+- `packages/core/.../security/target_policy.py` | 新增 | 统一目标访问策略（origin 白名单/重定向/内网阻断）
+- `packages/execution/.../browser/session.py` | 修改 | context route guard、blocked_requests、落地复核入口
+- `packages/execution/.../runtime/playwright_observer.py` | 修改 | navigate/click 目标校验 + 落地复核 + blocked_requests 入证据
+- `packages/agents/.../gateway/tool_gateway.py` | 修改 | 复用 TargetPolicy、`detail` 字段、落地复核审计
+- `apps/api/.../services/exploration_service.py` | 修改 | Explorer 与 Runner 共用同一策略
+- `packages/evidence/.../probe/feedback.py` | 新增 | 探针证据 → 支持/反驳/排除的确定性映射
+- `packages/evidence/.../probe/planner.py` | 修改 | 预算 fail-closed、CAS reserve、BudgetUnavailable
+- `packages/evidence/.../diagnosis/engine.py` | 修改 | EXCLUDED、unresolved_conflicts、LLM 前缀降级修复
+- `apps/api/.../services/probe_service.py` | 修改 | 探针回灌、冲突/停止原因映射、图刷新、LLM 诚实标注
+- `apps/api/.../services/diagnosis_service.py` | 修改 | reassess()、Disposition 刷新、冲突落库
+- `apps/api/.../services/graph_service.py` | 修改 | ProbeExecution 节点/边
+- `packages/persistence/.../catalog.py` | 修改 | bind_oracles、审核门禁、版本固定、原子晋升/回滚、主体校验
+- `packages/persistence/.../db.py` + `models.py` | 修改 | 迁移 v7（review_revision）
+- `packages/contracts/.../models.py` + schemas | 修改 | `AssertionSpec.oracle_version` + 重新导出
+- `apps/api/.../services/repair_service.py` | 修改 | 原子 CAS 晋升/回滚、主体校验
+- `apps/api/.../routers/catalog.py` | 修改 | `/oracle-bindings` 端点、AssertionReq.oracle_version
+- `apps/api/.../seed.py` | 修改 | 新增 2 个 Oracle，消除跨断言隐式复用
+- `packages/execution/.../runtime/pipeline.py` | 修改 | 按 pinned Oracle 版本加载、按模型字段过滤文档
+- 测试 | 新增 6 文件 | 62 个测试函数 / 82 采集用例
+- `docs/RUN-006-*.md` + `docs/assets/run006/` | 新增 | 交付文档与证据

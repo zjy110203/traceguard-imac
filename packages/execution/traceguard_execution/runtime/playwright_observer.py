@@ -18,6 +18,7 @@ from typing import Any
 
 from traceguard_contracts.models import TestStep
 from traceguard_core.logging import get_logger
+from traceguard_core.security.target_policy import TargetAccessDenied, TargetPolicy
 
 from ..browser.manager import BrowserConfig, BrowserManager, get_browser_manager
 from ..browser.session import BrowserSession
@@ -49,18 +50,25 @@ class PlaywrightObserver(Observer):
         self._config = config
         self.session: BrowserSession | None = None
         self._base_url = "http://127.0.0.1:8001"
+        self.policy = TargetPolicy.from_base_url(self._base_url)
         self._trace_data: bytes | None = None
         self.browser_info: dict[str, Any] = {}
 
     # ------------------------------------------------------------------ setup
     def setup(self, run_config: dict[str, Any]) -> None:
         self._base_url = str(run_config.get("base_url", "http://127.0.0.1:8001")).rstrip("/")
+        extra = run_config.get("allowed_origins") or []
+        self.policy = TargetPolicy.from_origins(
+            [self._base_url, *[str(o) for o in extra if o]],
+            max_redirects=int(run_config.get("max_redirects", 3)),
+        )
         self._manager = self._manager or get_browser_manager(self._config)
         self.session = BrowserSession(
             self._manager,
             base_url=self._base_url,
             run_id=str(run_config.get("run_id", "")),
             trace_enabled=bool(run_config.get("trace", True)),
+            target_policy=self.policy,
         )
         try:
             self.browser_info = {
@@ -116,13 +124,18 @@ class PlaywrightObserver(Observer):
             action = step.action
             if action == "navigate":
                 path = step.value or "/"
-                url = path if path.startswith("http") else self._base_url + path
-                resp = session.page.goto(url, wait_until="domcontentloaded")
+                # 相对路径按 base_url 解析；绝对 URL / 协议相对写法必须重新过白名单
+                target = self.policy.resolve(path, self._base_url)
+                if not target.allowed:
+                    raise TargetAccessDenied(target.reason, target.url)
+                resp = session.page.goto(target.url, wait_until="domcontentloaded")
                 try:
                     session.page.wait_for_load_state("networkidle", timeout=4000)
                 except Exception:  # noqa: BLE001 - 长轮询页面允许非 idle
                     pass
                 session.wait_network_settle()
+                # 重定向后的落地地址必须仍在授权范围（不能靠 302 绕过）
+                session.check_target(session.current_url(), landed=True)
                 obs = {
                     "url": session.current_url(),
                     "title": session.title(),
@@ -140,6 +153,8 @@ class PlaywrightObserver(Observer):
                 except Exception:  # noqa: BLE001
                     pass
                 session.wait_network_settle()
+                # 点击可能触发跳转：落地地址同样要复核
+                session.check_target(session.current_url(), landed=True)
                 obs = {
                     "clicked": step.target.value if step.target else "",
                     "url": session.current_url(),
@@ -209,6 +224,8 @@ class PlaywrightObserver(Observer):
         obs.setdefault("network", network_delta[-50:])
         obs.setdefault("page_errors", list(session.page_errors))
         obs.setdefault("http_errors", [n for n in network_delta if (n.get("status") or 0) >= 400])
+        if session.blocked_requests:
+            obs["blocked_requests"] = list(session.blocked_requests)[-20:]
         obs["page_url"] = self._safe_url()
         obs["page_title"] = session.title()
         if timed_out:

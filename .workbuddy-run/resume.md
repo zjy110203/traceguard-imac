@@ -1,78 +1,103 @@
-# 中断恢复指引（RUN-005 结束点）
+# 中断恢复指引（RUN-006 结束点）
 
-> 下一次运行的第一步：读本文件 → `docs/RUN-005-BASELINE.md` → `docs/FEATURE-STATUS.md`
-> → `.workbuddy-run/progress.md` → `docs/TraceGuard-持续开发任务台账.md`。
-> 不要从零重新开发。不要把 BLOCKED 写成完成。
+> 下一次运行的第一步：读本文件 → `docs/RUN-006-BASELINE.md` → `docs/RUN-006-IMPLEMENTATION-REPORT.md`
+> → `docs/RUN-006-TEST-REPORT.md` → `docs/RUN-006-SECURITY-RELIABILITY.md` → `docs/RUN-006-DECISION-REQUESTS.md`
+> → `docs/FEATURE-STATUS.md`（RUN-006 段）→ `.workbuddy-run/progress.md`。
+> 不要从零重新开发。不要把 PARTIAL/BLOCKED 写成完成。不要用历史证据替代本轮验证。
 
-- 最后保存：2026-11-23（RUN-005-CORE）
-- 分支：`workbuddy/traceguard-autonomous`（本轮未推送远程）
-- 本轮基线提交：`9d751fe`（RUN-004-FE）
+- 最后保存：2026-11-23（RUN-006，WP1 完成）
+- 分支：`workbuddy/traceguard-autonomous`（未推送远程）
+- 指令基线：`dadb4ae`；本轮起点 HEAD：`78a09f6`
 
 ## 当前快照
 
-- 测试：**285 passed / 5 skipped / 0 failed**（skip 全部是 PG parity，本机无 PG）
-- Ruff：`check` 全绿；`format` 已格式化本轮改动文件
-- 前端：`vue-tsc` + `vite build` 通过；真实浏览器 UI 验收 **30/30**（`docs/assets/run005/`）
-- 本轮已修复的四个 P0 可靠性缺陷：探针预算全局化、Active Planner 未闭环、伪 SSE、Inbox 单状态；
-  另修复 Event Store 多进程序号竞争
-- 本轮新增：LLM 编译/探针/修复三类顾问（真实冒烟通过）、候选稳定性回放、CI 三级门禁、
-  Run 时间线投影（Inbox 真实消费者）
+- 测试：**367 passed / 5 skipped / 0 failed**（`pytest -q`，30.0s）；skip 全部是 PG parity（本机无 PG）
+- 真实浏览器：`pytest tests/e2e -q` → **11 passed**
+- Lint：`ruff check packages apps tests` 全绿；本轮改动文件已 `ruff format`
+- 真实环境证据：`docs/assets/run006/`（正常/故障 Run、诊断、probe-plan、真实探针回灌、证据图、Oracle 门禁实测）
+- 数据库迁移：**v7**（新增 `tg_testcase_version.review_revision`）
+
+## 本轮真正修好的东西（VERIFIED）
+
+1. **Oracle 闭环**：绑定 API + required assertion 门禁 + 版本固定 + 主体类型校验 + 并发审核 CAS。
+2. **诊断闭环**：探针证据回灌假设、重诊断、冲突真实计算、全 `STOP_*` 原因；探针失败不当证据。
+3. **LLM 确认漏洞**：`llm:*` 假设不再能保留 CONFIRMED（原实现是精确匹配 `"llm"` 的真实漏洞）。
+4. **预算故障安全**：读/写失败一律阻断；`reserve()` 用文档版本 CAS 做跨进程扣减。
+5. **晋升/回滚原子性**：单事务"比较 + 条件更新 + 插入版本"；陈旧提案不会覆盖新版本。
+6. **网络管控**：`TargetPolicy` 统一 Explorer 与 Runner；真实 Chromium 下未授权目标服务端 0 次请求。
+
+## 已知限制（必须在后续报告中继续披露）
+
+- 无身份认证：审批人仍是请求体声明；只有"主体类型门禁"，不是 RBAC。
+- 顶层 302 跳转的**出站请求会到达目标**（route 不拦顶层跳转）；产品保证是"落地拒绝 + 步骤失败"。
+- 预算跨进程一致性用两个 Registry 实例验证，**未做双 OS 进程压测**。
+- PostgreSQL 行锁/迁移 v7 未实测；4 Worker、60 分钟长稳未执行；CI 未真实触发。
+- 前端本轮零改动（WP3 NOT_IMPLEMENTED）；Benchmark v3 未做（不得引用历史数字）。
 
 ## 环境
 
 | 项 | 值 |
 |---|---|
-| Python | 3.13.12（.venv） |
+| Python | 3.13.12（`.venv`） |
 | Node | 22.22.2 |
-| playwright | 1.65.2 + Chromium 1255 |
-| 数据库 | SQLite（迁移 **v6**）；隔离验收库 `.traceguard/run005/` |
-| PostgreSQL | 本机不可用（无 Docker/psql）→ parity 测试 skip，CI Nightly 执行 |
-| LLM | `.env` 内已配置 DeepSeek（本轮真实调用过 compiler/probe/repair 三类顾问） |
+| playwright | 1.65.2（自带 Chromium） |
+| 数据库（本地） | SQLite（迁移 v7）；隔离验收库 `.traceguard/run006/` |
+| PostgreSQL | 本机不可用（无 Docker/psql）→ parity 测试 skip |
+| LLM | `.env` 内已配置 DeepSeek（本轮真实诊断调用发生） |
 
 ## 恢复后立即可做的验证
 
 ```bash
-# 1) 单元 + 集成（约 25s）
+# 1) 单元 + 集成 + E2E（约 46s）
 .venv/bin/python -m pytest -q
 
-# 2) 真实服务（隔离库，勿用默认库做演示）
-TG_TEAMFLOW_DB="sqlite:///./.traceguard/run005/teamflow.db" \
-  .venv/bin/python -m uvicorn traceguard_teamflow.main:app --port 8011 &
-TG_DATABASE_URL="sqlite:///./.traceguard/run005/api.db" \
-TG_ARTIFACT_DIR=".traceguard/run005/artifacts" TG_TEAMFLOW_BASE_URL="http://127.0.0.1:8011" \
+# 2) 只跑真实浏览器
+.venv/bin/python -m pytest tests/e2e -q
+
+# 3) 真实服务（隔离库，勿用默认库）
+TG_TEAMFLOW_DB="sqlite:///./.traceguard/run006/teamflow.db" \
+  .venv/bin/python -m uvicorn traceguard_teamflow.main:app --host 127.0.0.1 --port 8011
+TG_DATABASE_URL="sqlite:///./.traceguard/run006/api.db" \
+TG_ARTIFACT_DIR=".traceguard/run006/artifacts" TG_TEAMFLOW_BASE_URL="http://127.0.0.1:8011" \
 TG_INLINE_WORKER=0 \
-  .venv/bin/python -m uvicorn traceguard_api.main:app --port 8010 &
+  .venv/bin/python -m uvicorn traceguard_api.main:app --host 127.0.0.1 --port 8010
 
-# 3) UI 验收（需前端已 build）
-.venv/bin/python scripts/ui_acceptance.py --base-url http://127.0.0.1:8010
-
-# 4) 三类 LLM 顾问真实冒烟（有凭据时）
-TG_API_URL=http://127.0.0.1:8010 .venv/bin/python scripts/llm_advisor_smoke.py
+# 4) 关键 API 复现
+curl -X POST http://127.0.0.1:8010/api/v1/testcases/tcase_tf_create_normal/execute \
+  -H 'Content-Type: application/json' -d '{"sync": true}'
+curl -X POST "http://127.0.0.1:8010/api/v1/runs/<run_id>/diagnose"
+curl -X POST "http://127.0.0.1:8010/api/v1/runs/<run_id>/probe-plan?diagnosis_id=<diag_id>"
 ```
 
-## 下一步（按阻塞解除顺序）
+> 后台起服务请用宿主工具的后台任务机制（不要 `nohup ... &`，进程会随 shell 退出被回收）。
 
-1. **Benchmark v3 多臂对照**（A/C 先行，无 LLM 成本；LLM 臂按日预算分批）——见 `RUN-005-BENCHMARK-REPORT.md` 第 4 节。
-2. **PostgreSQL**：在 CI 手动触发 Nightly（Service Container 已配置）；本地不装 PG。
-3. **60 分钟长稳 + 4 Worker 故障恢复**：需独立环境与时间窗，禁止用短测冒充。
-4. **CI 首次真实运行**：Nightly security job 会因 `vite` dev-only high 漏洞失败，需先决定
-   "迁移 vite 8" 或 "显式豁免 + 期限"（见 `RUN-005-SECURITY-RELIABILITY.md` 第 2 节）。
-5. **P03 / P08 决策后落地**：Oracle 冲突规则 / Repair RBAC。
-6. **LLM 编译完整链路**：真实探索 → LLM 编译 → 稳定性回放（多次浏览器）→ 人工审核。
+## 下一步（按解锁顺序）
+
+1. **CI 触发一次真实 Nightly**（含 PostgreSQL Service Container）：验证迁移 v7、`review_revision` CAS、
+   `promote_version_cas` 行锁行为（决策请求 D-07）。
+2. **60 分钟长稳 + 4 Worker 故障恢复**：独立时间窗，脚本化采集指标并归档原始 JSON（D-08）。
+3. **完整端到端全链**：Intent → … → Repair 晋升 → 回归 → 回滚，全部走真实 API/DB/浏览器/Worker（WP2-02）。
+4. **前端工作包**：14 视图信息层级、失败步骤与证据联动、冲突/排除状态可视、SSE 真实连接状态（WP3）。
+5. **决策落地**：D-01（认证）、D-02（P08 角色）、D-05（vite 升级）、D-06（队列）——需负责人批准。
+6. **Benchmark v3 多臂**：A/C/D/E + LLM 分批，报告分子分母与样本量（WP6）。
 
 ## 本轮关键记忆
 
-- 预算 scope 是 `run:<id>` / `diagnosis:<id>`，`started_at` 首次使用时确定；`CLOSED` 是终态，不会被重新打开。
-- 事件序号由 `tg_producer_sequence` + `ON CONFLICT … RETURNING` 原子分配；跳号合法，不判丢失。
-- SSE 游标 = `pi/seq`（来源）+ `at/eid`（追加顺序）；只承诺 at-least-once，不承诺全局顺序。
-- Inbox `UNKNOWN` = 外部副作用不确定，禁止盲目重试；`consume_in_transaction` 才是副作用+记录同事务。
-- LLM 三条路径只产候选：`oracle_id` 恒为 None，`review_status` 恒 DRAFT，失败即 fallback 并标记。
-- 验收必须用隔离库；`scripts/final_demo.py` 仍禁止对现有库运行。
+- 审核门禁：`review_testcase(APPROVED)` 会调用 `_oracle_gate()`；缺 Oracle → 412，不要"先放宽再补"。
+- 绑定：`bind_oracles()` 只允许在 `DRAFT/PENDING`；APPROVED 版本不可重绑（要新建版本）。
+- 版本固定：`AssertionSpec.oracle_version`；`pipeline._load_oracles()` **不回退**到最新版本。
+- 主体校验：`require_human_actor()` 按命名空间首段判断；`role:`/`human:`/`qa-team` 合法。
+- 探针回灌：`feedback.assess()` 只看 `SUCCEEDED`；失败/超时返回 `PROBE_*_NOT_EVIDENCE`。
+- 冲突：`unresolved_conflicts` 落库；循环顶部检测 → `STOP_CONFLICT_UNRESOLVED` 且 0 消耗。
+- 预算：`ProbeBudgetRegistry.reserve()` 先写库后计入；`PROBE_BUDGET_UNAVAILABLE` 一律阻断。
+- 晋升：`catalog.promote_version_cas()` / `rollback_version_cas()`；不要在服务层再写"先比较再创建"。
+- 网络：`TargetPolicy` 是唯一策略；`SecurityPolicy` 仍用于 SSRF/DNS/凭证扫描（两者结论一致性有测试）。
 
 ## 不要做的事
 
-- 不要删除 `.workbuddy-run/` 与 `.traceguard/`。
+- 不要删除 `.workbuddy-run/`、`.traceguard/`、`docs/assets/run006/`。
 - 不要 `git reset --hard` / `git clean` / 强推。
-- 不要访问外部 Web 应用（P-EXT 未授权）。
-- 不要声称 P03/P08 已决策、路线图已冻结。
-- 不要把 skip 当 passed，不要把 BLOCKED 写成成功，不要为过测试削弱断言。
+- 不要访问外部 Web 应用（P-10 未授权）。
+- 不要声称 P03/P06/P08 已决策、路线图已冻结。
+- 不要把 skip 当 passed，不要把 PARTIAL/BLOCKED 写成成功，不要为过测试削弱断言。
+- 不要把顶层 302 说成"请求已被阻断"——它只是"落地被拒绝"。

@@ -203,8 +203,10 @@ class RunPipeline:
             doc = self.catalog.latest_approved_version(tc_id) if tc_id else None
         if not doc:
             return None
-        doc.pop("review_history", None)
-        return TestCaseVersion(**doc)
+        # 文档里带有审核/绑定等元数据（review_history / oracle_bindings / review_revision），
+        # 契约模型是 extra=forbid，必须按模型字段过滤而不是只删一个键
+        allowed = set(TestCaseVersion.model_fields)
+        return TestCaseVersion(**{k: v for k, v in doc.items() if k in allowed})
 
     def _guard_reviewed(self, tc: TestCaseVersion, task: dict[str, Any] | None = None) -> None:
         # 沙箱验证允许执行 PENDING 候选版本（显式 sandbox 标记，不是普通入口）
@@ -221,12 +223,21 @@ class RunPipeline:
             )
 
     def _load_oracles(self, tc: TestCaseVersion) -> dict[str, OracleSpec]:
+        """加载 Oracle：审核时固定的版本优先，绝不静默改用"最新版本"。"""
         out: dict[str, OracleSpec] = {}
         for spec in tc.assertions:
             if not spec.oracle_id:
                 continue
-            doc = self.catalog.get_oracle(spec.oracle_id)
+            pinned = getattr(spec, "oracle_version", None)
+            doc = self.catalog.get_oracle(spec.oracle_id, int(pinned) if pinned else None)
             if not doc:
+                if pinned:
+                    # 固定版本被删除/不可读 → 该断言没有可信 Oracle（不得回退到最新版本）
+                    logger.warning(
+                        "pinned_oracle_missing",
+                        oracle_id=spec.oracle_id,
+                        pinned_version=pinned,
+                    )
                 continue
             if not doc.get("approved", False):
                 # 未审批的 Oracle 不作为判定依据（避免 Agent 自批自用）

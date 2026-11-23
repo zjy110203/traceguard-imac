@@ -153,3 +153,37 @@
 | 多 Worker 故障恢复 | **PARTIAL** | 历史证据，本轮未复验 |
 | P03 / P08 | **NEEDS_DECISION** | 决策包已产出，未冻结 |
 | Redis/Celery、MinIO/S3、专用图数据库 | **NOT_IMPLEMENTED** | 无明确收益证据，按规则不引入 |
+
+---
+
+# RUN-006 功能状态（2026-11-23）
+
+> 本轮只做 WP1（核心正确性与安全性）。口径同上：IMPLEMENTED / VERIFIED / PARTIAL / BLOCKED / NEEDS_DECISION / NOT_IMPLEMENTED。
+> 测试基线：285 passed → **367 passed / 5 skipped**（新增 82 采集用例）。
+
+| 能力 | 状态 | 证据 / 说明 |
+|---|---|---|
+| Oracle 绑定 API（`/oracle-bindings`） | **VERIFIED** | 26 项门禁测试 + 真实 API 200/412/403 |
+| required assertion 审核门禁 | **VERIFIED** | 缺 Oracle / 未审批 / 跨 Workspace / 不存在 → 412 且列出全部问题 |
+| Oracle 版本固定（pinned `oracle_version`） | **VERIFIED** | 审核时写入断言；执行端不回退到最新版本 |
+| 审核主体类型校验 | **VERIFIED** | `agent`/`agent:gpt`/`agent-1`/`llm:*`/`system:*`/`bot:*`/`service:*`/空 → 403 |
+| 并发审核 CAS（`review_revision`） | **VERIFIED** | 行级条件 UPDATE；迁移 v7 |
+| 探针证据回灌假设 | **VERIFIED（语义层）** | 11 项集成测试；真实 `http_state` 探针使假设被反驳并排除 |
+| 冲突真实计算 + 停止条件 | **VERIFIED** | `unresolved_conflicts` 落库；冲突时零探针消耗停止 |
+| 探针失败 ≠ 目标故障证据 | **VERIFIED** | 失败/超时不进 supporting/contradicting |
+| LLM 假设不得 CONFIRMED | **VERIFIED** | 修复 `suggested_by == "llm"` 精确匹配漏洞（真实漏洞） |
+| 全 STOP_* 停止原因 | **VERIFIED** | CONFIRMED / 冲突 / 预算关闭 / 预算耗尽 / 预算不可用 / 权限失效 / 边际价值不足 / 迭代上限 |
+| Evidence Graph 探针节点 | **VERIFIED** | 真实图 60 节点/81 边，含 `ProbeExecution` 与 `contradicts` |
+| ProbeBudget 故障安全 | **VERIFIED** | 读失败/写失败均阻断；回滚内存计数 |
+| 预算跨进程一致性 | **PARTIAL** | 多 Registry 共享版本 CAS；未做双 OS 进程压测 |
+| 晋升/回滚原子 CAS | **VERIFIED（SQLite）** | 单事务比较+写入；PG 行锁未实测 |
+| 统一目标域名策略 | **VERIFIED** | 18 项策略测试；Explorer 与 Runner 同一 `TargetPolicy` |
+| 请求级网络管控 | **VERIFIED（子资源/XHR）** | 真实 Chromium：未授权服务端 0 次请求 |
+| 顶层 302 越权落地 | **PARTIAL** | 落地复核 → `TargetAccessDenied` → 步骤失败；出站请求已到达（限制已披露） |
+| 身份认证 / RBAC | **NOT_IMPLEMENTED** | 仍为单机可信；主体类型门禁 ≠ 身份认证（NEEDS_DECISION R1） |
+| 完整端到端全链（含修复晋升） | **PARTIAL** | 正常/故障场景真跑；修复全链未走完 |
+| 稳定性回放 F08 | **PARTIAL（继承）** | 本轮未改 |
+| 前端体验升级 | **NOT_IMPLEMENTED（本轮）** | 零改动，不声称任何 UI 改善 |
+| PostgreSQL / 4 Worker / 60 分钟长稳 | **BLOCKED** | 环境/时间窗限制 |
+| CI 三级门禁真实运行 | **BLOCKED** | 未触发真实 Actions |
+| Benchmark v3 | **NOT_IMPLEMENTED（本轮）** | 不引用历史数字 |

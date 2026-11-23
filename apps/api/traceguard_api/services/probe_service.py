@@ -28,6 +28,7 @@ from typing import Any
 from traceguard_core.errors import AppError, ErrorCode
 from traceguard_core.ids import new_id, utc_now_iso
 from traceguard_core.logging import get_logger, redact
+from traceguard_evidence.probe.feedback import ProbeSignal
 from traceguard_evidence.probe.planner import (
     PROVISIONAL_NOTE,
     ActivePlanner,
@@ -135,25 +136,29 @@ class ProbeService:
 
     # ------------------------------------------------------- budget persistence
     def _load_budget_doc(self, scope_key: str) -> dict[str, Any] | None:
-        try:
-            rec = self.rt.docs.get(budget_doc_id(scope_key))
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("probe_budget_load_failed", scope=scope_key, error=str(exc))
+        """读取预算文档。异常必须向上抛出：由 Registry 转成 UNAVAILABLE 并阻断探针。
+
+        返回的文档带 `doc_version`（DocStore 行版本），供跨进程 CAS 使用。
+        """
+        rec = self.rt.docs.get(budget_doc_id(scope_key))
+        if rec is None:
             return None
-        return rec.doc if rec else None
+        doc = dict(rec.doc or {})
+        doc["doc_version"] = rec.version
+        return doc
 
     def _save_budget_doc(self, budget: ProbeBudget) -> None:
-        try:
-            self.rt.docs.put(
-                doc_id=budget.budget_id,
-                kind=BUDGET_KIND,
-                doc=budget.snapshot(),
-                workspace_id=budget.workspace_id,
-                ref_id=budget.owner_run_id or budget.owner_diagnosis_id or None,
-                status="CLOSED" if budget.is_closed else "OPEN",
-            )
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("probe_budget_save_failed", scope=budget.scope_key, error=str(exc))
+        """CAS 写入预算；版本冲突以 CONFLICT 抛出，由 Registry 重新加载后重试。"""
+        rec = self.rt.docs.put(
+            doc_id=budget.budget_id,
+            kind=BUDGET_KIND,
+            doc={k: v for k, v in budget.snapshot().items() if k != "doc_version"},
+            workspace_id=budget.workspace_id,
+            ref_id=budget.owner_run_id or budget.owner_diagnosis_id or None,
+            status="CLOSED" if budget.is_closed else "OPEN",
+            version=budget.doc_version or 1,
+        )
+        budget.doc_version = rec.version
 
     def budget_for(
         self, *, run_id: str = "", diagnosis_id: str = "", workspace_id: str = "default"
@@ -171,11 +176,7 @@ class ProbeService:
     def close_budget(
         self, *, run_id: str = "", diagnosis_id: str = "", reason: str = "DIAGNOSIS_COMPLETED"
     ) -> dict[str, Any] | None:
-        scope = (
-            f"diagnosis:{diagnosis_id}"
-            if diagnosis_id
-            else (f"run:{run_id}" if run_id else "")
-        )
+        scope = f"diagnosis:{diagnosis_id}" if diagnosis_id else (f"run:{run_id}" if run_id else "")
         if not scope:
             raise AppError(ErrorCode.VALIDATION_ERROR, "run_id or diagnosis_id required")
         budget = self.budgets.close(scope, reason)
@@ -206,8 +207,10 @@ class ProbeService:
         b = budget or self.budget_for(
             run_id=run_id or "", diagnosis_id=diagnosis_id or "", workspace_id=workspace_id
         )
-        result: ProbeResult = self.engine.execute(probe_id, params, workspace_id, budget=b)
-        self.budgets.save(b)
+        # 预算占位由 Registry 完成（跨进程 CAS + 故障即阻断），探针执行前必须已落库
+        result: ProbeResult = self.engine.execute(
+            probe_id, params, workspace_id, budget=b, reserve=self.budgets.reserve
+        )
 
         execution_id = new_id("probeexec")
         evidence_ids: list[str] = []
@@ -310,22 +313,30 @@ class ProbeService:
         """真正执行 Active Diagnosis 循环，而不是只返回静态建议。
 
         Evidence Gap → Candidate Probe → Permission/Risk/Cost/Schema 校验 →
-        EIG Score → Planner.choose → Execution → New Evidence → Re-evaluation →
-        Stop / Continue。
+        EIG Score → Planner.choose → Execution → New Evidence → 回灌假设 →
+        重新裁决 → 重算 Gap → Continue / Stop。
+
+        关键边界（RUN-006 WP1-02）：
+        - 探针失败/被拒绝不写入任何"目标系统故障"证据，只是没有提供证据；
+        - CONFIRMED 仍由确定性规则 + TRUSTED 确认证据产生，LLM 不得确认根因；
+        - 未解决证据冲突 → STOP_CONFLICT_UNRESOLVED，不再烧预算。
         """
         run = self.rt.tasks.get_run(run_id)
         if not run:
             raise AppError(ErrorCode.NOT_FOUND, "run not found")
         workspace_id = run.get("workspace_id") or "default"
         diag = self.rt.docs.get(diagnosis_id) if diagnosis_id else None
-        diag_doc = diag.doc if diag else None
+        diag_doc = rec_doc = dict(diag.doc or {}) if diag else None
         budget = self.budget_for(
             run_id=run_id, diagnosis_id=diagnosis_id or "", workspace_id=workspace_id
         )
+        diagnosis_service = self._diagnosis_service() if diagnosis_id else None
+        diagnosis_before = _diagnosis_snapshot(diag_doc)
 
         plan_id = new_id("probeplan")
         steps: list[dict[str, Any]] = []
         evidence_ids: list[str] = []
+        assessed: list[dict[str, Any]] = []
         attempted: dict[str, str] = {}  # gap_id -> status
         gaps_before = self._evidence_gaps(run, diag_doc)
         stop_reason = ""
@@ -337,7 +348,16 @@ class ProbeService:
             if budget.is_closed:
                 stop_reason, stop_detail = "STOP_BUDGET_CLOSED", budget.close_reason
                 break
-            confirmed = bool(diag_doc and diag_doc.get("outcome") == "CONFIRMED")
+            if diag_doc and diag_doc.get("outcome") == "CONFIRMED":
+                stop_reason = "STOP_CONFIRMED"
+                stop_detail = "诊断已确认根因，停止继续消耗探针预算"
+                break
+            conflicts = list((diag_doc or {}).get("unresolved_conflicts") or [])
+            if conflicts:
+                stop_reason = "STOP_CONFLICT_UNRESOLVED"
+                stop_detail = f"证据冲突未裁决（{', '.join(conflicts[:3])}），需人工介入"
+                break
+
             permissions_valid = PERMISSION in self.engine._permissions
             candidates: list[tuple[ProbeDefinition, float]] = []
             gap_by_probe: dict[str, dict[str, Any]] = {}
@@ -348,12 +368,17 @@ class ProbeService:
                 candidates.append((d, gap["info_gain"]))
                 gap_by_probe[gap["probe_id"]] = gap
 
+            if not permissions_valid:
+                stop_reason = "STOP_PERMISSION_INVALID"
+                stop_detail = "探针权限失效，停止执行"
+                break
+
             if advisor is not None and candidates:
                 llm_notes = self._apply_llm_advice(advisor, candidates, gap_by_probe)
             probe, reason = self.planner.choose(
                 candidates,
-                confirmed=confirmed,
-                conflicts_unresolved=False,
+                confirmed=False,  # 已在循环顶部处理 CONFIRMED
+                conflicts_unresolved=bool(conflicts),
                 permissions_valid=permissions_valid,
                 budget=budget,
             )
@@ -365,6 +390,7 @@ class ProbeService:
                     "STOP_PERMISSION_INVALID": "探针权限失效，停止执行",
                     "STOP_BUDGET_EXHAUSTED": budget.exhausted_reason() or "预算耗尽",
                     "STOP_BUDGET_CLOSED": budget.close_reason,
+                    "STOP_CONFLICT_UNRESOLVED": "证据冲突未裁决",
                     "STOP_MARGINAL_VALUE_INSUFFICIENT": "边际信息增益不足以覆盖成本与风险",
                 }.get(reason, "")
                 break
@@ -386,27 +412,61 @@ class ProbeService:
             )
             attempted[gap["gap_id"]] = result_doc["status"]
             evidence_ids.extend(result_doc.get("evidence_refs") or [])
-            steps.append(
-                {
-                    "iteration": iteration,
-                    "gap_id": gap["gap_id"],
-                    "probe_id": probe.probe_id,
-                    "why": gap["why"],
-                    "info_gain": gap["info_gain"],
-                    "score": score,
-                    "status": result_doc["status"],
-                    "reason": result_doc.get("reason") or "",
-                    "evidence_ids": result_doc.get("evidence_refs") or [],
-                    "duration_ms": result_doc.get("duration_ms", 0),
-                    "execution_id": result_doc["execution_id"],
-                    "budget": result_doc["budget"],
-                }
-            )
-            # 探针失败/被拒绝：保留失败事实；权限/预算类拒绝直接停止（硬约束）
+            step: dict[str, Any] = {
+                "iteration": iteration,
+                "gap_id": gap["gap_id"],
+                "probe_id": probe.probe_id,
+                "why": gap["why"],
+                "info_gain": gap["info_gain"],
+                "score": score,
+                "status": result_doc["status"],
+                "reason": result_doc.get("reason") or "",
+                "evidence_ids": result_doc.get("evidence_refs") or [],
+                "duration_ms": result_doc.get("duration_ms", 0),
+                "execution_id": result_doc["execution_id"],
+                "budget": result_doc["budget"],
+                "applied_to_diagnosis": False,
+            }
+
+            if result_doc["status"] == "SUCCEEDED" and diagnosis_id and diagnosis_service:
+                signal = ProbeSignal(
+                    probe_id=probe.probe_id,
+                    execution_id=result_doc["execution_id"],
+                    status=result_doc["status"],
+                    evidence_ids=list(result_doc.get("evidence_refs") or []),
+                    data=result_doc.get("result") or {},
+                    params=params,
+                    gap_id=gap["gap_id"],
+                )
+                assessment = diagnosis_service.reassess(
+                    diagnosis_id, [signal], run_report=run.get("report") or {}
+                )
+                diag_doc = assessment["diagnosis"]
+                step["applied_to_diagnosis"] = True
+                step["diagnosis_after"] = assessment["after"]
+                step["hypothesis_updates"] = [
+                    u for fb in assessment["feedback"] for u in fb["updates"]
+                ]
+                assessed.append(
+                    {
+                        "probe_id": probe.probe_id,
+                        "execution_id": result_doc["execution_id"],
+                        "before": assessment["before"],
+                        "after": assessment["after"],
+                        "updates": step["hypothesis_updates"],
+                    }
+                )
+            elif result_doc["status"] == "SUCCEEDED":
+                step["applied_to_diagnosis"] = False
+                step["note"] = "未提供 diagnosis_id：证据已落库但未回灌任何诊断"
+
+            steps.append(step)
+
+            # 探针被拒绝：区分权限 / 预算 / 预算不可用，给出明确停止原因
             if result_doc["status"] == "BLOCKED":
-                stop_reason = "STOP_PROBE_BLOCKED"
-                stop_detail = result_doc.get("reason") or "PROBE_BLOCKED"
+                stop_reason, stop_detail = _blocked_stop(result_doc.get("reason") or "")
                 break
+            # 探针自身失败/超时：保留失败事实，但绝不当作目标系统故障证据
             if result_doc["status"] in {"FAILED", "TIMED_OUT"}:
                 continue
         else:
@@ -414,8 +474,7 @@ class ProbeService:
 
         gaps_after = self._evidence_gaps(run, diag_doc, attempted=attempted)
         if close_on_confirm and (diag_doc or {}).get("outcome") == "CONFIRMED":
-            budget.close("STOP_CONFIRMED")
-            self.budgets.save(budget)
+            self.budgets.close(budget.scope_key, "STOP_CONFIRMED")
 
         plan = {
             "plan_id": plan_id,
@@ -427,6 +486,10 @@ class ProbeService:
             "gaps_after": gaps_after,
             "steps": steps,
             "evidence_ids": list(dict.fromkeys(evidence_ids)),
+            "diagnosis_before": diagnosis_before,
+            "diagnosis_after": _diagnosis_snapshot(diag_doc),
+            "assessments": assessed,
+            "unresolved_conflicts": list((diag_doc or {}).get("unresolved_conflicts") or []),
             "stop_reason": stop_reason,
             "stop_detail": stop_detail,
             "planner": {
@@ -447,7 +510,9 @@ class ProbeService:
             status=stop_reason,
         )
         if diag:
-            doc = dict(diag.doc or {})
+            doc = dict(rec_doc or {})
+            latest = self.rt.docs.get(diagnosis_id or "")
+            doc = dict((latest.doc if latest else doc) or {})
             doc["last_probe_plan_id"] = plan_id
             doc["probe_evidence_ids"] = plan["evidence_ids"]
             doc["updated_at"] = utc_now_iso()
@@ -457,9 +522,34 @@ class ProbeService:
                 doc=doc,
                 workspace_id=diag.workspace_id,
                 ref_id=run_id,
-                status=diag.status,
+                status=doc.get("outcome") or diag.status,
             )
+        self._refresh_graph(run_id, workspace_id)
         return plan
+
+    # ------------------------------------------------------------- 关联服务
+    def _diagnosis_service(self) -> Any:
+        svc = getattr(self.rt, "services_diagnosis", None)
+        if svc is not None:
+            return svc
+        from traceguard_api.services.diagnosis_service import DiagnosisService
+
+        svc = DiagnosisService(self.rt)
+        self.rt.services_diagnosis = svc  # type: ignore[attr-defined]
+        return svc
+
+    def _refresh_graph(self, run_id: str, workspace_id: str) -> None:
+        """探针产生新证据后更新 Evidence Graph（失败不阻断探针闭环）。"""
+        try:
+            svc = getattr(self.rt, "services_graph", None)
+            if svc is None:
+                from traceguard_api.services.graph_service import GraphService
+
+                svc = GraphService(self.rt)
+                self.rt.services_graph = svc  # type: ignore[attr-defined]
+            svc.build_for_run(run_id)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("probe_graph_refresh_failed", run_id=run_id, error=str(exc))
 
     # ------------------------------------------------------------- LLM 辅助
     def _llm_enabled(self, override: bool | None) -> bool:
@@ -512,6 +602,10 @@ class ProbeService:
             "model": advice.model,
             "dropped": advice.dropped,
             "selections": advice.selections,
+            # 诚实标注：LLM 只影响候选排序，返回的参数并未参与执行
+            "effect": "ranking_only",
+            "params_used_in_execution": False,
+            "applied_to_execution": False,
         }
         if advice.fallback or not advice.selections:
             return notes
@@ -533,10 +627,7 @@ class ProbeService:
         return rec.to_dict() if rec else None
 
     def list_plans(self, run_id: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
-        return [
-            r.to_dict()
-            for r in self.rt.docs.list(kind=PLAN_KIND, ref_id=run_id, limit=limit)
-        ]
+        return [r.to_dict() for r in self.rt.docs.list(kind=PLAN_KIND, ref_id=run_id, limit=limit)]
 
     # ------------------------------------------------------------- gaps
     def _evidence_gaps(
@@ -709,3 +800,29 @@ class ProbeService:
             raise ValueError("backend log not found (logs/teamflow.log)")
         lines = path.read_text(errors="replace").splitlines()[-line_limit:]
         return {"template": "tail_teamflow", "path": str(path), "lines": redact(lines)}
+
+
+def _diagnosis_snapshot(doc: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not doc:
+        return None
+    return {
+        "diagnosis_id": doc.get("diagnosis_id"),
+        "outcome": doc.get("outcome"),
+        "disposition": doc.get("disposition"),
+        "root_causes": list(doc.get("root_causes") or []),
+        "unresolved_conflicts": list(doc.get("unresolved_conflicts") or []),
+    }
+
+
+def _blocked_stop(reason: str) -> tuple[str, str]:
+    """把探针被拒绝的原因映射成明确的停止原因（不允许含糊地"继续执行"）。"""
+    text = (reason or "").upper()
+    if "BUDGET" in text and "UNAVAILABLE" in text:
+        return "STOP_BUDGET_UNAVAILABLE", reason
+    if "BUDGET" in text:
+        return "STOP_BUDGET_EXHAUSTED", reason
+    if any(
+        k in text for k in ("PERMISSION", "DENIED", "CROSS_WORKSPACE", "WHITELIST", "NOT_ALLOWED")
+    ):
+        return "STOP_PERMISSION_INVALID", reason
+    return "STOP_PROBE_BLOCKED", reason

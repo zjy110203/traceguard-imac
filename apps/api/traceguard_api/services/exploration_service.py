@@ -20,6 +20,7 @@ from traceguard_agents.gateway.tool_gateway import Budget, ToolGateway
 from traceguard_core.errors import AppError, ErrorCode
 from traceguard_core.ids import utc_now_iso
 from traceguard_core.logging import get_logger
+from traceguard_core.security.target_policy import TargetAccessDenied, TargetPolicy
 from traceguard_execution.browser.manager import get_browser_manager
 from traceguard_execution.browser.session import BrowserSession
 
@@ -86,14 +87,23 @@ class ExplorationService:
         if not intent:
             raise AppError(ErrorCode.NOT_FOUND, "intent not found")
         base = self.rt.settings.teamflow_base_url
-        port = int(base.rsplit(":", 1)[-1]) if ":" in base else 80
+        # Explorer 与正式 Runner 共用同一份目标策略（WP1-05）
+        policy = TargetPolicy.from_origins(
+            [base, *[str(o) for o in getattr(self.rt.settings, "target_extra_origins", []) if o]]
+        )
 
         session = BrowserSession(
-            get_browser_manager(), base_url=base, run_id=f"explore-{intent_id}", trace_enabled=False
+            get_browser_manager(),
+            base_url=base,
+            run_id=f"explore-{intent_id}",
+            trace_enabled=False,
+            target_policy=policy,
         )
         gateway = ToolGateway(
-            allowed_hosts={"127.0.0.1", "localhost"},
-            allowed_ports={port},
+            allowed_hosts=policy.hosts,
+            allowed_ports=policy.ports,
+            target_policy=policy,
+            base_url=base,
             budget=Budget(
                 max_steps=max_steps, max_tool_calls=max_steps * 2, max_duration_seconds=90
             ),
@@ -101,8 +111,14 @@ class ExplorationService:
         page = session.page
 
         def _navigate(params: dict[str, Any]) -> str:
-            page.goto(str(params.get("url")), wait_until="domcontentloaded")
+            target = policy.resolve(str(params.get("url", "/")), base)
+            if not target.allowed:
+                raise TargetAccessDenied(target.reason, target.url)
+            page.goto(target.url, wait_until="domcontentloaded")
             session.wait_network_settle()
+            landed = gateway.check_landed_url(page.url)
+            if not landed["allowed"]:
+                raise TargetAccessDenied(str(landed["reason"]), page.url)
             return page.url
 
         def _fill(params: dict[str, Any]) -> str:
@@ -118,6 +134,9 @@ class ExplorationService:
                 raise ValueError("click requires test_id")
             page.get_by_test_id(str(tid)).click()
             session.wait_network_settle()
+            landed = gateway.check_landed_url(page.url)
+            if not landed["allowed"]:
+                raise TargetAccessDenied(str(landed["reason"]), page.url)
             return page.url
 
         def _read_page(params: dict[str, Any]) -> str:

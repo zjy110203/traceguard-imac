@@ -47,6 +47,10 @@ class Settings(BaseSettings):
     # TeamFlow（阶段1）
     teamflow_base_url: str = "http://127.0.0.1:8001"
 
+    # 目标访问策略（RUN-006 WP1-05）：除 teamflow_base_url 外显式授权的 origin
+    # 形如 ["http://127.0.0.1:8011"]；未授权地址一律在请求发出前阻断。
+    target_extra_origins: list[str] = Field(default_factory=list)
+
     # 浏览器执行
     browser_headless: bool = True
     browser_channel: str = ""  # "" = playwright 自带 chromium；msedge / chrome

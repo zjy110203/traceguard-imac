@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 
 import pytest
-from traceguard_core.errors import AppError
+from traceguard_core.errors import AppError, ErrorCode
 from traceguard_persistence import (
     ArtifactStore,
     CatalogService,
@@ -185,8 +185,36 @@ def test_catalog_versioning_and_review(db: Database) -> None:
     assert cat.latest_approved_version("tcase_demo") is None
     with pytest.raises(AppError):
         cat.review_testcase("tcase_demo", 1, "APPROVED", reviewer="agent")
-    cat.review_testcase("tcase_demo", 1, "APPROVED", reviewer="role:qa")
-    assert cat.latest_approved_version("tcase_demo")["version"] == 1
+
+    # RUN-006 WP1-01：没有合法 Oracle 的必需断言不得进入正式可执行状态
+    with pytest.raises(AppError) as gate:
+        cat.review_testcase("tcase_demo", 1, "APPROVED", reviewer="role:qa")
+    assert gate.value.code is ErrorCode.PRECONDITION_FAILED
+    assert "MISSING_ORACLE" in gate.value.message
+
+    cat.create_oracle(
+        {
+            "oracle_id": "oracle_demo_a1",
+            "assertion_id": "a1",
+            "expected_behavior": "标题必须存在",
+            "requirement_ref": "REQ-DEMO-1",
+            "version": 1,
+        },
+        approved=True,
+        approved_by="role:qa-lead",
+    )
+    bound = cat.bind_oracles(
+        "tcase_demo", 1, {"a1": {"oracle_id": "oracle_demo_a1"}}, actor="role:qa"
+    )
+    assert bound["oracle_bindings"]["a1"]["oracle_version"] == 1
+
+    reviewed = cat.review_testcase("tcase_demo", 1, "APPROVED", reviewer="role:qa")
+    assert reviewed["review_revision"] == 1
+    approved = cat.latest_approved_version("tcase_demo")
+    assert approved["version"] == 1
+    # 审核通过后 Oracle 版本被固定到断言上
+    assert approved["assertions"][0]["oracle_version"] == 1
+    assert approved["oracle_binding_frozen"] is True
 
 
 def test_oracle_agent_cannot_approve(db: Database) -> None:

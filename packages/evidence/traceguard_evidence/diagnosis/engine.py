@@ -87,6 +87,9 @@ class Hypothesis:
     contributing_factors: list[str] = field(default_factory=list)
     flaky_characteristic: bool = False
     suggested_by: str = "rule"  # rule / llm（LLM 仅提出候选）
+    #: 探针证据的判定记录（谁支持/反驳/排除了它，依据是什么）
+    probe_feedback: list[dict[str, Any]] = field(default_factory=list)
+    excluded_by: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -105,6 +108,8 @@ class Hypothesis:
             "contributing_factors": list(self.contributing_factors),
             "flaky_characteristic": self.flaky_characteristic,
             "suggested_by": self.suggested_by,
+            "probe_feedback": list(self.probe_feedback),
+            "excluded_by": list(self.excluded_by),
         }
 
 
@@ -155,21 +160,41 @@ class DiagnosisEngine:
         d = Diagnosis(diagnosis_id=new_id("diagnosis"), symptom=symptom, hypotheses=hypotheses)
 
         for h in hypotheses:
-            # LLM 提出的假设只能从 CANDIDATE 开始，不能自带 CONFIRMED
-            if h.suggested_by == "llm" and h.status == HypothesisStatus.CONFIRMED:
-                h.status = HypothesisStatus.CANDIDATE  # 强制降级
+            trusted_support = any(e.source_trust == "TRUSTED" for e in h.supporting)
+            trusted_contradiction = any(e.source_trust == "TRUSTED" for e in h.contradicting)
             if self.rule.is_confirmed(h):
                 h.status = HypothesisStatus.CONFIRMED
-            elif any(e.source_trust == "TRUSTED" for e in h.contradicting):
+            elif trusted_contradiction:
                 h.status = HypothesisStatus.CONTRADICTED
+            elif h.excluded_by and not trusted_support:
+                # 探针给出确定性排除依据，且没有任何可信支持 → 排除（不静默当作"候选"）
+                h.status = HypothesisStatus.EXCLUDED
             elif self.rule.is_supported(h):
                 h.status = HypothesisStatus.SUPPORTED
             else:
                 h.status = HypothesisStatus.CANDIDATE
+            # LLM 提出的假设永远不能成为根因（能力层 ≠ 事实层）。
+            # 必须放在状态计算之后：仅"先降级再算"会让规则又把 CONFIRMED 加回来。
+            if (
+                str(h.suggested_by).lower().startswith("llm")
+                and h.status == HypothesisStatus.CONFIRMED
+            ):
+                h.status = HypothesisStatus.SUPPORTED
+                h.contributing_factors.append(
+                    "LLM 假设不得作为 CONFIRMED 根因，已降级为 SUPPORTED 供人工复核"
+                )
 
         # 根因：仅 CONFIRMED，可多个，不强制压缩
         d.root_causes = [
             h.hypothesis_id for h in hypotheses if h.status == HypothesisStatus.CONFIRMED
+        ]
+
+        # 未解决冲突：同一假设同时拥有 TRUSTED 支持与 TRUSTED 反驳证据
+        d.unresolved_conflicts = [
+            h.hypothesis_id
+            for h in hypotheses
+            if any(e.source_trust == "TRUSTED" for e in h.supporting)
+            and any(e.source_trust == "TRUSTED" for e in h.contradicting)
         ]
 
         # Diagnosis Outcome
@@ -187,6 +212,9 @@ class DiagnosisEngine:
     def _route(self, hypotheses: list[Hypothesis], d: Diagnosis) -> Disposition:
         confirmed = [h for h in hypotheses if h.status == HypothesisStatus.CONFIRMED]
         if not confirmed:
+            if d.unresolved_conflicts:
+                # 证据互相矛盾且无法裁决（P03 未决策）：交人工，不继续烧探针预算
+                return Disposition.MANUAL_REVIEW
             return Disposition.NEEDS_MORE_EVIDENCE
         # 多个已确认根因：若有产品域 → 产品缺陷优先记录
         domains = {h.failure_domain for h in confirmed}

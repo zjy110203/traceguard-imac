@@ -1,0 +1,239 @@
+{
+  "plan_id": "probeplan_1795417231637cf563ac1fb66",
+  "run_id": "run_1795417175537b8fd57ae15bf",
+  "diagnosis_id": "diagnosis_run006_inconclusive",
+  "workspace_id": "default",
+  "budget": {
+    "budget_id": "pbudget_diagnosis-diagnosis_run006_inconclusive",
+    "scope_key": "diagnosis:diagnosis_run006_inconclusive",
+    "owner_run_id": "run_1795417175537b8fd57ae15bf",
+    "owner_diagnosis_id": "diagnosis_run006_inconclusive",
+    "workspace_id": "default",
+    "max_probes": 50,
+    "probes_used": 2,
+    "probes_left": 48,
+    "max_total_cost": 100.0,
+    "cost_used": 1.2,
+    "cost_left": 98.8,
+    "max_duration_seconds": 60.0,
+    "elapsed_seconds": 0.044,
+    "time_left": 59.956,
+    "closed": false,
+    "close_reason": "",
+    "provisional": true,
+    "note": "P06 待负责人确认：以下预算与风险阈值为 provisional 配置，仅用于本轮实现与测试，不得视为正式冻结的工程决策。",
+    "started_at": 1795417231.637325,
+    "closed_at": null,
+    "version": 3,
+    "doc_version": 3
+  },
+  "gaps_before": [
+    {
+      "gap_id": "business_state_unknown",
+      "probe_id": "http_state",
+      "params": {
+        "template": "get_state_projects",
+        "run_id": "run_1795417175537b8fd57ae15bf"
+      },
+      "why": "业务状态证据缺失或不足，需要独立状态查询确认是否真正持久化",
+      "info_gain": 0.8
+    },
+    {
+      "gap_id": "network_unverified",
+      "probe_id": "network_trace",
+      "params": {
+        "template": "run_network",
+        "run_id": "run_1795417175537b8fd57ae15bf"
+      },
+      "why": "核对网络请求状态码与失败原因，排除环境/接口因素",
+      "info_gain": 0.55
+    }
+  ],
+  "gaps_after": [],
+  "steps": [
+    {
+      "iteration": 1,
+      "gap_id": "business_state_unknown",
+      "probe_id": "http_state",
+      "why": "业务状态证据缺失或不足，需要独立状态查询确认是否真正持久化",
+      "info_gain": 0.8,
+      "score": 0.5,
+      "status": "SUCCEEDED",
+      "reason": "",
+      "evidence_ids": [
+        "evd_179541723163962374c0c143f"
+      ],
+      "duration_ms": 2,
+      "execution_id": "probeexec_17954172316396796ca78c534",
+      "budget": {
+        "budget_id": "pbudget_diagnosis-diagnosis_run006_inconclusive",
+        "scope_key": "diagnosis:diagnosis_run006_inconclusive",
+        "owner_run_id": "run_1795417175537b8fd57ae15bf",
+        "owner_diagnosis_id": "diagnosis_run006_inconclusive",
+        "workspace_id": "default",
+        "max_probes": 50,
+        "probes_used": 1,
+        "probes_left": 49,
+        "max_total_cost": 100.0,
+        "cost_used": 1.0,
+        "cost_left": 99.0,
+        "max_duration_seconds": 60.0,
+        "elapsed_seconds": 0.003,
+        "time_left": 59.997,
+        "closed": false,
+        "close_reason": "",
+        "provisional": true,
+        "note": "P06 待负责人确认：以下预算与风险阈值为 provisional 配置，仅用于本轮实现与测试，不得视为正式冻结的工程决策。",
+        "started_at": 1795417231.637325,
+        "closed_at": null,
+        "version": 2,
+        "doc_version": 2
+      },
+      "applied_to_diagnosis": true,
+      "diagnosis_after": {
+        "outcome": "INCONCLUSIVE",
+        "root_causes": [],
+        "unresolved_conflicts": []
+      },
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_demo_persist",
+          "relation": "CONTRADICT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_179541723163962374c0c143f"
+          ],
+          "exclude": true,
+          "reason": "独立状态查询 count=1：数据已存在，排除'未持久化'"
+        }
+      ]
+    },
+    {
+      "iteration": 2,
+      "gap_id": "network_unverified",
+      "probe_id": "network_trace",
+      "why": "核对网络请求状态码与失败原因，排除环境/接口因素",
+      "info_gain": 0.55,
+      "score": 0.49,
+      "status": "SUCCEEDED",
+      "reason": "",
+      "evidence_ids": [
+        "evd_17954172316425f875708552b"
+      ],
+      "duration_ms": 0,
+      "execution_id": "probeexec_179541723164276f332a0665f",
+      "budget": {
+        "budget_id": "pbudget_diagnosis-diagnosis_run006_inconclusive",
+        "scope_key": "diagnosis:diagnosis_run006_inconclusive",
+        "owner_run_id": "run_1795417175537b8fd57ae15bf",
+        "owner_diagnosis_id": "diagnosis_run006_inconclusive",
+        "workspace_id": "default",
+        "max_probes": 50,
+        "probes_used": 2,
+        "probes_left": 48,
+        "max_total_cost": 100.0,
+        "cost_used": 1.2,
+        "cost_left": 98.8,
+        "max_duration_seconds": 60.0,
+        "elapsed_seconds": 0.006,
+        "time_left": 59.994,
+        "closed": false,
+        "close_reason": "",
+        "provisional": true,
+        "note": "P06 待负责人确认：以下预算与风险阈值为 provisional 配置，仅用于本轮实现与测试，不得视为正式冻结的工程决策。",
+        "started_at": 1795417231.637325,
+        "closed_at": null,
+        "version": 3,
+        "doc_version": 3
+      },
+      "applied_to_diagnosis": true,
+      "diagnosis_after": {
+        "outcome": "INCONCLUSIVE",
+        "root_causes": [],
+        "unresolved_conflicts": []
+      },
+      "hypothesis_updates": []
+    }
+  ],
+  "evidence_ids": [
+    "evd_179541723163962374c0c143f",
+    "evd_17954172316425f875708552b"
+  ],
+  "diagnosis_before": {
+    "diagnosis_id": "diagnosis_run006_inconclusive",
+    "outcome": "INCONCLUSIVE",
+    "disposition": "NEEDS_MORE_EVIDENCE",
+    "root_causes": [],
+    "unresolved_conflicts": []
+  },
+  "diagnosis_after": {
+    "diagnosis_id": "diagnosis_run006_inconclusive",
+    "outcome": "INCONCLUSIVE",
+    "disposition": "NEEDS_MORE_EVIDENCE",
+    "root_causes": [],
+    "unresolved_conflicts": []
+  },
+  "assessments": [
+    {
+      "probe_id": "http_state",
+      "execution_id": "probeexec_17954172316396796ca78c534",
+      "before": {
+        "outcome": "INCONCLUSIVE",
+        "root_causes": [],
+        "disposition": "NEEDS_MORE_EVIDENCE",
+        "unresolved_conflicts": []
+      },
+      "after": {
+        "outcome": "INCONCLUSIVE",
+        "root_causes": [],
+        "unresolved_conflicts": []
+      },
+      "updates": [
+        {
+          "hypothesis_id": "hyp_demo_persist",
+          "relation": "CONTRADICT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_179541723163962374c0c143f"
+          ],
+          "exclude": true,
+          "reason": "独立状态查询 count=1：数据已存在，排除'未持久化'"
+        }
+      ]
+    },
+    {
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_179541723164276f332a0665f",
+      "before": {
+        "outcome": "INCONCLUSIVE",
+        "root_causes": [],
+        "disposition": "NEEDS_MORE_EVIDENCE",
+        "unresolved_conflicts": []
+      },
+      "after": {
+        "outcome": "INCONCLUSIVE",
+        "root_causes": [],
+        "unresolved_conflicts": []
+      },
+      "updates": []
+    }
+  ],
+  "unresolved_conflicts": [],
+  "stop_reason": "STOP_ITERATION_LIMIT",
+  "stop_detail": "达到最大迭代 2",
+  "planner": {
+    "weights": {
+      "w_i": 1.0,
+      "w_c": 0.3,
+      "w_r": 0.5,
+      "note": "启发式默认权重，归一化与参数仍为待确认事项（P05），非校准概率"
+    },
+    "note": "启发式默认权重，归一化与参数仍为待确认事项（P05），非校准概率"
+  },
+  "llm_planner": {
+    "called": false
+  },
+  "provisional": true,
+  "note": "P06 待负责人确认：以下预算与风险阈值为 provisional 配置，仅用于本轮实现与测试，不得视为正式冻结的工程决策。",
+  "created_at": "2026-11-23T07:00:31.681650Z"
+}

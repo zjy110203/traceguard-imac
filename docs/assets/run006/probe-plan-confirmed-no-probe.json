@@ -1,0 +1,71 @@
+{
+  "plan_id": "probeplan_1795417210614284a699255c9",
+  "run_id": "run_1795417175537b8fd57ae15bf",
+  "diagnosis_id": "diagnosis_179541720014871310c65021f",
+  "workspace_id": "default",
+  "budget": {
+    "budget_id": "pbudget_diagnosis-diagnosis_179541720014871310c65021f",
+    "scope_key": "diagnosis:diagnosis_179541720014871310c65021f",
+    "owner_run_id": "run_1795417175537b8fd57ae15bf",
+    "owner_diagnosis_id": "diagnosis_179541720014871310c65021f",
+    "workspace_id": "default",
+    "max_probes": 50,
+    "probes_used": 0,
+    "probes_left": 50,
+    "max_total_cost": 100.0,
+    "cost_used": 0.0,
+    "cost_left": 100.0,
+    "max_duration_seconds": 60.0,
+    "elapsed_seconds": 0.001,
+    "time_left": 0.0,
+    "closed": true,
+    "close_reason": "STOP_CONFIRMED",
+    "provisional": true,
+    "note": "P06 待负责人确认：以下预算与风险阈值为 provisional 配置，仅用于本轮实现与测试，不得视为正式冻结的工程决策。",
+    "started_at": 1795417210.6135309,
+    "closed_at": 1795417210.6141682,
+    "version": 2,
+    "doc_version": 2
+  },
+  "gaps_before": [],
+  "gaps_after": [],
+  "steps": [],
+  "evidence_ids": [],
+  "diagnosis_before": {
+    "diagnosis_id": "diagnosis_179541720014871310c65021f",
+    "outcome": "CONFIRMED",
+    "disposition": "PRODUCT_DEFECT",
+    "root_causes": [
+      "hyp_17954171876752fdf3a05a845"
+    ],
+    "unresolved_conflicts": []
+  },
+  "diagnosis_after": {
+    "diagnosis_id": "diagnosis_179541720014871310c65021f",
+    "outcome": "CONFIRMED",
+    "disposition": "PRODUCT_DEFECT",
+    "root_causes": [
+      "hyp_17954171876752fdf3a05a845"
+    ],
+    "unresolved_conflicts": []
+  },
+  "assessments": [],
+  "unresolved_conflicts": [],
+  "stop_reason": "STOP_CONFIRMED",
+  "stop_detail": "诊断已确认根因，停止继续消耗探针预算",
+  "planner": {
+    "weights": {
+      "w_i": 1.0,
+      "w_c": 0.3,
+      "w_r": 0.5,
+      "note": "启发式默认权重，归一化与参数仍为待确认事项（P05），非校准概率"
+    },
+    "note": "启发式默认权重，归一化与参数仍为待确认事项（P05），非校准概率"
+  },
+  "llm_planner": {
+    "called": false
+  },
+  "provisional": true,
+  "note": "P06 待负责人确认：以下预算与风险阈值为 provisional 配置，仅用于本轮实现与测试，不得视为正式冻结的工程决策。",
+  "created_at": "2026-11-23T07:00:10.614727Z"
+}

@@ -186,6 +186,19 @@ def seed_teamflow_catalog(rt: Any, base_url: str = BASE) -> dict[str, Any]:
             "TF-PROJECT-CREATE#UI-2",
             {"type": "count", "op": "count_gte", "value": 1},
         ),
+        # RUN-006 WP1-01：每条断言绑定"声明用于该断言"的 Oracle，不允许跨断言复用
+        _oracle(
+            "oracle_tf_biz_created",
+            "a_biz_created",
+            "创建流程结束后独立业务状态查询的项目数必须 >=1",
+            "TF-PROJECT-CREATE#BIZ-2",
+            {
+                "type": "state_count",
+                "path": "/api/state/projects?workspace=default",
+                "op": "gte",
+                "value": 1,
+            },
+        ),
     ]
     for o in oracles:
         if rt.catalog.get_oracle(o["oracle_id"]):
@@ -334,7 +347,7 @@ def seed_teamflow_catalog(rt: Any, base_url: str = BASE) -> dict[str, Any]:
                         "op": "gte",
                         "value": 1,
                     },
-                    "oracle_tf_biz_count",
+                    "oracle_tf_biz_created",
                 ),
             ],
         },
@@ -392,7 +405,13 @@ def seed_teamflow_catalog(rt: Any, base_url: str = BASE) -> dict[str, Any]:
 
 
 def _fault_step(prefix: str, fault_id: str, idx: str = "f1") -> dict:
-    return _step(f"{prefix}_{idx}", "api", None, f"POST /api/faults/{fault_id}/activate", f"激活故障 {fault_id}")
+    return _step(
+        f"{prefix}_{idx}",
+        "api",
+        None,
+        f"POST /api/faults/{fault_id}/activate",
+        f"激活故障 {fault_id}",
+    )
 
 
 def _wait_step(prefix: str, ms: str, idx: str, desc: str) -> dict:
@@ -407,8 +426,16 @@ def _create_flow(prefix: str, name_value: str, wait_ms: str = "1200") -> list[di
         _step(f"{prefix}_n3", "fill", ("test_id", "project-name"), name_value, "填写项目名称"),
         _step(f"{prefix}_n4", "click", ("test_id", "create-submit"), None, "提交创建"),
         _wait_step(prefix, wait_ms, "n5", "等待跳转与提示"),
-        _step(f"{prefix}_n6", "assert", ("test_id", "banner-success"), "banner-success", "读取成功提示"),
-        _step(f"{prefix}_n7", "assert", ("test_id", "project-rows"), "project-rows", "读取项目列表"),
+        _step(
+            f"{prefix}_n6",
+            "assert",
+            ("test_id", "banner-success"),
+            "banner-success",
+            "读取成功提示",
+        ),
+        _step(
+            f"{prefix}_n7", "assert", ("test_id", "project-rows"), "project-rows", "读取项目列表"
+        ),
     ]
 
 
@@ -448,26 +475,64 @@ def _seed_bench_v2(rt: Any, base_url: str) -> int:
         )
         created += 1
 
+    if not rt.catalog.get_oracle("oracle_tf_row_render2"):
+        # RUN-006 WP1-01：每条断言都必须绑定"声明用于该断言"的 Oracle，
+        # 因此 a_row_render2 不能复用 oracle_tf_row_render（其 assertion_id 不同）。
+        rt.catalog.create_oracle(
+            _oracle(
+                "oracle_tf_row_render2",
+                "a_row_render2",
+                "项目列表必须渲染出数据行（data-testid=project-row，>=1）",
+                "TF-PROJECT-CREATE#UI-3",
+                {"type": "count", "op": "count_gte", "value": 1},
+            ),
+            approved_by="role:qa-lead",
+            approval_note="需求评审通过",
+            approved=True,
+        )
+        created += 1
+
     def banner_assert(aid: str = "a_ui_banner") -> dict:
-        return _assertion(aid, "成功提示出现", "ui", {"test_id": "banner-success"}, "oracle_tf_ui_banner")
+        return _assertion(
+            aid, "成功提示出现", "ui", {"test_id": "banner-success"}, "oracle_tf_ui_banner"
+        )
 
     def biz_assert(aid: str = "a_biz_count", op: str = "gte", value: int = 1) -> dict:
         return _assertion(
             aid,
             "独立业务状态计数校验",
             "business_state",
-            {"api": "/api/state/projects?workspace=default", "field": "count", "op": op, "value": value},
+            {
+                "api": "/api/state/projects?workspace=default",
+                "field": "count",
+                "op": op,
+                "value": value,
+            },
             "oracle_tf_biz_count",
         )
 
     def error_assert(aid: str = "a_error_banner") -> dict:
-        return _assertion(aid, "错误提示可见", "ui", {"test_id": "create-error"}, "oracle_tf_error_banner")
+        return _assertion(
+            aid, "错误提示可见", "ui", {"test_id": "create-error"}, "oracle_tf_error_banner"
+        )
 
-    def rows_assert(aid: str = "a_row_render", test_id: str = "project-rows") -> dict:
-        return _assertion(aid, "列表渲染数据行", "ui", {"test_id": test_id, "op": "count_gte", "value": 1}, "oracle_tf_row_render")
+    def rows_assert(
+        aid: str = "a_row_render",
+        test_id: str = "project-rows",
+        oracle_id: str = "oracle_tf_row_render",
+    ) -> dict:
+        return _assertion(
+            aid,
+            "列表渲染数据行",
+            "ui",
+            {"test_id": test_id, "op": "count_gte", "value": 1},
+            oracle_id,
+        )
 
     def edit_error_assert(aid: str = "a_edit_error") -> dict:
-        return _assertion(aid, "编辑保存失败提示", "ui", {"test_id": "edit-error"}, "oracle_tf_edit_error")
+        return _assertion(
+            aid, "编辑保存失败提示", "ui", {"test_id": "edit-error"}, "oracle_tf_edit_error"
+        )
 
     def edit_flow(prefix: str, fault_id: str) -> list[dict]:
         """编辑链路：先正常创建一个项目，再触发编辑接口故障。"""
@@ -476,21 +541,49 @@ def _seed_bench_v2(rt: Any, base_url: str) -> int:
             *_create_flow(prefix, f"Bench 编辑链路-{stamp}"),
             _step(f"{prefix}_e1", "navigate", None, "/projects/first", "打开第一个项目详情"),
             _wait_step(prefix, "800", "e2", "等待详情加载"),
-            _step(f"{prefix}_e3", "fill", ("test_id", "edit-name"), f"编辑后名称-{stamp}", "填写新名称"),
-            _step(f"{prefix}_e4", "click", ("test_id", "edit-save"), None, "保存编辑（预期接口失败）"),
+            _step(
+                f"{prefix}_e3",
+                "fill",
+                ("test_id", "edit-name"),
+                f"编辑后名称-{stamp}",
+                "填写新名称",
+            ),
+            _step(
+                f"{prefix}_e4", "click", ("test_id", "edit-save"), None, "保存编辑（预期接口失败）"
+            ),
             _wait_step(prefix, "800", "e6", "等待保存结果"),
-            _step(f"{prefix}_e7", "assert", ("test_id", "edit-error"), "edit-error", "读取编辑错误提示"),
+            _step(
+                f"{prefix}_e7",
+                "assert",
+                ("test_id", "edit-error"),
+                "edit-error",
+                "读取编辑错误提示",
+            ),
         ]
 
     def double_submit_flow(prefix: str) -> list[dict]:
         return [
             _step(f"{prefix}_n1", "navigate", None, "/projects", "打开项目列表"),
             _step(f"{prefix}_n2", "click", ("test_id", "nav-new"), None, "点击新建项目"),
-            _step(f"{prefix}_n3", "fill", ("test_id", "project-name"), f"双提交-{stamp}", "填写名称"),
+            _step(
+                f"{prefix}_n3", "fill", ("test_id", "project-name"), f"双提交-{stamp}", "填写名称"
+            ),
             _step(f"{prefix}_n4", "click", ("test_id", "create-submit"), None, "第一次提交"),
-            _step(f"{prefix}_n5", "click", ("test_id", "create-submit"), None, "第二次提交（300ms 内）"),
+            _step(
+                f"{prefix}_n5",
+                "click",
+                ("test_id", "create-submit"),
+                None,
+                "第二次提交（300ms 内）",
+            ),
             _wait_step(prefix, "1200", "n6", "等待跳转"),
-            _step(f"{prefix}_n7", "assert", ("test_id", "banner-success"), "banner-success", "成功提示"),
+            _step(
+                f"{prefix}_n7",
+                "assert",
+                ("test_id", "banner-success"),
+                "banner-success",
+                "成功提示",
+            ),
         ]
 
     bench: list[dict] = [
@@ -510,10 +603,28 @@ def _seed_bench_v2(rt: Any, base_url: str) -> int:
                 _fault_step("db2", "TF-DB-002"),
                 _step("db2_b1", "navigate", None, "/projects", "打开项目列表"),
                 _step("db2_b2", "click", ("test_id", "nav-new"), None, "点击新建项目"),
-                _step("db2_b3", "fill", ("test_id", "project-name"), f"Bench 重名静默-{stamp}", "再次填写同名"),
-                _step("db2_b4", "click", ("test_id", "create-submit"), None, "提交创建（预期静默失败）"),
+                _step(
+                    "db2_b3",
+                    "fill",
+                    ("test_id", "project-name"),
+                    f"Bench 重名静默-{stamp}",
+                    "再次填写同名",
+                ),
+                _step(
+                    "db2_b4",
+                    "click",
+                    ("test_id", "create-submit"),
+                    None,
+                    "提交创建（预期静默失败）",
+                ),
                 _wait_step("db2", "1200", "b5", "等待跳转与提示"),
-                _step("db2_b6", "assert", ("test_id", "banner-success"), "banner-success", "读取成功提示"),
+                _step(
+                    "db2_b6",
+                    "assert",
+                    ("test_id", "banner-success"),
+                    "banner-success",
+                    "读取成功提示",
+                ),
             ],
             "assertions": [biz_assert("a_biz_count2", value=2)],
         },
@@ -678,15 +789,31 @@ def _seed_bench_v2(rt: Any, base_url: str) -> int:
                 # 创建流（不含 rows 观测，避免故障前观测污染断言）
                 _step("sec2_n1", "navigate", None, "/projects", "打开项目列表"),
                 _step("sec2_n2", "click", ("test_id", "nav-new"), None, "点击新建项目"),
-                _step("sec2_n3", "fill", ("test_id", "project-name"), f"Bench 读权限-{stamp}", "填写名称"),
+                _step(
+                    "sec2_n3",
+                    "fill",
+                    ("test_id", "project-name"),
+                    f"Bench 读权限-{stamp}",
+                    "填写名称",
+                ),
                 _step("sec2_n4", "click", ("test_id", "create-submit"), None, "提交创建"),
                 _wait_step("sec2", "1200", "n5", "等待创建完成"),
                 _fault_step("sec2", "TF-SEC-002", idx="f2"),
                 _step("sec2_r1", "navigate", None, "/projects", "再次打开列表（预期读取失败）"),
                 _wait_step("sec2", "1000", "r2", "等待列表加载失败"),
-                _step("sec2_r3", "assert", ("test_id", "project-row"), "project-row", "观测故障后的数据行数量"),
+                _step(
+                    "sec2_r3",
+                    "assert",
+                    ("test_id", "project-row"),
+                    "project-row",
+                    "观测故障后的数据行数量",
+                ),
             ],
-            "assertions": [rows_assert("a_row_render2", test_id="project-row")],
+            "assertions": [
+                rows_assert(
+                    "a_row_render2", test_id="project-row", oracle_id="oracle_tf_row_render2"
+                )
+            ],
         },
         {
             "testcase_id": "tcase_bench_comp001",
@@ -730,7 +857,13 @@ def _seed_bench_v2(rt: Any, base_url: str) -> int:
             "steps": [
                 _fault_step("fl2", "TF-FLAKY-002"),
                 *_create_flow("fl2", f"Bench FlakyAPI-{stamp}"),
-                _step("fl2_n8", "assert", ("test_id", "create-error"), "create-error", "读取错误提示（可能不存在）"),
+                _step(
+                    "fl2_n8",
+                    "assert",
+                    ("test_id", "create-error"),
+                    "create-error",
+                    "读取错误提示（可能不存在）",
+                ),
             ],
             "assertions": [error_assert(), biz_assert()],
         },

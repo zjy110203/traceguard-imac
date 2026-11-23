@@ -38,3 +38,16 @@
 - 已完成（工程）：CI 三级门禁工作流、前端自动化验收脚本（30/30）、PG parity 测试（本地 skip）。
 - 未完成：Benchmark v3 多臂（BLOCKED）、60 分钟长稳（BLOCKED）、4 Worker 复验（PARTIAL）、
   PG 本地实测（BLOCKED）、P03/P08（NEEDS_DECISION）。
+
+---
+
+## RUN-006 更新（2026-11-23，追加）
+
+- 已完成（VERIFIED）：Oracle 绑定/审核门禁/版本固定/主体类型校验/并发审核 CAS；
+  探针证据回灌 + 动态重诊断 + 冲突真实计算 + 全 STOP_* 原因；预算故障安全与跨进程 CAS；
+  晋升/回滚单事务原子 CAS；统一 TargetPolicy（Explorer + Runner + 请求级拦截）。
+- 关键漏洞修复：`suggested_by == "llm"` 精确匹配导致 `llm:*` 假设可保留 CONFIRMED（已改为前缀 + 状态后降级）。
+- 测试：285 → **367 passed / 5 skipped**；真实 Chromium E2E 11 项通过。
+- 真实环境：正常/故障 Run、诊断、probe-plan、真实 http_state 回灌、图节点均已实测（`docs/assets/run006/`）。
+- 未完成：WP2 全链 E2E（PARTIAL）、WP3 前端（NOT_IMPLEMENTED 本轮）、WP4 PG/Worker/长稳（BLOCKED）、
+  WP5 CI 真实运行（BLOCKED）、WP6 Benchmark v3（NOT_IMPLEMENTED 本轮）。

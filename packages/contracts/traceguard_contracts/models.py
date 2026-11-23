@@ -62,6 +62,8 @@ class AssertionSpec(ContractBase):
     required: bool = True
     expected: dict[str, Any] = Field(default_factory=dict)
     oracle_id: str | None = None
+    # RUN-006 WP1-01：审核通过时固定 Oracle 版本，执行端不得无条件使用"最新版本"。
+    oracle_version: int | None = Field(default=None, ge=1)
 
 
 class TestCaseVersion(ContractBase):

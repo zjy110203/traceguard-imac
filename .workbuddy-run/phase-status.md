@@ -73,3 +73,21 @@
 | 0–11 | 维持历史 VERIFIED | 本轮未回退；关键路径回归通过 |
 | 12（工程质量） | PARTIAL → 推进 | CI 三级门禁入库、前端验收脚本化、PG parity 测试；长稳/多 Worker 未复验 |
 | 13（长期演进） | PARTIAL | LLM 三模块 + 稳定性回放 + 可观测性完成；Benchmark v3 与决策项未完成 |
+
+---
+
+## RUN-006 阶段/工作包状态（2026-11-23）
+
+| 工作包 | 状态 | 依据 |
+|---|---|---|
+| WP1-01 Oracle 绑定与审核闭环 | **VERIFIED** | 26 项门禁测试 + 真实 API 412/403/200 |
+| WP1-02 Active Diagnosis 闭环 | **VERIFIED（语义层）/ PARTIAL（真实故障链）** | 11 项集成测试 + 真实探针回灌证据 |
+| WP1-03 预算故障安全与跨进程 | **VERIFIED（逻辑）/ PARTIAL（双 OS 进程）** | 9 项测试；CAS 冲突重载 |
+| WP1-04 晋升/回滚原子 CAS | **VERIFIED（SQLite）** | 9 项测试，含并发仅一成功 |
+| WP1-05 目标域名与网络管控 | **VERIFIED（子资源）/ PARTIAL（顶层 302）** | 18 单测 + 4 真实浏览器 e2e |
+| WP2 稳定性回放 F08 | **PARTIAL（继承 RUN-005）** | 本轮未改 |
+| WP2 完整端到端真实验收 | **PARTIAL** | 正常/故障场景真跑，修复全链未走完 |
+| WP3 前端体验升级 | **NOT_IMPLEMENTED（本轮）** | 零改动 |
+| WP4 PostgreSQL / Worker / 长稳 | **BLOCKED** | 环境与时间窗 |
+| WP5 CI 三级门禁真实运行 | **BLOCKED** | 未触发真实 Actions |
+| WP6 UI-FaultBench 深化 | **NOT_IMPLEMENTED（本轮）** | 未追加实验 |

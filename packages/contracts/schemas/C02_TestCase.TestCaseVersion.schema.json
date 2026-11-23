@@ -44,6 +44,19 @@
           ],
           "default": null,
           "title": "Oracle Id"
+        },
+        "oracle_version": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Oracle Version"
         }
       },
       "required": [

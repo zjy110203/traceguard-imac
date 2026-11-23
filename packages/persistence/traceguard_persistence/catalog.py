@@ -4,13 +4,21 @@
 - TestCaseVersion 内容不可变（`immutable=True`），流程状态（review_status）可流转；
 - Oracle 版本化，Agent 不能批准（`approved_by_agent` 恒 False），审批人必须是具名角色；
 - 只有 APPROVED 的用例版本才允许被正式执行（执行器强制校验）。
+
+RUN-006 WP1-01 增强：
+- 审核前必须为全部 required assertion 绑定"存在且已审批、同 Workspace、版本明确"的 Oracle；
+- 审核通过时把 `oracle_version` 固定到断言上，执行端不得无条件使用最新版本；
+- 审查人身份用主体类型校验（拒绝 agent:/llm:/system: 等非人类主体），并明确
+  单机开发环境没有强认证，不宣称生产级 RBAC；
+- 并发审核用 `review_revision` 做 CAS，只允许一次成功。
 """
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from traceguard_contracts.models import OracleSpec, TestCaseVersion, TestIntent
 from traceguard_core.errors import AppError, ErrorCode
 from traceguard_core.ids import new_id, utc_now_iso
@@ -20,9 +28,52 @@ from .models import IntentRow, OracleRow, TestCaseRow, TestCaseVersionRow, Works
 
 DEFAULT_WORKSPACE = "default"
 
+#: 非人类主体标识：审核 / 审批 / 晋升一律拒绝（agent 可以"提案"，但不能"批准"）
+NON_HUMAN_TOKENS = {
+    "agent",
+    "agents",
+    "ai",
+    "assistant",
+    "bot",
+    "llm",
+    "model",
+    "robot",
+    "service",
+    "system",
+    "worker",
+}
+
 
 def _now() -> str:
     return utc_now_iso()
+
+
+def _subject_tokens(actor: str) -> list[str]:
+    return [t for t in re.split(r"[^a-z0-9]+", (actor or "").lower()) if t]
+
+
+def is_non_human_actor(actor: str) -> bool:
+    """判断主体是否为"非人类"（按命名空间/首段标识，而不是整串精确匹配）。
+
+    这样 `agent:gpt`、`agent-1`、`LLM:deepseek`、`system:promotion` 都会被拒绝，
+    不再存在"字符串精确匹配"的绕过空间。
+    """
+    tokens = _subject_tokens(actor)
+    if not tokens:
+        return True  # 空主体同样不可信
+    return tokens[0] in NON_HUMAN_TOKENS
+
+
+def require_human_actor(actor: str, *, field: str = "reviewer") -> str:
+    value = (actor or "").strip()
+    if not value:
+        raise AppError(ErrorCode.PRECONDITION_FAILED, f"{field}_REQUIRED")
+    if is_non_human_actor(value):
+        raise AppError(
+            ErrorCode.AUTHORIZATION_ERROR,
+            f"{field.upper()}_MUST_BE_HUMAN: '{value}' 不是可用的具名人类主体",
+        )
+    return value
 
 
 class CatalogService:
@@ -272,27 +323,249 @@ class CatalogService:
     def review_testcase(
         self, testcase_id: str, version: int, decision: str, reviewer: str, note: str = ""
     ) -> dict[str, Any]:
+        """人工审核：APPROVED 前必须通过 Oracle 绑定门禁，并用修订号 CAS 防并发。"""
         if decision not in {"APPROVED", "REJECTED", "PENDING"}:
             raise AppError(ErrorCode.VALIDATION_ERROR, "decision must be APPROVED/REJECTED/PENDING")
-        if not reviewer or reviewer.lower() in {"agent", "llm", "system"}:
-            raise AppError(ErrorCode.PRECONDITION_FAILED, "review requires a named human reviewer")
+        actor = require_human_actor(reviewer)
         with self.db.session() as s:
             v = s.get(TestCaseVersionRow, f"{testcase_id}@{version}")
             if not v:
                 raise AppError(ErrorCode.NOT_FOUND, "testcase version not found")
-            v.review_status = decision
+            base_revision = int(v.review_revision or 0)
             doc = dict(v.doc or {})
+            wsid = v.workspace_id or DEFAULT_WORKSPACE
+            warnings: list[str] = list(doc.get("oracle_binding_warnings") or [])
+
+            if decision == "APPROVED":
+                problems, warnings = self._oracle_gate(s, doc, workspace_id=wsid)
+                if problems:
+                    raise AppError(
+                        ErrorCode.PRECONDITION_FAILED,
+                        "ORACLE_BINDING_INCOMPLETE: " + "; ".join(problems[:6]),
+                        details={"problems": problems, "warnings": warnings},
+                    )
+                doc = self._pin_oracle_versions(s, doc, workspace_id=wsid)
+                doc["oracle_binding_warnings"] = warnings
+
             doc["review_status"] = decision
-            doc.setdefault("review_history", []).append(
-                {"decision": decision, "reviewer": reviewer, "note": note, "at": _now()}
+            doc["review_history"] = list(doc.get("review_history") or []) + [
+                {
+                    "decision": decision,
+                    "reviewer": actor,
+                    "note": note,
+                    "at": _now(),
+                    "review_revision": base_revision + 1,
+                }
+            ]
+            doc["review_revision"] = base_revision + 1
+
+            # 行级 CAS：并发审核只有一个能推进修订号，另一个得到 CONFLICT
+            result = s.execute(
+                update(TestCaseVersionRow)
+                .where(
+                    TestCaseVersionRow.id == f"{testcase_id}@{version}",
+                    TestCaseVersionRow.review_revision == base_revision,
+                )
+                .values(review_status=decision, doc=doc, review_revision=base_revision + 1)
             )
-            v.doc = doc
+            if result.rowcount != 1:
+                raise AppError(
+                    ErrorCode.CONFLICT,
+                    "CONCURRENT_REVIEW_CONFLICT: 该版本已被其他审核操作更新，请重新读取",
+                )
             tc = s.get(TestCaseRow, testcase_id)
             if tc:
                 tc.review_status = decision
                 tc.updated_at = _now()
             s.flush()
-            return {"testcase_id": testcase_id, "version": version, "review_status": decision}
+            return {
+                "testcase_id": testcase_id,
+                "version": version,
+                "review_status": decision,
+                "reviewer": actor,
+                "review_revision": base_revision + 1,
+                "warnings": warnings,
+            }
+
+    # ------------------------------------------------------------ oracle binding
+    def bind_oracles(
+        self,
+        testcase_id: str,
+        version: int,
+        bindings: dict[str, dict[str, Any]],
+        *,
+        actor: str,
+    ) -> dict[str, Any]:
+        """把 Oracle 绑定到具体 Assertion（只提案绑定，不等于审批）。
+
+        `bindings`：`{assertion_id: {"oracle_id": ..., "oracle_version": int|None}}`
+        校验：断言存在、Oracle 存在、已审批、同 Workspace、断言与 Oracle 声明一致。
+        已 APPROVED 的版本不允许再改绑定（必须新建版本，保持版本不可变语义）。
+        """
+        actor = require_human_actor(actor, field="actor")
+        if not bindings:
+            raise AppError(ErrorCode.VALIDATION_ERROR, "bindings 不能为空")
+        with self.db.session() as s:
+            v = s.get(TestCaseVersionRow, f"{testcase_id}@{version}")
+            if not v:
+                raise AppError(ErrorCode.NOT_FOUND, "testcase version not found")
+            if v.review_status == "APPROVED":
+                raise AppError(
+                    ErrorCode.PRECONDITION_FAILED,
+                    "APPROVED_VERSION_CONTENT_IMMUTABLE: 请创建新版本后再绑定 Oracle",
+                )
+            doc = dict(v.doc or {})
+            wsid = v.workspace_id or DEFAULT_WORKSPACE
+            assertions = {a.get("assertion_id"): a for a in doc.get("assertions") or []}
+            bound: dict[str, Any] = dict(doc.get("oracle_bindings") or {})
+            warnings: list[str] = list(doc.get("oracle_binding_warnings") or [])
+            for assertion_id, spec in bindings.items():
+                if assertion_id not in assertions:
+                    raise AppError(ErrorCode.VALIDATION_ERROR, f"UNKNOWN_ASSERTION: {assertion_id}")
+                oracle_id = str(spec.get("oracle_id") or "")
+                version_hint = spec.get("oracle_version")
+                row = self._resolve_oracle(s, oracle_id, version_hint, workspace_id=wsid)
+                mismatch = str(row.assertion_id or "") not in ("", str(assertion_id))
+                if mismatch:
+                    # 语义复用：记录事实并显式告警，不静默假装"这条 Oracle 就是为它写的"
+                    warnings.append(
+                        f"ORACLE_REUSED_ACROSS_ASSERTIONS: {oracle_id}"
+                        f"(声明用于 {row.assertion_id}) -> {assertion_id}"
+                    )
+                assertions[assertion_id]["oracle_id"] = oracle_id
+                assertions[assertion_id]["oracle_version"] = int(row.version)
+                bound[assertion_id] = {
+                    "oracle_id": oracle_id,
+                    "oracle_version": int(row.version),
+                    "workspace_id": row.workspace_id,
+                    "approved": bool(row.approved),
+                    "approved_by": row.approved_by,
+                    "oracle_assertion_id": row.assertion_id,
+                    "assertion_id_mismatch": mismatch,
+                    "bound_by": actor,
+                    "bound_at": _now(),
+                }
+            doc["assertions"] = list(assertions.values())
+            doc["oracle_bindings"] = bound
+            doc["oracle_binding_warnings"] = warnings
+            doc["binding_history"] = list(doc.get("binding_history") or []) + [
+                {"actor": actor, "bindings": bound, "warnings": warnings, "at": _now()}
+            ]
+            v.doc = doc
+            s.flush()
+            return {
+                "testcase_id": testcase_id,
+                "version": version,
+                "review_status": v.review_status,
+                "oracle_bindings": bound,
+                "warnings": warnings,
+            }
+
+    def _resolve_oracle(
+        self,
+        s: Any,
+        oracle_id: str,
+        version: int | None,
+        *,
+        workspace_id: str,
+    ) -> OracleRow:
+        """解析 Oracle 行并做存在性/审批/Workspace 校验。"""
+        if not oracle_id:
+            raise AppError(ErrorCode.VALIDATION_ERROR, "ORACLE_ID_REQUIRED")
+        if version is not None:
+            row = s.get(OracleRow, f"{oracle_id}@{int(version)}")
+        else:
+            row = s.scalar(
+                select(OracleRow)
+                .where(OracleRow.oracle_id == oracle_id)
+                .order_by(OracleRow.version.desc())
+                .limit(1)
+            )
+        if row is None:
+            raise AppError(
+                ErrorCode.NOT_FOUND, f"ORACLE_NOT_FOUND: {oracle_id}@{version or 'latest'}"
+            )
+        if (row.workspace_id or DEFAULT_WORKSPACE) != (workspace_id or DEFAULT_WORKSPACE):
+            raise AppError(
+                ErrorCode.AUTHORIZATION_ERROR,
+                f"CROSS_WORKSPACE_ORACLE: {oracle_id} 属于 {row.workspace_id}",
+            )
+        if not row.approved:
+            raise AppError(
+                ErrorCode.PRECONDITION_FAILED, f"ORACLE_NOT_APPROVED: {oracle_id}@{row.version}"
+            )
+        approval = (row.doc or {}).get("approval_history") or []
+        approver = row.approved_by or next(
+            (a.get("approved_by") for a in reversed(approval) if a.get("approved")), ""
+        )
+        if not approver or is_non_human_actor(str(approver)):
+            raise AppError(
+                ErrorCode.PRECONDITION_FAILED,
+                f"ORACLE_APPROVER_NOT_HUMAN: {oracle_id}@{row.version}",
+            )
+        return row
+
+    def _oracle_gate(
+        self, s: Any, doc: dict[str, Any], *, workspace_id: str
+    ) -> tuple[list[str], list[str]]:
+        """审核门禁：全部 required assertion 必须绑定合法、已审批、同 Workspace 的 Oracle。
+
+        返回 (problems, warnings)：problems 非空则不得 APPROVED；
+        warnings 记录"跨断言复用 Oracle"等需要人看到但不阻断的事实。
+        """
+        problems: list[str] = []
+        warnings: list[str] = []
+        assertions = doc.get("assertions") or []
+        if not assertions:
+            return ["NO_ASSERTIONS: 用例必须至少有一条断言"], []
+        if not any(a.get("required", True) for a in assertions):
+            return ["NO_REQUIRED_ASSERTION: 空必需断言集非法"], []
+        for a in assertions:
+            aid = a.get("assertion_id")
+            if not a.get("required", True):
+                continue
+            oracle_id = a.get("oracle_id")
+            if not oracle_id:
+                problems.append(f"MISSING_ORACLE: {aid}")
+                continue
+            try:
+                row = self._resolve_oracle(
+                    s, str(oracle_id), a.get("oracle_version"), workspace_id=workspace_id
+                )
+            except AppError as exc:
+                problems.append(f"{exc.message} ({aid})")
+                continue
+            if str(row.assertion_id or "") not in ("", str(aid)):
+                warnings.append(
+                    f"ORACLE_REUSED_ACROSS_ASSERTIONS: {oracle_id}"
+                    f"(声明用于 {row.assertion_id}) -> {aid}"
+                )
+        return problems, warnings
+
+    def _pin_oracle_versions(
+        self, s: Any, doc: dict[str, Any], *, workspace_id: str
+    ) -> dict[str, Any]:
+        """审核通过时把 Oracle 版本固定写入断言，避免每次执行都用"最新版本"。"""
+        pinned: dict[str, Any] = dict(doc.get("oracle_bindings") or {})
+        for a in doc.get("assertions") or []:
+            if not a.get("oracle_id"):
+                continue
+            row = self._resolve_oracle(
+                s, str(a["oracle_id"]), a.get("oracle_version"), workspace_id=workspace_id
+            )
+            a["oracle_version"] = int(row.version)
+            pinned[a["assertion_id"]] = {
+                **(pinned.get(a["assertion_id"]) or {}),
+                "oracle_id": a["oracle_id"],
+                "oracle_version": int(row.version),
+                "approved": True,
+                "approved_by": row.approved_by,
+                "workspace_id": row.workspace_id,
+                "pinned_at": _now(),
+            }
+        doc["oracle_bindings"] = pinned
+        doc["oracle_binding_frozen"] = True
+        return doc
 
     def latest_approved_version(self, testcase_id: str) -> dict[str, Any] | None:
         with self.db.session() as s:
@@ -308,6 +581,157 @@ class CatalogService:
             if not row:
                 return None
             return dict(row.doc or {})
+
+    # --------------------------------------------------- atomic promotion (CAS)
+    def approved_version_number(self, testcase_id: str) -> int:
+        """当前正式（APPROVED）版本号；0 表示还没有正式版本。"""
+        with self.db.session() as s:
+            return self._approved_version_in_session(s, testcase_id)
+
+    @staticmethod
+    def _approved_version_in_session(s: Any, testcase_id: str) -> int:
+        value = s.scalar(
+            select(TestCaseVersionRow.version)
+            .where(
+                TestCaseVersionRow.testcase_id == testcase_id,
+                TestCaseVersionRow.review_status == "APPROVED",
+            )
+            .order_by(TestCaseVersionRow.version.desc())
+            .limit(1)
+        )
+        return int(value or 0)
+
+    def promote_version_cas(
+        self,
+        testcase_id: str,
+        *,
+        base_version: int,
+        candidate: dict[str, Any],
+        workspace_id: str = DEFAULT_WORKSPACE,
+        title: str = "",
+    ) -> dict[str, Any]:
+        """正式版本晋升：比较 + 写入在同一个数据库事务内完成（真正原子 CAS）。
+
+        两个基于同一 base_version 的并发晋升只允许一个成功，另一个得到 VERSION_CONFLICT；
+        绝不"先在事务 A 比较，再在事务 B 无条件创建版本"。
+        """
+        with self.db.session() as s:
+            row = s.get(TestCaseRow, testcase_id)
+            if row is None:
+                raise AppError(ErrorCode.NOT_FOUND, "testcase not found")
+            current = self._approved_version_in_session(s, testcase_id)
+            if current != base_version:
+                raise AppError(
+                    ErrorCode.CONFLICT,
+                    f"VERSION_CONFLICT: current_approved={current} base={base_version}",
+                    details={"current_approved_version": current, "base_version": base_version},
+                )
+            expected_latest = int(row.latest_version or 0)
+            new_version = max(expected_latest, current) + 1
+            doc = self._promoted_doc(candidate, new_version=new_version)
+            updated = s.execute(
+                update(TestCaseRow)
+                .where(
+                    TestCaseRow.testcase_id == testcase_id,
+                    TestCaseRow.latest_version == expected_latest,
+                )
+                .values(
+                    latest_version=new_version,
+                    review_status="APPROVED",
+                    updated_at=_now(),
+                    compile_source=doc.get("compile_source", row.compile_source),
+                    title=title or row.title,
+                )
+            )
+            if updated.rowcount != 1:
+                raise AppError(
+                    ErrorCode.CONFLICT,
+                    "VERSION_CONFLICT: latest_version 已被并发修改",
+                )
+            s.add(
+                TestCaseVersionRow(
+                    id=f"{testcase_id}@{new_version}",
+                    testcase_id=testcase_id,
+                    workspace_id=workspace_id,
+                    version=new_version,
+                    review_status="APPROVED",
+                    review_revision=1,
+                    immutable=True,
+                    doc=doc,
+                )
+            )
+            s.flush()
+            return doc
+
+    def rollback_version_cas(
+        self,
+        testcase_id: str,
+        *,
+        promoted_version: int,
+        restored: dict[str, Any],
+        workspace_id: str = DEFAULT_WORKSPACE,
+        title: str = "",
+    ) -> dict[str, Any]:
+        """回滚：只有"当前正式版本仍是本提案晋升的版本"时才允许回滚。"""
+        with self.db.session() as s:
+            row = s.get(TestCaseRow, testcase_id)
+            if row is None:
+                raise AppError(ErrorCode.NOT_FOUND, "testcase not found")
+            current = self._approved_version_in_session(s, testcase_id)
+            if current != promoted_version:
+                raise AppError(
+                    ErrorCode.CONFLICT,
+                    f"ROLLBACK_CONFLICT: current_approved={current} promoted={promoted_version}",
+                    details={
+                        "current_approved_version": current,
+                        "promoted_version": promoted_version,
+                    },
+                )
+            expected_latest = int(row.latest_version or 0)
+            new_version = max(expected_latest, current) + 1
+            doc = self._promoted_doc(restored, new_version=new_version)
+            updated = s.execute(
+                update(TestCaseRow)
+                .where(
+                    TestCaseRow.testcase_id == testcase_id,
+                    TestCaseRow.latest_version == expected_latest,
+                )
+                .values(
+                    latest_version=new_version,
+                    review_status="APPROVED",
+                    updated_at=_now(),
+                    title=title or row.title,
+                )
+            )
+            if updated.rowcount != 1:
+                raise AppError(ErrorCode.CONFLICT, "ROLLBACK_CONFLICT: latest_version 已被并发修改")
+            s.add(
+                TestCaseVersionRow(
+                    id=f"{testcase_id}@{new_version}",
+                    testcase_id=testcase_id,
+                    workspace_id=workspace_id,
+                    version=new_version,
+                    review_status="APPROVED",
+                    review_revision=1,
+                    immutable=True,
+                    doc=doc,
+                )
+            )
+            s.flush()
+            return doc
+
+    @staticmethod
+    def _promoted_doc(candidate: dict[str, Any], *, new_version: int) -> dict[str, Any]:
+        """构造正式版本文档：断言与 Oracle 绑定原样保留，不因晋升而放宽。"""
+        doc = {
+            k: (dict(v) if isinstance(v, dict) else list(v) if isinstance(v, list) else v)
+            for k, v in candidate.items()
+        }
+        doc.pop("review_history", None)
+        doc["version"] = new_version
+        doc["review_status"] = "APPROVED"
+        doc["created_at"] = _now()
+        return doc
 
     # ---------------- Oracle ----------------
     def create_oracle(
@@ -328,11 +752,9 @@ class CatalogService:
             )
             version = (prev.version + 1) if prev else spec.version
             spec.version = version
-            if approved and (not approved_by or approved_by.lower() in {"agent", "llm"}):
-                raise AppError(
-                    ErrorCode.PRECONDITION_FAILED,
-                    "oracle approval requires a named human approver (agent cannot approve)",
-                )
+            if approved:
+                # 主体类型校验（不接受 agent:*/llm:*/system:* 等非人类主体）
+                approved_by = require_human_actor(approved_by, field="approved_by")
             doc = spec.model_dump()
             doc["approval_history"] = [
                 {
@@ -342,6 +764,13 @@ class CatalogService:
                     "at": _now(),
                 }
             ]
+            # OracleManager 校验读取 expectation_approval，必须与行级审批状态一致
+            doc["expectation_approval"] = {
+                "approved": bool(approved),
+                "approver": approved_by,
+                "note": approval_note,
+                "at": doc["approval_history"][0]["at"],
+            }
             s.add(
                 OracleRow(
                     id=f"{spec.oracle_id}@{version}",

@@ -19,3 +19,14 @@
 | B-06 | 60 分钟长稳 / 4 Worker 复验需独立时间窗 | 长稳证据缺失 | 标记 BLOCKED/PARTIAL，不引用旧结论 |
 | B-07 | `vite` dev-only high 漏洞仅能 semver-major 修复 | CI Nightly security job 会失败 | 记录风险与选项，等待决策；不 `--force` |
 | B-08 | P03 / P08 未批准 | Oracle 契约与 Repair RBAC 不能改 | 决策包已产出，保持现状 |
+
+## RUN-006 更新
+
+| 编号 | 阻塞 | 影响 | 处理 |
+|---|---|---|---|
+| B-02 | 本机无 Docker / PostgreSQL | PG 行锁与迁移 v7 未实测 | parity 测试 skip；请求授权 CI 触发（D-07） |
+| B-06 | 60 分钟长稳 / 4 Worker 需独立时间窗 | 长稳与故障恢复无本轮证据 | 标 BLOCKED，不引用历史结论（D-08） |
+| B-07 | `vite` dev-only high 漏洞仅能 semver-major 修复 | CI Nightly 会失败 | 未升级，请求决策（D-05） |
+| B-08 | P03/P06/P08 未批准 | 冲突裁决、预算数值、RBAC 不能冻结 | 决策请求已产出，保持现状 |
+| B-09 | 无身份认证基础设施 | 审批人身份不可强验证 | 仅主体类型门禁，安全文档明确披露（D-01） |
+| B-10 | 前端工作包本轮未排期 | 14 视图体验升级未做 | 标 NOT_IMPLEMENTED（本轮），不声称改善 |

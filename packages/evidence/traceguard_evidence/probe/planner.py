@@ -12,6 +12,12 @@ RUN-005 修复（P0）：预算不再是"服务实例级"全局对象。
 - 应用进程运行多久都不会让新诊断的 60 秒窗口提前失效（窗口从该预算首次使用时开始计）；
 - 预算可关闭并记录关闭原因；关闭后不可再扣费（明确的停止原因，而非静默失败）；
 - 预算使用量可序列化持久化，进程重启后按 scope 恢复，不会把不同诊断的预算混为一谈。
+
+RUN-006 修复（WP1-03）：预算持久化改为"故障安全 + 跨进程原子"。
+- 读取预算失败（数据库异常）不再静默新建预算继续跑，而是明确返回 UNAVAILABLE（fail closed）；
+- 扣减预算采用"先写库、后计入"：持久化失败则回滚内存计数并拒绝执行探针；
+- 持久化使用文档版本 CAS：多进程同时扣减同一 scope 时，冲突方重新加载最新值再重试，
+  因此同一 Run / Diagnosis 不会因为多个 API 进程而各得一份独立预算。
 """
 
 from __future__ import annotations
@@ -63,6 +69,18 @@ def _fake_clock() -> float:  # pragma: no cover - 仅作为 dataclass 默认占�
     return time.time()
 
 
+class BudgetUnavailable(AppError):
+    """预算无法可靠读写（数据库异常 / CAS 无法收敛）：必须拒绝执行探针。"""
+
+    def __init__(self, message: str = "PROBE_BUDGET_UNAVAILABLE", *, detail: str = "") -> None:
+        super().__init__(ErrorCode.DEPENDENCY_ERROR, message)
+        self.detail = detail
+
+
+class _BudgetVersionConflict(Exception):
+    """内部信号：持久化文档版本 CAS 冲突，需要重新加载后重试。"""
+
+
 def budget_doc_id(scope_key: str) -> str:
     """预算文档 ID：同一 scope 稳定，不同 Run/Diagnosis 必然不同。"""
     safe = re.sub(r"[^0-9A-Za-z_.-]+", "-", scope_key)
@@ -92,6 +110,8 @@ class ProbeBudget:
     owner_diagnosis_id: str = ""
     workspace_id: str = "default"
     version: int = 1
+    #: 持久化文档版本（用于跨进程 CAS；0 表示尚未落库）
+    doc_version: int = 0
     clock: Callable[[], float] = field(default=_fake_clock, repr=False, compare=False)
     _lock: Any = field(default=None, repr=False, compare=False)
 
@@ -193,6 +213,7 @@ class ProbeBudget:
             "started_at": self.started_at,
             "closed_at": self.closed_at,
             "version": self.version,
+            "doc_version": self.doc_version,
         }
 
     def to_dict(self) -> dict[str, Any]:
@@ -217,7 +238,25 @@ class ProbeBudget:
             owner_diagnosis_id=str(data.get("owner_diagnosis_id", "")),
             workspace_id=str(data.get("workspace_id", "default")),
             version=int(data.get("version", 1)),
+            doc_version=int(data.get("doc_version", 0)),
         )
+
+    def apply_doc(self, data: dict[str, Any]) -> None:
+        """用持久化文档刷新内存预算（CAS 冲突后重新加载，避免超发）。"""
+        with self._lock:
+            self.max_probes = int(data.get("max_probes", self.max_probes))
+            self.max_total_cost = float(data.get("max_total_cost", self.max_total_cost))
+            self.max_duration_seconds = float(
+                data.get("max_duration_seconds", self.max_duration_seconds)
+            )
+            self.probes_used = int(data.get("probes_used", self.probes_used))
+            self.cost_used = float(data.get("cost_used", self.cost_used))
+            self.started_at = float(data.get("started_at") or self.started_at)
+            closed_at = data.get("closed_at")
+            self.closed_at = float(closed_at) if closed_at else self.closed_at
+            self.close_reason = str(data.get("close_reason", self.close_reason))
+            self.version = int(data.get("version", self.version))
+            self.doc_version = int(data.get("doc_version", self.doc_version))
 
 
 class ProbeBudgetRegistry:
@@ -237,6 +276,8 @@ class ProbeBudgetRegistry:
         clock: Callable[[], float] = time.time,
         loader: Callable[[str], dict[str, Any] | None] | None = None,
         saver: Callable[[ProbeBudget], None] | None = None,
+        strict_persistence: bool = True,
+        cas_retries: int = 5,
     ) -> None:
         import threading
 
@@ -251,6 +292,9 @@ class ProbeBudgetRegistry:
         self.clock = clock
         self.loader = loader
         self.saver = saver
+        #: True = 持久化故障必须阻断探针（生产路径）；False 仅用于纯内存单测
+        self.strict_persistence = strict_persistence
+        self.cas_retries = max(1, cas_retries)
 
     def get_or_create(
         self,
@@ -282,7 +326,7 @@ class ProbeBudgetRegistry:
                 **params,
             )
             self._budgets[scope_key] = budget
-            self._save(budget)
+            self._persist(budget)  # 写不进去就不要假装有预算
             return budget
 
     def _load(self, scope_key: str, *, run_id: str, diagnosis_id: str) -> ProbeBudget | None:
@@ -290,7 +334,12 @@ class ProbeBudgetRegistry:
             return None
         try:
             doc = self.loader(scope_key)
-        except Exception:  # noqa: BLE001 - 读取失败不得阻断预算创建
+        except Exception as exc:  # noqa: BLE001
+            # WP1-03：读取失败不能"新建一份预算继续跑"，否则等于凭空多出配额
+            if self.strict_persistence:
+                raise BudgetUnavailable(
+                    "PROBE_BUDGET_UNAVAILABLE", detail=f"load failed: {type(exc).__name__}"
+                ) from exc
             return None
         if not doc:
             return None
@@ -301,8 +350,10 @@ class ProbeBudgetRegistry:
         # 归属校验：持久化文档声明的 owner 必须与本次调用一致（防止 scope 复用错配）
         if run_id and budget.owner_run_id and budget.owner_run_id != run_id:
             return None
-        if diagnosis_id and budget.owner_diagnosis_id and budget.owner_diagnosis_id != (
+        if (
             diagnosis_id
+            and budget.owner_diagnosis_id
+            and budget.owner_diagnosis_id != (diagnosis_id)
         ):
             return None
         return budget
@@ -317,19 +368,94 @@ class ProbeBudgetRegistry:
             if budget is None:
                 return None
             budget.close(reason)
-            self._save(budget)
+            # 关闭是"停止动作"：写失败不回滚关闭状态，但必须留下可观测告警
+            self._persist_quiet(budget)
             return budget
 
     def save(self, budget: ProbeBudget) -> None:
-        self._save(budget)
+        self._persist(budget)
 
-    def _save(self, budget: ProbeBudget) -> None:
+    # --------------------------------------------------------------- persistence
+    def _persist(self, budget: ProbeBudget) -> None:
+        """把预算写入持久化层；失败必须抛出（调用方据此拒绝执行）。"""
         if self.saver is None:
             return
         try:
             self.saver(budget)
-        except Exception:  # noqa: BLE001 - 审计写入失败不阻断探针执行，但需由调用方检查
-            pass
+        except AppError as exc:
+            if exc.code is ErrorCode.CONFLICT:
+                raise _BudgetVersionConflict() from exc
+            if self.strict_persistence:
+                raise BudgetUnavailable(
+                    "PROBE_BUDGET_UNAVAILABLE", detail=f"save failed: {exc.message[:80]}"
+                ) from exc
+        except Exception as exc:  # noqa: BLE001
+            if self.strict_persistence:
+                raise BudgetUnavailable(
+                    "PROBE_BUDGET_UNAVAILABLE", detail=f"save failed: {type(exc).__name__}"
+                ) from exc
+
+    def _persist_quiet(self, budget: ProbeBudget) -> None:
+        try:
+            self._persist(budget)
+        except Exception:  # noqa: BLE001 - 关闭路径不阻塞，但状态仍为 CLOSED
+            import logging
+
+            logging.getLogger("traceguard.probe.budget").warning(
+                "probe_budget_close_persist_failed", extra={"scope": budget.scope_key}
+            )
+
+    def reserve(self, budget: ProbeBudget, cost: float) -> str:
+        """跨进程原子占位。返回空串=成功；否则返回明确拒绝原因。
+
+        - 先持久化、后计入内存：写库失败 → 回滚计数并抛 BudgetUnavailable；
+        - CAS 冲突 → 重新加载最新持久化值后重试，保证同一 scope 不多发配额。
+        """
+        with self._lock:
+            for _ in range(self.cas_retries):
+                reason = budget.exhausted_reason()
+                if reason:
+                    return reason
+                if budget.cost_used + cost > budget.max_total_cost:
+                    return "PROBE_COST_BUDGET_EXHAUSTED"
+                if self.saver is None:
+                    budget.charge(cost)
+                    return ""
+                budget.probes_used += 1
+                budget.cost_used += float(cost)
+                budget.version += 1
+                try:
+                    self._persist(budget)
+                    return ""
+                except _BudgetVersionConflict:
+                    self._rollback_charge(budget, cost)
+                    if not self._reload(budget):
+                        return "PROBE_BUDGET_UNAVAILABLE"
+                except BudgetUnavailable:
+                    self._rollback_charge(budget, cost)
+                    raise
+            return "PROBE_BUDGET_UNAVAILABLE"
+
+    @staticmethod
+    def _rollback_charge(budget: ProbeBudget, cost: float) -> None:
+        budget.probes_used = max(0, budget.probes_used - 1)
+        budget.cost_used = max(0.0, budget.cost_used - float(cost))
+        budget.version = max(1, budget.version - 1)
+
+    def _reload(self, budget: ProbeBudget) -> bool:
+        if self.loader is None:
+            return False
+        try:
+            doc = self.loader(budget.scope_key)
+        except Exception as exc:  # noqa: BLE001
+            raise BudgetUnavailable(
+                "PROBE_BUDGET_UNAVAILABLE", detail=f"reload failed: {type(exc).__name__}"
+            ) from exc
+        if not doc:
+            return False
+        doc.setdefault("scope_key", budget.scope_key)
+        budget.apply_doc(doc)
+        return True
 
     def snapshot(self) -> list[dict[str, Any]]:
         with self._lock:
@@ -433,6 +559,7 @@ class ProbeEngine:
         workspace_id: str,
         *,
         budget: ProbeBudget | None = None,
+        reserve: Callable[[ProbeBudget, float], str] | None = None,
     ) -> ProbeResult:
         b = budget or self.budget
         started = time.time()
@@ -457,7 +584,31 @@ class ProbeEngine:
                 duration_ms=int((time.time() - started) * 1000),
             )
 
-        denied = b.try_reserve(d.estimated_cost)
+        try:
+            # 有持久化预算时走"跨进程原子占位"；失败必须阻断，不能先跑后记账
+            denied = (
+                reserve(b, d.estimated_cost)
+                if reserve is not None
+                else b.try_reserve(d.estimated_cost)
+            )
+        except BudgetUnavailable as exc:
+            self._audit.append(
+                {
+                    "probe_id": probe_id,
+                    "budget_scope": b.scope_key,
+                    "decision": "BUDGET_UNAVAILABLE",
+                    "reason": exc.detail or exc.message,
+                    "at": time.time(),
+                }
+            )
+            return ProbeResult(
+                probe_id,
+                "BLOCKED",
+                reason="PROBE_BUDGET_UNAVAILABLE",
+                source={"decision": "BUDGET_UNAVAILABLE", "error_code": exc.message},
+                budget_scope=b.scope_key,
+                duration_ms=int((time.time() - started) * 1000),
+            )
         if denied:  # 并发下仍可能被其他诊断线程抢走预算
             self._audit.append(
                 {
@@ -612,6 +763,7 @@ class ActivePlanner:
 __all__ = [
     "PROVISIONAL_NOTE",
     "ActivePlanner",
+    "BudgetUnavailable",
     "ProbeBudget",
     "ProbeBudgetRegistry",
     "ProbeDefinition",

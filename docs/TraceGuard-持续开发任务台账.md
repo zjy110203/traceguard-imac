@@ -103,3 +103,36 @@
 | R5-16 | PostgreSQL parity 测试 | PARTIAL（本地 BLOCKED） | `tests/integration/test_postgres_parity.py`(5 skip) |
 | R5-17 | 60 分钟长稳 | BLOCKED | 未执行 |
 | R5-18 | P03/P08 决策包 | NEEDS_DECISION | `docs/RUN-005-DECISION-PACKAGE.md` |
+
+---
+
+## RUN-006 台账（2026-11-23）
+
+> 口径：IMPLEMENTED / VERIFIED / PARTIAL / BLOCKED / NEEDS_DECISION / NOT_IMPLEMENTED。
+> 起点 285 passed / 5 skipped → 本轮 367 passed / 5 skipped。
+
+| ID | 任务 | 状态 | 证据 |
+|---|---|---|---|
+| R6-01 | 基线审计（逐项标注证据等级） | PASS | `docs/RUN-006-BASELINE.md` |
+| R6-02 | Oracle Binding API + required assertion 审核门禁 | VERIFIED | `tests/integration/test_oracle_binding_gate.py`(26)；真实 API 412/403/200 |
+| R6-03 | Oracle 版本固定到 TestCaseVersion（历史复现） | VERIFIED | `test_historical_case_uses_pinned_oracle_version`；pipeline 按 pinned 加载 |
+| R6-04 | 审核主体类型校验（agent:*/llm:*/system:*） | VERIFIED | 10 类非人类主体参数化拒绝；403 |
+| R6-05 | 并发审核 CAS（review_revision + 迁移 v7） | VERIFIED | `test_stale_review_revision_is_rejected` |
+| R6-06 | 探针证据回灌假设 + 动态重诊断 | VERIFIED（语义层） | `tests/integration/test_active_diagnosis_feedback.py`(11) |
+| R6-07 | 冲突真实计算 + STOP_CONFLICT_UNRESOLVED | VERIFIED | 同上；真实 plan `unresolved_conflicts` 字段 |
+| R6-08 | 探针失败不当目标故障证据 | VERIFIED | `test_probe_failure_is_not_target_failure_evidence` |
+| R6-09 | LLM 假设不得 CONFIRMED（前缀漏洞修复） | VERIFIED | 3 类 `suggested_by` 参数化；真实诊断中 LLM 假设为 SUPPORTED |
+| R6-10 | Evidence Graph 增加 ProbeExecution 节点/边 | VERIFIED | 真实图 60 节点/81 边含 2 探针节点 |
+| R6-11 | ProbeBudget 故障安全（读/写失败即阻断） | VERIFIED | `tests/unit/test_probe_budget_failsafe.py`(9) |
+| R6-12 | 预算跨进程 CAS 一致性 | PARTIAL（多 Registry 验证；未做双 OS 进程压测） | `test_two_processes_share_one_budget_without_overspend` |
+| R6-13 | Self-Healing 晋升/回滚原子 CAS | VERIFIED（SQLite） | `tests/integration/test_repair_atomic_cas.py`(9) |
+| R6-14 | 统一目标域名策略（Explorer + Runner） | VERIFIED | `tests/unit/test_target_policy.py`(18) |
+| R6-15 | 请求级网络管控（真实浏览器） | VERIFIED（子资源/XHR） | e2e：未授权服务端 0 次请求 |
+| R6-16 | 顶层 302 越权落地拒绝 | PARTIAL（拒绝继续，但请求已出站） | `test_redirect_landing_on_unsanctioned_origin_is_refused` |
+| R6-17 | 真实环境正常/故障链路 | VERIFIED（单场景） | `docs/assets/run006/real-env-run-summary.json` |
+| R6-18 | 完整端到端全链（含修复晋升回归） | PARTIAL | 未在本轮走完 |
+| R6-19 | 前端 14 视图体验升级 | NOT_IMPLEMENTED（本轮） | 未改前端 |
+| R6-20 | PostgreSQL 实测 / 4 Worker / 60 分钟长稳 | BLOCKED | 环境与时间窗限制 |
+| R6-21 | CI 三级门禁真实运行 | BLOCKED | 未触发真实 Actions |
+| R6-22 | UI-FaultBench 深化（30 场景多臂） | NOT_IMPLEMENTED（本轮） | 不引用历史数字 |
+| R6-23 | 稳定性回放 F08 完善 | PARTIAL（继承 RUN-005） | 未改动 |

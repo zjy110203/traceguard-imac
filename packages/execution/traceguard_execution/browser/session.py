@@ -15,6 +15,11 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from traceguard_core.logging import get_logger
+from traceguard_core.security.target_policy import (
+    TargetAccessDenied,
+    TargetCheck,
+    TargetPolicy,
+)
 
 from .manager import BrowserManager
 
@@ -56,11 +61,16 @@ class BrowserSession:
         base_url: str,
         run_id: str = "",
         trace_enabled: bool = True,
+        target_policy: TargetPolicy | None = None,
     ) -> None:
         self.manager = manager
         self.base_url = base_url.rstrip("/")
         self.run_id = run_id
+        self.policy = target_policy or TargetPolicy.from_base_url(self.base_url)
+        self.blocked_requests: list[dict[str, Any]] = []
         self.context = manager.new_context()
+        # 请求级网络管控：未授权 host/port 的请求在发出前被 abort（不依赖提示词/人工检查）
+        self.context.route("**/*", self._guard_route)
         self.page = self.context.new_page()
         self.console: list[dict[str, Any]] = []
         self.page_errors: list[dict[str, Any]] = []
@@ -79,6 +89,48 @@ class BrowserSession:
                 self._tracing = False
 
     # ------------------------------------------------------------------ events
+    def _guard_route(self, route: Any) -> None:
+        """请求级目标策略：未授权地址直接 abort，并记录审计事实。
+
+        说明：`about:` / `data:` / `blob:` 属于本地内联资源，策略放行。
+        """
+        try:
+            request = route.request
+            url = request.url
+        except Exception:  # noqa: BLE001 - 路由对象异常时保守放行会破坏安全边界
+            try:
+                route.abort(error_code="blockedbyclient")
+            except Exception:  # noqa: BLE001
+                pass
+            return
+        decision = self.policy.check(url)
+        if decision.allowed:
+            try:
+                route.continue_()
+            except Exception:  # noqa: BLE001
+                pass
+            return
+        self.blocked_requests.append(
+            {
+                "url": url,
+                "reason": decision.reason,
+                "method": getattr(request, "method", ""),
+                "resource_type": getattr(request, "resource_type", ""),
+                "at_ms": int(time.time() * 1000),
+            }
+        )
+        try:
+            route.abort(error_code="blockedbyclient")
+        except Exception:  # noqa: BLE001
+            pass
+
+    def check_target(self, url: str, *, landed: bool = False) -> TargetCheck:
+        """导航/跳转前后复核目标地址；不通过则抛 TargetAccessDenied。"""
+        decision = self.policy.check_landed_url(url) if landed else self.policy.check(url)
+        if not decision.allowed:
+            raise TargetAccessDenied(decision.reason, url)
+        return decision
+
     def _bind(self) -> None:
         self.page.on("console", self._on_console)
         self.page.on("pageerror", self._on_page_error)
@@ -238,6 +290,7 @@ class BrowserSession:
             "console_errors": console_errors,
             "http_errors": failed,
             "dialogs": list(self.dialogs),
+            "blocked_requests": list(self.blocked_requests),
         }
 
     def stop_trace(self) -> bytes | None:

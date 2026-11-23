@@ -1,0 +1,44 @@
+{
+  "run006_real_env": {
+    "teamflow": "http://127.0.0.1:8011 (isolated sqlite .traceguard/run006/teamflow.db)",
+    "api": "http://127.0.0.1:8010 (isolated sqlite .traceguard/run006/api.db)",
+    "runs": [
+      {
+        "purpose": "normal happy path",
+        "run_id": "run_179541716030067cb90d0ba49",
+        "test_verdict": "PASSED",
+        "observer": "playwright"
+      },
+      {
+        "purpose": "TF-DB-001 false pass",
+        "run_id": "run_1795417175537b8fd57ae15bf",
+        "test_verdict": "FAILED",
+        "diagnosis": "CONFIRMED PERSISTENCE",
+        "probe_plan": "STOP_CONFIRMED, 0 probes"
+      },
+      {
+        "purpose": "after fault clear",
+        "run_id": "run_1795417215470ce7b6a83e748",
+        "test_verdict": "PASSED",
+        "state_count": 1
+      }
+    ],
+    "probe_feedback_demo": {
+      "diagnosis_id": "diagnosis_run006_inconclusive",
+      "note": "诊断初始为 INCONCLUSIVE（合成，用于验证闭环语义）；探针为真实执行（HTTP 打到 TeamFlow）",
+      "probe": "http_state",
+      "state_count": 1,
+      "effect": "PERSISTENCE 假设 CONTRADICTED 并排除（excluded_by 1 条）",
+      "graph": {
+        "nodes": 60,
+        "edges": 81,
+        "probe_nodes": 2
+      }
+    },
+    "oracle_gate_live": {
+      "no_oracle_review": "412 ORACLE_BINDING_INCOMPLETE: MISSING_ORACLE: a_live",
+      "agent_review": "403 REVIEWER_MUST_BE_HUMAN: 'agent:gpt'",
+      "bind_then_review": "200 APPROVED, oracle_version pinned=1, oracle_binding_frozen=true"
+    }
+  }
+}

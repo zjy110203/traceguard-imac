@@ -1,4 +1,7 @@
-# TraceGuard API 参考（v1，共 81 个端点）
+# TraceGuard API 参考（v1）
+
+> RUN-006 实测：OpenAPI 共 **94** 个方法/路径组合（含 `/health` 与 `/docs` 相关基础端点）；
+> 本文件按资源分组列出业务端点，RUN-006 新增 `POST /testcases/{id}/versions/{v}/oracle-bindings`。
 
 - Base URL：`http://127.0.0.1:8000/api/v1`
 - 交互式文档：`/docs`（OpenAPI 3.1，`/openapi.json`）
@@ -32,8 +35,9 @@
 | GET | `/testcases/{id}` | 详情 + 最新版本 |
 | GET | `/testcases/{id}/versions` | 全部不可变版本 |
 | GET | `/testcases/{id}/versions/{v}` | 指定版本 |
-| POST | `/testcases/{id}/versions/{v}/review` | 人工审核（`reviewer` 不得为 agent/llm） |
-| GET/POST | `/oracles` | Oracle 列表 / 创建（`approved=true` 需具名人类 `approved_by`） |
+| POST | `/testcases/{id}/versions/{v}/review` | 人工审核；APPROVED 前强制校验全部 required assertion 的 Oracle；`reviewer` 主体类型不得为 agent/llm/system/service/bot；并发审核用 `review_revision` CAS |
+| POST | `/testcases/{id}/versions/{v}/oracle-bindings` | **RUN-006 新增**：`{"bindings": {assertion_id: {oracle_id, oracle_version?}}, "actor": "role:..."}`，校验存在/审批/同 Workspace；APPROVED 版本不可重绑 |
+| GET/POST | `/oracles` | Oracle 列表 / 创建（`approved=true` 需具名人类 `approved_by`，非人类主体 → 403） |
 | GET | `/oracles/{id}` | 指定或最新版本 |
 
 ## 3. 执行
@@ -123,6 +127,7 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/testcases/tcase_tf_create_normal/ex
 1. `test_verdict` 与 `execution_status` 独立；`NOT_EVALUATED` 不等于失败，也不等于通过。
 2. `POST /runs/{id}/diagnose` 对 PASSED 的 Run 返回 412 —— 不做伪诊断。
 3. 未审批 Oracle 不参与判定；`oracle_available=false` 的断言结论必须是 `NOT_EVALUATED`。
+4. 审核通过时 Oracle 版本被固定到 `AssertionSpec.oracle_version`；执行端按固定版本加载，缺失时不回退到最新版本。
 4. 修复沙箱 `sandbox_status` 与生命周期 `status` 是两个维度，不可互相替代。
 5. Benchmark 的 `blocked_baselines` 表示**没有可用模型/人力**，不是 0 分。
 

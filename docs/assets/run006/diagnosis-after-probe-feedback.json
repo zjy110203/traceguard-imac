@@ -1,0 +1,108 @@
+{
+  "id": "diagnosis_run006_inconclusive",
+  "kind": "diagnosis",
+  "workspace_id": "default",
+  "ref_id": "run_1795417175537b8fd57ae15bf",
+  "version": 1,
+  "status": "INCONCLUSIVE",
+  "created_at": "2026-11-23T00:00:00Z",
+  "updated_at": "2026-11-23T07:00:31.682396Z",
+  "diagnosis_id": "diagnosis_run006_inconclusive",
+  "run_id": "run_1795417175537b8fd57ae15bf",
+  "task_id": "task_demo",
+  "symptom": "业务断言失败（独立状态证据缺失）",
+  "outcome": "INCONCLUSIVE",
+  "disposition": "NEEDS_MORE_EVIDENCE",
+  "root_causes": [],
+  "unresolved_conflicts": [],
+  "hypotheses": [
+    {
+      "hypothesis_id": "hyp_demo_persist",
+      "description": "界面操作成功但业务状态未持久化（False Pass 风险）",
+      "failure_domain": "PRODUCT",
+      "failure_mechanism": "PERSISTENCE",
+      "supporting": [],
+      "contradicting": [
+        {
+          "id": "evd_179541723163962374c0c143f",
+          "trust": "TRUSTED"
+        }
+      ],
+      "status": "CONTRADICTED",
+      "contributing_factors": [
+        "[http_state] 独立状态查询 count=1：数据已存在，排除'未持久化'"
+      ],
+      "flaky_characteristic": false,
+      "suggested_by": "rule",
+      "probe_feedback": [
+        {
+          "probe_id": "http_state",
+          "execution_id": "probeexec_17954172316396796ca78c534",
+          "relation": "CONTRADICT",
+          "confirming": false,
+          "exclude": true,
+          "reason": "独立状态查询 count=1：数据已存在，排除'未持久化'"
+        }
+      ],
+      "excluded_by": [
+        {
+          "probe_id": "http_state",
+          "evidence_id": "evd_179541723163962374c0c143f",
+          "reason": "独立状态查询 count=1：数据已存在，排除'未持久化'"
+        }
+      ]
+    }
+  ],
+  "engine": "rule-v1+probe-feedback",
+  "probe_feedback": [
+    {
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_179541723164276f332a0665f",
+      "status": "SUCCEEDED",
+      "updates": [],
+      "skipped_reason": "",
+      "notes": {
+        "entries": 6,
+        "covered_steps": [
+          "fp_s1",
+          "fp_s2",
+          "fp_s5"
+        ],
+        "failed_steps": []
+      },
+      "claimed_as_target_failure": false
+    }
+  ],
+  "probe_evidence_ids": [
+    "evd_179541723163962374c0c143f",
+    "evd_17954172316425f875708552b"
+  ],
+  "evidence_refs": [
+    "evd_179541723163962374c0c143f"
+  ],
+  "evaluation_history": [
+    {
+      "at": "2026-11-23T07:00:31.641266Z",
+      "trigger": "probe_evidence",
+      "probes": [
+        "http_state"
+      ],
+      "outcome_before": "INCONCLUSIVE",
+      "outcome_after": "INCONCLUSIVE",
+      "root_causes_after": [],
+      "unresolved_conflicts": []
+    },
+    {
+      "at": "2026-11-23T07:00:31.643810Z",
+      "trigger": "probe_evidence",
+      "probes": [
+        "network_trace"
+      ],
+      "outcome_before": "INCONCLUSIVE",
+      "outcome_after": "INCONCLUSIVE",
+      "root_causes_after": [],
+      "unresolved_conflicts": []
+    }
+  ],
+  "last_probe_plan_id": "probeplan_1795417231637cf563ac1fb66"
+}
