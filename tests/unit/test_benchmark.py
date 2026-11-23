@@ -111,8 +111,10 @@ def test_dataset_statistics_separates_execution_and_verdict() -> None:
     # 11 个 PASSED 回归/性能感知场景不参与失败诊断计分
     assert stats["expected_test_verdict"].get("PASSED") == 11
     assert stats["diagnosis_eligible_count"] == 19
-    assert "NOT_EVALUATED" in stats["expected_test_verdict"]
-    assert "FAILED" in stats["expected_execution_status"]
+    # 4 个"执行中断"场景：LOC-001/LOC-002/COMP-003/TIME-003 → FAILED + NOT_EVALUATED
+    assert stats["expected_test_verdict"]["NOT_EVALUATED"] == 4
+    assert stats["expected_execution_status"]["FAILED"] == 4
+    assert stats["expected_execution_status"]["COMPLETED"] == 26
 
     # 旧特殊值 EXEC_FAILED 必须被归一为"执行失败 + 测试未评估"
     legacy = Scenario("LEGACY", "tc", "F", "TIMING", True, "d", "EXEC_FAILED")

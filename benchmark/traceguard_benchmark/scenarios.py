@@ -175,11 +175,31 @@ SCENARIOS: tuple[Scenario, ...] = (
         "TF-NET-002", "tcase_bench_net002", "TF-NET-002", "NETWORK", True, "9000ms 长延迟必然超时"
     ),
     # ---- 定位器失效 ----
+    # 定位器失效属于"步骤执行中断"：执行终态 FAILED，正式测试 Verdict 为 NOT_EVALUATED。
+    # 这不是产品缺陷，也不能为了贴合 GT 把它改写成 FAILED（RUN-007-FINALIZATION-2 / D2）。
     Scenario(
-        "TF-LOC-001", "tcase_bench_loc001", "TF-LOC-001", "LOCATOR", True, "提交按钮 test_id 变更"
+        "TF-LOC-001",
+        "tcase_bench_loc001",
+        "TF-LOC-001",
+        "LOCATOR",
+        True,
+        "提交按钮 test_id 变更",
+        "NOT_EVALUATED",
+        expected_execution_status="FAILED",
+        expected_test_verdict="NOT_EVALUATED",
+        expected_failure_mechanism="LOCATOR",
     ),
     Scenario(
-        "TF-LOC-002", "tcase_bench_loc002", "TF-LOC-002", "LOCATOR", True, "名称输入框 test_id 变更"
+        "TF-LOC-002",
+        "tcase_bench_loc002",
+        "TF-LOC-002",
+        "LOCATOR",
+        True,
+        "名称输入框 test_id 变更",
+        "NOT_EVALUATED",
+        expected_execution_status="FAILED",
+        expected_test_verdict="NOT_EVALUATED",
+        expected_failure_mechanism="LOCATOR",
     ),
     # ---- 时序 / 并发 ----
     Scenario(
@@ -244,6 +264,10 @@ SCENARIOS: tuple[Scenario, ...] = (
         "LOCATOR",
         True,
         "复合：定位器失效 + 静默忽略",
+        "NOT_EVALUATED",
+        expected_execution_status="FAILED",
+        expected_test_verdict="NOT_EVALUATED",
+        expected_failure_mechanism="LOCATOR",
     ),
     # ---- Flaky ----
     Scenario(

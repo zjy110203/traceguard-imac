@@ -254,3 +254,15 @@ def test_catalog_receipt_is_bound_to_testcase_and_workspace(rt: Runtime) -> None
         )
     assert exc.value.code is ErrorCode.CONFLICT
     assert rt.catalog.approved_version_number("tcase_receipt") == 2
+
+
+def test_promotion_fails_closed_on_invalid_result(rt: Runtime, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """Catalog 返回没有有效版本号时不得宣告 PROMOTED（fail-closed）。"""
+    svc = RepairService(rt)
+    pid = _approved_proposal(rt, base_version=1, locator="nav-a")
+    monkeypatch.setattr(rt.catalog, "promote_version_cas", lambda *a, **k: {})
+    doc = svc.promote(pid, idempotency_key="key-invalid")
+    assert doc["status"] == "PROMOTION_FAILED"
+    assert doc["failure_reason"] == "PROMOTION_RESULT_INVALID"
+    assert not doc.get("promoted_version")
+    assert rt.catalog.approved_version_number("tcase_receipt") == 1

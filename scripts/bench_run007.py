@@ -630,6 +630,11 @@ def run_pass(
                     "assertion_kinds": kinds,
                     "report": run.get("report"),
                     "repeat": rep,
+                    # 非诊断样本本来就没有诊断/探针/证据引用：显式置空，避免"缺字段"被误读
+                    "diagnosis_id": None,
+                    "probe_plan_id": None,
+                    "probe_state": "NOT_RUN",
+                    "evidence_refs": [],
                 }
                 sink.write(json.dumps(obs, ensure_ascii=False) + "\n")
                 sink.flush()
