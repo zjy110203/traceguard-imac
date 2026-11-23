@@ -23,8 +23,9 @@ from traceguard_contracts.models import OracleSpec, TestCaseVersion, TestIntent
 from traceguard_core.errors import AppError, ErrorCode
 from traceguard_core.ids import new_id, utc_now_iso
 
+from . import stability_gate
 from .db import Database
-from .models import IntentRow, OracleRow, TestCaseRow, TestCaseVersionRow, WorkspaceRow
+from .models import DocRow, IntentRow, OracleRow, TestCaseRow, TestCaseVersionRow, WorkspaceRow
 
 DEFAULT_WORKSPACE = "default"
 
@@ -321,9 +322,22 @@ class CatalogService:
             return out
 
     def review_testcase(
-        self, testcase_id: str, version: int, decision: str, reviewer: str, note: str = ""
+        self,
+        testcase_id: str,
+        version: int,
+        decision: str,
+        reviewer: str,
+        note: str = "",
+        *,
+        require_stability: bool = True,
     ) -> dict[str, Any]:
-        """人工审核：APPROVED 前必须通过 Oracle 绑定门禁，并用修订号 CAS 防并发。"""
+        """人工审核：APPROVED 前必须通过 Oracle 绑定门禁 **和** 稳定性回放门禁，并用修订号 CAS 防并发。
+
+        RUN-007 WP1-01：Agent 生成的候选（`compile_source in {compiler, healed}`）必须存在
+        "同版本、已完成、全样本终态、STABLE_PASS、Oracle 完整且版本固定" 的稳定性回放，
+        否则不得 APPROVED。人工编写版本（`compile_source == "human"`）显式记录豁免事实，
+        不做静默跳过；豁免会写进 `review_history`，可审计。
+        """
         if decision not in {"APPROVED", "REJECTED", "PENDING"}:
             raise AppError(ErrorCode.VALIDATION_ERROR, "decision must be APPROVED/REJECTED/PENDING")
         actor = require_human_actor(reviewer)
@@ -335,6 +349,8 @@ class CatalogService:
             doc = dict(v.doc or {})
             wsid = v.workspace_id or DEFAULT_WORKSPACE
             warnings: list[str] = list(doc.get("oracle_binding_warnings") or [])
+            stability_evidence: dict[str, Any] | None = None
+            stability_policy = ""
 
             if decision == "APPROVED":
                 problems, warnings = self._oracle_gate(s, doc, workspace_id=wsid)
@@ -346,6 +362,14 @@ class CatalogService:
                     )
                 doc = self._pin_oracle_versions(s, doc, workspace_id=wsid)
                 doc["oracle_binding_warnings"] = warnings
+                stability_evidence, stability_policy = self._stability_gate(
+                    s,
+                    testcase_id,
+                    version,
+                    doc,
+                    workspace_id=wsid,
+                    require=require_stability,
+                )
 
             doc["review_status"] = decision
             doc["review_history"] = list(doc.get("review_history") or []) + [
@@ -355,6 +379,8 @@ class CatalogService:
                     "note": note,
                     "at": _now(),
                     "review_revision": base_revision + 1,
+                    "stability_policy": stability_policy,
+                    "stability_evidence": stability_evidence,
                 }
             ]
             doc["review_revision"] = base_revision + 1
@@ -582,6 +608,64 @@ class CatalogService:
                 return None
             return dict(row.doc or {})
 
+    # ------------------------------------------------------- stability gate (F08)
+    def _stability_gate(
+        self,
+        s: Any,
+        testcase_id: str,
+        version: int,
+        doc: dict[str, Any],
+        *,
+        workspace_id: str,
+        require: bool = True,
+    ) -> tuple[dict[str, Any] | None, str]:
+        """正式审核的稳定性回放入口。
+
+        返回 `(evidence, policy)`：
+        - `policy = "ENFORCED"`：采纳了一条合法回放，`evidence` 是留痕摘要；
+        - `policy = "EXEMPT_HUMAN_AUTHORED"`：人工编写版本，记录豁免事实（不是静默跳过）；
+        - `policy = "SKIPPED_BY_CALLER"`：调用方显式 `require_stability=False`（仅用于
+          历史数据修复/迁移，正常审核路径不得使用）。
+        """
+        compile_source = str(doc.get("compile_source") or "human")
+        if not require:
+            return None, "SKIPPED_BY_CALLER"
+        if compile_source == "human":
+            # 人工编写用例没有"候选晋升"语义；仍然留痕，便于审计追溯
+            return None, "EXEMPT_HUMAN_AUTHORED"
+
+        version_ref = f"{testcase_id}@{version}"
+        rows = s.scalars(
+            select(DocRow)
+            .where(DocRow.kind == stability_gate.REPLAY_KIND, DocRow.ref_id == version_ref)
+            .order_by(DocRow.created_at.desc())
+            .limit(20)
+        ).all()
+        if not rows:
+            raise AppError(
+                ErrorCode.PRECONDITION_FAILED,
+                f"STABILITY_REPLAY_REQUIRED: {version_ref} 没有任何稳定性回放记录"
+                f"（compile_source={compile_source}）",
+                details={"testcase_version_ref": version_ref, "compile_source": compile_source},
+            )
+
+        best: list[str] | None = None
+        for row in rows:
+            problems = stability_gate.replay_problems(row.doc or {}, version_ref)
+            if not problems:
+                return stability_gate.gate_evidence(row.doc or {}), "ENFORCED"
+            if best is None or len(problems) < len(best):
+                best = problems
+        raise AppError(
+            ErrorCode.PRECONDITION_FAILED,
+            "STABILITY_REPLAY_GATE_FAILED: " + "; ".join((best or [])[:6]),
+            details={
+                "problems": best or [],
+                "testcase_version_ref": version_ref,
+                "compile_source": compile_source,
+            },
+        )
+
     # --------------------------------------------------- atomic promotion (CAS)
     def approved_version_number(self, testcase_id: str) -> int:
         """当前正式（APPROVED）版本号；0 表示还没有正式版本。"""
@@ -803,6 +887,7 @@ class CatalogService:
             doc["version"] = r.version
             doc["approved"] = r.approved
             doc["approved_by"] = r.approved_by
+            doc["workspace_id"] = r.workspace_id
             return doc
 
     def list_oracles(self, workspace_id: str | None = None) -> list[dict[str, Any]]:

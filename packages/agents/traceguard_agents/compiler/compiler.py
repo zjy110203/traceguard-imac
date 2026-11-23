@@ -210,26 +210,107 @@ class TestCaseCompiler:
             )
         return None
 
-    def validate_stability(self, verdicts: list[str]) -> dict[str, Any]:
+    #: 允许参与稳定性结论的"有效终态"；PENDING / NOT_EVALUATED 一律排除
+    TERMINAL_EVALUATED_VERDICTS = frozenset({"PASSED", "FAILED", "INCONCLUSIVE"})
+    #: 未完成 / 未被评估：既不证明稳定，也不证明失败
+    UNRESOLVED_VERDICTS = frozenset({"PENDING", "NOT_EVALUATED"})
+
+    def validate_stability(
+        self, verdicts: list[str], *, expected_samples: int | None = None
+    ) -> dict[str, Any]:
         """稳定性验证：多次回放 verdict 一致才算稳定。不降低断言严格度。
 
-        区分：确定性失败 / 环境故障 / 数据问题 / 不稳定表现 / 证据不足。
+        状态语义（RUN-007 WP1-01 明确化）：
+        - `PENDING`：Run 还没跑完 → 回放未完成，不得形成结论；
+        - `NOT_EVALUATED`：跑完了但没有任何必需 Oracle 得到有效评估 → **不是失败**，
+          只能算"证据不足"，绝不能归类为 `DETERMINISTIC_FAILURE`；
+        - `INCONCLUSIVE`：尝试评估但证据不足以裁决 → 证据不足；
+        - `PASSED` / `FAILED`：有效终态，可以作为稳定性样本。
+
+        只有"全部样本都是 PASSED"才是 `STABLE_PASS`；只有"全部样本都是 FAILED"才是
+        `DETERMINISTIC_FAILURE`。任何 NOT_EVALUATED / PENDING 混入都会把结论降级为
+        `INCOMPLETE` 或 `EVIDENCE_INSUFFICIENT`，不会被当成确定性失败。
         """
-        if not verdicts:
-            return {"stable": False, "classification": "INSUFFICIENT_EVIDENCE", "verdicts": []}
-        unique = set(verdicts)
+        raw = list(verdicts or [])
+        pending = [v for v in raw if v == "PENDING"]
+        not_evaluated = [v for v in raw if v == "NOT_EVALUATED"]
+        unknown = [v for v in raw if v not in self.TERMINAL_EVALUATED_VERDICTS | {"PENDING"}]
+        evaluated = [v for v in raw if v in self.TERMINAL_EVALUATED_VERDICTS]
+        expected = int(expected_samples) if expected_samples is not None else len(raw)
+
+        base: dict[str, Any] = {
+            "verdicts": raw,
+            "samples_expected": expected,
+            "samples_total": len(raw),
+            "samples_evaluated": len(evaluated),
+            "pending_count": len(pending),
+            "not_evaluated_count": len(not_evaluated),
+            "unknown_count": len(unknown),
+            "reasons": [],
+        }
+
+        if pending:
+            base.update(
+                stable=False,
+                classification="INCOMPLETE",
+                reasons=[f"PENDING_SAMPLES: {len(pending)} 次回放尚未完成"],
+            )
+            return base
+        if expected > len(raw):
+            base.update(
+                stable=False,
+                classification="INCOMPLETE",
+                reasons=[f"MISSING_SAMPLES: 期望 {expected} 次，实际只有 {len(raw)} 次"],
+            )
+            return base
+        if not evaluated:
+            base.update(
+                stable=False,
+                classification="INSUFFICIENT_EVIDENCE",
+                reasons=["NO_EVALUATED_SAMPLE: 没有任何样本得到有效评估"],
+            )
+            return base
+
+        unique = set(evaluated)
+        if not_evaluated or unknown:
+            # 有样本没被评估：结论必须降级，且明确说明不是"确定性失败"
+            base.update(
+                stable=False,
+                classification="EVIDENCE_INSUFFICIENT",
+                reasons=[
+                    f"UNEVALUATED_SAMPLES: {len(not_evaluated)} 次 NOT_EVALUATED / "
+                    f"{len(unknown)} 次未知状态，不能作为稳定性样本"
+                ],
+            )
+            return base
+
         if len(unique) == 1:
-            if verdicts[0] == "PASSED":
-                return {"stable": True, "classification": "STABLE_PASS", "verdicts": verdicts}
-            return {"stable": True, "classification": "DETERMINISTIC_FAILURE", "verdicts": verdicts}
-        # 不一致：不稳定
-        if "INCONCLUSIVE" in unique and unique == {"INCONCLUSIVE", "PASSED"}:
-            return {
-                "stable": False,
-                "classification": "EVIDENCE_INSUFFICIENT",
-                "verdicts": verdicts,
-            }
-        return {"stable": False, "classification": "FLAKY_UNSTABLE", "verdicts": verdicts}
+            if evaluated[0] == "PASSED":
+                base.update(stable=True, classification="STABLE_PASS")
+                return base
+            if evaluated[0] == "FAILED":
+                base.update(stable=True, classification="DETERMINISTIC_FAILURE")
+                return base
+            # 全部 INCONCLUSIVE
+            base.update(
+                stable=False,
+                classification="EVIDENCE_INSUFFICIENT",
+                reasons=["ALL_INCONCLUSIVE: 所有样本证据不足，无法裁决"],
+            )
+            return base
+
+        if "INCONCLUSIVE" in unique:
+            # 含 INCONCLUSIVE 的混合样本无法判定为"确定性失败"，也不能算稳定
+            base.update(
+                stable=False,
+                classification="EVIDENCE_INSUFFICIENT",
+                reasons=["MIXED_WITH_INCONCLUSIVE: 部分样本证据不足，结论不可判定"],
+            )
+            return base
+
+        base.update(stable=False, classification="FLAKY_UNSTABLE")
+        base["reasons"] = ["VERDICT_DIVERGENCE: PASSED/FAILED 混杂，属于 Flaky 表现"]
+        return base
 
     def review(
         self,

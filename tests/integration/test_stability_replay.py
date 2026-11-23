@@ -1,10 +1,12 @@
-"""RUN-005 WP2 F08：候选用例稳定性回放测试（不启真实浏览器）。
+"""RUN-007 WP1-01：候选用例稳定性回放（F08）测试（不启真实浏览器）。
 
 覆盖：
-- 每次回放产生独立 Run，不覆盖历史；
-- 走 sandbox Task 模式（不放开正式入口绕过审核）；
-- Oracle 不完整时不可晋升、不得声称业务预期已验证；
-- 失败分类区分 Locator / Timing / Environment / Business / UI，不一律 Flaky。
+- 每次回放产生独立 Run，不覆盖历史；走 sandbox Task 模式；
+- Run 级状态区分 PENDING / NOT_EVALUATED / INCONCLUSIVE / PASSED / FAILED；
+- 未完成的 Run 不参与结论（不产生 conclusion，不允许晋升）；
+- **NOT_EVALUATED 不得被归类为确定性失败**；
+- Oracle 完整性检查"具体已审批版本 + 版本固定"，不只看 oracle_id 是否存在；
+- 失败分类区分 Locator / Timing / Environment / 产品故障 / UI，不一律 Flaky。
 """
 
 from __future__ import annotations
@@ -36,13 +38,31 @@ def rt(work_tmp, monkeypatch):  # type: ignore[no-untyped-def]
 
 def _candidate(rt: Runtime, *, oracle_bound: bool = False) -> tuple[str, int]:
     testcase_id = new_id("tcase")
+    oracle_id = new_id("oracle")
+    if oracle_bound:
+        rt.catalog.create_oracle(
+            {
+                "oracle_id": oracle_id,
+                "assertion_id": "a1",
+                "expected_behavior": "成功提示必须出现",
+                "requirement_ref": "REQ-REPLAY-1",
+                "version": 1,
+            },
+            approved=True,
+            approved_by="role:qa-lead",
+        )
     payload = {
         "testcase_id": testcase_id,
         "version": 1,
         "intent_ref": "intent_x",
+        "compile_source": "compiler",
         "steps": [
             {"step_id": "s1", "action": "navigate", "value": "http://127.0.0.1:8011/"},
-            {"step_id": "s2", "action": "click", "target": {"strategy": "test_id", "value": "create"}},
+            {
+                "step_id": "s2",
+                "action": "click",
+                "target": {"strategy": "test_id", "value": "create"},
+            },
         ],
         "assertions": [
             {
@@ -51,7 +71,9 @@ def _candidate(rt: Runtime, *, oracle_bound: bool = False) -> tuple[str, int]:
                 "kind": "ui",
                 "required": True,
                 "expected": {"test_id": "banner-success"},
-                "oracle_id": "oracle_1" if oracle_bound else None,
+                "oracle_id": oracle_id if oracle_bound else None,
+                # 只有审核通过才会把版本固定下来；这里模拟"已固定"
+                "oracle_version": 1 if oracle_bound else None,
             }
         ],
         "review_status": "PENDING",
@@ -61,11 +83,18 @@ def _candidate(rt: Runtime, *, oracle_bound: bool = False) -> tuple[str, int]:
     return testcase_id, created["version"]
 
 
-def _set_verdict(rt: Runtime, run_id: str, verdict: str, report: dict | None = None) -> None:
+def _set_verdict(
+    rt: Runtime,
+    run_id: str,
+    verdict: str,
+    report: dict | None = None,
+    *,
+    execution_status: str = "COMPLETED",
+) -> None:
     with rt.db.session() as s:
         row = s.get(RunRow, run_id)
         row.test_verdict = verdict
-        row.execution_status = "COMPLETED"
+        row.execution_status = execution_status
         row.report_json = report or {"steps": [], "assertion_outcomes": []}
 
 
@@ -81,7 +110,51 @@ def test_replay_creates_independent_sandbox_runs(rt: Runtime) -> None:
         run = rt.tasks.get_run(record["run_id"])
         assert run is not None
     assert doc["status"] == "RUNNING"
+    assert doc["conclusion"] is None  # 未完成不得形成结论
     assert doc["requires_human_review"] is True
+    assert doc["testcase_version_ref"] == f"{testcase_id}@{version}"
+    assert doc["testcase_fingerprint"]
+
+
+def test_unfinished_replay_has_no_conclusion_and_is_not_promotable(rt: Runtime) -> None:
+    testcase_id, version = _candidate(rt, oracle_bound=True)
+    svc = StabilityReplayService(rt)
+    doc = svc.start(testcase_id, version, repeats=3)
+    # 只完成 2 个：仍不得下结论
+    _set_verdict(rt, doc["records"][0]["run_id"], "PASSED")
+    _set_verdict(rt, doc["records"][1]["run_id"], "PASSED")
+    refreshed = svc.refresh(doc["replay_id"])
+    assert refreshed["status"] == "RUNNING"
+    assert refreshed["conclusion"] is None
+    assert refreshed["promotable"] is False
+    assert refreshed["pending_runs"] == [doc["records"][2]["run_id"]]
+
+
+def test_not_evaluated_is_never_deterministic_failure(rt: Runtime) -> None:
+    """NOT_EVALUATED（跑了但没 Oracle 可评）不是"确定性失败"，只能算证据不足。"""
+    testcase_id, version = _candidate(rt, oracle_bound=False)
+    svc = StabilityReplayService(rt)
+    doc = svc.start(testcase_id, version, repeats=3)
+    for record in doc["records"]:
+        _set_verdict(rt, record["run_id"], "NOT_EVALUATED", execution_status="FAILED")
+    refreshed = svc.refresh(doc["replay_id"])
+    assert refreshed["classification"]["classification"] != "DETERMINISTIC_FAILURE"
+    assert refreshed["classification"]["classification"] == "INSUFFICIENT_EVIDENCE"
+    assert refreshed["classification"]["not_evaluated_count"] == 3
+    assert refreshed["classification"]["samples_evaluated"] == 0
+    assert refreshed["promotable"] is False
+
+
+def test_mixed_not_evaluated_downgrades_pass(rt: Runtime) -> None:
+    testcase_id, version = _candidate(rt, oracle_bound=True)
+    svc = StabilityReplayService(rt)
+    doc = svc.start(testcase_id, version, repeats=3)
+    _set_verdict(rt, doc["records"][0]["run_id"], "PASSED")
+    _set_verdict(rt, doc["records"][1]["run_id"], "PASSED")
+    _set_verdict(rt, doc["records"][2]["run_id"], "NOT_EVALUATED", execution_status="FAILED")
+    refreshed = svc.refresh(doc["replay_id"])
+    assert refreshed["classification"]["classification"] == "EVIDENCE_INSUFFICIENT"
+    assert refreshed["promotable"] is False
 
 
 def test_unstable_candidate_never_promotable(rt: Runtime) -> None:
@@ -109,6 +182,28 @@ def test_stable_but_oracle_incomplete_is_not_promotable(rt: Runtime) -> None:
     assert refreshed["promotable"] is False
     assert "不得宣称业务预期已验证" in refreshed["oracle_note"]
     assert refreshed["status"] == "COMPLETED"
+    assert any("MISSING_ORACLE" in p for p in refreshed["oracle_problems"])
+
+
+def test_unpinned_oracle_version_is_incomplete(rt: Runtime) -> None:
+    """Oracle 存在且已审批，但断言上没有固定版本 → 不算完整。"""
+    testcase_id, version = _candidate(rt, oracle_bound=True)
+    with rt.db.session() as s:
+        from traceguard_persistence.models import TestCaseVersionRow
+
+        row = s.get(TestCaseVersionRow, f"{testcase_id}@{version}")
+        old = dict(row.doc or {})
+        # 注意：JSON 列不支持嵌套原地修改追踪，必须重建结构再赋值
+        new_assertions = [{**a, "oracle_version": None} for a in old.get("assertions") or []]
+        row.doc = {**old, "assertions": new_assertions}
+    svc = StabilityReplayService(rt)
+    doc = svc.start(testcase_id, version, repeats=2)
+    for record in doc["records"]:
+        _set_verdict(rt, record["run_id"], "PASSED")
+    refreshed = svc.refresh(doc["replay_id"])
+    assert refreshed["oracle_complete"] is False
+    assert any("ORACLE_VERSION_NOT_PINNED" in p for p in refreshed["oracle_problems"])
+    assert refreshed["promotable"] is False
 
 
 def test_stable_with_oracle_is_promotable_but_still_needs_human(rt: Runtime) -> None:
@@ -152,8 +247,9 @@ def test_failure_classes_are_specific(rt: Runtime) -> None:
     refreshed = svc.refresh(doc["replay_id"])
     classes = refreshed["classification"]["failure_classes"]
     assert classes["LOCATOR"] == 1
-    assert classes["BUSINESS"] == 1
+    assert classes["PRODUCT"] == 1  # 业务断言失败 = 产品故障（不再混进 Flaky）
     assert classes["ENVIRONMENT"] == 1
+    assert refreshed["classification"]["execution_failures"] == []
 
 
 def test_repeat_bounds_are_validated(rt: Runtime) -> None:

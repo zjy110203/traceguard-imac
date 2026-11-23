@@ -196,13 +196,20 @@ class ReviewReq(BaseModel):
     decision: str
     reviewer: str
     note: str = ""
+    #: 仅供历史数据修复/迁移使用；正常审核路径必须保持默认 True（不得用来跳过门禁）
+    require_stability: bool = True
 
 
 @router.post("/testcases/{testcase_id}/versions/{version}/review")
 async def review(testcase_id: str, version: int, req: ReviewReq) -> dict[str, Any]:
     try:
         return get_services().rt.catalog.review_testcase(
-            testcase_id, version, req.decision, req.reviewer, req.note
+            testcase_id,
+            version,
+            req.decision,
+            req.reviewer,
+            req.note,
+            require_stability=req.require_stability,
         )
     except AppError as exc:
         raise _handle(exc) from exc
