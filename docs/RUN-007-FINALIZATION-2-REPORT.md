@@ -34,7 +34,7 @@
 | WP5 PostgreSQL | 本机 **BLOCKED**（无 psql/docker）；CI 的 `postgres:16` job 为唯一真实覆盖 | §7.2、§9 |
 | WP6 前端关键交互 | 75/75 检查通过（15 视图 × 4 断点 + 明暗主题），0 console 错误 | `docs/assets/run007/ui-f2/ui-review.json` |
 | WP7 最终回归 | **547 passed / 11 skipped**；ruff check + format 全绿 | §7.4 |
-| WP8 CI / PR | **PR Gate 在 `023f688` 上真实成功**（push #11 46s / PR #12 47s）；Nightly/Release 未 dispatch | §7.5 |
+| WP8 CI / PR | **PR Gate 在代码/证据提交 `7e7528f` 上真实成功**（push #15 53s / PR #16 52s）；Nightly/Release 未 dispatch | §7.5 |
 
 ---
 
@@ -319,12 +319,15 @@ E2E 总计 **56 步 / 0 失败**（含场景 D 新增的 D17b 回滚内容级复
 
 ### 7.5 CI / PR
 
-push 到 `workbuddy/run007-resume-20261123` 自动触发 PR Gate，**在最终代码提交 `023f688` 上真实通过**：
+push 到 `workbuddy/run007-resume-20261123` 自动触发 PR Gate，**代码/测试/证据的最终提交 `7e7528f` 真实通过**：
 
 | 门禁 | 事件 | 运行 | 结论 | 明细 |
 |---|---|---|---|---|
-| PR Gate #11 | push（`023f688`） | [45224414344](https://github.com/zjy110203/traceguard-imac/actions/runs/45224414344) | **success（46s）** | backend 43s（ruff/format/单测/契约/关键集成）、frontend 24s（typecheck+build） |
-| PR Gate #12 | pull_request #1（synchronize） | [45224428962](https://github.com/zjy110203/traceguard-imac/actions/runs/45224428962) | **success（47s）** | backend 45s、frontend 25s |
+| PR Gate #15 | push（`7e7528f`） | [45226091595](https://github.com/zjy110203/traceguard-imac/actions/runs/45226091595) | **success（53s）** | backend（ruff check/format/单测/契约/关键集成）、frontend（typecheck+build） |
+| PR Gate #16 | pull_request #1（synchronize） | [45226105637](https://github.com/zjy110203/traceguard-imac/actions/runs/45226105637) | **success（52s）** | 同上 |
+
+本轮 7 个提交的 PR Gate 均成功（#11/#12 → 023f688，#13/#14 → b5cb00b，#15/#16 → 7e7528f）。
+本文件归档后若再追加纯文档提交，代码等价于 `7e7528f`，其 PR Gate 结果以 Actions 列表为准。
 
 仅有的 2 条 annotation 是 Node.js 20 deprecated（actions 版本被强升 Node24），非阻断。
 
@@ -354,7 +357,7 @@ push 到 `workbuddy/run007-resume-20261123` 自动触发 PR Gate，**在最终�
 
 1. **PostgreSQL 本地持续运行与并发验证 BLOCKED**：本机无 PG 运行时，只能依赖 CI `postgres:16`；
    迁移 v9 未在 PG 上实测。
-2. **Nightly / Release Gate 未在本轮 commit 上运行**：PR Gate 已在 `023f688` 上真实通过（§7.5），
+2. **Nightly / Release Gate 未在本轮 commit 上运行**：PR Gate 已在代码提交 `7e7528f` 上真实通过（§7.5），
    但 Nightly（含 `postgres:16`、真实浏览器 E2E、Benchmark）与 Release（attestation）
    需要 `workflow_dispatch` 且需要带 Actions 权限的凭据，本轮未执行。
    上一轮 `cc3339d`/`fdbe0f5` 的 Nightly/Release 绿灯**不能**作为本轮验收证据。
