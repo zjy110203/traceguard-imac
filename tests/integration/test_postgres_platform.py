@@ -391,3 +391,175 @@ def test_producer_sequence_allocator_does_not_reuse_numbers(db: Database) -> Non
     assert len(allocated) == 20
     assert len(set(allocated)) == 20, f"序列重复: {sorted(allocated)}"
     assert min(allocated) >= 1
+
+
+def test_migration_v9_upgrades_existing_pg_evidence_table(pg_url: str) -> None:
+    """迁移 v9 在 PG 上对**已存在的旧表**生效：加列幂等，历史行如实 NOT_RUN。
+
+    构造 pre-v9 结构（tg_evidence 无摘要列、迁移记录只到 v8）后启动 schema：
+    `create_all` 不会改已存在的表，必须依赖 v9 的 ALTER TABLE；这一条在 SQLite 上
+    有用例，但 PG 的 JSON 类型与 ALTER 语义不同，必须单独实测。
+    """
+    from traceguard_persistence.stores import PersistentEvidenceManager
+
+    engine = create_engine(pg_url, future=True)
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    "CREATE TABLE tg_evidence ("
+                    "evidence_id VARCHAR(64) PRIMARY KEY,"
+                    "workspace_id VARCHAR(64) NOT NULL,"
+                    "run_id VARCHAR(64),"
+                    "kind VARCHAR(20) NOT NULL,"
+                    "source_type VARCHAR(30) NOT NULL,"
+                    "sha256 VARCHAR(64) NOT NULL,"
+                    "attachment_ref VARCHAR(200),"
+                    "source_trust VARCHAR(20) NOT NULL DEFAULT 'UNKNOWN',"
+                    "integrity_check VARCHAR(12) NOT NULL DEFAULT 'NOT_RUN',"
+                    "redacted BOOLEAN NOT NULL DEFAULT FALSE,"
+                    "doc JSON NOT NULL DEFAULT '{}',"
+                    "captured_at VARCHAR(40) NOT NULL DEFAULT '')"
+                )
+            )
+            conn.execute(
+                text(
+                    "CREATE TABLE tg_schema_migration ("
+                    "version INTEGER PRIMARY KEY, name VARCHAR(120) NOT NULL, "
+                    "applied_at VARCHAR(40) NOT NULL)"
+                )
+            )
+            for v in range(2, 9):
+                conn.execute(
+                    text(
+                        "INSERT INTO tg_schema_migration (version, name, applied_at) "
+                        "VALUES (:v, :n, '2026-01-01T00:00:00Z')"
+                    ),
+                    {"v": v, "n": f"legacy_{v}"},
+                )
+            conn.execute(
+                text(
+                    "INSERT INTO tg_evidence (evidence_id, workspace_id, run_id, kind, "
+                    "source_type, sha256, attachment_ref, doc, captured_at) VALUES "
+                    "('evd_legacy_pg', 'default', 'run_legacy', 'raw', 'browser', "
+                    "'deadbeef', 'art_legacy', :doc, '2026-01-01T00:00:00Z')"
+                ),
+                {"doc": '{"content": {"a": 1}, "run_id": "run_legacy"}'},
+            )
+    finally:
+        engine.dispose()
+
+    db = Database(pg_url)
+    try:
+        db.create_schema()
+        rows = _migration_rows(db)
+        assert (9, "evidence_digest_semantics") in rows
+        assert len(rows) == len(EXPECTED_VERSIONS)
+
+        with db.session() as s:
+            cols = {
+                str(r[0])
+                for r in s.execute(
+                    text(
+                        "SELECT column_name FROM information_schema.columns "
+                        "WHERE table_name = 'tg_evidence'"
+                    )
+                ).all()
+            }
+        assert {"stored_content_sha256", "attachment_sha256", "integrity_detail"} <= cols
+
+        # 历史行没有记录摘要：只能 NOT_RUN，不能判 PASS/FAIL
+        em = PersistentEvidenceManager(db)
+        result = em.verify_storage_integrity("evd_legacy_pg", artifacts=None)
+        assert result["status"] == "NOT_RUN"
+        assert "STORED_DIGEST_NOT_RECORDED_AT_CAPTURE" in result["reasons"]
+
+        # 重复启动不重复应用迁移（幂等）
+        db.create_schema()
+        assert len(_migration_rows(db)) == len(EXPECTED_VERSIONS)
+    finally:
+        db.dispose()
+
+
+def test_migration_v10_widens_intent_ref_and_pg_accepts_long_ref(pg_url: str) -> None:
+    """迁移 v10：PG 上把 intent_ref 从 varchar(64) 放宽到 varchar(255)。
+
+    背景（真实缺陷）：探索编译把需求正文写进 intent_ref，SQLite 不校验长度所以本地全绿，
+    PG 直接 `value too long for type character varying(64)` → 编译接口 500。
+    语义修复后 intent_ref 只存引用，同时放宽列以兼容历史长引用。
+    """
+    engine = create_engine(pg_url, future=True)
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    "CREATE TABLE tg_testcase ("
+                    "testcase_id VARCHAR(64) PRIMARY KEY,"
+                    "workspace_id VARCHAR(64) NOT NULL,"
+                    "intent_ref VARCHAR(64),"
+                    "title VARCHAR(300) NOT NULL DEFAULT '',"
+                    "review_status VARCHAR(20) NOT NULL DEFAULT 'DRAFT',"
+                    "latest_version INTEGER NOT NULL DEFAULT 0,"
+                    "compile_source VARCHAR(20) NOT NULL DEFAULT 'human',"
+                    "doc JSON NOT NULL DEFAULT '{}',"
+                    "created_at VARCHAR(40) NOT NULL DEFAULT '',"
+                    "updated_at VARCHAR(40) NOT NULL DEFAULT '')"
+                )
+            )
+            conn.execute(
+                text(
+                    "CREATE TABLE tg_schema_migration ("
+                    "version INTEGER PRIMARY KEY, name VARCHAR(120) NOT NULL, "
+                    "applied_at VARCHAR(40) NOT NULL)"
+                )
+            )
+            for v in range(2, 10):
+                conn.execute(
+                    text(
+                        "INSERT INTO tg_schema_migration (version, name, applied_at) "
+                        "VALUES (:v, :n, '2026-01-01T00:00:00Z')"
+                    ),
+                    {"v": v, "n": f"legacy_{v}"},
+                )
+    finally:
+        engine.dispose()
+
+    db = Database(pg_url)
+    try:
+        db.create_schema()
+        assert (10, "widen_testcase_intent_ref") in _migration_rows(db)
+        with db.session() as s:
+            length = s.execute(
+                text(
+                    "SELECT character_maximum_length FROM information_schema.columns "
+                    "WHERE table_name = 'tg_testcase' AND column_name = 'intent_ref'"
+                )
+            ).scalar()
+        assert int(length) == 255
+
+        catalog = CatalogService(db)
+        payload = {
+            "testcase_id": "tcase_pg_long_ref",
+            "version": 1,
+            "intent_ref": "i" * 200,
+            "steps": [{"step_id": "s1", "action": "navigate", "value": "/"}],
+            "assertions": [
+                {
+                    "assertion_id": "a1",
+                    "description": "标题",
+                    "kind": "ui",
+                    "expected": {"test_id": "page-title"},
+                    "oracle_id": "oracle_pg_long_ref",
+                }
+            ],
+            "created_at": "2026-01-01T00:00:00Z",
+        }
+        created = catalog.create_testcase(payload, title="pg-long-ref")
+        assert len(created["intent_ref"]) == 200  # PG 不再截断
+
+        payload["intent_ref"] = "i" * 300
+        with pytest.raises(AppError) as exc:
+            catalog.create_testcase({**payload, "testcase_id": "tcase_pg_long_ref2"})
+        assert exc.value.code is ErrorCode.VALIDATION_ERROR
+    finally:
+        db.dispose()

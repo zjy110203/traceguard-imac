@@ -240,3 +240,37 @@ def test_oracle_agent_cannot_approve(db: Database) -> None:
     # 新版本自动递增，不覆盖历史
     doc2 = cat.create_oracle(payload, approved=True, approved_by="role:qa-lead")
     assert doc2["version"] == 2
+
+
+def test_testcase_intent_ref_length_is_validated(db: Database) -> None:
+    """SQLite 不校验 VARCHAR 长度，PG 会直接 500；目录层必须显式拒绝超长引用。"""
+    payload = {
+        "testcase_id": "tcase_long_ref",
+        "version": 1,
+        "intent_ref": "x" * 300,
+        "steps": [{"step_id": "s1", "action": "navigate", "value": "/"}],
+        "assertions": [
+            {
+                "assertion_id": "a1",
+                "description": "标题",
+                "kind": "ui",
+                "expected": {"test_id": "page-title"},
+                "oracle_id": "oracle_long_ref",
+            }
+        ],
+        "created_at": "2026-01-01T00:00:00Z",
+    }
+    with pytest.raises(AppError) as exc:
+        db_catalog(db).create_testcase(payload, title="long")
+    assert exc.value.code.value == "VALIDATION_ERROR"
+    assert "intent_ref" in exc.value.message
+
+    payload["intent_ref"] = "y" * 200  # 255 以内允许
+    created = db_catalog(db).create_testcase(payload, title="long-ok")
+    assert created["intent_ref"] == "y" * 200
+
+
+def db_catalog(db: Database):  # type: ignore[no-untyped-def]
+    from traceguard_persistence.catalog import CatalogService
+
+    return CatalogService(db)

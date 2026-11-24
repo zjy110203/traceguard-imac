@@ -277,6 +277,11 @@ MIGRATIONS: list[tuple[int, str, list[str]]] = [
         "evidence_digest_semantics",
         ["__CALLABLE__:_migrate_evidence_digest_semantics"],
     ),
+    (
+        10,
+        "widen_testcase_intent_ref",
+        ["__CALLABLE__:_migrate_widen_intent_ref"],
+    ),
 ]
 
 
@@ -302,6 +307,30 @@ def _migrate_evidence_digest_semantics(conn) -> None:  # type: ignore[no-untyped
         if name in cols:
             continue
         conn.execute(text(f"ALTER TABLE tg_evidence ADD COLUMN {name} {ddl}"))
+
+
+def _migrate_widen_intent_ref(conn) -> None:  # type: ignore[no-untyped-def]
+    """把 tg_testcase.intent_ref 从 VARCHAR(64) 放宽到 VARCHAR(255)（RUN-007-FINALIZATION-2）。
+
+    真实缺陷：探索编译曾把"需求正文"写进 intent_ref，SQLite 不校验 VARCHAR 长度所以
+    一直正常，PostgreSQL 抛 `value too long for type character varying(64)` → 500。
+    语义修复见 compiler/exploration_service；这里同时放宽列以兼容历史长引用。
+    """
+    from sqlalchemy import inspect
+
+    inspector = inspect(conn)
+    if "tg_testcase" not in inspector.get_table_names():
+        return
+    cols = {c["name"]: c for c in inspector.get_columns("tg_testcase")}
+    col = cols.get("intent_ref")
+    if col is None:
+        return
+    length = getattr(col.get("type"), "length", None)
+    if length is not None and int(length) >= 255:
+        return
+    if conn.dialect.name == "sqlite":
+        return  # SQLite 不强制 VARCHAR 长度，无需重建表
+    conn.execute(text("ALTER TABLE tg_testcase ALTER COLUMN intent_ref TYPE VARCHAR(255)"))
 
 
 def _migrate_step_primary_key(conn) -> None:  # type: ignore[no-untyped-def]
@@ -393,6 +422,7 @@ _MIGRATION_CALLABLES = {
     "_migrate_inbox_states": _migrate_inbox_states,
     "_migrate_review_revision": _migrate_review_revision,
     "_migrate_evidence_digest_semantics": _migrate_evidence_digest_semantics,
+    "_migrate_widen_intent_ref": _migrate_widen_intent_ref,
 }
 
 _lock = threading.RLock()

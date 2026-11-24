@@ -215,6 +215,16 @@ class CatalogService:
         """
         clean = {k: v for k, v in payload.items() if k in TestCaseVersion.model_fields}
         tc = TestCaseVersion(**clean)
+        # 数据库无关的长度护栏：SQLite 不校验 VARCHAR 长度，PG 会直接抛 DataError(500)。
+        # 这里显式返回校验错误，避免"本地过、CI/PG 崩"的差异。
+        if tc.intent_ref and len(tc.intent_ref) > 255:
+            raise AppError(
+                ErrorCode.VALIDATION_ERROR,
+                f"intent_ref 过长（{len(tc.intent_ref)} > 255）：引用字段不得存放需求正文，"
+                "正文请放 intent_text",
+            )
+        if title and len(title) > 300:
+            raise AppError(ErrorCode.VALIDATION_ERROR, f"title 过长（{len(title)} > 300）")
         tc.review_status = review_status  # type: ignore[assignment]
         with self.db.session() as s:
             row = s.get(TestCaseRow, tc.testcase_id)

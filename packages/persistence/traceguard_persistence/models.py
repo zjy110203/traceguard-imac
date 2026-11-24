@@ -58,7 +58,9 @@ class TestCaseRow(Base):
     __tablename__ = "tg_testcase"
     testcase_id: Mapped[str] = mapped_column(String(64), primary_key=True)
     workspace_id: Mapped[str] = mapped_column(String(64), index=True)
-    intent_ref: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    #: 需求引用（intent_id）。v10 从 64 放宽到 255：调用方可能传入较长引用；
+    #: 需求正文不得写进这里（见 TestCaseVersion.intent_text）。
+    intent_ref: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     title: Mapped[str] = mapped_column(String(300), default="")
     review_status: Mapped[str] = mapped_column(String(20), default="DRAFT")
     latest_version: Mapped[int] = mapped_column(Integer, default=0)

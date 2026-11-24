@@ -178,7 +178,8 @@ class TestCaseCompiler:
         candidate = TestCaseVersion(
             testcase_id=new_id("tcase"),
             version=1,
-            intent_ref=intent,
+            intent_ref=None,  # 引用由调用方（探索服务）补 intent_id
+            intent_text=intent,
             steps=steps,
             assertions=assertions,
             preconditions=["探索轨迹来源：" + trace.get("exploration_id", "unknown")],
