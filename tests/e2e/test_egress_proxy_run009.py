@@ -129,17 +129,13 @@ def test_chromium_forced_loopback_through_proxy(report: dict[str, Any]) -> None:
     assert any(arg.startswith("--proxy-server=http://127.0.0.1:") for arg in argv), argv
 
     # 代理审计里必须真的出现 loopback 目标（功能证据，不只依赖命令行）
-    loopback_entries = [
-        e for e in report["proxy_audit"] if e["host"] in {"127.0.0.1", "::1"}
-    ]
+    loopback_entries = [e for e in report["proxy_audit"] if e["host"] in {"127.0.0.1", "::1"}]
     assert loopback_entries, "代理审计中没有 loopback 请求，bypass 可能未生效"
 
 
 def test_proxy_ipv6_and_keepalive_validation_regression() -> None:
     """快速回归：IPv6 URL 重建 + keep-alive 后续请求不得绕过逐请求校验。"""
-    policy = TargetPolicy.from_origins(
-        ["http://127.0.0.1:1", "http://[::1]:1"], pin_dns=False
-    )
+    policy = TargetPolicy.from_origins(["http://127.0.0.1:1", "http://[::1]:1"], pin_dns=False)
     proxy = EgressProxy(policy)
 
     # IPv6 字面量必须能重建出可解析的 URL（曾因未加 [] 被误判 MALFORMED_URL）

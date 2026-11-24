@@ -236,7 +236,9 @@ async def bind_oracles(
         request, req.actor, "oracle.bind", resource_type="testcase", resource_id=testcase_id
     )
     try:
-        return get_services().rt.catalog.bind_oracles(testcase_id, version, req.bindings, actor=actor)
+        return get_services().rt.catalog.bind_oracles(
+            testcase_id, version, req.bindings, actor=actor
+        )
     except AppError as exc:
         raise _handle(exc) from exc
 
@@ -266,7 +268,11 @@ async def create_oracle(req: OracleReq, request: Request) -> dict[str, Any]:
     approved_by = ""
     if req.approved:
         approved_by = trusted_actor(
-            request, req.approved_by, "oracle.create", resource_type="oracle", resource_id=req.assertion_id
+            request,
+            req.approved_by,
+            "oracle.create",
+            resource_type="oracle",
+            resource_id=req.assertion_id,
         )
     payload = {
         "oracle_id": req.oracle_id or new_id("oracle"),

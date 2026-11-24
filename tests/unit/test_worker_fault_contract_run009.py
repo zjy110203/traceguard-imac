@@ -117,9 +117,15 @@ def test_duplicate_submit_contract_stale_rejected_same_owner_recorded() -> None:
     assert claim is not None
     token = claim["fencing_token"]
 
-    svc.submit_result(run_id, "worker-A", token, execution_status="RUNNING", test_verdict="NOT_EVALUATED")
-    svc.submit_result(run_id, "worker-A", token, execution_status="FINALIZING", test_verdict="PASSED")
-    svc.submit_result(run_id, "worker-A", token, execution_status="COMPLETED", test_verdict="PASSED")
+    svc.submit_result(
+        run_id, "worker-A", token, execution_status="RUNNING", test_verdict="NOT_EVALUATED"
+    )
+    svc.submit_result(
+        run_id, "worker-A", token, execution_status="FINALIZING", test_verdict="PASSED"
+    )
+    svc.submit_result(
+        run_id, "worker-A", token, execution_status="COMPLETED", test_verdict="PASSED"
+    )
 
     run = svc.get_run(run_id)
     assert run["execution_status"] == "COMPLETED"

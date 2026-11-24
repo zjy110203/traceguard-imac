@@ -236,9 +236,7 @@ class EgressProxy:
             try:
                 ip = ipaddress.ip_address(ip_text)
             except ValueError:
-                return Decision(
-                    False, "INVALID_DNS_ANSWER", scheme, host, port, path, tuple(ips)
-                )
+                return Decision(False, "INVALID_DNS_ANSWER", scheme, host, port, path, tuple(ips))
             if not _is_internal(ip):
                 continue
             # 私网地址只允许两种显式授权：IP 字面量本身在白名单，或它是授权主机
@@ -302,9 +300,7 @@ class EgressProxy:
         return headers
 
     @staticmethod
-    async def _read_body(
-        reader: asyncio.StreamReader, headers: dict[str, str]
-    ) -> bytes:
+    async def _read_body(reader: asyncio.StreamReader, headers: dict[str, str]) -> bytes:
         try:
             length = int(headers.get("content-length", "0") or "0")
         except ValueError:
@@ -316,9 +312,7 @@ class EgressProxy:
         return await asyncio.wait_for(reader.readexactly(length), timeout=_READ_TIMEOUT_S)
 
     # ------------------------------------------------------------------ 连接处理
-    async def _handle(
-        self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
-    ) -> None:
+    async def _handle(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         method = ""
         channel = "unknown"
         try:
@@ -334,9 +328,7 @@ class EgressProxy:
             body = await self._read_body(reader, headers)
             if method.upper() == "CONNECT":
                 channel = "connect"
-                await self._handle_connect(
-                    reader, writer, target, version, method, channel
-                )
+                await self._handle_connect(reader, writer, target, version, method, channel)
             else:
                 channel = "http"
                 await self._handle_http(
@@ -428,9 +420,7 @@ class EgressProxy:
         forwarded.append("Connection: Upgrade\r\n" if is_ws_upgrade else "Connection: close\r\n")
         head = "".join(forwarded).encode("latin-1") + b"\r\n"
 
-        upstream_reader, upstream_writer = await asyncio.open_connection(
-            decision.chosen_ip, port
-        )
+        upstream_reader, upstream_writer = await asyncio.open_connection(decision.chosen_ip, port)
         self._record(decision, channel=channel, method=method, connected=True)
         try:
             upstream_writer.write(head + body)
@@ -461,9 +451,7 @@ class EgressProxy:
     ) -> None:
         # CONNECT 的 authority 形如 host:port，IPv6 为 [::1]:port。
         authority = target.strip()
-        if authority.count(":") > 1 and not (
-            authority.startswith("[") and "]" in authority
-        ):
+        if authority.count(":") > 1 and not (authority.startswith("[") and "]" in authority):
             decision = Decision(False, "MALFORMED_HOST", "https", "", 0, "")
             self._record(decision, channel=channel, method=method, connected=False)
             await self._error_response(writer, 403, "MALFORMED_HOST")
@@ -505,9 +493,7 @@ class EgressProxy:
             await self._error_response(writer, 403, decision.reason)
             return
 
-        upstream_reader, upstream_writer = await asyncio.open_connection(
-            decision.chosen_ip, port
-        )
+        upstream_reader, upstream_writer = await asyncio.open_connection(decision.chosen_ip, port)
         writer.write(b"HTTP/1.1 200 Connection Established\r\n\r\n")
         await writer.drain()
         self._record(decision, channel=channel, method=method, connected=True)
@@ -551,9 +537,7 @@ class EgressProxy:
         await asyncio.gather(*tasks, return_exceptions=True)
 
     @staticmethod
-    async def _error_response(
-        writer: asyncio.StreamWriter, status: int, reason: str
-    ) -> None:
+    async def _error_response(writer: asyncio.StreamWriter, status: int, reason: str) -> None:
         """最小错误响应：不回显 URL、Header 或任何目标内容。"""
         body = f"{status} {reason}".encode("ascii", errors="replace")
         writer.write(
