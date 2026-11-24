@@ -15,6 +15,7 @@
 
 - PR #1（`workbuddy/run007-resume-20261123` → `main`）仍 open，`mergeable=true`、`mergeable_state=clean`，其 head `ce1acea` 是本分支祖先；因此新建 PR #2 覆盖完整 32 提交，避免合并时丢失 RUN-008 历史。
 - 已创建 **PR #2**：<https://github.com/zjy110203/traceguard-imac/pull/2>，源分支 `workbuddy/run008-quality-hardening`，目标 `main`，状态 open。
+- **RUN-009 后续更新**：RUN-009 10 个提交（`e15a2b8`..`e11d7d1`）已推送至该分支；最新 HEAD 的 PR Gate `backend=success`、`frontend=success`（真实 Actions 运行）。合并仍保持 **HOLD**，理由同下。
 - **合并决策：暂不合并（NEEDS_DECISION / HOLD）**。理由：完整授权允许合并，但 WP0 复核发现仍有未处理的高风险事项——真实认证/RBAC 未实现（请求体可伪造审批人）、B-17 下四个 Worker 故障场景 BLOCKED、网络出口受控代理尚未验证；这些事项正在 RUN-009 处理。按「没有未处理的高风险问题才可合并」的条件，先保持分支与 PR 开放；RUN-009 完成后在 WP9 重新评估，必要时以新提交更新同一 PR 的 head_sha 并重跑 CI。
 - 未执行 `reset` / `clean` / 强推 / 历史改写；未关闭或合并 PR #1。
 
