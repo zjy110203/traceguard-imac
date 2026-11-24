@@ -44,6 +44,16 @@ class Settings(BaseSettings):
     allowed_origins: list[str] = Field(default_factory=lambda: ["http://127.0.0.1:5173"])
     max_upload_bytes: int = 10 * 1024 * 1024
 
+    # RUN-009 WP2：真实身份认证与 RBAC。
+    # 显式开启后所有 /api/v1/** 业务请求 fail-closed；关闭时仅用于明确标记的开发/迁移环境。
+    auth_enabled: bool = False
+    auth_session_ttl_s: int = 8 * 3600
+    auth_cookie_name: str = "tg_session"
+    auth_cookie_secure: bool = False
+    auth_csrf_required: bool = True
+    auth_max_failed_logins: int = 5
+    auth_login_window_s: int = 300
+
     # TeamFlow（阶段1）
     teamflow_base_url: str = "http://127.0.0.1:8001"
 

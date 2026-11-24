@@ -67,10 +67,14 @@ class DiagnosisService:
                 ErrorCode.PRECONDITION_FAILED, "run PASSED：无失败症状可诊断（不做伪诊断）"
             )
         if run["test_verdict"] == "NOT_EVALUATED":
-            raise AppError(
-                ErrorCode.PRECONDITION_FAILED,
-                "run NOT_EVALUATED：缺少 Oracle 或执行中断，只能补证据，不能下结论",
-            )
+            # RUN-010 WP4/5：有失败步骤证据的 NOT_EVALUATED 允许进入规则诊断——
+            # 结论仍是"方向性支持"（引擎不会 CONFIRMED：断言未评估），
+            # 输出 PROBABLE/INCONCLUSIVE + NEEDS_MORE_EVIDENCE 处置，不冒充结论。
+            if not report.get("steps"):
+                raise AppError(
+                    ErrorCode.PRECONDITION_FAILED,
+                    "run NOT_EVALUATED 且无步骤证据：只能补证据，不能下结论",
+                )
         if run["execution_status"] != "COMPLETED" and not report.get("steps"):
             raise AppError(
                 ErrorCode.PRECONDITION_FAILED, "run has no executable evidence (failed/cancelled)"
@@ -117,6 +121,7 @@ class DiagnosisService:
         observed: list[str] = []
 
         http_5xx: list[dict[str, Any]] = []
+        http_authz: list[dict[str, Any]] = []
         network_failures: list[dict[str, Any]] = []
         locator_timeouts: list[dict[str, Any]] = []
         page_errors: list[dict[str, Any]] = []
@@ -129,8 +134,12 @@ class DiagnosisService:
                 if s not in locator_timeouts:
                     locator_timeouts.append(s)
             for he in obs.get("http_errors") or []:
-                if (he.get("status") or 0) >= 500:
+                status_code = he.get("status") or 0
+                if status_code >= 500:
                     http_5xx.append({"step": s["step_id"], "entry": he})
+                elif status_code in (401, 403):
+                    # RUN-010 WP4 规则补齐：HTTP 403/401 → AUTHORIZATION 假设
+                    http_authz.append({"step": s["step_id"], "entry": he})
             for ne in obs.get("network") or []:
                 if ne.get("failure"):
                     network_failures.append({"step": s["step_id"], "entry": ne})
@@ -211,6 +220,32 @@ class DiagnosisService:
                 )
             )
 
+        # ---- HTTP 401/403 → 授权缺陷（RUN-010 WP4 规则补齐）
+        # 403/401 是确定性授权信号：目标服务器明确拒绝。403 时业务断言失败是
+        # 授权被拒的后果，不作为独立根因。
+        if http_authz:
+            ids = []
+            for item in http_authz:
+                ids.extend(network_evidence_ids(item["step"]))
+                ids.extend(step_evidence_ids(item["step"]))
+            codes = sorted({int(item["entry"].get("status") or 0) for item in http_authz})
+            hypotheses.append(
+                Hypothesis(
+                    hypothesis_id=new_id("hyp"),
+                    description=(
+                        f"目标返回 {codes}：访问被拒绝（授权/会话缺失或权限不足）"
+                        f"（{http_authz[0]['entry'].get('url', '')}）"
+                    ),
+                    failure_domain=DOMAIN_EXEC,
+                    failure_mechanism=FailureMechanism.AUTHORIZATION,
+                    supporting=refs(list(dict.fromkeys(ids)), confirming=True),
+                    contributing_factors=[
+                        f"HTTP {item['entry'].get('status')} @ {item['step']}"
+                        for item in http_authz[:3]
+                    ],
+                )
+            )
+
         # ---- 网络失败 / 超时
         if network_failures or run_timeouts:
             ids = []
@@ -281,7 +316,6 @@ class DiagnosisService:
                 )
 
         symptom = " | ".join(observed[:3]) or f"verdict={run['test_verdict']}"
-
         # ---- LLM 诊断顾问（RUN-003-G）：只追加 PROBABLE 级候选假设，不改 CONFIRMED 判定
         advisor_enabled = (
             getattr(self.rt.settings, "llm_diagnosis_enabled", True)
@@ -298,7 +332,34 @@ class DiagnosisService:
                 hypotheses=hypotheses,
             )
 
-        result = self.engine.diagnose(symptom, hypotheses)
+        # ---- RUN-010 WP4：Evidence Graph 裁决层参与主因裁决
+        # （图不再只用于可视化：时间窗口/来源独立/重复消重/完整性全部进入裁决）
+        evidence_rows = [
+            {
+                "evidence_id": e.evidence_id,
+                "source_type": e.source_type,
+                "source_ref": str((e.content or {}).get("step_id", "") or e.source_ref),
+                "captured_at": e.captured_at,
+                "source_trust": getattr(e, "source_trust", "") or "",
+                "integrity_check": getattr(e, "integrity_check", "") or "NOT_RUN",
+                "kind": getattr(e, "kind", "") or "",
+            }
+            for e in evidence
+        ]
+        from traceguard_evidence.graph.adjudication import (
+            GraphAdjudicator,
+            evidence_meta_from_rows,
+        )
+
+        meta_index = evidence_meta_from_rows(evidence_rows)
+        adjudicator = GraphAdjudicator(
+            meta_index,
+            run_started_at=_parse_epoch(run.get("started_at")),
+            run_ended_at=_parse_epoch(run.get("ended_at")),
+        )
+        adjudication = adjudicator.adjudicate([h.to_dict() for h in hypotheses])
+
+        result = self.engine.diagnose(symptom, hypotheses, adjudication=adjudication)
         doc = {
             "diagnosis_id": result.diagnosis_id,
             "run_id": run_id,
@@ -314,14 +375,15 @@ class DiagnosisService:
             "evidence_refs": list(
                 dict.fromkeys([r["id"] for h in hypotheses for r in h.to_dict()["supporting"]])
             ),
+            "graph_adjudication": result.graph_adjudication,
             "flaky_characteristic": flaky,
             "engine": (
-                "rule-v1+llm-advisor"
+                "rule-v2+graph-adjudication+llm-advisor"
                 if llm_advisor_notes and llm_advisor_notes.get("called")
-                else "rule-v1"
+                else "rule-v2+graph-adjudication"
             ),
             "llm_advisor": llm_advisor_notes,
-            "strategy_version": "v1",
+            "strategy_version": "v2",
             "created_at": utc_now_iso(),
         }
         self.rt.docs.put(
@@ -363,16 +425,46 @@ class DiagnosisService:
         }
         run = self.rt.tasks.get_run(doc.get("run_id", "")) or {}
         report = run_report if run_report is not None else (run.get("report") or {})
+        run_ended_at = _parse_epoch(run.get("ended_at"))
 
-        merged, results = merge_signals(doc.get("hypotheses") or [], signals, report)
+        merged, results = merge_signals(
+            doc.get("hypotheses") or [], signals, report, run_ended_at=run_ended_at
+        )
+        # RUN-010 WP4：探针生成的 TIMING 新假设（写入延迟/查询滞后）进入假设列表
         hypotheses = [_hypothesis_from_dict(h) for h in merged]
-        result = self.engine.diagnose(doc.get("symptom", ""), hypotheses)
+
+        # RUN-010 WP4：裁决层参与重诊断（与首诊同一裁决口径）
+        evidence_rows = [
+            {
+                "evidence_id": e.evidence_id,
+                "source_type": e.source_type,
+                "source_ref": str((e.content or {}).get("step_id", "") or e.source_ref),
+                "captured_at": e.captured_at,
+                "source_trust": getattr(e, "source_trust", "") or "",
+                "integrity_check": getattr(e, "integrity_check", "") or "NOT_RUN",
+                "kind": getattr(e, "kind", "") or "",
+            }
+            for e in self.rt.evidence.list(run_id=doc.get("run_id", ""), limit=500)
+        ]
+        from traceguard_evidence.graph.adjudication import (
+            GraphAdjudicator,
+            evidence_meta_from_rows,
+        )
+
+        adjudicator = GraphAdjudicator(
+            evidence_meta_from_rows(evidence_rows),
+            run_started_at=_parse_epoch(run.get("started_at")),
+            run_ended_at=run_ended_at,
+        )
+        adjudication = adjudicator.adjudicate([h.to_dict() for h in hypotheses])
+        result = self.engine.diagnose(doc.get("symptom", ""), hypotheses, adjudication=adjudication)
 
         doc["hypotheses"] = [h.to_dict() for h in hypotheses]
         doc["outcome"] = result.outcome.value
         doc["disposition"] = result.disposition.value
         doc["root_causes"] = result.root_causes
         doc["unresolved_conflicts"] = result.unresolved_conflicts
+        doc["graph_adjudication"] = result.graph_adjudication
         doc["probe_feedback"] = [r.to_dict() for r in results]
         doc["probe_evidence_ids"] = list(
             dict.fromkeys(eid for r in results for u in r.updates for eid in u.evidence_ids)
@@ -671,7 +763,11 @@ def _enum(cls: Any, value: Any, fallback: Any) -> Any:
 
 
 def _hypothesis_from_dict(h: dict[str, Any]) -> Hypothesis:
-    """把持久化的假设文档还原成领域对象（探针回灌后重新裁决用）。"""
+    """把持久化的假设文档还原成领域对象（探针回灌后重新裁决用）。
+
+    RUN-010 WP4：POST_HOC 证据以 UNTRUSTED 信任进入领域对象——引擎的
+    CONFIRMED 规则只认 TRUSTED，事后观测因此无法冒充权威证据。
+    """
     return Hypothesis(
         hypothesis_id=str(h["hypothesis_id"]),
         description=str(h.get("description", "")),
@@ -680,12 +776,20 @@ def _hypothesis_from_dict(h: dict[str, Any]) -> Hypothesis:
             FailureMechanism, h.get("failure_mechanism"), FailureMechanism.UNKNOWN
         ),
         supporting=[
-            EvidenceRef(str(x["id"]), str(x.get("trust", "UNKNOWN")), bool(x.get("confirming")))
+            EvidenceRef(
+                str(x["id"]),
+                str(x.get("trust", "UNKNOWN")),
+                bool(x.get("confirming")) and str(x.get("trust", "")) == "TRUSTED",
+            )
             for x in h.get("supporting") or []
             if x.get("id")
         ],
         contradicting=[
-            EvidenceRef(str(x["id"]), str(x.get("trust", "UNKNOWN")), False)
+            EvidenceRef(
+                str(x["id"]),
+                str(x.get("trust", "UNKNOWN")),
+                False,
+            )
             for x in h.get("contradicting") or []
             if x.get("id")
         ],
@@ -696,3 +800,17 @@ def _hypothesis_from_dict(h: dict[str, Any]) -> Hypothesis:
         probe_feedback=list(h.get("probe_feedback") or []),
         excluded_by=list(h.get("excluded_by") or []),
     )
+
+
+def _parse_epoch(value: Any) -> float:
+    """run started_at/ended_at（epoch 或 ISO）→ epoch 秒；未知返回 0。"""
+    if value in (None, "", 0):
+        return 0.0
+    if isinstance(value, (int, float)):
+        return float(value)
+    from datetime import datetime
+
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        return 0.0

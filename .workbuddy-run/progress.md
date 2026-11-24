@@ -1,5 +1,15 @@
 # TraceGuard 自主开发进度
 
+> **RUN-010 进度（2026-11-24 22:45 CST）**：WP0~WP9 全部完成并推送（HEAD 与 origin 同步）。
+> 验收矩阵、测试汇总（**657 收集 / 644 passed / 13 skipped**、E2E **30**、axe 13 路由 0 违规）、BLOCKED 项见
+> `docs/RUN-010-FINAL-REPORT.md`。以下历史进度保留。
+
+> **RUN-009 WP0 权威状态摘要（2026-11-24 16:05 CST）**：下方 RUN-001 段是历史起点快照，不再代表当前状态。
+> RUN-009 已完成：WP0/1/2/5/6/7 通过，WP3/WP4 PARTIAL（宿主级网络封锁与 B-17 四场景如实 BLOCKED），
+> WP8 PARTIAL（vue-tsc 升级 NEEDS_DECISION）。最终状态见 `docs/RUN-009-FINAL-REPORT.md`；
+> 当前分支 `workbuddy/run008-quality-hardening`，`origin/main` = `ac2876e`，领先 32+ 提交。
+> 不得把 `40efee6` 的三段 CI 结果外推到后续提交。以下历史记录保留不覆盖。
+
 > 本目录为长期自主运行的持久化记录。每次中断后先读 `resume.md`，再读本文件与 `phase-status.md`。
 > 严禁在此保存密钥、Token、密码或真实凭据。
 
@@ -155,3 +165,50 @@
 - 交付：`docs/RUN-006-BASELINE.md`、`RUN-006-IMPLEMENTATION-REPORT.md`、`RUN-006-TEST-REPORT.md`、
   `RUN-006-SECURITY-RELIABILITY.md`、`RUN-006-DECISION-REQUESTS.md`；证据 `docs/assets/run006/`。
 - WP1 五项均落地并有可复核证据；WP2–WP6 按实际状态标 PARTIAL/BLOCKED/NOT_IMPLEMENTED，未虚报。
+
+## RUN-007-RESUME 进度（2026-11-23）
+
+| WP | 内容 | 状态 |
+|---|---|---|
+| WP0 | 基线审计 + 分支创建 + `docs/RUN-007-BASELINE.md` | ✅ 完成（origin/main 校验一致） |
+| WP1 | 五项修复复核 + 迁移 v8 幂等/旧库升级 | ✅ 完成（163 passed；4 迁移用例；修 3 个真实缺陷） |
+| WP2 | E2E 改独立 Worker 消费队列 | ✅ 完成（55 步 0 失败，证据重取） |
+| WP3 | 前端 15 视图 × 4 断点 + 深色 + 四态 | ✅ 完成（75/75，人工复核 + 修 3 处缺陷） |
+| WP4-01 | PG16 Service Container 扩展验证 | ⚠️ 用例与 CI 就绪；本机无 PG → BLOCKED |
+| WP4-02 | Worker 故障恢复 | ✅ 完成（17/17 checks） |
+| WP4-03 | 60 分钟长稳 | ✅ 完成（65 周期全 PASSED） |
+| WP5 | CI 三级门禁修复 | ⚠️ 逻辑已修 + YAML 校验；无凭据 → 未真实触发（IMPLEMENTED） |
+| WP6 | UI-FaultBench v3 四臂 + LLM 臂 | ✅ 完成（含 D/E 无增益的负结论） |
+| WP7 | 七份报告 + README/FEATURE-STATUS/台账 + 状态文件 | ✅ 完成 |
+| — | 分支推送 + PR | ❌ BLOCKED（无 Git 凭据） |
+
+## RUN-007-RESUME 收尾（2026-11-23 深夜）
+
+| WP | 变更后状态 |
+|---|---|
+| WP4-01 PostgreSQL 16 | ⚠️ → ✅ **PASS（CI 真跑 16.16，6 用例）**；本机仍无 PG |
+| WP5 CI 三级门禁 | ⚠️（未运行）→ ✅ **PASS**（同 commit 三级全绿） |
+| 分支推送 + PR | ❌ BLOCKED → ✅ **PASS**（PR #1） |
+| CI 首跑暴露缺陷 | 8 个（2 个产品缺陷 + 6 个测试/CI 缺陷），4 轮修完 |
+
+## RUN-010-FINAL-CLOSEOUT（2026-11-25 00:30 CST）
+
+- 基线复核：分支 `workbuddy/run008-quality-hardening`，HEAD `f69c39b` 与 origin 一致，工作区干净，
+  PR #2 head = 该 SHA；origin/main `ac2876e` 为 merge-base（ahead 61，无落后）。
+- **统计更正（以真实证据为准）**：RUN-010 提交 15→16、文件 66→77；测试 601→**657 收集 /
+  644 passed / 13 skipped**；E2E 35→**30**；PR #2 差异 691→**693 文件 / 61 提交**。
+- **CL-01（P1）**：`EgressProxyController` 用 `asyncio.to_thread(stop_evt.wait)` 占用线程池线程；
+  代理先于 `stop()` 退出时该线程永久阻塞，解释器退出阶段 `concurrent.futures._python_exit`
+  join 挂死 → CI Nightly backend-full 打印 "2 failed, 642 passed" 后静默 43 分钟被 45min 超时取消；
+  Release full-verification 同样挂死 60min。本地 faulthandler 线程栈复现并确认；改用轮询协程 +
+  退出时置位事件 + `shutdown_default_executor()`。修复后全量 72s 正常退出。
+- **CL-02**：登录 E2E 依赖 `apps/web/dist`，Nightly/Release 未构建前端 → `/runs` 无 SPA 路由
+  → 2 个真实 E2E 必失败。两处 workflow 补 `npm ci && npm run build` + `dist/index.html` fail-closed 校验。
+- 文档补齐：`docs/RUN-010-WP4-INTELLIGENCE.md`、`docs/RUN-010-WP6-FRONTEND.md`、
+  `docs/RUN-010-CLOSEOUT-REPORT.md`；FINAL-REPORT / PR-REVIEW / 台账 / 状态文件同步更新。
+- CI（最终代码 HEAD `271ee42`）：PR Gate push+PR 双 success；Nightly Gate 5/5 success（backend-full 70.42s，
+  644 passed / 13 skipped，postgres 16.16）；Release Gate 4/4 success（`NIGHTLY_OK head_sha=271ee423…`）。
+- **CL-03**：复验 `da2fbc6` 时 PG 并发建表撞 `pg_type` 唯一索引（4 线程 3 失败），
+  为 `CREATE TABLE IF NOT EXISTS` 非原子所致；已加 PG advisory lock 串行化 + SAVEPOINT 容忍，
+  `271ee42` 复验通过。
+- PR #2 标题与描述已更新为 RUN-007~RUN-010 集成状态；未合并、未改写历史、未强推。

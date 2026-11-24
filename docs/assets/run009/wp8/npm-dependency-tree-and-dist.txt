@@ -1,0 +1,56 @@
+=== npm ls vue-tsc @vue/language-core minimatch ===
+traceguard-web@0.1.0 /Users/dlp--test/Desktop/traceguard/apps/web
+└─┬ vue-tsc@2.2.12
+  └─┬ @vue/language-core@2.2.12
+    └── minimatch@9.0.9
+
+=== npm ls --omit=dev --depth=1 ===
+traceguard-web@0.1.0 /Users/dlp--test/Desktop/traceguard/apps/web
+├─┬ @lucide/vue@1.77.0
+│ └── vue@3.5.46 deduped
+├─┬ pinia@2.3.1
+│ ├── @vue/devtools-api@6.6.4
+│ ├── typescript@5.6.3
+│ ├── vue-demi@0.14.10
+│ └── vue@3.5.46 deduped
+├─┬ vue-router@4.6.5
+│ ├── @vue/devtools-api@6.6.4 deduped
+│ └── vue@3.5.46 deduped
+└─┬ vue@3.5.46
+  ├── @vue/compiler-dom@3.5.46
+  ├── @vue/compiler-sfc@3.5.46
+  ├── @vue/runtime-dom@3.5.46
+  ├── @vue/server-renderer@3.5.46
+  ├── @vue/shared@3.5.46
+  └── typescript@5.6.3 deduped
+
+=== dist 文件清单 ===
+dist/assets/BarChart.vue_vue_type_script_setup_true_lang-CbMd3YX1.js
+dist/assets/BenchmarkView-CLFG6i7i.js
+dist/assets/ConfirmDialog.vue_vue_type_script_setup_true_lang-DVN0Z_Bn.js
+dist/assets/DashboardView-BfKFjWvK.js
+dist/assets/DiagnosesView-Xuul7U3k.js
+dist/assets/DiagnosisDetailView-C0fUW6Ar.css
+dist/assets/DiagnosisDetailView-CdXrdb9C.js
+dist/assets/ExplorerView-CB-zALxX.js
+dist/assets/IntentsView-CLoTXL8O.js
+dist/assets/JsonBlock.vue_vue_type_script_setup_true_lang-BVY7tfAj.js
+dist/assets/MetricCard.vue_vue_type_script_setup_true_lang-CuJ19Smt.js
+dist/assets/ModalShell.vue_vue_type_script_setup_true_lang-BVUWCfsr.js
+dist/assets/ModelsView-CkZ9_3kK.js
+dist/assets/OraclesView-Ktv3Q2BD.js
+dist/assets/PageHeader.vue_vue_type_script_setup_true_lang-DO6hKopb.js
+dist/assets/RepairsView-raAxUT1D.js
+dist/assets/RunDetailView-BWsgIMZ2.js
+dist/assets/RunsView-CFS8m61q.js
+dist/assets/StatusBadge.vue_vue_type_script_setup_true_lang-B7j-WM4H.js
+dist/assets/SystemView-BFtHSWRl.js
+dist/assets/TestCaseDetailView-BYsVRrR-.js
+dist/assets/TestCasesView-BM-ryJGt.js
+dist/assets/TrendChart.vue_vue_type_script_setup_true_lang-DoIlkTbr.js
+dist/assets/index-CCM3EuWl.js
+dist/assets/index-T0rBq4FC.css
+dist/assets/refresh-cw-BDRPGX3q.js
+dist/index.html
+=== dist 中漏洞关键字扫描 (minimatch|vue-tsc|language-core) ===
+(no matches)

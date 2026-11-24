@@ -75,9 +75,7 @@ def test_multiprocess_sequence_allocation_is_unique(db_url: str) -> None:
     ctx = mp.get_context("fork")
     q = ctx.Queue()
     procs = [
-        ctx.Process(
-            target=_append_worker, args=(db_url, "inst-shared", "worker-1", i * 25, 25, q)
-        )
+        ctx.Process(target=_append_worker, args=(db_url, "inst-shared", "worker-1", i * 25, 25, q))
         for i in range(4)
     ]
     for p in procs:
@@ -100,9 +98,7 @@ def test_multiprocess_sequence_allocation_is_unique(db_url: str) -> None:
 def test_concurrent_duplicate_delivery_returns_same_event(db_url: str) -> None:
     ctx = mp.get_context("fork")
     q = ctx.Queue()
-    procs = [
-        ctx.Process(target=_duplicate_worker, args=(db_url, "same-key", q)) for _ in range(4)
-    ]
+    procs = [ctx.Process(target=_duplicate_worker, args=(db_url, "same-key", q)) for _ in range(4)]
     for p in procs:
         p.start()
     for p in procs:

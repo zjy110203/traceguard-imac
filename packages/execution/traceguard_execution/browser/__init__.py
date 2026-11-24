@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from .egress import EgressProxyController, EgressProxyDeadError
 from .manager import (
     BrowserConfig,
     BrowserManager,
     BrowserUnavailableError,
     close_current_thread_browser,
     config_from_env,
+    egress_enforced_from_env,
     get_browser_manager,
     probe_browser,
 )
@@ -18,9 +20,12 @@ __all__ = [
     "BrowserManager",
     "BrowserSession",
     "BrowserUnavailableError",
+    "EgressProxyController",
+    "EgressProxyDeadError",
     "NetworkEntry",
     "close_current_thread_browser",
     "config_from_env",
+    "egress_enforced_from_env",
     "get_browser_manager",
     "probe_browser",
 ]

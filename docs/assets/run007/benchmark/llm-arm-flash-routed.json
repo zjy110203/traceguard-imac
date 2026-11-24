@@ -1,0 +1,943 @@
+{
+  "round": "RUN-007-RESUME",
+  "arm": "LLM",
+  "label": "flash-routed",
+  "api": "http://127.0.0.1:8020",
+  "teamflow": "http://127.0.0.1:8021",
+  "subset": 19,
+  "subset_note": "故障场景子集（预算约束），不是全量 19 个故障场景",
+  "started_at": "2026-11-23T13:52:28Z",
+  "duration_s": 275.7,
+  "llm_candidate_accuracy": {
+    "num": 8,
+    "den": 19,
+    "value": 0.4211
+  },
+  "final_diagnosis_accuracy": {
+    "num": 10,
+    "den": 19,
+    "value": 0.5263
+  },
+  "models_seen": {
+    "deepseek-flash": 12,
+    "unknown": 7
+  },
+  "llm_calls": {
+    "total_delta": 22,
+    "median_per_case": 1
+  },
+  "llm_not_called": [
+    "TF-UI-001",
+    "TF-LOC-001",
+    "TF-LOC-002",
+    "TF-TIME-003",
+    "TF-SEC-001",
+    "TF-COMP-002",
+    "TF-COMP-003"
+  ],
+  "rows": [
+    {
+      "scenario": "TF-DB-001",
+      "testcase_id": "tcase_tf_false_pass",
+      "gt": "PERSISTENCE",
+      "run_id": "run_1795441948044385ad35cdb3e",
+      "elapsed_s": 5.3,
+      "verdict": "FAILED",
+      "execution_status": "COMPLETED",
+      "worker": "run007-w3",
+      "diagnose_s": 4.8,
+      "outcome": "CONFIRMED",
+      "pred_final": "PERSISTENCE",
+      "pred_final_basis": "CONFIRMED",
+      "pred": "PERSISTENCE",
+      "pred_basis": "SUPPORTED",
+      "correct": true,
+      "final_correct": true,
+      "llm": {
+        "engine": "rule-v1+llm-advisor",
+        "called": true,
+        "model": "deepseek-flash",
+        "added": [
+          {
+            "description": "项目创建请求（POST /api/projects）之后，权威状态接口返回 count=0、keys=[]，说明新建项目未被持久化或写入未被状态读取路径感知，导致后续列表断言为空/找不到项目而失败。",
+            "domain": "PERSISTENCE",
+            "confidence": 0.55,
+            "evidence_ids": [
+              "evd_1795441951334f7c6b5ebbfe9",
+              "evd_179544195314969f305f689c3",
+              "evd_1795441953018218fe850205c",
+              "evd_17954419530189dd9ac7f1b48"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "断言在等待步骤之后立即执行，但列表/状态尚未重新拉取或重新渲染完成，断言读到的是创建前的空列表快照，属于时序与等待条件不足导致失败。",
+            "domain": "TIMEOUT",
+            "confidence": 0.4,
+            "evidence_ids": [
+              "evd_179544195292988427661b07d",
+              "evd_17954419529289a806e0e5711",
+              "evd_17954419529725de008413cd0",
+              "evd_1795441953017c820b222fcdf"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "断言定位器所指向的列表项/项目名称元素与实际渲染结构不匹配（或匹配到创建前 DOM 快照），即使数据存在也无法命中，导致 fp_s7/fp_s8 断言失败。",
+            "domain": "LOCATOR",
+            "confidence": 0.3,
+            "evidence_ids": [
+              "evd_1795441953018218fe850205c",
+              "evd_17954419530189dd9ac7f1b48",
+              "evd_17954419529725de008413cd0"
+            ],
+            "warnings": [
+              "fabricated_evidence_id_removed"
+            ]
+          }
+        ],
+        "skipped": null,
+        "fallbacks": [],
+        "calls_delta": 1
+      }
+    },
+    {
+      "scenario": "TF-DB-002",
+      "testcase_id": "tcase_bench_db002",
+      "gt": "PERSISTENCE",
+      "run_id": "run_179544195817237d536683741",
+      "elapsed_s": 9.4,
+      "verdict": "FAILED",
+      "execution_status": "COMPLETED",
+      "worker": "run007-w3",
+      "diagnose_s": 5.9,
+      "outcome": "CONFIRMED",
+      "pred_final": "PERSISTENCE",
+      "pred_final_basis": "CONFIRMED",
+      "pred": "PERSISTENCE",
+      "pred_basis": "SUPPORTED",
+      "correct": true,
+      "final_correct": true,
+      "llm": {
+        "engine": "rule-v1+llm-advisor",
+        "called": true,
+        "model": "deepseek-flash",
+        "added": [
+          {
+            "description": "创建项目提交（db2_b4 触发的 POST /api/projects，无 http_errors）后，权威状态接口 /api/state/projects 仍返回 count=1 且仅含既有 key TF-602104，说明新建项目可能未被写入持久化存储，导致 db2_b6 的断言找不到新项目。",
+            "domain": "PERSISTENCE",
+            "confidence": 0.45,
+            "evidence_ids": [
+              "evd_179544196551222cbda778fad",
+              "evd_17954419672850b0810fb5a3b"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "db2_b4 的创建操作可能已在服务端生效，但页面列表/视图未在 db2_b5 等待窗口内刷新重渲染，db2_b6 断言读取到的是创建前的旧 DOM 快照（与 db2_b4 的截图 artifact 相同 sha256），造成断言失败。",
+            "domain": "UI",
+            "confidence": 0.4,
+            "evidence_ids": [
+              "evd_179544196551437eaae9c093f",
+              "evd_1795441967075eeada6262740",
+              "evd_1795441967132a81bb80f0656",
+              "evd_17954419671321805e6a93c36"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "db2_b5 的 wait 与该断言之间的时序可能不足：异步 POST 响应与列表更新在断言执行时尚未完成，产生竞态，使 db2_b6 在数据/渲染就绪前就做判断。",
+            "domain": "TIMEOUT",
+            "confidence": 0.3,
+            "evidence_ids": [
+              "evd_1795441967075eeada6262740",
+              "evd_1795441967075af0053fbfef6",
+              "evd_17954419671315fdaa723a2ae",
+              "evd_179544196551222cbda778fad"
+            ],
+            "warnings": []
+          }
+        ],
+        "skipped": null,
+        "fallbacks": [],
+        "calls_delta": 1
+      }
+    },
+    {
+      "scenario": "TF-DB-004",
+      "testcase_id": "tcase_bench_db004",
+      "gt": "TIMING",
+      "run_id": "run_1795441973500bc7be23ad932",
+      "elapsed_s": 5.3,
+      "verdict": "FAILED",
+      "execution_status": "COMPLETED",
+      "worker": "run007-w2",
+      "diagnose_s": 6.3,
+      "outcome": "CONFIRMED",
+      "pred_final": "PERSISTENCE",
+      "pred_final_basis": "CONFIRMED",
+      "pred": "PERSISTENCE",
+      "pred_basis": "SUPPORTED",
+      "correct": false,
+      "final_correct": false,
+      "llm": {
+        "engine": "rule-v1+llm-advisor",
+        "called": true,
+        "model": "deepseek-flash",
+        "added": [
+          {
+            "description": "创建项目后服务端未持久化该记录：独立状态查询返回 count=0、keys=[]，而创建请求已发出，导致后续对项目列表/计数的一致性校验持续失败。",
+            "domain": "PERSISTENCE",
+            "confidence": 0.55,
+            "evidence_ids": [
+              "evd_179544197853476a81362d68a",
+              "evd_179544197671070305de019ff",
+              "evd_1795441978352c569d7936b70",
+              "evd_17954419783965e2b07eca4d5"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "UI 在创建成功后未刷新或未重新拉取列表，页面 DOM 仍呈现旧列表，断言在界面上找不到新项目。",
+            "domain": "UI",
+            "confidence": 0.45,
+            "evidence_ids": [
+              "evd_17954419767114295059921d3",
+              "evd_17954419783085a64de085b1c",
+              "evd_1795441978352008c165065fe",
+              "evd_17954419783951d1afdc0d3f7"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "创建/刷新的异步链路未在等待窗口内完成，断言执行过早导致失败。",
+            "domain": "TIMEOUT",
+            "confidence": 0.3,
+            "evidence_ids": [
+              "evd_179544197830702f658431959",
+              "evd_17954419783520cc0aadfe32b",
+              "evd_1795441978395050c22811d94",
+              "evd_179544197671070305de019ff"
+            ],
+            "warnings": []
+          }
+        ],
+        "skipped": null,
+        "fallbacks": [],
+        "calls_delta": 1
+      }
+    },
+    {
+      "scenario": "TF-UI-001",
+      "testcase_id": "tcase_tf_ui_missing",
+      "gt": "UI_RENDERING",
+      "run_id": "run_179544198519223eb70d2e0e7",
+      "elapsed_s": 5.8,
+      "verdict": "FAILED",
+      "execution_status": "COMPLETED",
+      "worker": "run007-w3",
+      "diagnose_s": 14.9,
+      "outcome": "CONFIRMED",
+      "pred_final": "UI_RENDERING",
+      "pred_final_basis": "CONFIRMED",
+      "pred": "NONE",
+      "pred_basis": "no-llm-candidate",
+      "correct": false,
+      "final_correct": true,
+      "llm": {
+        "engine": "rule-v1",
+        "called": false,
+        "model": null,
+        "added": null,
+        "skipped": "llm_error:invalid_json",
+        "fallbacks": null,
+        "calls_delta": 2
+      }
+    },
+    {
+      "scenario": "TF-UI-002",
+      "testcase_id": "tcase_bench_ui002",
+      "gt": "UI_RENDERING",
+      "run_id": "run_179544200584311307d5d34eb",
+      "elapsed_s": 4.9,
+      "verdict": "FAILED",
+      "execution_status": "COMPLETED",
+      "worker": "run007-w4",
+      "diagnose_s": 4.5,
+      "outcome": "PROBABLE",
+      "pred_final": "PERSISTENCE",
+      "pred_final_basis": "SUPPORTED",
+      "pred": "PERSISTENCE",
+      "pred_basis": "SUPPORTED",
+      "correct": false,
+      "final_correct": false,
+      "llm": {
+        "engine": "rule-v1+llm-advisor",
+        "called": true,
+        "model": "deepseek-flash",
+        "added": [
+          {
+            "description": "创建项目后，权威状态接口返回的 projects 数量仍为 0（keys 为空），说明新建的项目没有写入被 UI 读取的状态源，后续断言因此找不到任何项目条目。",
+            "domain": "PERSISTENCE",
+            "confidence": 0.55,
+            "evidence_ids": [
+              "evd_17954420106816572340ceeb1",
+              "evd_1795442008418038dbea79c76",
+              "evd_179544200883458db427ae67d",
+              "evd_17954420105473ba8147f136f"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "点击提交后的等待与断言发生在列表异步刷新完成之前，UI 断言读取到的仍是创建前渲染的空列表。",
+            "domain": "TIMEOUT",
+            "confidence": 0.35,
+            "evidence_ids": [
+              "evd_179544201044017e391737f78",
+              "evd_17954420104913f72ec0f6365",
+              "evd_17954420105476b365ed53839",
+              "evd_179544200883458db427ae67d"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "断言定位的可能是旧列表容器/占位节点，未指向新插入的项目条目，因而即使 DOM 更新也会判定失败。",
+            "domain": "LOCATOR",
+            "confidence": 0.25,
+            "evidence_ids": [
+              "evd_17954420105471b19b77e1081",
+              "evd_17954420104916e1ba3130366",
+              "evd_17954420104408105a220b3d6",
+              "evd_17954420080057442e9fea6a0"
+            ],
+            "warnings": []
+          }
+        ],
+        "skipped": null,
+        "fallbacks": [],
+        "calls_delta": 1
+      }
+    },
+    {
+      "scenario": "TF-UI-003",
+      "testcase_id": "tcase_bench_ui003",
+      "gt": "UI_RENDERING",
+      "run_id": "run_17954420152649d9ed8288770",
+      "elapsed_s": 4.9,
+      "verdict": "FAILED",
+      "execution_status": "COMPLETED",
+      "worker": "run007-w4",
+      "diagnose_s": 11.7,
+      "outcome": "CONFIRMED",
+      "pred_final": "UI_RENDERING",
+      "pred_final_basis": "CONFIRMED",
+      "pred": "UI_RENDERING",
+      "pred_basis": "SUPPORTED",
+      "correct": true,
+      "final_correct": true,
+      "llm": {
+        "engine": "rule-v1+llm-advisor",
+        "called": true,
+        "model": "deepseek-flash",
+        "added": [
+          {
+            "description": "项目已通过 POST /api/projects 创建成功，且权威状态查询返回 count=1（key TF-066621），但 UI 在断言步骤 ui3_n7/ui3_n6 时未渲染出该新建项目，导致断言失败。",
+            "domain": "UI",
+            "confidence": 0.55,
+            "evidence_ids": [
+              "evd_1795442019943405426da862a",
+              "evd_1795442018096648e73953f61",
+              "evd_17954420198023b02b840ad78",
+              "evd_179544201980257218835483a",
+              "evd_179544201980138a92b12a652"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "ui3_n5 的 wait 与 ui3_n6/ui3_n7 的断言时序过紧，异步渲染或请求回调尚未完成时就执行了断言，表现为断言失败而不是显式的等待超时。",
+            "domain": "TIMEOUT",
+            "confidence": 0.4,
+            "evidence_ids": [
+              "evd_17954420196974143c9027c2e",
+              "evd_1795442019697b147bbe76aa4",
+              "evd_1795442019696ea71859cb114",
+              "evd_17954420197584908dbbdfbee",
+              "evd_17954420198023b02b840ad78"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "断言使用的定位器或期望文本与新创建项目的实际渲染内容不匹配（例如项目 key/名称格式、动态生成标识、列表项结构差异），导致断言无法命中目标元素。",
+            "domain": "LOCATOR",
+            "confidence": 0.3,
+            "evidence_ids": [
+              "evd_17954420198023b02b840ad78",
+              "evd_179544201980257218835483a",
+              "evd_179544201980138a92b12a652",
+              "evd_17954420197584908dbbdfbee",
+              "evd_1795442017649fa616409f4ed"
+            ],
+            "warnings": []
+          }
+        ],
+        "skipped": null,
+        "fallbacks": [],
+        "calls_delta": 2
+      }
+    },
+    {
+      "scenario": "TF-API-001",
+      "testcase_id": "tcase_tf_api_error",
+      "gt": "API",
+      "run_id": "run_1795442031852a1efa6a23e46",
+      "elapsed_s": 3.7,
+      "verdict": "FAILED",
+      "execution_status": "COMPLETED",
+      "worker": "run007-w3",
+      "diagnose_s": 4.7,
+      "outcome": "CONFIRMED",
+      "pred_final": "API",
+      "pred_final_basis": "CONFIRMED",
+      "pred": "API",
+      "pred_basis": "SUPPORTED",
+      "correct": true,
+      "final_correct": true,
+      "llm": {
+        "engine": "rule-v1+llm-advisor",
+        "called": true,
+        "model": "deepseek-flash",
+        "added": [
+          {
+            "description": "点击创建项目后，POST /api/projects 返回 500，服务端未能创建项目，后续断言因列表为空而失败。",
+            "domain": "API",
+            "confidence": 0.78,
+            "evidence_ids": [
+              "evd_17954420339052df871301081",
+              "evd_1795442035322210abedb124a",
+              "evd_179544203518434db9a2de5e7",
+              "evd_179544203518416f71d0bc00a",
+              "evd_17954420351844b7a05fbcf4c"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "项目创建未持久化：权威状态接口返回 count=0、keys=[]，说明即使前端提交，后端状态存储中也没有新增记录，导致页面断言无数据可匹配。",
+            "domain": "PERSISTENCE",
+            "confidence": 0.45,
+            "evidence_ids": [
+              "evd_1795442035322210abedb124a",
+              "evd_17954420339052df871301081",
+              "evd_179544203518434db9a2de5e7"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "断言的等待时机不足：创建失败后页面可能仍处加载/重试状态，wait 步骤的固定等待未覆盖列表刷新或错误提示渲染，断言在错误状态下执行。",
+            "domain": "TIMEOUT",
+            "confidence": 0.22,
+            "evidence_ids": [
+              "evd_1795442035120b4e78d20ba8c",
+              "evd_17954420351202d6bbc67c08e",
+              "evd_17954420351199188c8e68568",
+              "evd_179544203518434db9a2de5e7"
+            ],
+            "warnings": []
+          }
+        ],
+        "skipped": null,
+        "fallbacks": [],
+        "calls_delta": 1
+      }
+    },
+    {
+      "scenario": "TF-API-002",
+      "testcase_id": "tcase_bench_api002",
+      "gt": "API",
+      "run_id": "run_179544204025160e6cfbe2454",
+      "elapsed_s": 4.9,
+      "verdict": "FAILED",
+      "execution_status": "COMPLETED",
+      "worker": "run007-w4",
+      "diagnose_s": 4.4,
+      "outcome": "CONFIRMED",
+      "pred_final": "API",
+      "pred_final_basis": "CONFIRMED",
+      "pred": "API",
+      "pred_basis": "SUPPORTED",
+      "correct": true,
+      "final_correct": true,
+      "llm": {
+        "engine": "rule-v1+llm-advisor",
+        "called": true,
+        "model": "deepseek-flash",
+        "added": [
+          {
+            "description": "创建项目的 POST /api/projects 请求返回 503，导致项目未能创建，后续列表断言因此失败。",
+            "domain": "API",
+            "confidence": 0.86,
+            "evidence_ids": [
+              "evd_1795442043156609423de67c2",
+              "evd_1795442045065c61ec1c32ea2",
+              "evd_1795442044911f949b358a334",
+              "evd_1795442044850ea2d761bb60e"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "项目创建失败后权威状态仍为空，属于持久化/写入链路未落库，而非单纯前端展示延迟。",
+            "domain": "PERSISTENCE",
+            "confidence": 0.62,
+            "evidence_ids": [
+              "evd_1795442045065c61ec1c32ea2",
+              "evd_1795442043156609423de67c2",
+              "evd_17954420449116c70c29bf550",
+              "evd_17954420448509291ad82d78c"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "等待后的断言仍失败，可能存在断言目标或等待条件不匹配，但当前证据更支持创建接口失败。",
+            "domain": "UI",
+            "confidence": 0.18,
+            "evidence_ids": [
+              "evd_1795442044790551136f66efd",
+              "evd_17954420449111e78cb23e9a5",
+              "evd_1795442044849439ccdb1b67a",
+              "evd_1795442043156609423de67c2"
+            ],
+            "warnings": []
+          }
+        ],
+        "skipped": null,
+        "fallbacks": [],
+        "calls_delta": 1
+      }
+    },
+    {
+      "scenario": "TF-NET-002",
+      "testcase_id": "tcase_bench_net002",
+      "gt": "NETWORK",
+      "run_id": "run_1795442049570d27041572a91",
+      "elapsed_s": 15.6,
+      "verdict": "FAILED",
+      "execution_status": "COMPLETED",
+      "worker": "run007-w3",
+      "diagnose_s": 6.8,
+      "outcome": "PROBABLE",
+      "pred_final": "PERSISTENCE",
+      "pred_final_basis": "SUPPORTED",
+      "pred": "PERSISTENCE",
+      "pred_basis": "SUPPORTED",
+      "correct": false,
+      "final_correct": false,
+      "llm": {
+        "engine": "rule-v1+llm-advisor",
+        "called": true,
+        "model": "deepseek-flash",
+        "added": [
+          {
+            "description": "点击创建后发出的 POST /api/projects 请求未在服务端落库，权威状态接口仍返回 count=0、keys=[]，导致后续列表断言失败。",
+            "domain": "PERSISTENCE",
+            "confidence": 0.55,
+            "evidence_ids": [
+              "evd_17954420614546c7fe8754aca",
+              "evd_17954420648299f0cf623662b",
+              "evd_1795442064690b83f134fda47",
+              "evd_1795442064631e26937825432"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "创建接口的响应/状态未被前端正确接收，UI 未触发列表刷新，页面仍停留在创建前的空列表视图。",
+            "domain": "UI",
+            "confidence": 0.3,
+            "evidence_ids": [
+              "evd_17954420614546c7fe8754aca",
+              "evd_179544206456938ceb2c377ed",
+              "evd_1795442064690291a37d23ef4",
+              "evd_17954420646314c41751f1b43"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "创建后的等待时长不足或等待条件未覆盖数据到达时机，断言在列表刷新完成前执行，形成时序性失败。",
+            "domain": "TIMEOUT",
+            "confidence": 0.25,
+            "evidence_ids": [
+              "evd_179544206456938ceb2c377ed",
+              "evd_1795442064569130d5110aa8a",
+              "evd_1795442064689b72ac8dd36fe",
+              "evd_17954420646307615da6ece1a"
+            ],
+            "warnings": []
+          }
+        ],
+        "skipped": null,
+        "fallbacks": [],
+        "calls_delta": 1
+      }
+    },
+    {
+      "scenario": "TF-LOC-001",
+      "testcase_id": "tcase_bench_loc001",
+      "gt": "LOCATOR",
+      "run_id": "run_1795442071959b074a200ec5d",
+      "elapsed_s": 12.7,
+      "verdict": "NOT_EVALUATED",
+      "execution_status": "FAILED",
+      "worker": "run007-w3",
+      "error": "RuntimeError: POST /runs/run_1795442071959b074a200ec5d/diagnose?use_llm=true -> 412: {\"detail\":{\"code\":\"PRECONDITION_FAILED\",\"message\":\"run NOT_EVALUATED：缺少 Oracle 或执行中断，只能补证据，不能下结论\"}}",
+      "correct": false
+    },
+    {
+      "scenario": "TF-LOC-002",
+      "testcase_id": "tcase_bench_loc002",
+      "gt": "LOCATOR",
+      "run_id": "run_1795442084748ca551eee3db6",
+      "elapsed_s": 12.7,
+      "verdict": "NOT_EVALUATED",
+      "execution_status": "FAILED",
+      "worker": "run007-w4",
+      "error": "RuntimeError: POST /runs/run_1795442084748ca551eee3db6/diagnose?use_llm=true -> 412: {\"detail\":{\"code\":\"PRECONDITION_FAILED\",\"message\":\"run NOT_EVALUATED：缺少 Oracle 或执行中断，只能补证据，不能下结论\"}}",
+      "correct": false
+    },
+    {
+      "scenario": "TF-TIME-003",
+      "testcase_id": "tcase_bench_time003",
+      "gt": "TIMING",
+      "run_id": "run_1795442097509b366488584fc",
+      "elapsed_s": 12.8,
+      "verdict": "NOT_EVALUATED",
+      "execution_status": "FAILED",
+      "worker": "run007-w3",
+      "error": "RuntimeError: POST /runs/run_1795442097509b366488584fc/diagnose?use_llm=true -> 412: {\"detail\":{\"code\":\"PRECONDITION_FAILED\",\"message\":\"run NOT_EVALUATED：缺少 Oracle 或执行中断，只能补证据，不能下结论\"}}",
+      "correct": false
+    },
+    {
+      "scenario": "TF-SEC-001",
+      "testcase_id": "tcase_bench_sec001",
+      "gt": "AUTHORIZATION",
+      "run_id": "run_1795442110295e4c08e0e2783",
+      "elapsed_s": 4.9,
+      "verdict": "FAILED",
+      "execution_status": "COMPLETED",
+      "worker": "run007-w4",
+      "diagnose_s": 11.9,
+      "outcome": "INCONCLUSIVE",
+      "pred_final": "UNKNOWN",
+      "pred_final_basis": "no-hypothesis",
+      "pred": "NONE",
+      "pred_basis": "no-llm-candidate",
+      "correct": false,
+      "final_correct": false,
+      "llm": {
+        "engine": "rule-v1",
+        "called": false,
+        "model": null,
+        "added": null,
+        "skipped": "llm_error:invalid_json",
+        "fallbacks": null,
+        "calls_delta": 2
+      }
+    },
+    {
+      "scenario": "TF-SEC-002",
+      "testcase_id": "tcase_bench_sec002",
+      "gt": "AUTHORIZATION",
+      "run_id": "run_179544212714108de354fb188",
+      "elapsed_s": 7.4,
+      "verdict": "FAILED",
+      "execution_status": "COMPLETED",
+      "worker": "run007-w4",
+      "diagnose_s": 9.9,
+      "outcome": "CONFIRMED",
+      "pred_final": "UI_RENDERING",
+      "pred_final_basis": "CONFIRMED",
+      "pred": "UI_RENDERING",
+      "pred_basis": "SUPPORTED",
+      "correct": false,
+      "final_correct": false,
+      "llm": {
+        "engine": "rule-v1+llm-advisor",
+        "called": true,
+        "model": "deepseek-flash",
+        "added": [
+          {
+            "description": "前端在渲染/计算列表长度时读取了 undefined 的 .length 属性，导致页面脚本崩溃；该错误在 sec2_r1、sec2_r2、sec2_n5、sec2_r3 多个步骤中重复出现，说明是持续存在的运行时缺陷而非偶发。",
+            "domain": "JS",
+            "confidence": 0.72,
+            "evidence_ids": [
+              "evd_1795442134135c5357d5492dc",
+              "evd_1795442134090efc9020caa67",
+              "evd_1795442131765efadcc324e2f",
+              "evd_17954421341366fa5c5891c0c"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "导航阶段对 /api/projects?workspace=default 的 fetch 请求出现 HTTP 错误，虽另有 state 接口返回 ok 且 count=1，但失败请求可能使前端持有的项目数据结构为 undefined，与页面脚本报错在时间上相关。",
+            "domain": "API",
+            "confidence": 0.5,
+            "evidence_ids": [
+              "evd_179544213269966e45ce9e316",
+              "evd_179544213426799a3dacba4de",
+              "evd_1795442134135c5357d5492dc"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "断言步骤 sec2_r3 失败可能源于目标 UI 元素因脚本崩溃而未渲染，属于断言/定位层面的观测失败，而非断言值本身错误。",
+            "domain": "UI",
+            "confidence": 0.45,
+            "evidence_ids": [
+              "evd_17954421341366fa5c5891c0c",
+              "evd_1795442134135f14fa223bf7f",
+              "evd_17954421341359fd3f71c75f0",
+              "evd_17954421340922ad68d024321"
+            ],
+            "warnings": []
+          }
+        ],
+        "skipped": null,
+        "fallbacks": [],
+        "calls_delta": 2
+      }
+    },
+    {
+      "scenario": "TF-COMP-001",
+      "testcase_id": "tcase_bench_comp001",
+      "gt": "API",
+      "run_id": "run_17954421443905c19f530a674",
+      "elapsed_s": 4.9,
+      "verdict": "FAILED",
+      "execution_status": "COMPLETED",
+      "worker": "run007-w3",
+      "diagnose_s": 5.0,
+      "outcome": "CONFIRMED",
+      "pred_final": "API",
+      "pred_final_basis": "CONFIRMED",
+      "pred": "API",
+      "pred_basis": "SUPPORTED",
+      "correct": true,
+      "final_correct": true,
+      "llm": {
+        "engine": "rule-v1+llm-advisor",
+        "called": true,
+        "model": "deepseek-flash",
+        "added": [
+          {
+            "description": "项目创建请求 POST /api/projects 返回 500，可能导致创建操作未成功，后续针对项目创建结果的断言失败。",
+            "domain": "API",
+            "confidence": 0.82,
+            "evidence_ids": [
+              "evd_17954421471915067053d047a",
+              "evd_17954421489003a6c3281ec32",
+              "evd_17954421489547ef6ac2b7eb9"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "权威状态接口显示 projects count=0，可能与创建失败后持久化状态未发生变化有关，从而使依赖项目存在的断言失败。",
+            "domain": "PERSISTENCE",
+            "confidence": 0.55,
+            "evidence_ids": [
+              "evd_17954421490894f5b054047fe",
+              "evd_17954421471915067053d047a",
+              "evd_1795442148954868dc3992e9a"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "创建操作后 UI 可能未渲染新项目或未进入预期界面状态，导致 cp1_n6/cp1_n7 的 UI 断言失败。",
+            "domain": "UI",
+            "confidence": 0.35,
+            "evidence_ids": [
+              "evd_17954421489547ef6ac2b7eb9",
+              "evd_1795442148954868dc3992e9a",
+              "evd_1795442148954b366086bb6c9",
+              "evd_17954421471915067053d047a"
+            ],
+            "warnings": []
+          }
+        ],
+        "skipped": null,
+        "fallbacks": [],
+        "calls_delta": 1
+      }
+    },
+    {
+      "scenario": "TF-COMP-002",
+      "testcase_id": "tcase_bench_comp002",
+      "gt": "PERSISTENCE",
+      "run_id": "run_1795442154310ae086fde5750",
+      "elapsed_s": 9.0,
+      "verdict": "FAILED",
+      "execution_status": "COMPLETED",
+      "worker": "run007-w1",
+      "diagnose_s": 13.6,
+      "outcome": "CONFIRMED",
+      "pred_final": "PERSISTENCE",
+      "pred_final_basis": "CONFIRMED",
+      "pred": "NONE",
+      "pred_basis": "no-llm-candidate",
+      "correct": false,
+      "final_correct": true,
+      "llm": {
+        "engine": "rule-v1",
+        "called": false,
+        "model": null,
+        "added": null,
+        "skipped": "llm_error:invalid_json",
+        "fallbacks": null,
+        "calls_delta": 2
+      }
+    },
+    {
+      "scenario": "TF-COMP-003",
+      "testcase_id": "tcase_bench_comp003",
+      "gt": "LOCATOR",
+      "run_id": "run_1795442176914e3df963740de",
+      "elapsed_s": 12.7,
+      "verdict": "NOT_EVALUATED",
+      "execution_status": "FAILED",
+      "worker": "run007-w1",
+      "error": "RuntimeError: POST /runs/run_1795442176914e3df963740de/diagnose?use_llm=true -> 412: {\"detail\":{\"code\":\"PRECONDITION_FAILED\",\"message\":\"run NOT_EVALUATED：缺少 Oracle 或执行中断，只能补证据，不能下结论\"}}",
+      "correct": false
+    },
+    {
+      "scenario": "TF-FLAKY-001",
+      "testcase_id": "tcase_bench_flaky001",
+      "gt": "PERSISTENCE",
+      "run_id": "run_1795442189711f08af6cd3219",
+      "elapsed_s": 4.9,
+      "verdict": "FAILED",
+      "execution_status": "COMPLETED",
+      "worker": "run007-w4",
+      "diagnose_s": 13.2,
+      "outcome": "CONFIRMED",
+      "pred_final": "PERSISTENCE",
+      "pred_final_basis": "CONFIRMED",
+      "pred": "PERSISTENCE",
+      "pred_basis": "SUPPORTED",
+      "correct": true,
+      "final_correct": true,
+      "llm": {
+        "engine": "rule-v1+llm-advisor",
+        "called": true,
+        "model": "deepseek-flash",
+        "added": [
+          {
+            "description": "创建项目的 POST /api/projects 请求虽已发出，但权威状态接口 /api/state/projects?workspace=default 返回 count=0、keys 为空，符合“写入未落库或写入被服务端丢弃”的表现；随后 fl1_n6/fl1_n7 对列表项的断言自然无法满足。",
+            "domain": "PERSISTENCE",
+            "confidence": 0.62,
+            "evidence_ids": [
+              "evd_17954421945016a4c8c1c5bfd",
+              "evd_1795442192696e51f3966a072",
+              "evd_17954421943252e8acd621127",
+              "evd_1795442194364730506a1be6d"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "fl1_n4 点击提交后 fl1_n5 仅执行了一次 wait，若前端列表刷新或创建响应返回慢于等待窗口，断言在旧快照上执行即失败；证据显示断言步骤集中失败而等待步骤本身有截图留存，属于时序竞态的可能性存在。",
+            "domain": "TIMEOUT",
+            "confidence": 0.5,
+            "evidence_ids": [
+              "evd_1795442194274edc88f4cd530",
+              "evd_1795442194273974b7924a986",
+              "evd_17954421942730087f5b6b4a0",
+              "evd_1795442194324b4830cc5b848",
+              "evd_1795442194363bb702083f4e2"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "fl1_n3 的 fill 使用了与其他步骤不同的截图产物集合，fl1_n6/fl1_n7 断言复用了相同三份产物，提示断言定位器可能指向与输入/渲染结构不匹配的元素（如新项目行未唯一匹配或匹配到空列表提示元素）。",
+            "domain": "LOCATOR",
+            "confidence": 0.35,
+            "evidence_ids": [
+              "evd_1795442192295902be81f1f4b",
+              "evd_1795442192295428833065884",
+              "evd_17954421922951d3a736b2164",
+              "evd_1795442194364357144ae74e3",
+              "evd_1795442194324ef3d26e62527"
+            ],
+            "warnings": []
+          }
+        ],
+        "skipped": null,
+        "fallbacks": [],
+        "calls_delta": 2
+      }
+    },
+    {
+      "scenario": "TF-FLAKY-002",
+      "testcase_id": "tcase_bench_flaky002",
+      "gt": "API",
+      "run_id": "run_17954422078945a1e6150f034",
+      "elapsed_s": 4.9,
+      "verdict": "FAILED",
+      "execution_status": "COMPLETED",
+      "worker": "run007-w2",
+      "diagnose_s": 10.9,
+      "outcome": "CONFIRMED",
+      "pred_final": "API",
+      "pred_final_basis": "CONFIRMED",
+      "pred": "API",
+      "pred_basis": "SUPPORTED",
+      "correct": true,
+      "final_correct": true,
+      "llm": {
+        "engine": "rule-v1+llm-advisor",
+        "called": true,
+        "model": "deepseek-flash",
+        "added": [
+          {
+            "description": "点击创建后，POST /api/projects 返回 HTTP 500，导致项目创建请求失败，后端未生成记录；随后 GET /api/state/projects 返回 count=0、keys=[]，断言步骤 fl2_n6~n8 找不到新建项目而失败。",
+            "domain": "API",
+            "confidence": 0.78,
+            "evidence_ids": [
+              "evd_179544221078514f78ca29290",
+              "evd_1795442212748c455e0508988",
+              "evd_17954422124659e33c07c5bde",
+              "evd_179544221252663ed1ebe0c10",
+              "evd_1795442212599853aec031913"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "即使服务端可能短暂接受请求，项目数据未持久化到 authoritative-state（GET 返回 count=0），刷新/reset 后列表为空，后续断言基于持久数据失败。",
+            "domain": "PERSISTENCE",
+            "confidence": 0.45,
+            "evidence_ids": [
+              "evd_1795442212748c455e0508988",
+              "evd_179544221078514f78ca29290"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "创建后 fl2_n5 仅做单次 wait，UI 列表可能尚未完成刷新或局部重渲染，断言 fl2_n6 起在旧 DOM 上执行导致找不到新项目条目。",
+            "domain": "TIMEOUT",
+            "confidence": 0.25,
+            "evidence_ids": [
+              "evd_17954422124036efae13824a7",
+              "evd_17954422124659e33c07c5bde",
+              "evd_179544221252663ed1ebe0c10",
+              "evd_1795442212599853aec031913"
+            ],
+            "warnings": []
+          }
+        ],
+        "skipped": null,
+        "fallbacks": [],
+        "calls_delta": 2
+      }
+    }
+  ],
+  "limits": [
+    "子集样本，不做显著性外推；不得用该数字代表全量能力",
+    "模型由服务端路由决定，臂标签只用于区分批次，不代表命令行指定模型",
+    "LLM 候选状态固定为 CANDIDATE（不能 CONFIRMED），因此以 LLM 候选机制计分，不以最终根因计分",
+    "llm_not_called 非空时，该臂不是完整 LLM 覆盖（缺凭据/超预算），必须如实标注"
+  ]
+}

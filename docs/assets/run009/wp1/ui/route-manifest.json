@@ -1,0 +1,264 @@
+{
+  "source": "apps/web/src/router.ts",
+  "business_count": 14,
+  "excluded": [
+    {
+      "path": "/:pathMatch(.*)*",
+      "reason": "无 name/component（通配或重定向路由）"
+    }
+  ],
+  "routes": [
+    {
+      "index": 1,
+      "name": "dashboard",
+      "component": "./views/DashboardView.vue",
+      "status": "PASS",
+      "screenshots": {
+        "1440-light": "docs/assets/run009/wp1/ui/shots/01-dashboard-1440-light.png",
+        "refresh-1440-light": "docs/assets/run009/wp1/ui/shots/01-dashboard-refresh.png",
+        "interaction-1440-light": "docs/assets/run009/wp1/ui/shots/01-dashboard-interaction.png",
+        "1440-dark": "docs/assets/run009/wp1/ui/shots/01-dashboard-1440-dark.png",
+        "1024-light": "docs/assets/run009/wp1/ui/shots/01-dashboard-1024-light.png",
+        "1024-dark": "docs/assets/run009/wp1/ui/shots/01-dashboard-1024-dark.png",
+        "768-light": "docs/assets/run009/wp1/ui/shots/01-dashboard-768-light.png",
+        "768-dark": "docs/assets/run009/wp1/ui/shots/01-dashboard-768-dark.png",
+        "390-light": "docs/assets/run009/wp1/ui/shots/01-dashboard-390-light.png",
+        "390-dark": "docs/assets/run009/wp1/ui/shots/01-dashboard-390-dark.png"
+      }
+    },
+    {
+      "index": 2,
+      "name": "intents",
+      "component": "./views/IntentsView.vue",
+      "status": "FAIL",
+      "screenshots": {
+        "1440-light": "docs/assets/run009/wp1/ui/shots/02-intents-1440-light.png",
+        "refresh-1440-light": "docs/assets/run009/wp1/ui/shots/02-intents-refresh.png",
+        "interaction-1440-light": "docs/assets/run009/wp1/ui/shots/02-intents-interaction.png",
+        "1440-dark": "docs/assets/run009/wp1/ui/shots/02-intents-1440-dark.png",
+        "1024-light": "docs/assets/run009/wp1/ui/shots/02-intents-1024-light.png",
+        "1024-dark": "docs/assets/run009/wp1/ui/shots/02-intents-1024-dark.png",
+        "768-light": "docs/assets/run009/wp1/ui/shots/02-intents-768-light.png",
+        "768-dark": "docs/assets/run009/wp1/ui/shots/02-intents-768-dark.png",
+        "390-light": "docs/assets/run009/wp1/ui/shots/02-intents-390-light.png",
+        "390-dark": "docs/assets/run009/wp1/ui/shots/02-intents-390-dark.png"
+      }
+    },
+    {
+      "index": 3,
+      "name": "testcases",
+      "component": "./views/TestCasesView.vue",
+      "status": "FAIL",
+      "screenshots": {
+        "1440-light": "docs/assets/run009/wp1/ui/shots/03-testcases-1440-light.png",
+        "refresh-1440-light": "docs/assets/run009/wp1/ui/shots/03-testcases-refresh.png",
+        "interaction-1440-light": "docs/assets/run009/wp1/ui/shots/03-testcases-interaction.png",
+        "1440-dark": "docs/assets/run009/wp1/ui/shots/03-testcases-1440-dark.png",
+        "1024-light": "docs/assets/run009/wp1/ui/shots/03-testcases-1024-light.png",
+        "1024-dark": "docs/assets/run009/wp1/ui/shots/03-testcases-1024-dark.png",
+        "768-light": "docs/assets/run009/wp1/ui/shots/03-testcases-768-light.png",
+        "768-dark": "docs/assets/run009/wp1/ui/shots/03-testcases-768-dark.png",
+        "390-light": "docs/assets/run009/wp1/ui/shots/03-testcases-390-light.png",
+        "390-dark": "docs/assets/run009/wp1/ui/shots/03-testcases-390-dark.png"
+      }
+    },
+    {
+      "index": 4,
+      "name": "testcase-detail",
+      "component": "./views/TestCaseDetailView.vue",
+      "status": "PASS",
+      "screenshots": {
+        "1440-light": "docs/assets/run009/wp1/ui/shots/04-testcase-detail-1440-light.png",
+        "refresh-1440-light": "docs/assets/run009/wp1/ui/shots/04-testcase-detail-refresh.png",
+        "interaction-1440-light": "docs/assets/run009/wp1/ui/shots/04-testcase-detail-interaction.png",
+        "1440-dark": "docs/assets/run009/wp1/ui/shots/04-testcase-detail-1440-dark.png",
+        "1024-light": "docs/assets/run009/wp1/ui/shots/04-testcase-detail-1024-light.png",
+        "1024-dark": "docs/assets/run009/wp1/ui/shots/04-testcase-detail-1024-dark.png",
+        "768-light": "docs/assets/run009/wp1/ui/shots/04-testcase-detail-768-light.png",
+        "768-dark": "docs/assets/run009/wp1/ui/shots/04-testcase-detail-768-dark.png",
+        "390-light": "docs/assets/run009/wp1/ui/shots/04-testcase-detail-390-light.png",
+        "390-dark": "docs/assets/run009/wp1/ui/shots/04-testcase-detail-390-dark.png"
+      }
+    },
+    {
+      "index": 5,
+      "name": "oracles",
+      "component": "./views/OraclesView.vue",
+      "status": "FAIL",
+      "screenshots": {
+        "1440-light": "docs/assets/run009/wp1/ui/shots/05-oracles-1440-light.png",
+        "refresh-1440-light": "docs/assets/run009/wp1/ui/shots/05-oracles-refresh.png",
+        "interaction-1440-light": "docs/assets/run009/wp1/ui/shots/05-oracles-interaction.png",
+        "1440-dark": "docs/assets/run009/wp1/ui/shots/05-oracles-1440-dark.png",
+        "1024-light": "docs/assets/run009/wp1/ui/shots/05-oracles-1024-light.png",
+        "1024-dark": "docs/assets/run009/wp1/ui/shots/05-oracles-1024-dark.png",
+        "768-light": "docs/assets/run009/wp1/ui/shots/05-oracles-768-light.png",
+        "768-dark": "docs/assets/run009/wp1/ui/shots/05-oracles-768-dark.png",
+        "390-light": "docs/assets/run009/wp1/ui/shots/05-oracles-390-light.png",
+        "390-dark": "docs/assets/run009/wp1/ui/shots/05-oracles-390-dark.png"
+      }
+    },
+    {
+      "index": 6,
+      "name": "runs",
+      "component": "./views/RunsView.vue",
+      "status": "FAIL",
+      "screenshots": {
+        "1440-light": "docs/assets/run009/wp1/ui/shots/06-runs-1440-light.png",
+        "refresh-1440-light": "docs/assets/run009/wp1/ui/shots/06-runs-refresh.png",
+        "interaction-1440-light": "docs/assets/run009/wp1/ui/shots/06-runs-interaction.png",
+        "1440-dark": "docs/assets/run009/wp1/ui/shots/06-runs-1440-dark.png",
+        "1024-light": "docs/assets/run009/wp1/ui/shots/06-runs-1024-light.png",
+        "1024-dark": "docs/assets/run009/wp1/ui/shots/06-runs-1024-dark.png",
+        "768-light": "docs/assets/run009/wp1/ui/shots/06-runs-768-light.png",
+        "768-dark": "docs/assets/run009/wp1/ui/shots/06-runs-768-dark.png",
+        "390-light": "docs/assets/run009/wp1/ui/shots/06-runs-390-light.png",
+        "390-dark": "docs/assets/run009/wp1/ui/shots/06-runs-390-dark.png"
+      }
+    },
+    {
+      "index": 7,
+      "name": "run-detail",
+      "component": "./views/RunDetailView.vue",
+      "status": "PASS",
+      "screenshots": {
+        "1440-light": "docs/assets/run009/wp1/ui/shots/07-run-detail-1440-light.png",
+        "refresh-1440-light": "docs/assets/run009/wp1/ui/shots/07-run-detail-refresh.png",
+        "interaction-1440-light": "docs/assets/run009/wp1/ui/shots/07-run-detail-interaction.png",
+        "1440-dark": "docs/assets/run009/wp1/ui/shots/07-run-detail-1440-dark.png",
+        "1024-light": "docs/assets/run009/wp1/ui/shots/07-run-detail-1024-light.png",
+        "1024-dark": "docs/assets/run009/wp1/ui/shots/07-run-detail-1024-dark.png",
+        "768-light": "docs/assets/run009/wp1/ui/shots/07-run-detail-768-light.png",
+        "768-dark": "docs/assets/run009/wp1/ui/shots/07-run-detail-768-dark.png",
+        "390-light": "docs/assets/run009/wp1/ui/shots/07-run-detail-390-light.png",
+        "390-dark": "docs/assets/run009/wp1/ui/shots/07-run-detail-390-dark.png"
+      }
+    },
+    {
+      "index": 8,
+      "name": "explorer",
+      "component": "./views/ExplorerView.vue",
+      "status": "PASS",
+      "screenshots": {
+        "1440-light": "docs/assets/run009/wp1/ui/shots/08-explorer-1440-light.png",
+        "refresh-1440-light": "docs/assets/run009/wp1/ui/shots/08-explorer-refresh.png",
+        "interaction-1440-light": "docs/assets/run009/wp1/ui/shots/08-explorer-interaction.png",
+        "1440-dark": "docs/assets/run009/wp1/ui/shots/08-explorer-1440-dark.png",
+        "1024-light": "docs/assets/run009/wp1/ui/shots/08-explorer-1024-light.png",
+        "1024-dark": "docs/assets/run009/wp1/ui/shots/08-explorer-1024-dark.png",
+        "768-light": "docs/assets/run009/wp1/ui/shots/08-explorer-768-light.png",
+        "768-dark": "docs/assets/run009/wp1/ui/shots/08-explorer-768-dark.png",
+        "390-light": "docs/assets/run009/wp1/ui/shots/08-explorer-390-light.png",
+        "390-dark": "docs/assets/run009/wp1/ui/shots/08-explorer-390-dark.png"
+      }
+    },
+    {
+      "index": 9,
+      "name": "models",
+      "component": "./views/ModelsView.vue",
+      "status": "PASS",
+      "screenshots": {
+        "1440-light": "docs/assets/run009/wp1/ui/shots/09-models-1440-light.png",
+        "refresh-1440-light": "docs/assets/run009/wp1/ui/shots/09-models-refresh.png",
+        "interaction-1440-light": "docs/assets/run009/wp1/ui/shots/09-models-interaction.png",
+        "1440-dark": "docs/assets/run009/wp1/ui/shots/09-models-1440-dark.png",
+        "1024-light": "docs/assets/run009/wp1/ui/shots/09-models-1024-light.png",
+        "1024-dark": "docs/assets/run009/wp1/ui/shots/09-models-1024-dark.png",
+        "768-light": "docs/assets/run009/wp1/ui/shots/09-models-768-light.png",
+        "768-dark": "docs/assets/run009/wp1/ui/shots/09-models-768-dark.png",
+        "390-light": "docs/assets/run009/wp1/ui/shots/09-models-390-light.png",
+        "390-dark": "docs/assets/run009/wp1/ui/shots/09-models-390-dark.png"
+      }
+    },
+    {
+      "index": 10,
+      "name": "diagnoses",
+      "component": "./views/DiagnosesView.vue",
+      "status": "FAIL",
+      "screenshots": {
+        "1440-light": "docs/assets/run009/wp1/ui/shots/10-diagnoses-1440-light.png",
+        "refresh-1440-light": "docs/assets/run009/wp1/ui/shots/10-diagnoses-refresh.png",
+        "interaction-1440-light": "docs/assets/run009/wp1/ui/shots/10-diagnoses-interaction.png",
+        "1440-dark": "docs/assets/run009/wp1/ui/shots/10-diagnoses-1440-dark.png",
+        "1024-light": "docs/assets/run009/wp1/ui/shots/10-diagnoses-1024-light.png",
+        "1024-dark": "docs/assets/run009/wp1/ui/shots/10-diagnoses-1024-dark.png",
+        "768-light": "docs/assets/run009/wp1/ui/shots/10-diagnoses-768-light.png",
+        "768-dark": "docs/assets/run009/wp1/ui/shots/10-diagnoses-768-dark.png",
+        "390-light": "docs/assets/run009/wp1/ui/shots/10-diagnoses-390-light.png",
+        "390-dark": "docs/assets/run009/wp1/ui/shots/10-diagnoses-390-dark.png"
+      }
+    },
+    {
+      "index": 11,
+      "name": "diagnosis-detail",
+      "component": "./views/DiagnosisDetailView.vue",
+      "status": "FAIL",
+      "screenshots": {
+        "1440-light": "docs/assets/run009/wp1/ui/shots/11-diagnosis-detail-1440-light.png",
+        "refresh-1440-light": "docs/assets/run009/wp1/ui/shots/11-diagnosis-detail-refresh.png",
+        "interaction-1440-light": "docs/assets/run009/wp1/ui/shots/11-diagnosis-detail-interaction.png",
+        "1440-dark": "docs/assets/run009/wp1/ui/shots/11-diagnosis-detail-1440-dark.png",
+        "1024-light": "docs/assets/run009/wp1/ui/shots/11-diagnosis-detail-1024-light.png",
+        "1024-dark": "docs/assets/run009/wp1/ui/shots/11-diagnosis-detail-1024-dark.png",
+        "768-light": "docs/assets/run009/wp1/ui/shots/11-diagnosis-detail-768-light.png",
+        "768-dark": "docs/assets/run009/wp1/ui/shots/11-diagnosis-detail-768-dark.png",
+        "390-light": "docs/assets/run009/wp1/ui/shots/11-diagnosis-detail-390-light.png",
+        "390-dark": "docs/assets/run009/wp1/ui/shots/11-diagnosis-detail-390-dark.png"
+      }
+    },
+    {
+      "index": 12,
+      "name": "repairs",
+      "component": "./views/RepairsView.vue",
+      "status": "PASS",
+      "screenshots": {
+        "1440-light": "docs/assets/run009/wp1/ui/shots/12-repairs-1440-light.png",
+        "refresh-1440-light": "docs/assets/run009/wp1/ui/shots/12-repairs-refresh.png",
+        "interaction-1440-light": "docs/assets/run009/wp1/ui/shots/12-repairs-interaction.png",
+        "1440-dark": "docs/assets/run009/wp1/ui/shots/12-repairs-1440-dark.png",
+        "1024-light": "docs/assets/run009/wp1/ui/shots/12-repairs-1024-light.png",
+        "1024-dark": "docs/assets/run009/wp1/ui/shots/12-repairs-1024-dark.png",
+        "768-light": "docs/assets/run009/wp1/ui/shots/12-repairs-768-light.png",
+        "768-dark": "docs/assets/run009/wp1/ui/shots/12-repairs-768-dark.png",
+        "390-light": "docs/assets/run009/wp1/ui/shots/12-repairs-390-light.png",
+        "390-dark": "docs/assets/run009/wp1/ui/shots/12-repairs-390-dark.png"
+      }
+    },
+    {
+      "index": 13,
+      "name": "benchmark",
+      "component": "./views/BenchmarkView.vue",
+      "status": "PASS",
+      "screenshots": {
+        "1440-light": "docs/assets/run009/wp1/ui/shots/13-benchmark-1440-light.png",
+        "refresh-1440-light": "docs/assets/run009/wp1/ui/shots/13-benchmark-refresh.png",
+        "interaction-1440-light": "docs/assets/run009/wp1/ui/shots/13-benchmark-interaction.png",
+        "1440-dark": "docs/assets/run009/wp1/ui/shots/13-benchmark-1440-dark.png",
+        "1024-light": "docs/assets/run009/wp1/ui/shots/13-benchmark-1024-light.png",
+        "1024-dark": "docs/assets/run009/wp1/ui/shots/13-benchmark-1024-dark.png",
+        "768-light": "docs/assets/run009/wp1/ui/shots/13-benchmark-768-light.png",
+        "768-dark": "docs/assets/run009/wp1/ui/shots/13-benchmark-768-dark.png",
+        "390-light": "docs/assets/run009/wp1/ui/shots/13-benchmark-390-light.png",
+        "390-dark": "docs/assets/run009/wp1/ui/shots/13-benchmark-390-dark.png"
+      }
+    },
+    {
+      "index": 14,
+      "name": "system",
+      "component": "./views/SystemView.vue",
+      "status": "PASS",
+      "screenshots": {
+        "1440-light": "docs/assets/run009/wp1/ui/shots/14-system-1440-light.png",
+        "refresh-1440-light": "docs/assets/run009/wp1/ui/shots/14-system-refresh.png",
+        "interaction-1440-light": "docs/assets/run009/wp1/ui/shots/14-system-interaction.png",
+        "1440-dark": "docs/assets/run009/wp1/ui/shots/14-system-1440-dark.png",
+        "1024-light": "docs/assets/run009/wp1/ui/shots/14-system-1024-light.png",
+        "1024-dark": "docs/assets/run009/wp1/ui/shots/14-system-1024-dark.png",
+        "768-light": "docs/assets/run009/wp1/ui/shots/14-system-768-light.png",
+        "768-dark": "docs/assets/run009/wp1/ui/shots/14-system-768-dark.png",
+        "390-light": "docs/assets/run009/wp1/ui/shots/14-system-390-light.png",
+        "390-dark": "docs/assets/run009/wp1/ui/shots/14-system-390-dark.png"
+      }
+    }
+  ]
+}

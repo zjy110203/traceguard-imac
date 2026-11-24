@@ -144,6 +144,7 @@ export interface Run {
   observer_mode: string
   fencing_token: number
   lease_owner: string | null
+  lease_expires_at?: number
   report: RunReport | null
   error: string | null
   created_at: number

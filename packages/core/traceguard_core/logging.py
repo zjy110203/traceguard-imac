@@ -19,6 +19,14 @@ _SENSITIVE_KEY = re.compile(
     re.IGNORECASE,
 )
 
+#: 字符串形态必须与字典键使用同一套敏感词（RUN-008 WP6）：
+#: 旧实现的字符串正则少了 cookie/access_key/private_key/credential，
+#: 导致 `Cookie: session=xxx` 这类日志会把真实凭据原文写出。
+_SENSITIVE_INLINE = re.compile(
+    _SENSITIVE_KEY.pattern + r"\s*[=:]\s*[^\s&,\"']+",
+    re.IGNORECASE,
+)
+
 
 def redact(value: Any) -> Any:
     """递归脱敏：对 dict 中敏感键遮蔽，对字符串中的 key=value 形态遮蔽。"""
@@ -31,11 +39,7 @@ def redact(value: Any) -> Any:
         return [redact(v) for v in value]
     if isinstance(value, str):
         # 遮蔽 query/日志里形如 password=xxx、token: xxx 的片段
-        value = re.sub(
-            r"(?i)(pass(word|wd)?|secret|token|authorization|api[_-]?key)\s*[=:]\s*[^\s&,\"']+",
-            r"\1=***REDACTED***",
-            value,
-        )
+        value = re.sub(_SENSITIVE_INLINE, "***REDACTED***", value)
         return value
     return value
 

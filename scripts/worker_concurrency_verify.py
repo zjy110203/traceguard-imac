@@ -63,7 +63,9 @@ def main() -> int:
     while time.monotonic() < deadline:
         runs = api_call("GET", "/runs?limit=50&workspace_id=default")
         by_id = {r["run_id"]: r for r in runs if r["run_id"] in run_ids}
-        if all(by_id.get(rid, {}).get("execution_status") in {"COMPLETED", "FAILED"} for rid in run_ids):
+        if all(
+            by_id.get(rid, {}).get("execution_status") in {"COMPLETED", "FAILED"} for rid in run_ids
+        ):
             break
         time.sleep(2)
 
@@ -98,7 +100,9 @@ def main() -> int:
     Path(".workbuddy-run/worker-concurrency-verify.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=2)
     )
-    print(f"{completed}/{n} completed, {len(owners)} distinct lease owners → .workbuddy-run/worker-concurrency-verify.json")
+    print(
+        f"{completed}/{n} completed, {len(owners)} distinct lease owners → .workbuddy-run/worker-concurrency-verify.json"
+    )
     return 0 if completed == n else 1
 
 

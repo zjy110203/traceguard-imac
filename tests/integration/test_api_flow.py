@@ -312,3 +312,44 @@ def test_websocket_free_artifact_integrity_error(client) -> None:  # type: ignor
     with pytest.raises(AppError):
         rt.artifacts.read(art["artifact_id"])
     _ = base64.b64encode(b"x")  # 保留导入示例，避免 lint 误报
+
+
+def test_evidence_verify_is_server_side_and_keeps_legacy_separate(client) -> None:  # type: ignore[no-untyped-def]
+    """WP2/C3：验证接口默认不需要调用者提交内容；旧请求来源比对不得混为同一个 PASS。"""
+    from traceguard_api.services import get_services
+
+    rt = get_services().rt
+    art = rt.artifacts.put(
+        b"\x89PNG\r\n\x1a\napi-evidence", workspace_id="default", media_type="image/png"
+    )
+    eid = "evd_api_verify"
+    rt.evidence.add_raw(
+        eid,
+        "browser",
+        "screenshot:s1",
+        "default",
+        {"run_id": "run_api", "artifact": art},
+        run_id="run_api",
+        attachment_ref=art["artifact_id"],
+        attachment_sha256=art["sha256"],
+    )
+
+    # 1) 服务端验证：不传 body
+    r = client.post(f"/api/v1/evidence/{eid}/verify")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["service_side_verification"] is True
+    assert body["integrity_check"] == "PASS"
+    assert body["storage_integrity"]["checks"]["stored_content_match"] is True
+    assert body["storage_integrity"]["checks"]["attachment_sha256_match"] is True
+    assert "legacy_source_check" not in body
+
+    # 2) 旧请求：调用者提交错误内容 → 来源比对 FAIL，但存储完整性仍是 PASS（分开报告）
+    r2 = client.post(f"/api/v1/evidence/{eid}/verify", json={"content": {"run_id": "wrong"}})
+    body2 = r2.json()
+    assert body2["legacy_source_check"]["status"] == "FAIL"
+    assert body2["integrity_check"] == "PASS"
+
+    # 3) workspace 不符必须 FAIL
+    r3 = client.post(f"/api/v1/evidence/{eid}/verify?workspace_id=other")
+    assert r3.json()["integrity_check"] == "FAIL"

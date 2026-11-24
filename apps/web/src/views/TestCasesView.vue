@@ -132,8 +132,8 @@ onMounted(load)
     <div class="card">
       <div class="card-head">
         <div class="toolbar">
-          <input v-model="keyword" placeholder="搜索用例标题 / ID" style="width: 240px" />
-          <select v-model="filter">
+          <input id="tc-search" v-model="keyword" aria-label="搜索用例标题或 ID" placeholder="搜索用例标题 / ID" style="width: 240px" />
+          <select id="tc-status-filter" v-model="filter" aria-label="按审核状态筛选">
             <option value="">全部状态</option>
             <option value="APPROVED">已审核</option>
             <option value="PENDING">待审核</option>
@@ -176,23 +176,23 @@ onMounted(load)
 
     <ModalShell v-if="showCreate" title="新建测试用例" width="760px" @close="showCreate = false">
       <div>
-        <label>用例标题</label>
-        <input v-model="form.title" />
+        <label for="tc-title">用例标题</label>
+        <input id="tc-title" v-model="form.title" />
       </div>
       <div>
-        <label>关联需求（可选）</label>
-        <select v-model="form.intent_ref">
+        <label for="tc-intent-ref">关联需求（可选）</label>
+        <select id="tc-intent-ref" v-model="form.intent_ref">
           <option value="">不关联</option>
           <option v-for="i in intents" :key="i.intent_id" :value="i.intent_id">{{ i.title }}</option>
         </select>
       </div>
       <div>
-        <label>步骤（JSON 数组，支持 navigate/click/fill/select/press/assert/wait/api）</label>
-        <textarea v-model="form.steps" rows="10" class="mono" style="font-size: 12px" />
+        <label for="tc-steps">步骤（JSON 数组，支持 navigate/click/fill/select/press/assert/wait/api）</label>
+        <textarea id="tc-steps" v-model="form.steps" rows="10" class="mono" style="font-size: 12px" />
       </div>
       <div>
-        <label>断言（JSON 数组，oracle_id 必须是已审批 Oracle）</label>
-        <textarea v-model="form.assertions" rows="5" class="mono" style="font-size: 12px" />
+        <label for="tc-assertions">断言（JSON 数组，oracle_id 必须是已审批 Oracle）</label>
+        <textarea id="tc-assertions" v-model="form.assertions" rows="5" class="mono" style="font-size: 12px" />
       </div>
       <template #footer>
         <button @click="showCreate = false">取消</button>

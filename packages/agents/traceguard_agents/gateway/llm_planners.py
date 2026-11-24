@@ -52,11 +52,11 @@ def ensure_advisor_prompts(prompts: PromptManager) -> None:
         system=(
             "你是 Web UI 测试用例编译器。只能基于输入探索轨迹中真实出现过的页面元素生成步骤，"
             "禁止凭空创造元素、字段、按钮或业务预期。"
-            "输出 JSON：{\"steps\": [{\"action\": \"navigate|click|fill\", \"target\": "
-            "{\"strategy\": \"role|label|placeholder|test_id|css|xpath\", \"value\": str} | null, "
-            "\"value\": str|null, \"source\": str}], "
-            "\"assertions\": [{\"description\": str, \"kind\": \"ui|business_state\", "
-            "\"expected\": object}], \"warnings\": [str]}。"
+            '输出 JSON：{"steps": [{"action": "navigate|click|fill", "target": '
+            '{"strategy": "role|label|placeholder|test_id|css|xpath", "value": str} | null, '
+            '"value": str|null, "source": str}], '
+            '"assertions": [{"description": str, "kind": "ui|business_state", '
+            '"expected": object}], "warnings": [str]}。'
             "每个步骤的 source 必须写明对应轨迹动作序号或元素来源。"
             "不要输出 JSON 以外的内容。"
         ),
@@ -73,14 +73,12 @@ def ensure_advisor_prompts(prompts: PromptManager) -> None:
         "v1",
         system=(
             "你是只读探针规划顾问。只能从给定的已注册探针与模板中选择，禁止发明新探针、"
-            "禁止生成 SQL 或任意网络地址。输出 JSON：{\"selections\": [{\"probe_id\": str, "
-            "\"template\": str, \"params\": object, \"why\": str, \"info_gain\": 0~1}]}，最多 3 项。"
+            '禁止生成 SQL 或任意网络地址。输出 JSON：{"selections": [{"probe_id": str, '
+            '"template": str, "params": object, "why": str, "info_gain": 0~1}]}，最多 3 项。'
             "info_gain 是启发式估计，不是校准概率。不要输出 JSON 以外的内容。"
         ),
         user_template=(
-            "证据缺口：{gaps}\n"
-            "已注册探针（含允许模板）：{definitions}\n"
-            "输出探针选择 JSON。"
+            "证据缺口：{gaps}\n已注册探针（含允许模板）：{definitions}\n输出探针选择 JSON。"
         ),
     )
     prompts.register(
@@ -89,8 +87,8 @@ def ensure_advisor_prompts(prompts: PromptManager) -> None:
         system=(
             "你是测试资产修复顾问。只允许修复：定位器、等待策略、数据引用、动作配置。"
             "严禁修改断言、预期、Oracle、业务代码或降低测试严格度。"
-            "输出 JSON：{\"changes\": [{\"path\": str, \"step_index\": int|null, "
-            "\"value\": any, \"reason\": str}], \"warnings\": [str]}。"
+            '输出 JSON：{"changes": [{"path": str, "step_index": int|null, '
+            '"value": any, "reason": str}], "warnings": [str]}。'
             "path 只能是 steps[i].target / steps[i].value / steps[i].action_config / "
             "run_config.wait_timeout / test_data_refs。不要输出 JSON 以外的内容。"
         ),
@@ -183,9 +181,7 @@ class LLMCompilerAdvisor:
             advice.error = "llm_returned_no_valid_step"
         return advice
 
-    def _validate_step(
-        self, raw: Any, locators: set[str], warnings: list[str]
-    ) -> TestStep | None:
+    def _validate_step(self, raw: Any, locators: set[str], warnings: list[str]) -> TestStep | None:
         if not isinstance(raw, dict):
             return None
         action = str(raw.get("action", "")).lower()
@@ -237,7 +233,11 @@ class LLMCompilerAdvisor:
         kind = str(raw.get("kind", "ui")).lower()
         description = str(raw.get("description", "")).strip()[:300]
         expected = raw.get("expected")
-        if kind not in {"ui", "business_state"} or not description or not isinstance(expected, dict):
+        if (
+            kind not in {"ui", "business_state"}
+            or not description
+            or not isinstance(expected, dict)
+        ):
             warnings.append("llm_assertion_dropped: 结构或 kind 非法")
             return None
         if kind == "business_state":
@@ -390,9 +390,7 @@ class LLMProbePlannerAdvisor:
             params = raw.get("params") or {}
             if not isinstance(params, dict):
                 params = {}
-            safe_params = {
-                k: v for k, v in params.items() if k in SAFE_PROBE_PARAM_KEYS
-            }
+            safe_params = {k: v for k, v in params.items() if k in SAFE_PROBE_PARAM_KEYS}
             if template is not None:
                 safe_params["template"] = str(template)
             try:

@@ -16,7 +16,7 @@ const loading = ref(true)
 const error = ref('')
 const busy = ref('')
 
-async function load(probe = false) {
+async function load(probe = false): Promise<boolean> {
   loading.value = !health.value
   try {
     const [h, b, c, m, a] = await Promise.all([
@@ -32,8 +32,10 @@ async function load(probe = false) {
     metrics.value = m
     artifacts.value = a
     error.value = ''
+    return true
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
+    return false
   } finally {
     loading.value = false
   }
@@ -42,8 +44,14 @@ async function load(probe = false) {
 async function probeBrowser() {
   busy.value = 'browser'
   try {
-    await load(true)
+    const ok = await load(true)
+    if (!ok) {
+      notifyError(error.value || '浏览器自检失败')
+      return
+    }
     notify(browser.value?.available ? `浏览器可用：${browser.value.channel} ${browser.value.version ?? ''}` : '浏览器不可用')
+  } catch (e) {
+    notifyError(e)
   } finally {
     busy.value = ''
   }

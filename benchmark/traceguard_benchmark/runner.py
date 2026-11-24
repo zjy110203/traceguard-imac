@@ -238,7 +238,9 @@ class BenchmarkRunner:
             if top_conf < 0.5:
                 # 按需升级 Pro：记录升级原因（不允许无理由升级）
                 model, route = router.resolve(
-                    "complex_diagnosis", complexity="high", reason=f"flash_confidence_{top_conf:.2f}"
+                    "complex_diagnosis",
+                    complexity="high",
+                    reason=f"flash_confidence_{top_conf:.2f}",
                 )
                 pred = predict(advisor_pro, o)
                 pred["routed_to"] = model
@@ -271,7 +273,9 @@ class BenchmarkRunner:
                     preds.append(fn(o))
                 except Exception as exc:  # noqa: BLE001
                     logger.warning("llm_benchmark_pred_failed", group=name, error=str(exc))
-                    preds.append({"mechanism": "UNKNOWN", "conclusive": False, "error": str(exc)[:120]})
+                    preds.append(
+                        {"mechanism": "UNKNOWN", "conclusive": False, "error": str(exc)[:120]}
+                    )
             metrics += self._diag_metrics(name, preds, failures)
             llm_obs.append({"baseline": name, "predictions": preds})
 
@@ -305,7 +309,9 @@ class BenchmarkRunner:
         )
         return metrics, llm_obs
 
-    def _llm_input_for(self, o: dict[str, Any]) -> tuple[list[dict[str, str]], list[dict[str, Any]], str]:
+    def _llm_input_for(
+        self, o: dict[str, Any]
+    ) -> tuple[list[dict[str, str]], list[dict[str, Any]], str]:
         """从 Run 报告与证据库构建 LLM 输入（与诊断服务相同的摘要口径，不含 GT）。"""
         run_id = o["run_id"]
         report = o.get("report") or {}

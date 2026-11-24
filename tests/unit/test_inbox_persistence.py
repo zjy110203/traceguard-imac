@@ -185,7 +185,9 @@ def test_legacy_processed_status_is_migrated(db: Database) -> None:
     inbox = PersistentConsumerInbox(db)
     inbox.claim("proj", "evt_legacy")
     with db.session() as s:
-        s.execute(text("UPDATE tg_consumer_inbox SET status='PROCESSED' WHERE event_id='evt_legacy'"))
+        s.execute(
+            text("UPDATE tg_consumer_inbox SET status='PROCESSED' WHERE event_id='evt_legacy'")
+        )
     from traceguard_persistence.db import _migrate_inbox_states
 
     with db.engine.begin() as conn:
@@ -199,7 +201,8 @@ def test_stats_reports_all_states(db: Database) -> None:
     inbox = PersistentConsumerInbox(db)
     inbox.run("c1", "e1", lambda: {"ok": 1})
     inbox.run("c1", "e2", lambda: (_ for _ in ()).throw(RuntimeError("x")))
-    inbox.run("c1", "e3", lambda: (_ for _ in ()).throw(RuntimeError("y")),
-              external_side_effect=True)
+    inbox.run(
+        "c1", "e3", lambda: (_ for _ in ()).throw(RuntimeError("y")), external_side_effect=True
+    )
     stats = inbox.stats()
     assert stats["SUCCEEDED"] == 1 and stats["FAILED"] == 1 and stats["UNKNOWN"] == 1

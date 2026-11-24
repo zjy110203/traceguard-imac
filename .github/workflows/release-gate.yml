@@ -1,20 +1,26 @@
 # Release Gate（三级门禁之三）：发布前必须全绿。
 # 原则：
 # - Nightly 关键失败必须阻断 Release；旧 Commit 的通过结果不得冒充新 RC 的验收；
-# - 文档版本必须与代码一致（RUN-005 报告缺失即阻断）；
-# - 真实浏览器 E2E / Benchmark 需要外部环境与凭据，未满足时必须记录 BLOCKED，不得写成功。
+# - 证据必须与当前 commit 严格对应（Nightly 的 head_sha == github.sha），缺证据 fail-closed；
+# - 文档版本必须与代码一致（RUN-007 报告/证据缺失即阻断），不再依赖 RUN-005 历史文件；
+# - 真实浏览器 E2E / Benchmark 需要外部环境与凭据，未满足时必须记录 BLOCKED，不得写成功；
+# - 本工作流不创建 Release Tag。
 name: Release Gate
 
 on:
   workflow_dispatch:
     inputs:
       benchmark_report:
-        description: "是否声明已有本 RC 的 Benchmark 报告（true/false）"
+        description: "是否已有本 RC 的 Benchmark 报告（true/false）"
         required: false
         default: "false"
   push:
     tags:
       - "v*"
+
+permissions:
+  contents: read
+  actions: read
 
 concurrency:
   group: release-gate
@@ -24,6 +30,10 @@ jobs:
   full-verification:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    env:
+      # 内联 `python - <<'PY'` 不会继承 pytest 的 pythonpath（pyproject 配置），
+      # 必须显式提供，否则 import traceguard_persistence 失败。
+      PYTHONPATH: packages/core:packages/contracts:packages/execution:packages/agents:packages/evidence:packages/persistence:apps/api:apps/teamflow:apps/workers:benchmark
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -32,34 +42,110 @@ jobs:
       - name: Install
         run: |
           python -m venv .venv
-          .venv/bin/pip install -r requirements-dev.txt
+          # RUN-010 WP7：优先按 lock 安装（可复现），失败才回退范围声明
+          .venv/bin/pip install -r requirements.lock.txt || \
+            .venv/bin/pip install -r requirements-dev.txt
+      # RUN-010 WP0 修复：全量测试套件含真实浏览器 E2E，必须先装 Chromium，
+      # 否则 Playwright 用例全部 error（RUN-010 首次触发的真实缺陷，fail-closed 是正确行为）。
+      - name: Install Playwright chromium (must succeed)
+        run: |
+          .venv/bin/python -m playwright install --with-deps chromium
+          .venv/bin/python - <<'PY'
+          import pathlib, sys
+          roots = [pathlib.Path.home() / ".cache" / "ms-playwright"]
+          found = [p.name for r in roots if r.exists() for p in r.iterdir() if "chromium" in p.name]
+          if not found:
+              print("BLOCKED: playwright chromium 未安装成功（目录为空）", file=sys.stderr)
+              sys.exit(1)
+          print("playwright chromium installed:", found)
+          PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Build frontend (E2E 依赖真实 SPA 产物)
+        # RUN-010 收尾缺陷 CL-02：登录 E2E 依赖单端口 SPA 产物（apps/web/dist），
+        # 仓库不含 dist。不构建 → create_app() 不挂载前端路由 → 2 个登录 E2E 必失败。
+        working-directory: apps/web
+        run: |
+          npm ci
+          npm run build
+          test -f dist/index.html || { echo "BLOCKED: 前端 dist 未产出"; exit 1; }
+          echo "frontend dist ready: $(ls dist | tr '\n' ' ')"
       - name: Lint + format
         run: |
           .venv/bin/ruff check packages apps tests benchmark scripts
           .venv/bin/ruff format --check packages apps tests benchmark scripts
       - name: Full test suite
         run: .venv/bin/pytest -q
-      - name: Schema / migration idempotency (fresh + repeat)
+      - name: Schema / migration idempotency (fresh + repeat, 含 v8)
         run: |
           .venv/bin/python - <<'PY'
           from traceguard_persistence import Database
+          from traceguard_persistence.db import MIGRATIONS
+          from sqlalchemy import text
           import tempfile, os
+
           d = tempfile.mkdtemp()
           url = f"sqlite:///{os.path.join(d, 'release.db')}"
           db = Database(url); db.create_schema(); db.create_schema()
           db.dispose()
           db2 = Database(url); db2.create_schema()  # 第二次启动必须幂等
-          print("schema idempotent OK")
+          with db2.session() as s:
+              rows = [(int(r[0]), str(r[1])) for r in s.execute(text("SELECT version, name FROM tg_schema_migration")).all()]
+          expected = {v for v, _n, _m in MIGRATIONS}
+          got = [v for v, _n in rows]
+          assert sorted(got) == sorted(expected), (got, sorted(expected))
+          assert len(got) == len(set(got)), f"迁移被重复应用: {got}"
+          assert (8, "promotion_receipts") in rows, "缺少迁移 v8（promotion_receipts）"
+          db2.dispose()
+          print("schema idempotent OK, migrations:", rows)
           PY
-      - name: Docs presence check
+      - name: Docs presence check (RUN-007)
         run: |
           set -e
-          for f in docs/RUN-005-BASELINE.md docs/RUN-005-TEST-REPORT.md \
-                   docs/RUN-005-IMPLEMENTATION-REPORT.md docs/FEATURE-STATUS.md \
+          missing=0
+          for f in docs/RUN-007-BASELINE.md docs/RUN-007-IMPLEMENTATION-REPORT.md \
+                   docs/RUN-007-TEST-REPORT.md docs/RUN-007-SECURITY-RELIABILITY.md \
+                   docs/RUN-007-UI-REVIEW.md docs/RUN-007-BENCHMARK-REPORT.md \
+                   docs/RUN-007-DECISION-REQUESTS.md docs/FEATURE-STATUS.md \
                    docs/ARCHITECTURE.md docs/DATABASE.md docs/API.md; do
-            test -s "$f" || { echo "missing: $f"; exit 1; }
+            if [ ! -s "$f" ]; then echo "missing: $f"; missing=1; fi
           done
+          if [ "$missing" -ne 0 ]; then echo "BLOCKED: RUN-007 文档不完整"; exit 1; fi
           echo "docs present"
+      - name: Evidence assets presence + JSON validity (fail-closed)
+        run: |
+          .venv/bin/python - <<'PY'
+          import json, sys
+          from pathlib import Path
+
+          required = {
+              "docs/assets/run007/e2e-worker-run007.json": ["mode", "scenarios", "steps", "runs"],
+              "docs/assets/run007/worker-fault-recovery-verified.json": ["victim", "runs", "passed"],
+              "docs/assets/run007/soak-60min.json": ["cycles", "checks", "passed", "integrity"],
+              "docs/assets/run007/ui/ui-review.json": ["results", "views_covered"],
+              "docs/assets/run007/benchmark/benchmark-v3.json": ["metrics", "arm_predictions"],
+          }
+          problems = []
+          for rel, keys in required.items():
+              p = Path(rel)
+              if not p.is_file() or p.stat().st_size == 0:
+                  problems.append(f"missing/empty: {rel}")
+                  continue
+              try:
+                  doc = json.loads(p.read_text(encoding="utf-8"))
+              except Exception as exc:  # noqa: BLE001
+                  problems.append(f"invalid json: {rel} ({exc})")
+                  continue
+              for k in keys:
+                  if k not in doc:
+                      problems.append(f"{rel} 缺少字段 {k}")
+          if problems:
+              for x in problems:
+                  print("BLOCKED:", x)
+              sys.exit(1)
+          print("evidence assets OK")
+          PY
 
   frontend:
     runs-on: ubuntu-latest
@@ -74,16 +160,99 @@ jobs:
       - name: Typecheck + build
         working-directory: apps/web
         run: npm run build
-      - name: UI acceptance script presence
+      - name: UI review script + screenshots presence
         run: |
-          test -f scripts/ui_acceptance.py || { echo "UI acceptance script missing"; exit 1; }
+          test -f scripts/ui_review_run007.py || { echo "BLOCKED: scripts/ui_review_run007.py 缺失"; exit 1; }
+          count=$(find docs/assets/run007/ui -name "*.png" | wc -l | tr -d ' ')
+          echo "ui screenshots = $count"
+          test "$count" -ge 40 || { echo "BLOCKED: UI 截图数量不足（$count < 40）"; exit 1; }
 
-  release-evidence:
-    needs: [full-verification, frontend]
+  nightly-attestation:
+    # 关键门禁：必须有 head_sha 严格等于当前 commit 的成功 Nightly（旧 commit 的结果不得冒充）。
     runs-on: ubuntu-latest
     steps:
+      - name: Query Nightly runs for this exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/${REPO}/actions/workflows/nightly-gate.yml/runs?per_page=50"
+          curl -fsS -H "Authorization: Bearer ${GH_TOKEN}" \
+                    -H "Accept: application/vnd.github+json" "$api" > nightly.json
+          python3 - <<'PY'
+          import json, os, sys
+
+          sha = os.environ["SHA"]
+          doc = json.load(open("nightly.json", encoding="utf-8"))
+          runs = doc.get("workflow_runs") or []
+          matched = [r for r in runs if r.get("head_sha") == sha]
+          ok = [r for r in matched if r.get("conclusion") == "success"]
+          if not ok:
+              print(f"BLOCKED: 找不到 head_sha == {sha} 的成功 Nightly 运行")
+              print("  该 commit 的 Nightly 运行:", [(r.get('id'), r.get('conclusion'), r.get('created_at')) for r in matched] or "无")
+              sys.exit(1)
+          run = max(ok, key=lambda r: r.get("created_at") or "")
+          print(f"NIGHTLY_OK id={run['id']} head_sha={run['head_sha']} created_at={run['created_at']}")
+          print(f"https://github.com/{os.environ['REPO']}/actions/runs/{run['id']}")
+          open("nightly_run_id.txt", "w").write(str(run["id"]))
+          PY
+      - name: Nightly must not have BLOCKED LLM evidence for release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          run_id=$(cat nightly_run_id.txt)
+          curl -fsS -H "Authorization: Bearer ${GH_TOKEN}" \
+                    -H "Accept: application/vnd.github+json" \
+                    "https://api.github.com/repos/${REPO}/actions/runs/${run_id}/jobs?per_page=100" > jobs.json
+          python3 - <<'PY'
+          import json, sys
+          doc = json.load(open("jobs.json", encoding="utf-8"))
+          jobs = {j["name"]: j for j in doc.get("jobs") or []}
+          bad = [n for n, j in jobs.items() if j.get("conclusion") not in ("success", "skipped")]
+          if bad:
+              print("BLOCKED: Nightly 存在非成功 Job:", bad)
+              sys.exit(1)
+          if "llm-smoke" not in jobs:
+              print("BLOCKED: Nightly 缺少 llm-smoke Job（无法确认 LLM 证据状态）")
+              sys.exit(1)
+          print("Nightly jobs all successful:", sorted(jobs))
+          PY
+      - name: Upload attestation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-attestation
+          path: |
+            nightly.json
+            jobs.json
+            nightly_run_id.txt
+          retention-days: 30
+
+  release-evidence:
+    needs: [full-verification, frontend, nightly-attestation]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Benchmark report gate
+        run: |
+          set -e
+          if [ "${{ github.event.inputs.benchmark_report }}" != "true" ]; then
+            if [ -s docs/RUN-007-BENCHMARK-REPORT.md ]; then
+              echo "benchmark_report 输入为 false，但仓库存在 docs/RUN-007-BENCHMARK-REPORT.md；按 fail-closed 视为未声明，阻止放行"
+            fi
+            echo "BLOCKED: 未声明本 RC 的 Benchmark 报告（workflow_dispatch 输入 benchmark_report 必须为 true）"
+            exit 1
+          fi
+          test -s docs/RUN-007-BENCHMARK-REPORT.md || { echo "BLOCKED: Benchmark 报告缺失"; exit 1; }
+          echo "benchmark report present"
       - name: Evidence summary
         run: |
           echo "Commit: ${{ github.sha }}"
           echo "Benchmark report provided: ${{ github.event.inputs.benchmark_report }}"
-          echo "真实 LLM / 外部站点 / 人工基线若未执行，必须在 RUN-005 报告中标记 BLOCKED"
+          echo "Nightly attestation: head_sha 必须等于 ${{ github.sha }}（已在 nightly-attestation 严格校验）"
+          echo "真实 LLM / 外部站点 / 人工基线若未执行，必须在 RUN-007 报告中标记 BLOCKED —— 不得写成功"
+          echo "本工作流不创建 Release Tag。"

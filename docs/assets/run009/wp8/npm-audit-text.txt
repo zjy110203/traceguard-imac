@@ -1,0 +1,19 @@
+# npm audit report
+
+minimatch  7.0.0 - 11.0.0
+Severity: moderate
+minimatch has potential denial of service via globparts amplification - https://github.com/advisories/GHSA-g3hv-75wg-m249
+fix available via `npm audit fix --force`
+Will install vue-tsc@3.3.14, which is a breaking change
+node_modules/minimatch
+  @vue/language-core  <=3.0.1
+  Depends on vulnerable versions of minimatch
+  node_modules/@vue/language-core
+    vue-tsc  1.7.0-alpha.0 - 3.0.1
+    Depends on vulnerable versions of @vue/language-core
+    node_modules/vue-tsc
+
+3 moderate severity vulnerabilities
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force

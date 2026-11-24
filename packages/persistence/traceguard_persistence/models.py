@@ -58,7 +58,9 @@ class TestCaseRow(Base):
     __tablename__ = "tg_testcase"
     testcase_id: Mapped[str] = mapped_column(String(64), primary_key=True)
     workspace_id: Mapped[str] = mapped_column(String(64), index=True)
-    intent_ref: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    #: 需求引用（intent_id）。v10 从 64 放宽到 255：调用方可能传入较长引用；
+    #: 需求正文不得写进这里（见 TestCaseVersion.intent_text）。
+    intent_ref: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     title: Mapped[str] = mapped_column(String(300), default="")
     review_status: Mapped[str] = mapped_column(String(20), default="DRAFT")
     latest_version: Mapped[int] = mapped_column(Integer, default=0)
@@ -131,6 +133,26 @@ class RunRow(Base):
     ended_at: Mapped[float | None] = mapped_column(Float, nullable=True)
 
 
+class RunSubmissionRow(Base):
+    """RUN-010 WP3：终态/中间态提交回执（幂等键 → 原回执重放）。
+
+    与 Run 状态变更在同一事务内写入；同一幂等键重复提交返回原回执，
+    不改写 verdict / report（冻结语义）。
+    """
+
+    __tablename__ = "tg_run_submission"
+    idempotency_key: Mapped[str] = mapped_column(String(160), primary_key=True)
+    run_id: Mapped[str] = mapped_column(String(64), index=True)
+    fencing_token: Mapped[int] = mapped_column(Integer, default=0)
+    worker_id: Mapped[str] = mapped_column(String(120), default="")
+    execution_status: Mapped[str] = mapped_column(String(24), default="")
+    test_verdict: Mapped[str] = mapped_column(String(24), default="NOT_EVALUATED")
+    report_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    observer_mode: Mapped[str] = mapped_column(String(24), default="")
+    submitted_at: Mapped[float] = mapped_column(Float, default=_ts)
+
+
 class StepRow(Base):
     __tablename__ = "tg_step"
     # step_id 在同一用例的每次 Run 中会重复，因此主键必须是 run 范围的
@@ -198,10 +220,16 @@ class EvidenceRow(Base):
     run_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     kind: Mapped[str] = mapped_column(String(20), index=True)
     source_type: Mapped[str] = mapped_column(String(30), index=True)
+    #: 原始来源 payload（脱敏前）的摘要，兼容历史字段名
     sha256: Mapped[str] = mapped_column(String(64))
+    #: 实际持久化内容（脱敏后）的摘要：服务端完整性校验必须以它为准
+    stored_content_sha256: Mapped[str] = mapped_column(String(64), default="")
+    #: 附件的摘要（ArtifactStore 落盘内容的 SHA-256）
+    attachment_sha256: Mapped[str] = mapped_column(String(64), default="")
     attachment_ref: Mapped[str | None] = mapped_column(String(200), nullable=True)
     source_trust: Mapped[str] = mapped_column(String(20), default="UNKNOWN")
     integrity_check: Mapped[str] = mapped_column(String(12), default="NOT_RUN")
+    integrity_detail: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     redacted: Mapped[bool] = mapped_column(Boolean, default=False)
     doc: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     captured_at: Mapped[str] = mapped_column(String(40), default=utc_now_iso)

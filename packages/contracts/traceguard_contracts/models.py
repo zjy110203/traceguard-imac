@@ -69,7 +69,11 @@ class AssertionSpec(ContractBase):
 class TestCaseVersion(ContractBase):
     testcase_id: str = Field(pattern=r"^tcase_[A-Za-z0-9_]+$")
     version: int = Field(ge=1)
+    #: 需求**引用**（intent_id），不是需求正文；正文放 intent_text。
     intent_ref: str | None = None
+    #: 需求正文快照（可追溯用）。RUN-007-FINALIZATION-2：此前正文被写进 intent_ref，
+    #: SQLite 不校验长度所以一直"看起来正常"，PostgreSQL 直接 500（varchar(64) 截断）。
+    intent_text: str | None = None
     steps: list[TestStep] = Field(min_length=1)
     assertions: list[AssertionSpec] = Field(min_length=1)  # F05：禁止空必需断言集
     test_data_refs: list[str] = Field(default_factory=list)

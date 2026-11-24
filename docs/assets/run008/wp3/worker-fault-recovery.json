@@ -1,0 +1,139 @@
+{
+  "round": "RUN-007-RESUME",
+  "started_at": "2026-11-24T05:10:23Z",
+  "kill_at": "2026-11-24T05:10:25Z",
+  "ended_at": "2026-11-24T05:11:08Z",
+  "duration_s": 45.2,
+  "killed_after_s": 2.77,
+  "takeover_latency_s": 21.31,
+  "lease_ttl_s": 6.0,
+  "db": ".traceguard/run008/wfr/workers.db",
+  "procs": 4,
+  "worker_pids": {
+    "wfr-w1": 80665,
+    "wfr-w2": 80666,
+    "wfr-w3": 80667,
+    "wfr-w4": 80668
+  },
+  "queued_runs": 4,
+  "victim": {
+    "run_id": "run_1795497023979298e3a894e54",
+    "worker_id": "wfr-w1",
+    "pid": 80665,
+    "fencing_token_before": 1,
+    "attempt_before": 1,
+    "status_before": "RUNNING",
+    "steps_before_kill": 1,
+    "started_at": 1795497024.942695,
+    "lease_expires_at_before": 1795497030.942695
+  },
+  "killed_pid": 80665,
+  "killed_worker_id": "wfr-w1",
+  "killed_worker_exit_code": -9,
+  "takeover_worker": "wfr-w4",
+  "takeover_fencing_token": 2,
+  "stale_write": {
+    "checked": true,
+    "renew_rejected": true,
+    "submit_rejected": true,
+    "detail": "STALE_FENCING_TOKEN: old worker submit rejected"
+  },
+  "survivors_alive_before_shutdown": [],
+  "worker_exit_codes": {
+    "wfr-w1": -9,
+    "wfr-w2": 0,
+    "wfr-w3": 0,
+    "wfr-w4": 0
+  },
+  "runs": [
+    {
+      "run_id": "run_1795497023975bc7e65208679",
+      "execution_status": "COMPLETED",
+      "test_verdict": "PASSED",
+      "attempt": 1,
+      "fencing_token": 1,
+      "final_owner": "wfr-w4",
+      "has_report": true
+    },
+    {
+      "run_id": "run_1795497023977acf4caf7708c",
+      "execution_status": "COMPLETED",
+      "test_verdict": "PASSED",
+      "attempt": 1,
+      "fencing_token": 1,
+      "final_owner": "wfr-w2",
+      "has_report": true
+    },
+    {
+      "run_id": "run_17954970239789c908562fc93",
+      "execution_status": "COMPLETED",
+      "test_verdict": "PASSED",
+      "attempt": 1,
+      "fencing_token": 1,
+      "final_owner": "wfr-w3",
+      "has_report": true
+    },
+    {
+      "run_id": "run_1795497023979298e3a894e54",
+      "execution_status": "COMPLETED",
+      "test_verdict": "PASSED",
+      "attempt": 1,
+      "fencing_token": 2,
+      "final_owner": "wfr-w4",
+      "has_report": true
+    }
+  ],
+  "victim_run_final": {
+    "run_id": "run_1795497023979298e3a894e54",
+    "execution_status": "COMPLETED",
+    "test_verdict": "PASSED",
+    "attempt": 1,
+    "fencing_token": 2,
+    "lease_owner": "wfr-w4",
+    "lease_expires_at": 0.0,
+    "started_at": 1795497024.942695,
+    "ended_at": 1795497068.14626,
+    "has_report": true
+  },
+  "evidence_counts": {
+    "run_1795497023975bc7e65208679": 21,
+    "run_1795497023977acf4caf7708c": 24,
+    "run_17954970239789c908562fc93": 21,
+    "run_1795497023979298e3a894e54": 24
+  },
+  "step_counts": {
+    "run_1795497023975bc7e65208679": 8,
+    "run_1795497023977acf4caf7708c": 8,
+    "run_17954970239789c908562fc93": 8,
+    "run_1795497023979298e3a894e54": 8
+  },
+  "event_counts_by_context": {
+    "{\"run\": \"run_1795497023975bc7e65208679\"}": 11,
+    "{\"run\": \"run_1795497023977acf4caf7708c\"}": 11,
+    "{\"run\": \"run_17954970239789c908562fc93\"}": 11,
+    "{\"run\": \"run_1795497023979298e3a894e54\"}": 12
+  },
+  "duplicate_event_keys": [],
+  "duplicate_steps": [],
+  "orphan_steps": 0,
+  "checks": {
+    "victim_selected_while_running": true,
+    "kill_recorded": true,
+    "killed_after_s_positive": true,
+    "worker_process_died": true,
+    "same_run_taken_over": true,
+    "takeover_worker_is_other_process": true,
+    "fencing_token_strictly_increased": true,
+    "victim_run_reached_terminal": true,
+    "all_runs_terminal": true,
+    "no_duplicate_events": true,
+    "no_duplicate_steps": true,
+    "no_orphan_steps": true,
+    "evidence_persisted": true,
+    "steps_persisted": true,
+    "victim_run_has_events": true,
+    "reports_present": true,
+    "stale_write_rejected": true
+  },
+  "passed": true
+}

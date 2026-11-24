@@ -1,5 +1,14 @@
 # TraceGuard 阶段与里程碑验收状态（RUN-002 复核）
 
+> **RUN-010（2026-11-24）**：M0~M5 全部 ACCEPTED 的基础上，RUN-010 补齐
+> 认证产品化/内核集成/智能成熟；M5 的外部泛化与 B-17 仍 BLOCKED（如实）。
+> 权威状态见 `docs/RUN-010-FINAL-REPORT.md`。以下历史表格保留。
+
+> **RUN-009 WP0 权威状态摘要（2026-11-24 16:05 CST）**：下方 RUN-002~RUN-007 表格为历史快照。
+> 当前起点 HEAD `cb80591`，RUN-008 已完成：WP0/1/2/4/5/7/8 VERIFIED 或完成，WP3/WP6 PARTIAL；
+> B-17、LLM smoke、Benchmark LLM/人工基线 BLOCKED；真实认证/RBAC NOT_IMPLEMENTED。
+> RUN-009 各 WP 状态以 `docs/RUN-009-FINAL-REPORT.md`（待生成）为准；权威基线见 `docs/RUN-009-BASELINE.md`。历史记录保留不覆盖。
+
 状态枚举：NOT_STARTED / IN_PROGRESS / BLOCKED / READY_FOR_REVIEW / ACCEPTED
 规则：只有具备真实验收证据（测试日志、运行结果）才可 ACCEPTED；代码写完 ≠ 完成。
 最后更新：2026-11-22 13:40
@@ -92,3 +101,41 @@
 | WP4 PostgreSQL / Worker / 长稳 | **BLOCKED** | 环境与时间窗 |
 | WP5 CI 三级门禁真实运行 | **BLOCKED** | 未触发真实 Actions |
 | WP6 UI-FaultBench 深化 | **NOT_IMPLEMENTED（本轮）** | 未追加实验 |
+
+## RUN-007-RESUME 更新（2026-11-23）
+
+状态枚举沿用：NOT_STARTED / IN_PROGRESS / BLOCKED / READY_FOR_REVIEW / ACCEPTED。
+
+| 层 | 阶段 | 名称 | 状态 | 本轮证据 |
+|---|---|---|---|---|
+| 2 | 3 | 任务调度与工作台 | **ACCEPTED（强化）** | 独立 Worker 队列 E2E 55 步 0 失败；执行归属（Worker/fencing/租约）可见 |
+| 3 | 4 | Event 与 Evidence 基础设施 | **ACCEPTED（强化）** | 证据改 `/runs/{id}/evidence` + 图绑定校验；长稳 845 事件无重复键 |
+| 4 | 8 | Evidence Graph | **ACCEPTED（强化）** | 图 54/58 节点、70/76 边；前端自适应渲染修复裁切 |
+| 4 | 10 | Oracle-Protected Self-Healing | **PARTIAL** | E2E 场景 D 全链通过；Benchmark 定位器场景晋升未闭环（0/1 回归），已如实记录 |
+| 5 | 11 | UI-FaultBench | **READY_FOR_REVIEW（四臂已跑）** | A/C/D/E 30 场景 + LLM 两臂；D/E 无增益为负结论；人工基线 BLOCKED |
+| 5 | 12 | 外部泛化、安全与可靠性 | **READY_FOR_REVIEW** | 60 分钟长稳 19/19、故障恢复 17/17；外部泛化仍 BLOCKED(P03) |
+| 5 | 13 | 全链路集成与交付 | **READY_FOR_REVIEW** | 七份报告 + 证据索引；推送/PR 与 CI 触发 BLOCKED（无凭据） |
+| — | — | 前端产品化（15 视图） | **ACCEPTED（视觉人工复核）** | 75/75 检查 + 79 张截图 + 四态；深色真实生效 |
+
+## RUN-007-RESUME 阶段状态最终更新（2026-11-23）
+
+| 层 | 阶段 | 状态变更 |
+|---|---|---|
+| 5 | 12 外部泛化、安全与可靠性 | READY_FOR_REVIEW → **ACCEPTED**（长稳 19/19、故障恢复 17/17、CI security/llm-smoke 真跑） |
+| 5 | 13 全链路集成与交付 | READY_FOR_REVIEW → **ACCEPTED**（PR #1 + 三级门禁同 commit 全绿） |
+| — | CI 三级门禁 | BLOCKED → **ACCEPTED**（VERIFIED，含 attestation `head_sha` 严格匹配） |
+| 4 | 10 Oracle-Protected Self-Healing | 仍 **PARTIAL**（自愈未闭环，0/1 回归） |
+
+## RUN-010-FINAL-CLOSEOUT 状态（2026-11-25 00:30 CST）
+
+| 项 | 状态 | 依据 |
+|---|---|---|
+| RUN-010 WP0~WP9 | **ACCEPTED（收尾复核后）** | 全部交付物与测试证据核对一致；统计数字已按最新 HEAD 更正 |
+| WP4 诊断 v2 | **ACCEPTED（准确率无增益，如实记录）** | 13 专项用例通过；Benchmark C/D 臂均 9/14，graph_changed 2/14 |
+| WP6 前端无障碍 | **ACCEPTED（范围受限）** | 13 路由 axe 0 violations；键盘/读屏/动效/缩放未覆盖（报告 §7） |
+| CI 三级门禁（`d4d59ba`） | **PR Gate / Nightly Gate PASS；Release Gate 见 CLOSEOUT §4** | CL-01 修复后 Nightly backend-full 2m29s 正常结束（此前 45min 超时） |
+| B-17 Worker 真实故障矩阵 | **BLOCKED** | 安全批准未解除，未绕过 |
+| 宿主级网络隔离 | **BLOCKED** | 无 pf/防火墙权限 |
+| Benchmark LLM 臂 / 人工基线 | **BLOCKED** | 无计费授权 / 无真人 |
+| LICENSE | **NEEDS_DECISION** | 待负责人决策 |
+| 生产就绪 | **NOT READY** | 见 FINAL-REPORT §6 与 CLOSEOUT §5 |

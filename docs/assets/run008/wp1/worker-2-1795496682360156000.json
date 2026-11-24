@@ -1,0 +1,1 @@
+{"pid": 71027, "scope": "run008-normal", "reserved": 5, "rejected": 15, "reasons": {"PROBE_COUNT_BUDGET_EXHAUSTED": 15}, "error": "", "probes_used_seen": 20, "closed_seen": false}

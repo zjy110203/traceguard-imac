@@ -144,14 +144,29 @@ def test_validation_failure_state() -> None:
     assert result.sandbox_status == "FAILED"
 
 
-def test_agent_cannot_self_approve() -> None:
+@pytest.mark.parametrize(
+    "actor", ["agent-1", "system:promotion", "llm:deepseek", "bot:ci", "worker:1"]
+)
+def test_non_human_cannot_self_approve(actor: str) -> None:
+    """RUN-008 WP6：所有非人类命名空间都必须被主体类型门禁拒绝。"""
     svc = SelfHealingService()
     svc.register_official(_tc())
     prop = _prop(svc)
     svc.validate(prop.proposal_id)
     svc.submit_for_approval(prop.proposal_id)
     with pytest.raises(AppError) as e:
-        svc.approve(prop.proposal_id, "agent-1")
+        svc.approve(prop.proposal_id, actor)
+    assert e.value.code.value == "AUTHORIZATION_ERROR"
+
+
+def test_non_human_cannot_reject() -> None:
+    svc = SelfHealingService()
+    svc.register_official(_tc())
+    prop = _prop(svc)
+    svc.validate(prop.proposal_id)
+    svc.submit_for_approval(prop.proposal_id)
+    with pytest.raises(AppError) as e:
+        svc.reject(prop.proposal_id, "system:promotion")
     assert e.value.code.value == "AUTHORIZATION_ERROR"
 
 

@@ -1,0 +1,1041 @@
+{
+  "api": "http://127.0.0.1:8020",
+  "teamflow": "http://127.0.0.1:8021",
+  "mode": "worker",
+  "scenarios": {
+    "A": {
+      "intent_id": "intent_17954410162303e619dc19db4",
+      "exploration_id": "exploration_1795441016547245a22f5a2de",
+      "testcase_id": "tcase_1795441023150c9ac17694538",
+      "version": 1,
+      "oracle_ids": {
+        "cand_a_create_ui": "oracle_e2e_tcase_1795441023150c9ac17694538_cand_a_create_ui"
+      },
+      "gate_rejected_as_expected": {
+        "rejected": true,
+        "status": 412,
+        "detail": "POST /testcases/tcase_1795441023150c9ac17694538/versions/1/review -> 412: {\"detail\":{\"code\":\"PRECONDITION_FAILED\",\"message\":\"STABILITY_REPLAY_REQUIRED: tcase_1795441023150c9ac17694538@1 没有任何稳定性回放记录（compile_source=compiler）\"}}"
+      },
+      "replay_id": "replay_17954410231622cc88efeee63",
+      "replay_classification": "STABLE_PASS",
+      "review_revision": 1,
+      "run_id": "run_179544102610731a049aac1b2",
+      "verdict": "PASSED",
+      "worker_execution": {
+        "workers": [
+          "run007-w3"
+        ],
+        "fencing_token": 1
+      },
+      "llm": {
+        "engine": "llm:deepseek",
+        "provider": "deepseek",
+        "model": "deepseek-flash",
+        "configured": true,
+        "connected": "unknown",
+        "llm_calls": 5,
+        "fallback_calls": 0,
+        "fallback_happened": false,
+        "last_error": "",
+        "decision_source": "llm",
+        "real_llm_call_observed": true,
+        "llm_summary": {
+          "data_available": true,
+          "record_count": 232,
+          "date": "2026-11-23",
+          "calls": 96,
+          "errors": 0,
+          "input_tokens": 83067,
+          "output_tokens": 31536,
+          "estimated_cost_usd": 0.020921,
+          "cost_is_estimated": true,
+          "retries": 0,
+          "avg_latency_ms": 2427.2,
+          "p95_latency_ms": 5989,
+          "latency_sample": 96,
+          "budget_usd": 1.0,
+          "budget_exceeded": false,
+          "total": {
+            "calls": 232,
+            "errors": 0,
+            "input_tokens": 305661,
+            "output_tokens": 131115,
+            "estimated_cost_usd": 0.18512,
+            "cost_is_estimated": true,
+            "retries": 0,
+            "avg_latency_ms": 4495.5,
+            "p95_latency_ms": 13404,
+            "latency_sample": 232
+          },
+          "by_agent": {
+            "compiler": {
+              "calls": 2,
+              "errors": 0,
+              "input_tokens": 1058,
+              "output_tokens": 1419,
+              "estimated_cost_usd": 0.000673,
+              "cost_is_estimated": true,
+              "retries": 0,
+              "avg_latency_ms": 4011.5,
+              "p95_latency_ms": 3945,
+              "latency_sample": 2
+            },
+            "diagnosis": {
+              "calls": 20,
+              "errors": 0,
+              "input_tokens": 53485,
+              "output_tokens": 17523,
+              "estimated_cost_usd": 0.012358,
+              "cost_is_estimated": true,
+              "retries": 0,
+              "avg_latency_ms": 5591.3,
+              "p95_latency_ms": 6444,
+              "latency_sample": 20
+            },
+            "explorer": {
+              "calls": 67,
+              "errors": 0,
+              "input_tokens": 24957,
+              "output_tokens": 8051,
+              "estimated_cost_usd": 0.005716,
+              "cost_is_estimated": true,
+              "retries": 0,
+              "avg_latency_ms": 1249.0,
+              "p95_latency_ms": 2193,
+              "latency_sample": 67
+            },
+            "probe_planner": {
+              "calls": 4,
+              "errors": 0,
+              "input_tokens": 1590,
+              "output_tokens": 1308,
+              "estimated_cost_usd": 0.000682,
+              "cost_is_estimated": true,
+              "retries": 0,
+              "avg_latency_ms": 2295.8,
+              "p95_latency_ms": 2590,
+              "latency_sample": 4
+            },
+            "repair_planner": {
+              "calls": 3,
+              "errors": 0,
+              "input_tokens": 1977,
+              "output_tokens": 3235,
+              "estimated_cost_usd": 0.001492,
+              "cost_is_estimated": true,
+              "retries": 0,
+              "avg_latency_ms": 6767.3,
+              "p95_latency_ms": 6030,
+              "latency_sample": 3
+            }
+          },
+          "by_model": {
+            "deepseek-flash": {
+              "calls": 96,
+              "errors": 0,
+              "input_tokens": 83067,
+              "output_tokens": 31536,
+              "estimated_cost_usd": 0.020921,
+              "cost_is_estimated": true,
+              "retries": 0,
+              "avg_latency_ms": 2427.2,
+              "p95_latency_ms": 5989,
+              "latency_sample": 96
+            }
+          },
+          "daily_series": [
+            {
+              "date": "2026-11-22",
+              "calls": 136,
+              "errors": 0,
+              "input_tokens": 222594,
+              "output_tokens": 99579,
+              "estimated_cost_usd": 0.164199,
+              "cost_is_estimated": true,
+              "retries": 0,
+              "avg_latency_ms": 5955.5,
+              "p95_latency_ms": 14329,
+              "latency_sample": 136
+            },
+            {
+              "date": "2026-11-23",
+              "calls": 96,
+              "errors": 0,
+              "input_tokens": 83067,
+              "output_tokens": 31536,
+              "estimated_cost_usd": 0.020921,
+              "cost_is_estimated": true,
+              "retries": 0,
+              "avg_latency_ms": 2427.2,
+              "p95_latency_ms": 5989,
+              "latency_sample": 96
+            }
+          ],
+          "latency_summary": {
+            "avg_ms": 2427.2,
+            "p95_ms": 5989,
+            "sample": 96
+          },
+          "prompt_versions": {
+            "deepseek:deepseek-flash:compile_advisor@v1": 2,
+            "deepseek:deepseek-flash:diagnosis_advisor@v1": 112,
+            "deepseek:deepseek-flash:explorer_planner@v1": 76,
+            "deepseek:deepseek-flash:probe_planner@v1": 4,
+            "deepseek:deepseek-flash:repair_planner@v1": 3,
+            "deepseek:deepseek-v4-pro:diagnosis_advisor@v1": 27,
+            "smoke@v1": 4
+          },
+          "recent_calls": [
+            {
+              "ts": "2026-11-23T13:37:03.111035+00:00",
+              "model": "deepseek-flash",
+              "agent": "explorer",
+              "request_status": "ok",
+              "error_kind": "",
+              "latency_ms": 1910,
+              "input_tokens": 471,
+              "output_tokens": 152
+            },
+            {
+              "ts": "2026-11-23T13:37:00.832934+00:00",
+              "model": "deepseek-flash",
+              "agent": "explorer",
+              "request_status": "ok",
+              "error_kind": "",
+              "latency_ms": 1406,
+              "input_tokens": 403,
+              "output_tokens": 57
+            },
+            {
+              "ts": "2026-11-23T13:36:59.406555+00:00",
+              "model": "deepseek-flash",
+              "agent": "explorer",
+              "request_status": "ok",
+              "error_kind": "",
+              "latency_ms": 711,
+              "input_tokens": 386,
+              "output_tokens": 58
+            },
+            {
+              "ts": "2026-11-23T13:36:58.643486+00:00",
+              "model": "deepseek-flash",
+              "agent": "explorer",
+              "request_status": "ok",
+              "error_kind": "",
+              "latency_ms": 991,
+              "input_tokens": 370,
+              "output_tokens": 132
+            },
+            {
+              "ts": "2026-11-23T13:36:57.280469+00:00",
+              "model": "deepseek-flash",
+              "agent": "explorer",
+              "request_status": "ok",
+              "error_kind": "",
+              "latency_ms": 715,
+              "input_tokens": 325,
+              "output_tokens": 54
+            },
+            {
+              "ts": "2026-11-23T12:29:27.133544+00:00",
+              "model": "deepseek-flash",
+              "agent": "diagnosis",
+              "request_status": "ok",
+              "error_kind": "",
+              "latency_ms": 4974,
+              "input_tokens": 2654,
+              "output_tokens": 899
+            },
+            {
+              "ts": "2026-11-23T12:29:10.742700+00:00",
+              "model": "deepseek-flash",
+              "agent": "explorer",
+              "request_status": "ok",
+              "error_kind": "",
+              "latency_ms": 1241,
+              "input_tokens": 442,
+              "output_tokens": 126
+            },
+            {
+              "ts": "2026-11-23T12:29:09.158811+00:00",
+              "model": "deepseek-flash",
+              "agent": "explorer",
+              "request_status": "ok",
+              "error_kind": "",
+              "latency_ms": 1392,
+              "input_tokens": 403,
+              "output_tokens": 62
+            },
+            {
+              "ts": "2026-11-23T12:29:07.755837+00:00",
+              "model": "deepseek-flash",
+              "agent": "explorer",
+              "request_status": "ok",
+              "error_kind": "",
+              "latency_ms": 1299,
+              "input_tokens": 386,
+              "output_tokens": 55
+            },
+            {
+              "ts": "2026-11-23T12:29:06.443449+00:00",
+              "model": "deepseek-flash",
+              "agent": "explorer",
+              "request_status": "ok",
+              "error_kind": "",
+              "latency_ms": 1139,
+              "input_tokens": 370,
+              "output_tokens": 37
+            }
+          ],
+          "generated_at": "2026-11-23T13:37:03.143863+00:00",
+          "note": "应用侧按公开牌价估算的成本，非 DeepSeek 平台账单；未包含密钥、Prompt 原文或页面内容。",
+          "configured": true,
+          "connected": "unknown",
+          "provider": "deepseek",
+          "default_model": "deepseek-flash",
+          "reasoning_model": "deepseek-v4-pro",
+          "enabled": {
+            "explorer": true,
+            "diagnosis": true,
+            "compiler": false,
+            "compiler_mode": "rule_only",
+            "probe_planner": false,
+            "repair_planner": false
+          },
+          "decisions": {
+            "llm_calls_recorded": 15,
+            "fallback_calls": 0,
+            "rule_explorations": 0,
+            "diagnosis_advisor_called": 1,
+            "diagnosis_advisor_skipped": 0,
+            "compiler_llm_calls": 0,
+            "compiler_fallbacks": 0,
+            "probe_planner_calls": 0,
+            "probe_planner_fallbacks": 0,
+            "repair_planner_proposals": 0,
+            "note": "engine 标记规划器配置，不等于每个动作都由 LLM 决策；成本为应用侧估算。"
+          }
+        }
+      },
+      "evidence": {
+        "run_id": "run_179544102610731a049aac1b2",
+        "evidence_count": 18,
+        "evidence_ids": [
+          "evd_179544102855607795bcf4786",
+          "evd_17954410284215d8b2030ff38",
+          "evd_1795441028421dbe1489a1666",
+          "evd_1795441028421e6a2d021dfcc",
+          "evd_1795441028382503aadbec940",
+          "evd_179544102838254048a56bca3",
+          "evd_1795441028382df8693686425",
+          "evd_17954410283811651c93931f8",
+          "evd_1795441027918d686e13c7c19",
+          "evd_17954410279180e4c90c4f858",
+          "evd_17954410279178c4a45b1e9be",
+          "evd_17954410275007477194ba0c8",
+          "evd_179544102750079a48396cb04",
+          "evd_17954410274993caccead21ec",
+          "evd_1795441027110c321e74115dd",
+          "evd_1795441027110690210e514ce",
+          "evd_17954410271091d5827923009",
+          "evd_179544102710930eb43cdbcc8"
+        ],
+        "evidence_kinds": {
+          "raw": 18
+        },
+        "evidence_sources": {
+          "api": 1,
+          "browser": 15,
+          "network": 2
+        },
+        "step_count": 5,
+        "event_count": 8,
+        "with_attachment": 15,
+        "integrity_pass": 0
+      },
+      "execution_trace": {
+        "run_id": "run_179544102610731a049aac1b2",
+        "mode": "worker",
+        "submitted_at": "QUEUED",
+        "submitted_ts": 1795441026.108,
+        "workers_seen": [
+          "run007-w3"
+        ],
+        "fencing_tokens_seen": [
+          0,
+          1
+        ],
+        "polls": 11,
+        "elapsed_s": 2.6,
+        "execution_status": "COMPLETED",
+        "test_verdict": "PASSED",
+        "attempt": 1,
+        "fencing_token": 1,
+        "lease_owner": "run007-w3",
+        "observer_mode": "playwright",
+        "has_report": true
+      }
+    },
+    "B": {
+      "run_id": "run_17954410287144f666f29f267",
+      "verdict": "FAILED",
+      "worker_execution": {
+        "workers": [
+          "run007-w1"
+        ],
+        "fencing_token": 1
+      },
+      "diagnosis_id": "diagnosis_1795441048722f5154af6cf16",
+      "outcome": "CONFIRMED",
+      "disposition": "PRODUCT_DEFECT",
+      "graph_nodes": 51,
+      "graph_edges": 56,
+      "graph_node_types": [
+        "Assertion",
+        "Event",
+        "Evidence",
+        "Hypothesis",
+        "Run",
+        "Source",
+        "Step"
+      ],
+      "baseline_project_count": true,
+      "evidence_ids": [
+        "evd_1795441033925e57784e78683",
+        "evd_179544103378859d02d03c43a",
+        "evd_17954410337877aa2171844bf",
+        "evd_179544103378797f2517e04c3",
+        "evd_1795441033738783f2fc97207",
+        "evd_17954410337388c7e5e8e7266",
+        "evd_1795441033738a0d3bceda54a",
+        "evd_179544103369312d82e3a0a9b",
+        "evd_1795441033692eae1f4018c35",
+        "evd_1795441033692f6263fbd3e0a",
+        "evd_1795441032106844f8dc73253",
+        "evd_17954410321058ceda9ee4374",
+        "evd_1795441032105e7b2de3e0876",
+        "evd_1795441032105833b06423886",
+        "evd_1795441031674ecae0ccef4b2",
+        "evd_1795441031674bdbfea990d5b",
+        "evd_1795441031673b21e62a6687e",
+        "evd_1795441031274c8b40fb0681a",
+        "evd_17954410312748020e53e26e0",
+        "evd_17954410312746f3903da5f5f",
+        "evd_17954410308644e18df793d5e",
+        "evd_179544103086385039ada6253",
+        "evd_179544103086374b552da2f25",
+        "evd_17954410308626c3685cb5519",
+        "evd_17954410299167ca5e638f145",
+        "evd_17954410299165193b1ebcfcc",
+        "evd_1795441029915ca1f9f2fadf1",
+        "evd_17954410299148fb390af6b28"
+      ],
+      "evidence": {
+        "run_id": "run_17954410287144f666f29f267",
+        "evidence_count": 28,
+        "evidence_ids": [
+          "evd_1795441033925e57784e78683",
+          "evd_179544103378859d02d03c43a",
+          "evd_17954410337877aa2171844bf",
+          "evd_179544103378797f2517e04c3",
+          "evd_1795441033738783f2fc97207",
+          "evd_17954410337388c7e5e8e7266",
+          "evd_1795441033738a0d3bceda54a",
+          "evd_179544103369312d82e3a0a9b",
+          "evd_1795441033692eae1f4018c35",
+          "evd_1795441033692f6263fbd3e0a",
+          "evd_1795441032106844f8dc73253",
+          "evd_17954410321058ceda9ee4374",
+          "evd_1795441032105e7b2de3e0876",
+          "evd_1795441032105833b06423886",
+          "evd_1795441031674ecae0ccef4b2",
+          "evd_1795441031674bdbfea990d5b",
+          "evd_1795441031673b21e62a6687e",
+          "evd_1795441031274c8b40fb0681a",
+          "evd_17954410312748020e53e26e0",
+          "evd_17954410312746f3903da5f5f",
+          "evd_17954410308644e18df793d5e",
+          "evd_179544103086385039ada6253",
+          "evd_179544103086374b552da2f25",
+          "evd_17954410308626c3685cb5519",
+          "evd_17954410299167ca5e638f145",
+          "evd_17954410299165193b1ebcfcc",
+          "evd_1795441029915ca1f9f2fadf1",
+          "evd_17954410299148fb390af6b28"
+        ],
+        "evidence_kinds": {
+          "raw": 28
+        },
+        "evidence_sources": {
+          "api": 1,
+          "browser": 24,
+          "network": 3
+        },
+        "step_count": 8,
+        "event_count": 11,
+        "with_attachment": 24,
+        "integrity_pass": 0
+      },
+      "execution_trace": {
+        "run_id": "run_17954410287144f666f29f267",
+        "mode": "worker",
+        "submitted_at": "QUEUED",
+        "submitted_ts": 1795441028.715,
+        "workers_seen": [
+          "run007-w1"
+        ],
+        "fencing_tokens_seen": [
+          0,
+          1
+        ],
+        "polls": 21,
+        "elapsed_s": 5.2,
+        "execution_status": "COMPLETED",
+        "test_verdict": "FAILED",
+        "attempt": 1,
+        "fencing_token": 1,
+        "lease_owner": "run007-w1",
+        "observer_mode": "playwright",
+        "has_report": true
+      }
+    },
+    "C": {
+      "suggestions": 2,
+      "probe_steps": [
+        [
+          "http_state",
+          "SUCCEEDED"
+        ],
+        [
+          "network_trace",
+          "SUCCEEDED"
+        ]
+      ],
+      "stop_reason": "STOP_NO_HIGH_VALUE_PROBE",
+      "stop_detail": "已无高价值证据缺口",
+      "new_evidence_ids": [
+        "evd_17954410487694733aefa904c",
+        "evd_1795441048773e3e2b56498ef"
+      ],
+      "hypotheses_after": [
+        {
+          "id": "hyp_1795441033934c15e0dc110a6",
+          "status": "CONFIRMED"
+        }
+      ],
+      "diagnosis_status_after": "CONFIRMED",
+      "outcome_after": "CONFIRMED",
+      "graph_after_nodes": 55,
+      "graph_after_edges": 62,
+      "budget": {
+        "budget_id": "pbudget_run-run_17954410287144f666f29f267",
+        "scope_key": "run:run_17954410287144f666f29f267",
+        "owner_run_id": "run_17954410287144f666f29f267",
+        "owner_diagnosis_id": "",
+        "workspace_id": "default",
+        "max_probes": 50,
+        "probes_used": 2,
+        "probes_left": 48,
+        "max_total_cost": 100.0,
+        "cost_used": 1.2,
+        "cost_left": 98.8,
+        "max_duration_seconds": 60.0,
+        "elapsed_seconds": 0.012,
+        "time_left": 59.988,
+        "closed": false,
+        "close_reason": "",
+        "provisional": true,
+        "note": "P06 待负责人确认：以下预算与风险阈值为 provisional 配置，仅用于本轮实现与测试，不得视为正式冻结的工程决策。",
+        "started_at": 1795441048.762892,
+        "closed_at": null,
+        "version": 3,
+        "doc_version": 3
+      }
+    },
+    "D": {
+      "case_id": "tcase_17954410487865951be674ef1",
+      "base_version": 1,
+      "baseline_run_id": "run_1795441048796fdd6a392594c",
+      "baseline_verdict": "NOT_EVALUATED",
+      "baseline_execution_status": "FAILED",
+      "baseline_note": "定位器故障=步骤执行中断，状态机输出 NOT_EVALUATED（符合规范）",
+      "proposal_id": "repair_1795441061065a2faa2bad8d0",
+      "validated_status": "VALIDATED",
+      "assertion_preservation": "PASS",
+      "oracle_integrity": "PASS",
+      "sandbox_run_id": "run_1795441061071b4bfb33e5473",
+      "sandbox_verdict": "PASSED",
+      "sandbox_executed_by": "run007-w4",
+      "sandbox_fencing_token": 1,
+      "approved_by": "role:qa-lead",
+      "promoted_version": 2,
+      "idempotent_replay_version": 2,
+      "regression_run_id": "run_179544106574353ed4c61e2d3",
+      "regression_verdict": "PASSED",
+      "regression_worker": {
+        "workers": [
+          "run007-w3"
+        ],
+        "fencing_token": 1
+      },
+      "rolled_back_status": "ROLLED_BACK",
+      "restored_version": 3,
+      "latest_after_rollback": 3,
+      "post_rollback_run_id": "run_1795441070172be4e8b0d480c",
+      "post_rollback_verdict": "PASSED",
+      "fault_cleared": {
+        "ok": true,
+        "cleared_projects": 0,
+        "faults_cleared": true
+      }
+    }
+  },
+  "api_inline_worker": false,
+  "runs": [
+    {
+      "run_id": "run_179544102610731a049aac1b2",
+      "mode": "worker",
+      "submitted_at": "QUEUED",
+      "submitted_ts": 1795441026.108,
+      "workers_seen": [
+        "run007-w3"
+      ],
+      "fencing_tokens_seen": [
+        0,
+        1
+      ],
+      "polls": 11,
+      "elapsed_s": 2.6,
+      "execution_status": "COMPLETED",
+      "test_verdict": "PASSED",
+      "attempt": 1,
+      "fencing_token": 1,
+      "lease_owner": "run007-w3",
+      "observer_mode": "playwright",
+      "has_report": true
+    },
+    {
+      "run_id": "run_17954410287144f666f29f267",
+      "mode": "worker",
+      "submitted_at": "QUEUED",
+      "submitted_ts": 1795441028.715,
+      "workers_seen": [
+        "run007-w1"
+      ],
+      "fencing_tokens_seen": [
+        0,
+        1
+      ],
+      "polls": 21,
+      "elapsed_s": 5.2,
+      "execution_status": "COMPLETED",
+      "test_verdict": "FAILED",
+      "attempt": 1,
+      "fencing_token": 1,
+      "lease_owner": "run007-w1",
+      "observer_mode": "playwright",
+      "has_report": true
+    },
+    {
+      "run_id": "run_1795441048796fdd6a392594c",
+      "mode": "worker",
+      "submitted_at": "QUEUED",
+      "submitted_ts": 1795441048.797,
+      "workers_seen": [
+        "run007-w2"
+      ],
+      "fencing_tokens_seen": [
+        0,
+        1
+      ],
+      "polls": 48,
+      "elapsed_s": 12.3,
+      "execution_status": "FAILED",
+      "test_verdict": "NOT_EVALUATED",
+      "attempt": 1,
+      "fencing_token": 1,
+      "lease_owner": "run007-w2",
+      "observer_mode": "playwright",
+      "has_report": true
+    },
+    {
+      "run_id": "run_179544106574353ed4c61e2d3",
+      "mode": "worker",
+      "submitted_at": "QUEUED",
+      "submitted_ts": 1795441065.744,
+      "workers_seen": [
+        "run007-w3"
+      ],
+      "fencing_tokens_seen": [
+        0,
+        1
+      ],
+      "polls": 18,
+      "elapsed_s": 4.4,
+      "execution_status": "COMPLETED",
+      "test_verdict": "PASSED",
+      "attempt": 1,
+      "fencing_token": 1,
+      "lease_owner": "run007-w3",
+      "observer_mode": "playwright",
+      "has_report": true
+    },
+    {
+      "run_id": "run_1795441070172be4e8b0d480c",
+      "mode": "worker",
+      "submitted_at": "QUEUED",
+      "submitted_ts": 1795441070.173,
+      "workers_seen": [
+        "run007-w3"
+      ],
+      "fencing_tokens_seen": [
+        0,
+        1
+      ],
+      "polls": 20,
+      "elapsed_s": 5.0,
+      "execution_status": "COMPLETED",
+      "test_verdict": "PASSED",
+      "attempt": 1,
+      "fencing_token": 1,
+      "lease_owner": "run007-w3",
+      "observer_mode": "playwright",
+      "has_report": true
+    }
+  ],
+  "steps": [
+    {
+      "step": "0 健康检查",
+      "ok": true,
+      "ms": 15,
+      "at": 1795441015.786001
+    },
+    {
+      "step": "0 API 不得启用内嵌 Worker（否则无法证明是独立 Worker 执行）",
+      "ok": true,
+      "ms": 0,
+      "at": 1795441015.78811
+    },
+    {
+      "step": "0 浏览器可用性",
+      "ok": true,
+      "ms": 390,
+      "at": 1795441016.184157
+    },
+    {
+      "step": "0 资产种子",
+      "ok": true,
+      "ms": 45,
+      "at": 1795441016.23005
+    },
+    {
+      "step": "A1 创建 Intent",
+      "ok": true,
+      "ms": 1,
+      "at": 1795441016.2312598
+    },
+    {
+      "step": "A2 Intent 状态推进",
+      "ok": true,
+      "ms": 1,
+      "at": 1795441016.2323809
+    },
+    {
+      "step": "A3 Agent 真实探索",
+      "ok": true,
+      "ms": 6899,
+      "at": 1795441023.132006
+    },
+    {
+      "step": "A4 编译候选用例",
+      "ok": true,
+      "ms": 5,
+      "at": 1795441023.153673
+    },
+    {
+      "step": "A5 创建并审批 Oracle（cand_a_create_ui）",
+      "ok": true,
+      "ms": 2,
+      "at": 1795441023.157187
+    },
+    {
+      "step": "A6 绑定 Oracle（固定版本）",
+      "ok": true,
+      "ms": 1,
+      "at": 1795441023.159044
+    },
+    {
+      "step": "A7 审核门禁应拒绝（无稳定性回放）",
+      "ok": true,
+      "ms": 2,
+      "at": 1795441023.1611462
+    },
+    {
+      "step": "A8 稳定性回放（3 次真实 Run）",
+      "ok": true,
+      "ms": 2939,
+      "at": 1795441026.1008158
+    },
+    {
+      "step": "A9 回放结论检查",
+      "ok": true,
+      "ms": 0,
+      "at": 1795441026.100831
+    },
+    {
+      "step": "A10 人工审核通过（消费回放结论）",
+      "ok": true,
+      "ms": 3,
+      "at": 1795441026.103966
+    },
+    {
+      "step": "A11 审核留痕含回放证据",
+      "ok": true,
+      "ms": 1,
+      "at": 1795441026.105118
+    },
+    {
+      "step": "A12 正式执行（独立 Worker 消费队列）",
+      "ok": true,
+      "ms": 2590,
+      "at": 1795441028.695672
+    },
+    {
+      "step": "A13 结果必须 PASSED",
+      "ok": true,
+      "ms": 0,
+      "at": 1795441028.69568
+    },
+    {
+      "step": "A14 必须由独立 Worker 执行（含租约/fencing）",
+      "ok": true,
+      "ms": 0,
+      "at": 1795441028.6956868
+    },
+    {
+      "step": "A15 真实 Evidence 与 Step 已持久化",
+      "ok": true,
+      "ms": 8,
+      "at": 1795441028.7042902
+    },
+    {
+      "step": "B0 重置 TeamFlow 数据（保证业务状态基线为 0）",
+      "ok": true,
+      "ms": 5,
+      "at": 1795441028.709769
+    },
+    {
+      "step": "B0b 基线业务状态必须为空",
+      "ok": true,
+      "ms": 2,
+      "at": 1795441028.712115
+    },
+    {
+      "step": "B1 真实执行受控故障用例 tcase_tf_false_pass",
+      "ok": true,
+      "ms": 5220,
+      "at": 1795441033.932794
+    },
+    {
+      "step": "B2 假成功必须被判 FAILED",
+      "ok": true,
+      "ms": 0,
+      "at": 1795441033.932801
+    },
+    {
+      "step": "B2b 必须由独立 Worker 执行",
+      "ok": true,
+      "ms": 0,
+      "at": 1795441033.9328058
+    },
+    {
+      "step": "B3 诊断",
+      "ok": true,
+      "ms": 14793,
+      "at": 1795441048.726208
+    },
+    {
+      "step": "B4 生成并查询证据图",
+      "ok": true,
+      "ms": 22,
+      "at": 1795441048.748309
+    },
+    {
+      "step": "B5 通过 /runs/{run_id}/evidence 取真实 Evidence",
+      "ok": true,
+      "ms": 11,
+      "at": 1795441048.7597141
+    },
+    {
+      "step": "B6 证据图必须包含这些 Evidence 节点与来源关系",
+      "ok": true,
+      "ms": 0,
+      "at": 1795441048.759804
+    },
+    {
+      "step": "C1 读取探针建议（只读探针）",
+      "ok": true,
+      "ms": 3,
+      "at": 1795441048.764986
+    },
+    {
+      "step": "C2 执行 Active Diagnosis 探针闭环",
+      "ok": true,
+      "ms": 18,
+      "at": 1795441048.78323
+    },
+    {
+      "step": "C3 必须有真实成功执行的探针与新证据",
+      "ok": true,
+      "ms": 0,
+      "at": 1795441048.783239
+    },
+    {
+      "step": "C4 重新读取诊断结论",
+      "ok": true,
+      "ms": 1,
+      "at": 1795441048.784439
+    },
+    {
+      "step": "D0 创建场景 D 用例（自带故障激活步骤）",
+      "ok": true,
+      "ms": 9,
+      "at": 1795441048.795132
+    },
+    {
+      "step": "D1 基线版本在故障下必须真实失败（步骤中断→NOT_EVALUATED 或 断言失败→FAILED）",
+      "ok": true,
+      "ms": 0,
+      "at": 1795441061.063926
+    },
+    {
+      "step": "D1b 基线 Run 必须由独立 Worker 执行",
+      "ok": true,
+      "ms": 0,
+      "at": 1795441061.0639381
+    },
+    {
+      "step": "D2 生成修复提案（test_id → role 定位器）",
+      "ok": true,
+      "ms": 2,
+      "at": 1795441061.0666082
+    },
+    {
+      "step": "D3 Diff / 断言保护 / Oracle 完整性校验",
+      "ok": true,
+      "ms": 1,
+      "at": 1795441061.068325
+    },
+    {
+      "step": "D4 校验必须通过",
+      "ok": true,
+      "ms": 0,
+      "at": 1795441061.068335
+    },
+    {
+      "step": "D5 沙箱真实执行（故障仍生效；等待独立 Worker 消费队列）",
+      "ok": true,
+      "ms": 4661,
+      "at": 1795441065.729532
+    },
+    {
+      "step": "D6 沙箱必须 PASSED（证明修复真实有效）",
+      "ok": true,
+      "ms": 0,
+      "at": 1795441065.729547
+    },
+    {
+      "step": "D6b 沙箱 Run 必须由独立 Worker 执行",
+      "ok": true,
+      "ms": 0,
+      "at": 1795441065.729557
+    },
+    {
+      "step": "D7 提交审批",
+      "ok": true,
+      "ms": 3,
+      "at": 1795441065.732565
+    },
+    {
+      "step": "D8 Agent 审批必须被拒",
+      "ok": true,
+      "ms": 1,
+      "at": 1795441065.7339761
+    },
+    {
+      "step": "D9 人工审批",
+      "ok": true,
+      "ms": 1,
+      "at": 1795441065.7356858
+    },
+    {
+      "step": "D10 CAS 晋升",
+      "ok": true,
+      "ms": 3,
+      "at": 1795441065.739292
+    },
+    {
+      "step": "D11 晋升结果",
+      "ok": true,
+      "ms": 0,
+      "at": 1795441065.739297
+    },
+    {
+      "step": "D12 幂等重放（同键）",
+      "ok": true,
+      "ms": 1,
+      "at": 1795441065.740947
+    },
+    {
+      "step": "D13 重放必须返回同一版本",
+      "ok": true,
+      "ms": 0,
+      "at": 1795441065.740952
+    },
+    {
+      "step": "D14 全量回归（故障仍生效，修复版本应通过；独立 Worker 执行）",
+      "ok": true,
+      "ms": 4424,
+      "at": 1795441070.165858
+    },
+    {
+      "step": "D15 回归必须 PASSED",
+      "ok": true,
+      "ms": 0,
+      "at": 1795441070.165865
+    },
+    {
+      "step": "D15b 回归必须由独立 Worker 执行",
+      "ok": true,
+      "ms": 0,
+      "at": 1795441070.1658711
+    },
+    {
+      "step": "D16 回滚到基线版本",
+      "ok": true,
+      "ms": 3,
+      "at": 1795441070.1698391
+    },
+    {
+      "step": "D17 回滚后正式版本应回到基线",
+      "ok": true,
+      "ms": 0,
+      "at": 1795441070.1707861
+    },
+    {
+      "step": "D18 回滚后复核：晋升版本仍可通过正式执行入口由 Worker 执行",
+      "ok": true,
+      "ms": 0,
+      "at": 1795441075.126781
+    },
+    {
+      "step": "D19 清除 TeamFlow 故障",
+      "ok": true,
+      "ms": 4,
+      "at": 1795441075.131306
+    }
+  ],
+  "duration_s": 59.4,
+  "failed_steps": [],
+  "passed": true
+}

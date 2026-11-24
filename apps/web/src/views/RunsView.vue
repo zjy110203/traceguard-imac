@@ -69,17 +69,18 @@ function verdictCount(v: string) {
     <div class="card">
       <div class="card-head">
         <div class="filter-bar">
-          <select v-model="verdict">
+          <select id="runs-verdict" v-model="verdict" aria-label="按测试结论筛选">
             <option value="">全部结论</option>
             <option value="PASSED">PASSED</option>
             <option value="FAILED">FAILED</option>
             <option value="INCONCLUSIVE">INCONCLUSIVE</option>
             <option value="NOT_EVALUATED">NOT_EVALUATED</option>
           </select>
-          <label class="flex small" style="gap: 5px; margin: 0">
-          <input v-model="includeBench" type="checkbox" style="width: auto" @change="load" /> 包含 Benchmark 运行
-        </label>
-        <select v-model="status">
+          <label class="filter-check">
+            <input id="runs-include-bench" v-model="includeBench" type="checkbox" style="width: auto" aria-label="包含 Benchmark 运行" @change="load" />
+            包含 Benchmark 运行
+          </label>
+          <select id="runs-status" v-model="status" aria-label="按执行状态筛选">
             <option value="">全部执行状态</option>
             <option value="QUEUED">QUEUED</option>
             <option value="RUNNING">RUNNING</option>

@@ -70,8 +70,16 @@ def main() -> int:
             max_tokens=100,
         )
         u = r["usage"]
-        record("flash_text_call", bool(r["content"]), f"{u['input_tokens']}in/{u['output_tokens']}out {r['latency_ms']}ms")
-        record("token_usage_recorded", u["input_tokens"] > 0 and u["output_tokens"] > 0, f"cached={u['cached_tokens']}")
+        record(
+            "flash_text_call",
+            bool(r["content"]),
+            f"{u['input_tokens']}in/{u['output_tokens']}out {r['latency_ms']}ms",
+        )
+        record(
+            "token_usage_recorded",
+            u["input_tokens"] > 0 and u["output_tokens"] > 0,
+            f"cached={u['cached_tokens']}",
+        )
     except LLMError as exc:
         record("flash_text_call", False, exc.kind)
 
@@ -79,7 +87,10 @@ def main() -> int:
     try:
         parsed, r = provider.chat_json(
             [
-                {"role": "system", "content": '只输出 JSON，格式：{"action": "stop", "params": {}, "reason": "停止原因"}'},
+                {
+                    "role": "system",
+                    "content": '只输出 JSON，格式：{"action": "stop", "params": {}, "reason": "停止原因"}',
+                },
                 {"role": "user", "content": "目标已达成，请停止。"},
             ],
             model=router.default_model,
@@ -93,7 +104,12 @@ def main() -> int:
     # 4. Pro 复杂推理调用
     try:
         r = provider.chat(
-            [{"role": "user", "content": "一个测试偶发失败，重跑即过。给出两种可能原因，各一句话。"}],
+            [
+                {
+                    "role": "user",
+                    "content": "一个测试偶发失败，重跑即过。给出两种可能原因，各一句话。",
+                }
+            ],
             model=router.reasoning_model,
             agent="smoke",
             prompt_version="smoke@v1",
@@ -105,13 +121,22 @@ def main() -> int:
 
     # 5. 超时边界（timeout=0.001s 必然超时 → LLMError(timeout)，不重试无限等待）
     t0 = time.monotonic()
-    short = DeepSeekProvider(api_key=settings.deepseek_api_key, base_url=settings.llm_base_url, timeout_s=0.001, max_retries=0)
+    short = DeepSeekProvider(
+        api_key=settings.deepseek_api_key,
+        base_url=settings.llm_base_url,
+        timeout_s=0.001,
+        max_retries=0,
+    )
     try:
         short.chat([{"role": "user", "content": "hi"}], model=router.default_model)
         record("timeout_boundary", False, "未触发超时（意外成功）")
     except LLMError as exc:
         dt = time.monotonic() - t0
-        record("timeout_boundary", exc.kind == "timeout" and dt < 5, f"kind={exc.kind} elapsed={dt:.2f}s")
+        record(
+            "timeout_boundary",
+            exc.kind == "timeout" and dt < 5,
+            f"kind={exc.kind} elapsed={dt:.2f}s",
+        )
 
     # 6. 无效输出处理（max_tokens=5 强制截断 → 大概率 invalid_json 或正常短输出，均应显式处理）
     try:
@@ -123,7 +148,9 @@ def main() -> int:
         )
         record("truncated_output_handled", True, f"解析成功 keys={list(parsed.keys())[:3]}")
     except LLMError as exc:
-        record("truncated_output_handled", exc.kind in {"invalid_json", "server"}, f"kind={exc.kind}")
+        record(
+            "truncated_output_handled", exc.kind in {"invalid_json", "server"}, f"kind={exc.kind}"
+        )
 
     # 7. 成本计算 + 用量报告（估算值，明确标记）
     report = tracker.usage_for_date()

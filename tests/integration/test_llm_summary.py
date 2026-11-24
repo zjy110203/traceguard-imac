@@ -10,7 +10,9 @@ from traceguard_agents.gateway.llm_gateway import TokenUsageTracker, UsageRecord
 from traceguard_api.main import create_app
 
 
-def _record(*, agent: str, model: str, day: str, status: str = "ok", latency: int = 100) -> UsageRecord:
+def _record(
+    *, agent: str, model: str, day: str, status: str = "ok", latency: int = 100
+) -> UsageRecord:
     return UsageRecord(
         ts=f"{day}T00:00:00+00:00",
         provider="deepseek",
@@ -34,7 +36,15 @@ def test_tracker_summary_aggregates_real_records_without_details(tmp_path) -> No
     tracker = TokenUsageTracker(path=str(tmp_path / "usage.jsonl"), daily_budget_usd=1.0)
     today = datetime.now(UTC).strftime("%Y-%m-%d")
     tracker.record(_record(agent="explorer", model="deepseek-flash", day=today))
-    tracker.record(_record(agent="diagnosis", model="deepseek-v4-pro", day=today, status="error:timeout", latency=300))
+    tracker.record(
+        _record(
+            agent="diagnosis",
+            model="deepseek-v4-pro",
+            day=today,
+            status="error:timeout",
+            latency=300,
+        )
+    )
     tracker.record(_record(agent="explorer", model="deepseek-flash", day="2026-01-01"))
 
     out = tracker.summary()
@@ -63,7 +73,9 @@ def test_llm_summary_endpoint_registered_and_redacted(tmp_path, monkeypatch) -> 
             routes.extend(r.original_router.routes)
     paths = {getattr(r, "path", None) for r in routes}
     assert "/api/v1/system/llm/summary" in paths
-    fn = next(r.endpoint for r in routes if getattr(r, "path", None) == "/api/v1/system/llm/summary")
+    fn = next(
+        r.endpoint for r in routes if getattr(r, "path", None) == "/api/v1/system/llm/summary"
+    )
     monkeypatch.setenv("TG_TRACEGUARD_ROOT", str(tmp_path))
     result = asyncio.run(fn())
     for key in (

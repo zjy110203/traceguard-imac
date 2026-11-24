@@ -117,7 +117,7 @@ export function subscribeEvents(opts: SubscribeOptions): () => void {
       errorCount += 1
       // 连续失败说明 SSE 通道不可用（代理/网络），降级为轮询但保留重连
       if (errorCount >= 2) {
-        stopPolling()
+        // startPolling 自身幂等：已在轮询时不重建计时器，避免连续 error 把回调永久推迟。
         startPolling()
       } else {
         setMode('connecting')

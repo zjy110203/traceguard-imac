@@ -1,5 +1,15 @@
 # 性能与可靠性报告（本机实测）
 
+> **RUN-010 更新（2026-11-24）**：RUN-009 基线不变（1/2/4 Worker 12.37/23.67/32.74 runs/min）。
+> 新增开销：每浏览器实例 1 个 egress 代理线程（localhost，延迟可忽略）；
+> WP8 完整闭环 2 轮真实执行 ~14s；Benchmark v4 单场景 0.1~22.8s。
+
+> **RUN-009 更新（2026-11-24）**：新增多 Worker 资源监控与吞吐基线（`docs/RUN-009-WP5-PERFORMANCE.md`）。
+> 方法：`libproc.dylib` 真实采样（不使用 ps/proc），6 个 Run 一次性入队，隔离库 + 隔离端口。
+> 1/2/4 Worker：吞吐 **12.37 / 23.67 / 32.74 runs/min**，队列等待 12.43/5.35/2.19s，
+> Worker+Chromium RSS 合计约 354/685/1176 MB，完成率 6/6；4W 边际收益递减。
+> 下方 RUN-002 历史数据保留，不与本轮混用。
+
 环境：macOS / Apple Silicon，Python 3.13.12，SQLite（本地文件），Chromium 159，单机模式（API + 内嵌 Worker）。
 测量时间：2026-11-22。数值为本机实测，不代表生产容量规划。
 
@@ -73,3 +83,10 @@
 3. SSE / WebSocket 替代轮询；
 4. 证据保留策略（按 workspace / 时间 / 大小）；
 5. 引入 k6/Locust 做 API 压测，形成容量基线。
+
+## RUN-008 补充（2026-11-24）
+
+- CPU/RSS 采集仍为 `source=liveness_only`（沙箱禁止 `ps`、无 `/proc`），不伪造资源数字。
+- 4 Worker 并发实测：峰值并行 Run 数 4，24.22s 完成 4 Run，24/24 检查（14 项业务 + DB 完整性）。
+- 真实 SIGKILL 故障恢复：执行 2.77s 后击杀，接管延迟见 `worker-fault-recovery.json`；17/17 检查。
+- 60 分钟长稳与 Benchmark v3 本轮实验运行中；结论以 `docs/RUN-008-FINAL-REPORT.md` 定稿为准。

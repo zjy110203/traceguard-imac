@@ -109,9 +109,7 @@ class ConsumerInbox:
             rec.claim_expires_at = now + lease_seconds
             return rec, True
 
-    def complete(
-        self, consumer_id: str, event_id: str, result: Any = None
-    ) -> InboxRecord:
+    def complete(self, consumer_id: str, event_id: str, result: Any = None) -> InboxRecord:
         with self._lock:
             rec = self._records[(consumer_id, event_id)]
             if rec.status == SUCCEEDED:
@@ -152,8 +150,10 @@ class ConsumerInbox:
     ) -> InboxOutcome:
         rec, claimed = self.claim(consumer_id, event_id, lease_seconds=lease_seconds)
         if not claimed:
-            reason = "ALREADY_SUCCEEDED" if rec.status == SUCCEEDED else (
-                "INDETERMINATE_SIDE_EFFECT" if rec.status == UNKNOWN else "IN_FLIGHT"
+            reason = (
+                "ALREADY_SUCCEEDED"
+                if rec.status == SUCCEEDED
+                else ("INDETERMINATE_SIDE_EFFECT" if rec.status == UNKNOWN else "IN_FLIGHT")
             )
             return InboxOutcome(record=rec, executed=False, skipped_reason=reason)
         try:

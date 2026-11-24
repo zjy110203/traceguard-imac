@@ -1,8 +1,30 @@
 # TraceGuard
 
+> **RUN-010（2026-11-24）**：核心整合与智能成熟——认证产品化、Egress 正式内核集成、
+> 幂等冻结、诊断 v2（时间对齐/图裁决）、Benchmark v4 真实执行、无障碍 0 违规、供应链治理。
+> 状态与风险见 `docs/RUN-010-FINAL-REPORT.md`。以下历史内容保留。
+
 Agentic Web UI Testing & Quality Intelligence Platform（智能 Web UI 自动化测试与质量情报平台）
 
 > 真实浏览器执行 · 业务事实校验 · 证据可追溯 · 诊断与修复闭环
+
+## RUN-009 新增能力（2026-11-24）
+
+- **真实身份认证与 RBAC**：本地认证（PBKDF2 密码、HttpOnly 会话、CSRF、登录限速）、四角色权限矩阵、
+  服务端 Principal 注入审批主体（请求体 `reviewer`/`approved_by` 不再可信）、审计日志哈希链；
+  `TG_AUTH_ENABLED=true` 时全站 fail-closed，未认证请求一律 401，不再回退匿名管理员。
+- **受控出站代理**（用户态）：HTTP/HTTPS/CONNECT 在请求发出前按 `TargetPolicy` 校验，逐跳重定向复核、
+  DNS pinning、WebSocket 守卫、私网/链路本地拒绝；真实验证中未授权服务器收到请求数为 0。
+  宿主级网络封锁仍 BLOCKED（无防火墙权限），不把用户态代理写成生产级隔离。
+- **14/14 前端业务路由验收**：从 `router.ts` 自动解析路由，154 张真实截图覆盖 15 视图 × 4 断点 × 双主题、
+  四态、刷新/直达 URL/前进后退/真实交互；发现 6 个视图的表单控件缺可访问标签（已记录，未在本轮改 UI）。
+- **资源监控与性能基线**：基于 `libproc.dylib` 的真实 CPU/RSS 采样（不使用 ps/proc）；
+  1/2/4 Worker 并行入队实测吞吐 12.37 → 23.67 → 32.74 runs/min，队列等待 12.4s → 2.2s，内存随 Worker 线性增长。
+- **诊断增益研究（WP6/WP7）**：19 场景逐场景误差分析证明 RUN-008 中 D/E=C 的根因是探针证据未回灌、
+  图只升置信度不改主因；v4 消融臂实测「真实回灌探针」在当前时序错位下产生**负增益**（覆盖率 24/38→16/38），
+  并给出三条明确的增益前提，而非编造提升。
+- **Worker 故障契约**：FINALIZING 提前判 Task FAILED 的真实缺陷已修复；四个真实进程故障场景
+  仍因 B-17（AgentDR 拦截）保持 BLOCKED，未伪造通过。
 
 ## 现在能做什么
 
@@ -49,6 +71,35 @@ Agentic Web UI Testing & Quality Intelligence Platform（智能 Web UI 自动化
 本轮测试：**367 passed / 5 skipped**（起点 285）；真实 Chromium E2E **11 passed**。
 交付文档：`docs/RUN-006-BASELINE.md`、`RUN-006-IMPLEMENTATION-REPORT.md`、`RUN-006-TEST-REPORT.md`、
 `RUN-006-SECURITY-RELIABILITY.md`、`RUN-006-DECISION-REQUESTS.md`；证据：`docs/assets/run006/`。
+
+## RUN-007 续跑新增能力（2026-11-23）
+
+- **执行归属可见**：Run 详情新增「执行归属」条（`Worker` / `attempt` / `fencing token` / 队列状态 / 租约），
+  质量总览明确区分「独立 Worker / 内嵌 Worker」并显示 API Worker ID、数据库状态与 dialect。
+- **E2E 改为真正消费队列**：`TG_INLINE_WORKER=0` + 4 个独立 Worker + `sync:false` 轮询，
+  四场景（正常 / 假成功 / 探针闭环 / 修复全链）**55 步 0 失败**；证据页改为
+  `GET /runs/{id}/evidence` 并校验证据图节点与关系（不再依赖空的 `report.evidence_ids`）。
+- **两个真实缺陷修复**：① 常驻 Worker 复用 pipeline 导致业务状态缓存**跨 Run 泄漏**（假通过漏检）；
+  ② 沙箱曾在 API 进程内执行（改为入队 + 无 Worker 时 fail-closed）；
+  另外修复 API + 多 Worker **并发启动建表非原子**导致的随机崩溃。
+- **前端 15 视图 × 4 断点 + 深色 + 四态真实截图验收**：75 项检查全通过，
+  并修掉证据图裁切、390px 筛选栏错位、暗色截图实际是浅色三处问题（见 `docs/RUN-007-UI-REVIEW.md`）。
+- **CI 三级门禁去掩盖**：PR Gate 分支过滤修正；Nightly 删除 `|| true` / `|| echo`，
+  LLM 缺 Secret 记 BLOCKED、有 Secret 失败即失败，npm audit 区分工具错误与漏洞；
+  Release Gate 去除 RUN-005 依赖，改用 Actions API 校验 Nightly 的 `head_sha` 严格等于当前 commit。
+- **可靠性实验**：Worker 被杀接管（真实计时 + 同 Run 代次递增 + 陈旧代次拒绝）、
+  60 分钟长稳（独立 API + 4 Worker + 真实 SSE 续传 + 19 项完整性检查）、
+  UI-FaultBench v3 四臂（A/C/D/E）30 场景与 LLM 对照臂。
+
+> 交付状态：分支已推送、PR #1 已创建（→ `main@ac2876e`）；同一 commit `cc3339d` 上
+> **PR Gate / Nightly Gate / Release Gate 三级门禁全部真实通过**（Nightly 使用 `postgres:16`，
+> Release 用 Actions API 校验 `head_sha` 严格相等）。
+> 仍存在的限制：本机无 Docker/PostgreSQL（本地 PG 用例 skip，CI 已真跑）、自愈闭环未完成、
+> 证据图/探针臂无增益。详见 `docs/RUN-007-TEST-REPORT.md` §9。
+
+交付文档：`docs/RUN-007-BASELINE.md`、`RUN-007-IMPLEMENTATION-REPORT.md`、`RUN-007-TEST-REPORT.md`、
+`RUN-007-SECURITY-RELIABILITY.md`、`RUN-007-UI-REVIEW.md`、`RUN-007-BENCHMARK-REPORT.md`、
+`RUN-007-DECISION-REQUESTS.md`；证据：`docs/assets/run007/`。
 
 ## 快速开始
 
@@ -151,3 +202,17 @@ docs                  架构 / API / 数据库 / Agent / Playwright / 安全 / �
 - 分支：`workbuddy/traceguard-autonomous`（本地开发，不推送远程）
 - 提交：阶段性本地提交；禁止密钥入库；禁止强制推送/改写历史
 - 测试：验收数字必须来自真实测试日志；禁止 Mock 冒充真实运行
+
+## RUN-008 更新（2026-11-24）
+
+- 开发分支：`workbuddy/run008-quality-hardening`（已推送远程）；基线 HEAD `ce1acea`。
+- 本轮交付索引：`docs/RUN-008-FINAL-REPORT.md`（完成后）、`docs/RUN-008-BASELINE.md`、
+  `docs/RUN-008-WP1-IMPLEMENTATION.md`、`docs/RUN-008-WP2-REGRESSION-CI.md`、
+  `docs/RUN-008-WP3-WORKER.md`、`docs/RUN-008-WP5-FRONTEND-AUDIT.md`、
+  `docs/RUN-008-SECURITY-AUDIT.md`、`docs/RUN-008-DECISIONS.md`。
+- 回归基线：567 passed / 13 skipped；E2E 12/12；Ruff 全绿；前端 typecheck/build 通过。
+- CI（commit `40efee6`）：PR Gate `45335765297` 与 Nightly `45335777381` 真实全绿；
+  LLM smoke 因缺 Secret 真实标记 BLOCKED，不冒充通过。
+- 安全边界：两次 AgentDR `info_theft_steal_env_keys` 拦截均按策略保留 BLOCKED，
+  未绕过、未读取或传递真实凭据；详见 `.workbuddy-run/blockers.md` B-17。
+- 功能状态以 `docs/FEATURE-STATUS.md` 的 RUN-008 段为准；旧段落是历史快照。

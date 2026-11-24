@@ -92,8 +92,13 @@ def test_service_budgets_are_per_run_and_persisted(rt: Runtime) -> None:
     b1 = svc.budget_for(run_id="run_probe", workspace_id="default")
     b2 = svc.budget_for(run_id="run_probe_b", workspace_id="default")
     assert b1.budget_id != b2.budget_id
-    svc.execute("network_trace", {"template": "run_network", "run_id": "run_probe"}, "default",
-                run_id="run_probe", budget=b1)
+    svc.execute(
+        "network_trace",
+        {"template": "run_network", "run_id": "run_probe"},
+        "default",
+        run_id="run_probe",
+        budget=b1,
+    )
     assert b1.probes_used == 1 and b2.probes_used == 0
 
     # 预算文档已持久化（重启后可恢复，且不混用）
@@ -158,8 +163,11 @@ def test_plan_stops_immediately_when_root_cause_confirmed(rt: Runtime) -> None:
     assert plan["budget"]["closed"] is True
     # 关闭后再次探测必须被明确拒绝
     blocked = svc.execute(
-        "network_trace", {"template": "run_network", "run_id": "run_probe"}, "default",
-        run_id="run_probe", diagnosis_id="diag_confirmed",
+        "network_trace",
+        {"template": "run_network", "run_id": "run_probe"},
+        "default",
+        run_id="run_probe",
+        diagnosis_id="diag_confirmed",
     )
     assert blocked["status"] == "BLOCKED"
     assert blocked["reason"] == "PROBE_BUDGET_CLOSED"

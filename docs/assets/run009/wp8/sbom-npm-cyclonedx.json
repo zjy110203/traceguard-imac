@@ -1,0 +1,3062 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.5.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:e2487be7-06ce-4322-9451-3fb94ae2bc60",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-11-24T08:17:43.288Z",
+    "lifecycles": [
+      {
+        "phase": "build"
+      }
+    ],
+    "tools": [
+      {
+        "vendor": "npm",
+        "name": "cli",
+        "version": "10.9.7"
+      }
+    ],
+    "component": {
+      "bom-ref": "traceguard-web@0.1.0",
+      "type": "library",
+      "name": "web",
+      "version": "0.1.0",
+      "scope": "required",
+      "purl": "pkg:npm/traceguard-web@0.1.0",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": ""
+        },
+        {
+          "name": "cdx:npm:package:private",
+          "value": "true"
+        }
+      ],
+      "externalReferences": []
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "@babel/helper-string-parser@7.29.15",
+      "type": "library",
+      "name": "@babel/helper-string-parser",
+      "version": "7.29.15",
+      "scope": "required",
+      "author": "The Babel Team",
+      "description": "A utility package to parse strings",
+      "purl": "pkg:npm/%40babel/helper-string-parser@7.29.15",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@babel/helper-string-parser"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@babel/helper-string-parser/-/helper-string-parser-7.29.15.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/babel/babel.git"
+        },
+        {
+          "type": "website",
+          "url": "https://babel.dev/docs/en/next/babel-helper-string-parser"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/babel/babel/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "0b616e6a94362a1d4e9d51c0a0b8b9ac3dc6049f0239bf50eb4f53e871292ea681028e7ad0f0cfe4ec4113974223f87de753013bff9b094614e5267ef19955fb"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@babel/helper-validator-identifier@7.29.7",
+      "type": "library",
+      "name": "@babel/helper-validator-identifier",
+      "version": "7.29.7",
+      "scope": "required",
+      "author": "The Babel Team",
+      "description": "Validate identifier/keywords name",
+      "purl": "pkg:npm/%40babel/helper-validator-identifier@7.29.7",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@babel/helper-validator-identifier"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@babel/helper-validator-identifier/-/helper-validator-identifier-7.29.7.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/babel/babel.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/babel/babel#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/babel/babel/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "a9e8711a4463e7987f7dff0431a27e71887268a947231a980e7ebcdb0403ed1369f54ba3390b07a20dae4b4af6bf3af8a56fac5dff7435e79aca370d697ddf16"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@babel/parser@7.29.15",
+      "type": "library",
+      "name": "@babel/parser",
+      "version": "7.29.15",
+      "scope": "required",
+      "author": "The Babel Team",
+      "description": "A JavaScript parser",
+      "purl": "pkg:npm/%40babel/parser@7.29.15",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@babel/parser"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@babel/parser/-/parser-7.29.15.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/babel/babel.git"
+        },
+        {
+          "type": "website",
+          "url": "https://babel.dev/docs/en/next/babel-parser"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/babel/babel/issues?utf8=%E2%9C%93&q=is%3Aissue+label%3A%22pkg%3A+parser+%28babylon%29%22+is%3Aopen"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "469296ca2b07a0ff35b70b520a0984d36894d119cf72ad433796c111ba5478fae303d437c1786e7e7089aeb6b23e9a1989ea85877cf2650ab0b522b480671c44"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@babel/types@7.29.15",
+      "type": "library",
+      "name": "@babel/types",
+      "version": "7.29.15",
+      "scope": "required",
+      "author": "The Babel Team",
+      "description": "Babel Types is a Lodash-esque utility library for AST nodes",
+      "purl": "pkg:npm/%40babel/types@7.29.15",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@babel/types"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@babel/types/-/types-7.29.15.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/babel/babel.git"
+        },
+        {
+          "type": "website",
+          "url": "https://babel.dev/docs/en/next/babel-types"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/babel/babel/issues?utf8=%E2%9C%93&q=is%3Aissue+label%3A%22pkg%3A%20types%22+is%3Aopen"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "fd72a92836a42fffcb67ae9bab55ec64eb30baa788e4c66a3cb0eed7ca375dd914d5f349edb74fb7382773864d4be6c11875741491bc8e36fc4b0702de735541"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@esbuild/darwin-arm64@0.25.12",
+      "type": "library",
+      "name": "@esbuild/darwin-arm64",
+      "version": "0.25.12",
+      "scope": "optional",
+      "description": "The macOS ARM 64-bit binary for esbuild, a JavaScript bundler.",
+      "purl": "pkg:npm/%40esbuild/darwin-arm64@0.25.12",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@esbuild/darwin-arm64"
+        },
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@esbuild/darwin-arm64/-/darwin-arm64-0.25.12.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/evanw/esbuild.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/evanw/esbuild#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/evanw/esbuild/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "377ce5fa5c470a27e022570c50fe74d7a11291e4232e3ffde7d471c4d608b61220f82407227ba316e5de59b58c8274e8e1ca795d51ea14f9a9caef49eb90b562"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@jridgewell/sourcemap-codec@1.6.0",
+      "type": "library",
+      "name": "@jridgewell/sourcemap-codec",
+      "version": "1.6.0",
+      "scope": "required",
+      "author": "Justin Ridgewell",
+      "description": "Encode/decode sourcemap mappings",
+      "purl": "pkg:npm/%40jridgewell/sourcemap-codec@1.6.0",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@jridgewell/sourcemap-codec"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@jridgewell/sourcemap-codec/-/sourcemap-codec-1.6.0.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/jridgewell/sourcemaps.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/jridgewell/sourcemaps/tree/main/packages/sourcemap-codec"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/jridgewell/sourcemaps/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "4fb8dffb9ce0b191f0349e25bd0eff69ecdbca4d27357fb32555a998703b558b04c7b6bbaabe5183921bb4916a920cdee58dacaeeab545463c43cdfb39dee217"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@lucide/vue@1.77.0",
+      "type": "library",
+      "name": "@lucide/vue",
+      "version": "1.77.0",
+      "scope": "required",
+      "author": "Eric Fennis",
+      "description": "A Lucide icon library package for Vue applications.",
+      "purl": "pkg:npm/%40lucide/vue@1.77.0",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@lucide/vue"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@lucide/vue/-/vue-1.77.0.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/lucide-icons/lucide.git"
+        },
+        {
+          "type": "website",
+          "url": "https://lucide.dev"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/lucide-icons/lucide/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "07ea24aff77ca82da298bccd3c9e6d5bc35feee282d7d0e088e69fc54d1b38c7cb9e47794e4b2ce065bae34face4589ead3263825f7d2e9b8ee34bbeca78b4a9"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "ISC"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@rollup/rollup-darwin-arm64@4.68.8",
+      "type": "library",
+      "name": "@rollup/rollup-darwin-arm64",
+      "version": "4.68.8",
+      "scope": "optional",
+      "author": "Lukas Taegert-Atkinson",
+      "description": "Native bindings for Rollup",
+      "purl": "pkg:npm/%40rollup/rollup-darwin-arm64@4.68.8",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@rollup/rollup-darwin-arm64"
+        },
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@rollup/rollup-darwin-arm64/-/rollup-darwin-arm64-4.68.8.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/rollup/rollup.git"
+        },
+        {
+          "type": "website",
+          "url": "https://rollupjs.org/"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/rollup/rollup/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "626054363826e5bb23381c8ef87d5315bb8665ef999c7718b4f5d88fdf8bd5cc13bbf046f338ee5333b63c7f4ac12f393f4507f9624349bfa643686a8e9e6e05"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@types/estree@1.0.10",
+      "type": "library",
+      "name": "@types/estree",
+      "version": "1.0.10",
+      "scope": "optional",
+      "description": "TypeScript definitions for estree",
+      "purl": "pkg:npm/%40types/estree@1.0.10",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@types/estree"
+        },
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@types/estree/-/estree-1.0.10.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/DefinitelyTyped/DefinitelyTyped.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/estree"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/DefinitelyTyped/DefinitelyTyped/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "953c8e32739c991073742bfaff8cd4642ac4855d31aea422519059b5571b98b1c15ca2e737cabcf6fff029117f4341dbc15b2a6c81b7a391c3a0597db1db8cfa"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@vitejs/plugin-vue@5.2.4",
+      "type": "library",
+      "name": "@vitejs/plugin-vue",
+      "version": "5.2.4",
+      "scope": "optional",
+      "author": "Evan You",
+      "purl": "pkg:npm/%40vitejs/plugin-vue@5.2.4",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@vitejs/plugin-vue"
+        },
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@vitejs/plugin-vue/-/plugin-vue-5.2.4.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/vitejs/vite-plugin-vue.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/vitejs/vite-plugin-vue/tree/main/packages/plugin-vue#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/vitejs/vite-plugin-vue/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "ed8c7f49748e710ab91e2895de8adebc75059fea66301e1c81b1240d882791459bd167de43fc1adb216fe83e480a2090395a6303bbd80d7ac2ec018ef328c31c"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@volar/language-core@2.4.15",
+      "type": "library",
+      "name": "@volar/language-core",
+      "version": "2.4.15",
+      "scope": "optional",
+      "purl": "pkg:npm/%40volar/language-core@2.4.15",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@volar/language-core"
+        },
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@volar/language-core/-/language-core-2.4.15.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/volarjs/volar.js.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/volarjs/volar.js#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/volarjs/volar.js/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "dd51f0f90654d191bd22e426cd3ebc23237885935df4672118f85b0fdfa96bc095bfbae7a0e670a3b4fcc1e21bad19a286acb7013a5d7d7167a91adf3d52ba08"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@volar/source-map@2.4.15",
+      "type": "library",
+      "name": "@volar/source-map",
+      "version": "2.4.15",
+      "scope": "optional",
+      "purl": "pkg:npm/%40volar/source-map@2.4.15",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@volar/source-map"
+        },
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@volar/source-map/-/source-map-2.4.15.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/volarjs/volar.js.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/volarjs/volar.js#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/volarjs/volar.js/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "08f6cc5a550dea155925819c53f192a07bb812708788b69723d9fc73d95ae91688f56e491d7f8da86f86490701d09742d852012dd649c06b1f2b2041ef55654e"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@volar/typescript@2.4.15",
+      "type": "library",
+      "name": "@volar/typescript",
+      "version": "2.4.15",
+      "scope": "optional",
+      "purl": "pkg:npm/%40volar/typescript@2.4.15",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@volar/typescript"
+        },
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@volar/typescript/-/typescript-2.4.15.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/volarjs/volar.js.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/volarjs/volar.js#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/volarjs/volar.js/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "d9a67c8b472a3c68d76f806190cb0f603924b9cd9943ac8ea6ac00b8dc14a277042eaa32e5f460390b4b47d801d20f74da24b434092fa48cecdbb81e57255d3e"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@vue/compiler-core@3.5.46",
+      "type": "library",
+      "name": "@vue/compiler-core",
+      "version": "3.5.46",
+      "scope": "required",
+      "author": "Evan You",
+      "description": "@vue/compiler-core",
+      "purl": "pkg:npm/%40vue/compiler-core@3.5.46",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@vue/compiler-core"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@vue/compiler-core/-/compiler-core-3.5.46.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/vuejs/core.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/vuejs/core/tree/main/packages/compiler-core#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/vuejs/core/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "c9bf8df3f9a005ca1ea8224f572248fc3dcea612eb48c5e707765050d9912d4ff57ec316e1b15f74958d8bda088fbf8403750b28a90fedbfd50a97184187a2b9"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@vue/compiler-dom@3.5.46",
+      "type": "library",
+      "name": "@vue/compiler-dom",
+      "version": "3.5.46",
+      "scope": "required",
+      "author": "Evan You",
+      "description": "@vue/compiler-dom",
+      "purl": "pkg:npm/%40vue/compiler-dom@3.5.46",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@vue/compiler-dom"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@vue/compiler-dom/-/compiler-dom-3.5.46.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/vuejs/core.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/vuejs/core/tree/main/packages/compiler-dom#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/vuejs/core/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "063de5092c370d09c3443c70d75e57a9d2c3774fb5f0d7ed96077c3974861beb9def8871248135ede62b33e556810ad332cbc96cb87d1f37f6324c00cebbb7e9"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@vue/compiler-sfc@3.5.46",
+      "type": "library",
+      "name": "@vue/compiler-sfc",
+      "version": "3.5.46",
+      "scope": "required",
+      "author": "Evan You",
+      "description": "@vue/compiler-sfc",
+      "purl": "pkg:npm/%40vue/compiler-sfc@3.5.46",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@vue/compiler-sfc"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@vue/compiler-sfc/-/compiler-sfc-3.5.46.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/vuejs/core.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/vuejs/core/tree/main/packages/compiler-sfc#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/vuejs/core/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "86352f3311a1f902207a0c24b1fa7a05105895e13f6bcbde647bd347ab1afa8f9b3381d4f969eb5199613745fea4372c97c2e1c266eeef6c4fbcb324dd7530a2"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@vue/compiler-ssr@3.5.46",
+      "type": "library",
+      "name": "@vue/compiler-ssr",
+      "version": "3.5.46",
+      "scope": "required",
+      "author": "Evan You",
+      "description": "@vue/compiler-ssr",
+      "purl": "pkg:npm/%40vue/compiler-ssr@3.5.46",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@vue/compiler-ssr"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@vue/compiler-ssr/-/compiler-ssr-3.5.46.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/vuejs/core.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/vuejs/core/tree/main/packages/compiler-ssr#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/vuejs/core/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "a9e6c284bdda3f49b593e4e549ff9f656bcec007f77e50428b9a3e9f4d72911dc35f899321685e165b66a22435dbecfaebfe1c19e5ea6c1d8feec3d690685035"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@vue/compiler-vue2@2.7.16",
+      "type": "library",
+      "name": "@vue/compiler-vue2",
+      "version": "2.7.16",
+      "scope": "optional",
+      "author": "Evan You",
+      "description": "template compiler for Vue 2.x",
+      "purl": "pkg:npm/%40vue/compiler-vue2@2.7.16",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@vue/compiler-vue2"
+        },
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@vue/compiler-vue2/-/compiler-vue2-2.7.16.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/vuejs/vue.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/vuejs/vue/tree/dev/packages/vue-template-compiler#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/vuejs/vue/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "a980b73ec8fd4bf99fbbdb958b95af359233abec675cc84ec1b4c528a0c3edbd658699e7ef58d748575343e5ac20493438d09ded557620c9bb38d97ab5b43ce8"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@vue/devtools-api@6.6.4",
+      "type": "library",
+      "name": "@vue/devtools-api",
+      "version": "6.6.4",
+      "scope": "required",
+      "author": "Guillaume Chau",
+      "description": "Interact with the Vue devtools from the page",
+      "purl": "pkg:npm/%40vue/devtools-api@6.6.4",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@vue/devtools-api"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@vue/devtools-api/-/devtools-api-6.6.4.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/vuejs/vue-devtools.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/vuejs/vue-devtools#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/vuejs/vue-devtools/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "b068533ccb97a99d6b54e937d91ca5ced5a47d74d186e4bbbe000abf4ce3aa4f206ec1e427bc5f15ffa36f24b1b7bb5639b109c3229a1cc8a457f5860e2426f2"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@vue/language-core@2.2.12",
+      "type": "library",
+      "name": "@vue/language-core",
+      "version": "2.2.12",
+      "scope": "optional",
+      "purl": "pkg:npm/%40vue/language-core@2.2.12",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@vue/language-core"
+        },
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@vue/language-core/-/language-core-2.2.12.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/vuejs/language-tools.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/vuejs/language-tools#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/vuejs/language-tools/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "22c1a58d66ca194d4c66904f37e06f3c076be7960f923da707f4c1346342df6572daa2c6db90d8bbf341376bcdb59a9d45b4d18daa18ada84bad3a229b635a9c"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@vue/reactivity@3.5.46",
+      "type": "library",
+      "name": "@vue/reactivity",
+      "version": "3.5.46",
+      "scope": "required",
+      "author": "Evan You",
+      "description": "@vue/reactivity",
+      "purl": "pkg:npm/%40vue/reactivity@3.5.46",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@vue/reactivity"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@vue/reactivity/-/reactivity-3.5.46.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/vuejs/core.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/vuejs/core/tree/main/packages/reactivity#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/vuejs/core/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "f851ed613bc6c601685f7a11b3bb28cfa2478b31afe74436e9624de8f5ad5ee4cb5d17e47d4a4351346ea1303f92265556df0d31e329b0f40b87d87ef917948d"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@vue/runtime-core@3.5.46",
+      "type": "library",
+      "name": "@vue/runtime-core",
+      "version": "3.5.46",
+      "scope": "required",
+      "author": "Evan You",
+      "description": "@vue/runtime-core",
+      "purl": "pkg:npm/%40vue/runtime-core@3.5.46",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@vue/runtime-core"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@vue/runtime-core/-/runtime-core-3.5.46.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/vuejs/core.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/vuejs/core/tree/main/packages/runtime-core#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/vuejs/core/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "78953328051a1c09ad9f2b3f97da9db8fcd49c1ad83249ac094ed337ebdb48e4a99bc91c1134fb9da70ac483b83017a3fd788eada573abe952799bfba35fff8d"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@vue/runtime-dom@3.5.46",
+      "type": "library",
+      "name": "@vue/runtime-dom",
+      "version": "3.5.46",
+      "scope": "required",
+      "author": "Evan You",
+      "description": "@vue/runtime-dom",
+      "purl": "pkg:npm/%40vue/runtime-dom@3.5.46",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@vue/runtime-dom"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@vue/runtime-dom/-/runtime-dom-3.5.46.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/vuejs/core.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/vuejs/core/tree/main/packages/runtime-dom#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/vuejs/core/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "e8bee56c1bd74d804516322ddb96b4a607699a7dcdb3c46a52735589b4731786e0ca2589bea3a12845793176162a50adb5913768678937c9af7a8fba22b20a5c"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@vue/server-renderer@3.5.46",
+      "type": "library",
+      "name": "@vue/server-renderer",
+      "version": "3.5.46",
+      "scope": "required",
+      "author": "Evan You",
+      "description": "@vue/server-renderer",
+      "purl": "pkg:npm/%40vue/server-renderer@3.5.46",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@vue/server-renderer"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@vue/server-renderer/-/server-renderer-3.5.46.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/vuejs/core.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/vuejs/core/tree/main/packages/server-renderer#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/vuejs/core/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "e2673461644473a399e690c28a0bca3c3cc8515f9a722887f76cafc934bac5a1c7c56ffcd2b31c790427d75a587bb384101b76610818591f7317c405df418951"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@vue/shared@3.5.46",
+      "type": "library",
+      "name": "@vue/shared",
+      "version": "3.5.46",
+      "scope": "required",
+      "author": "Evan You",
+      "description": "internal utils shared across @vue packages",
+      "purl": "pkg:npm/%40vue/shared@3.5.46",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@vue/shared"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@vue/shared/-/shared-3.5.46.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/vuejs/core.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/vuejs/core/tree/main/packages/shared#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/vuejs/core/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "3f559e3db7731eb7087225ad998d889bd10585d6a4777ad9c58aaf6a539add27e8c6d177e50f148668f5b4a9fa6d63f8bad70ea4df1aa3a06825422dab451ffa"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "alien-signals@1.0.13",
+      "type": "library",
+      "name": "alien-signals",
+      "version": "1.0.13",
+      "scope": "optional",
+      "description": "The lightest signal library.",
+      "purl": "pkg:npm/alien-signals@1.0.13",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/alien-signals"
+        },
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/alien-signals/-/alien-signals-1.0.13.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/johnsoncodehk/signals.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/johnsoncodehk/signals#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/johnsoncodehk/signals/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "3868fdcb24e7244b6dbf3853516bac70ebedab1ab9beb845eef2fda12d3127698ad08b4f60fd7fcbebc215e6dfc68132033d3efb5008c09e4232bf859379c39a"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "balanced-match@1.0.2",
+      "type": "library",
+      "name": "balanced-match",
+      "version": "1.0.2",
+      "scope": "optional",
+      "author": "Julian Gruber",
+      "description": "Match balanced character pairs, like \"{\" and \"}\"",
+      "purl": "pkg:npm/balanced-match@1.0.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/balanced-match"
+        },
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/balanced-match/-/balanced-match-1.0.2.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git://github.com/juliangruber/balanced-match.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/juliangruber/balanced-match"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/juliangruber/balanced-match/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "de849e50ed13315ebb84dd4099b5ec2b8c9aa94eed8e21e56f144364ea47d0a5bdf82797e1b440697d009f1b74b71d8cae94695b041a3f02252121098585393f"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "brace-expansion@2.1.8",
+      "type": "library",
+      "name": "brace-expansion",
+      "version": "2.1.8",
+      "scope": "optional",
+      "author": "Julian Gruber",
+      "description": "Brace expansion as known from sh/bash",
+      "purl": "pkg:npm/brace-expansion@2.1.8",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/brace-expansion"
+        },
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/brace-expansion/-/brace-expansion-2.1.8.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git://github.com/juliangruber/brace-expansion.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/juliangruber/brace-expansion"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/juliangruber/brace-expansion/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "067943cc3610a29953b194af3e2f3a08dce66dc6f4ed7f2e7d1f1f935ce2bda8842655c9922ab5310c830959a559cb166e3e9a597a879ebc307af6eb9bf49a8a"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "csstype@3.2.4",
+      "type": "library",
+      "name": "csstype",
+      "version": "3.2.4",
+      "scope": "required",
+      "author": "Fredrik Nicol",
+      "description": "Strict TypeScript and Flow types for style based on MDN data",
+      "purl": "pkg:npm/csstype@3.2.4",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/csstype"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/csstype/-/csstype-3.2.4.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/frenic/csstype.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/frenic/csstype#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/frenic/csstype/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "3e829aa0fcd06a99c4a2a5129c7c75bba5ba92ef0254480ab27a669b35379b59f09227693c143c57f66adbe6d636bb0e2a828bc1319d6f1eb117b0573f5ccb55"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "de-indent@1.0.2",
+      "type": "library",
+      "name": "de-indent",
+      "version": "1.0.2",
+      "scope": "optional",
+      "author": "Evan You",
+      "description": "remove extra indent from a block of code",
+      "purl": "pkg:npm/de-indent@1.0.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/de-indent"
+        },
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/de-indent/-/de-indent-1.0.2.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/yyx990803/de-indent.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/yyx990803/de-indent#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/yyx990803/de-indent/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "7bfd73bb7c47e4c42bc8ddb3755685d0eadd34b51bbd6c7331b8be88d03a064cbb9754683fc6b67c86d1a1cc877255edfdaac3aeb47a94bdd3a850fda4c413b2"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "entities@7.0.1",
+      "type": "library",
+      "name": "entities",
+      "version": "7.0.1",
+      "scope": "required",
+      "author": "Felix Boehm",
+      "description": "Encode & decode XML and HTML entities with ease & speed",
+      "purl": "pkg:npm/entities@7.0.1",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/entities"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/entities/-/entities-7.0.1.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/fb55/entities.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/fb55/entities#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/fb55/entities/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "4d6ae02ce1544131fdf78614ca5d724f8bb26af6399cd0799ae7dff91b566aa3550802b8d3c6f96679db34050458b4c2a6e9bdc3a6ab4fbd22d57750e1478e3c"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-2-Clause"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "esbuild@0.25.12",
+      "type": "library",
+      "name": "esbuild",
+      "version": "0.25.12",
+      "scope": "optional",
+      "description": "An extremely fast JavaScript and CSS bundler and minifier.",
+      "purl": "pkg:npm/esbuild@0.25.12",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/esbuild"
+        },
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/esbuild/-/esbuild-0.25.12.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/evanw/esbuild.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/evanw/esbuild#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/evanw/esbuild/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "6db3c1618aed65b92de8eb3a1624cb093171beae2db7724a6a5975bd1c2c840ddf755cedb0b01ab45699a1b864042f3f06b3deb686b4a24b18a0a5e81b8af226"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "estree-walker@2.0.2",
+      "type": "library",
+      "name": "estree-walker",
+      "version": "2.0.2",
+      "scope": "required",
+      "author": "Rich Harris",
+      "description": "Traverse an ESTree-compliant AST",
+      "purl": "pkg:npm/estree-walker@2.0.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/estree-walker"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/estree-walker/-/estree-walker-2.0.2.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/Rich-Harris/estree-walker.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/Rich-Harris/estree-walker#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/Rich-Harris/estree-walker/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "45f924fcca7f0cbec95637b7bb5f05c45ba34254cd476aba41f312301ec0bc2071f753468ff6dade409fcdad1fe9d5436f0ed89517ff9c3ae7ee942b082c90ff"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "fdir@6.5.0",
+      "type": "library",
+      "name": "fdir",
+      "version": "6.5.0",
+      "scope": "optional",
+      "author": "thecodrr",
+      "description": "The fastest directory crawler & globbing alternative to glob, fast-glob, & tiny-glob. Crawls 1m files in < 1s",
+      "purl": "pkg:npm/fdir@6.5.0",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/fdir"
+        },
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/fdir/-/fdir-6.5.0.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/thecodrr/fdir.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/thecodrr/fdir#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/thecodrr/fdir/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "b486d8b596ee70eb340511aa3c992c84951874bf920c7edd54cf208f2f84469dd60148cb105244fb4da46a7c87b708d63a7c2b298062c0098cd29e242c90275e"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "fsevents@2.3.3",
+      "type": "library",
+      "name": "fsevents",
+      "version": "2.3.3",
+      "scope": "optional",
+      "description": "Native Access to MacOS FSEvents",
+      "purl": "pkg:npm/fsevents@2.3.3",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/fsevents"
+        },
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/fsevents/-/fsevents-2.3.3.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/fsevents/fsevents.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/fsevents/fsevents"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/fsevents/fsevents/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "e71a037d7f9f2fb7da0139da82658fa5b16dc21fd1efb5a630caaa1c64bae42defbc1d181eb805f81d58999df8e35b4c8f99fade4d36d765cda09c339617df43"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "he@1.2.0",
+      "type": "library",
+      "name": "he",
+      "version": "1.2.0",
+      "scope": "optional",
+      "author": "Mathias Bynens",
+      "description": "A robust HTML entities encoder/decoder with full Unicode support.",
+      "purl": "pkg:npm/he@1.2.0",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/he"
+        },
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/he/-/he-1.2.0.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/mathiasbynens/he.git"
+        },
+        {
+          "type": "website",
+          "url": "https://mths.be/he"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/mathiasbynens/he/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "17fd439d418fa29391662d278be0afac28074391721001d12d2029b9858c9ab6d2c28376327ffb93e1a5dfc8099d1ef2c83664e962d7c221a877524e58d0ca1b"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "magic-string@0.30.21",
+      "type": "library",
+      "name": "magic-string",
+      "version": "0.30.21",
+      "scope": "required",
+      "author": "Rich Harris",
+      "description": "Modify strings, generate sourcemaps",
+      "purl": "pkg:npm/magic-string@0.30.21",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/magic-string"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/magic-string/-/magic-string-0.30.21.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/Rich-Harris/magic-string.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/Rich-Harris/magic-string#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/Rich-Harris/magic-string/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "bddd85e1853211728670b1e8abe4c4c828f1b9e49e1e7171cb28cda7cd328345d5e2f5219c37abfe5bef96a33f6ab0796d740de4adbfde88a7c82472c7c4f609"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "minimatch@9.0.9",
+      "type": "library",
+      "name": "minimatch",
+      "version": "9.0.9",
+      "scope": "optional",
+      "author": "Isaac Z. Schlueter",
+      "description": "a glob matcher in javascript",
+      "purl": "pkg:npm/minimatch@9.0.9",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/minimatch"
+        },
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/minimatch/-/minimatch-9.0.9.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git://github.com/isaacs/minimatch.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/isaacs/minimatch#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/isaacs/minimatch/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "381c0137d00be1daa61139694b6cdab31faf4de59c956ce46e57d993b2930398f78de38e373fed4429d9a26532bcd83cdf02f966ff52b3a1cc2570202fc47662"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "ISC"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "muggle-string@0.4.1",
+      "type": "library",
+      "name": "muggle-string",
+      "version": "0.4.1",
+      "scope": "optional",
+      "purl": "pkg:npm/muggle-string@0.4.1",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/muggle-string"
+        },
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/muggle-string/-/muggle-string-0.4.1.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/johnsoncodehk/muggle-string.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/johnsoncodehk/muggle-string#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/johnsoncodehk/muggle-string/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "54d4eb01a93f2a13b68bc76aaa7aa700739addc601c171197bd87e0f987fd59a854931051dd33ae6547b46822aab7b410586afb0e5d5f383681d76740243f2a9"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "nanoid@3.3.20",
+      "type": "library",
+      "name": "nanoid",
+      "version": "3.3.20",
+      "scope": "required",
+      "author": "Andrey Sitnik",
+      "description": "A tiny (116 bytes), secure URL-friendly unique string ID generator",
+      "purl": "pkg:npm/nanoid@3.3.20",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/nanoid"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/nanoid/-/nanoid-3.3.20.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/ai/nanoid.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/ai/nanoid#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/ai/nanoid/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "b8a760d86dc63422909fd6f260ea716c6aab4f67c63b9291b7927ff1bde9a24f2b4faab119617a871332262118b407fe155c98b83f6145a0ea5f9b8f15827865"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "path-browserify@1.0.1",
+      "type": "library",
+      "name": "path-browserify",
+      "version": "1.0.1",
+      "scope": "optional",
+      "author": "James Halliday",
+      "description": "the path module from node core for browsers",
+      "purl": "pkg:npm/path-browserify@1.0.1",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/path-browserify"
+        },
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/path-browserify/-/path-browserify-1.0.1.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git://github.com/browserify/path-browserify.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/browserify/path-browserify"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/browserify/path-browserify/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "6fbba8d9409439865c9c5ff7203d25ba53898bf6da7f16b5c4f7bb64fb1a9a6052a634964248cdc65b7adf96064b632247d1a3bee5c2b73d9e9abde36eccfdf2"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "picocolors@1.1.1",
+      "type": "library",
+      "name": "picocolors",
+      "version": "1.1.1",
+      "scope": "required",
+      "author": "Alexey Raspopov",
+      "description": "The tiniest and the fastest library for terminal output formatting with ANSI colors",
+      "purl": "pkg:npm/picocolors@1.1.1",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/picocolors"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/picocolors/-/picocolors-1.1.1.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/alexeyraspopov/picocolors.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/alexeyraspopov/picocolors#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/alexeyraspopov/picocolors/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "c5c787dac9e1b5be4cf658aa0ec984c39ea57b7efa993664117fe311bfd1c4d1727a036e97b78db250973fd1438ff2dcbb45fc284c8c71e3f69eda5a1eb0c454"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "ISC"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "picomatch@4.0.7",
+      "type": "library",
+      "name": "picomatch",
+      "version": "4.0.7",
+      "scope": "optional",
+      "author": "Jon Schlinkert",
+      "description": "Blazing fast and accurate glob matcher written in JavaScript, with no dependencies and full support for standard and extended Bash glob features, including braces, extglobs, POSIX brackets, and regular expressions.",
+      "purl": "pkg:npm/picomatch@4.0.7",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/picomatch"
+        },
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/picomatch/-/picomatch-4.0.7.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/micromatch/picomatch.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/micromatch/picomatch"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/micromatch/picomatch/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "a9c26ef3c436216a89b030f9dbd24a31dc069bf76f2275b81ef427470887f49b62849bf318eb1c0ed1c4df1d6904a794393cac43c91598b9c9da426eef285c18"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "pinia@2.3.1",
+      "type": "library",
+      "name": "pinia",
+      "version": "2.3.1",
+      "scope": "required",
+      "author": "Eduardo San Martin Morote",
+      "description": "Intuitive, type safe and flexible Store for Vue",
+      "purl": "pkg:npm/pinia@2.3.1",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/pinia"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/pinia/-/pinia-2.3.1.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/vuejs/pinia.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/vuejs/pinia#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/vuejs/pinia/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "921525652c2df715c26936dbc4560128373f6d60065898ce82fc444f091337b2919bae84793d597598fa8b671e87db0fd8fceab1b73bd38af6ca7801af1055ba"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "postcss@8.5.33",
+      "type": "library",
+      "name": "postcss",
+      "version": "8.5.33",
+      "scope": "required",
+      "author": "Andrey Sitnik",
+      "description": "Tool for transforming styles with JS plugins",
+      "purl": "pkg:npm/postcss@8.5.33",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/postcss"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/postcss/-/postcss-8.5.33.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/postcss/postcss.git"
+        },
+        {
+          "type": "website",
+          "url": "https://postcss.org/"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/postcss/postcss/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "4551c453dfcfa751678ebfcca4026c668003ba408a85f222d793ae9c46221a4b489182e43d5bc2d6c8a85a89460d2ed7072313c7d9bf2066eba3426cd77ce19d"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "rollup@4.68.8",
+      "type": "library",
+      "name": "rollup",
+      "version": "4.68.8",
+      "scope": "optional",
+      "author": "Rich Harris",
+      "description": "Next-generation ES module bundler",
+      "purl": "pkg:npm/rollup@4.68.8",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/rollup"
+        },
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/rollup/-/rollup-4.68.8.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/rollup/rollup.git"
+        },
+        {
+          "type": "website",
+          "url": "https://rollupjs.org/"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/rollup/rollup/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "207c780de7931a1a003e47baa755a5834244405c90a194108c47b5883fa784411193b7a87872bdcf23a9549886739e19d4c0a023deab375b43ed3b6e6fc5f23c"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "source-map-js@1.2.4",
+      "type": "library",
+      "name": "source-map-js",
+      "version": "1.2.4",
+      "scope": "required",
+      "author": "Valentin 7rulnik Semirulnik",
+      "description": "Generates and consumes source maps",
+      "purl": "pkg:npm/source-map-js@1.2.4",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/source-map-js"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/source-map-js/-/source-map-js-1.2.4.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/7rulnik/source-map-js.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/7rulnik/source-map-js"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/7rulnik/source-map-js/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "27b66332f1ddf4ed5f713ff9574f5059a69297605b5b1dc5e8ed3cb2975ef3635a99ff540741b145520f88d6d5b1d2a4a22cc7892a53a1da37be9d9b032f7530"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "tinyglobby@0.2.17",
+      "type": "library",
+      "name": "tinyglobby",
+      "version": "0.2.17",
+      "scope": "optional",
+      "author": "Superchupu",
+      "description": "A fast and minimal alternative to globby and fast-glob",
+      "purl": "pkg:npm/tinyglobby@0.2.17",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/tinyglobby"
+        },
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/tinyglobby/-/tinyglobby-0.2.17.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/SuperchupuDev/tinyglobby.git"
+        },
+        {
+          "type": "website",
+          "url": "https://superchupu.dev/tinyglobby"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/SuperchupuDev/tinyglobby/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "c1747f758a5ca8a99f5a911d66388a24ec023459dd0f40cc9eb5bf7188d51adb449017d581c2c51e836b963e3b9a339589cf72c8dbbae5a96c805e0d4324dada"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "typescript@5.6.3",
+      "type": "library",
+      "name": "typescript",
+      "version": "5.6.3",
+      "scope": "optional",
+      "author": "Microsoft Corp.",
+      "description": "TypeScript is a language for application scale JavaScript development",
+      "purl": "pkg:npm/typescript@5.6.3",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/typescript"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/typescript/-/typescript-5.6.3.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/microsoft/TypeScript.git"
+        },
+        {
+          "type": "website",
+          "url": "https://www.typescriptlang.org/"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/microsoft/TypeScript/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "863712d6685fbb28b8596f085ad8cfedbac3ac6d9cb8366e932ad8ad26aea1718d831d12ef371e3f4eda758909c9c12be7a04e51334fcdb227a2888dddf9f5ab"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "vite@6.4.6",
+      "type": "library",
+      "name": "vite",
+      "version": "6.4.6",
+      "scope": "optional",
+      "author": "Evan You",
+      "description": "Native-ESM powered web dev build tool",
+      "purl": "pkg:npm/vite@6.4.6",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/vite"
+        },
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/vite/-/vite-6.4.6.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/vitejs/vite.git"
+        },
+        {
+          "type": "website",
+          "url": "https://vite.dev"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/vitejs/vite/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "46db2b680c041baf2274e03a8943a82293a57122913a77fcd79688abda874d2ac33692e806b05ad76b2ec9f70477caa7d31c0e5502356219b519b9938c5eb4d0"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "vscode-uri@3.2.0",
+      "type": "library",
+      "name": "vscode-uri",
+      "version": "3.2.0",
+      "scope": "optional",
+      "author": "Microsoft",
+      "description": "The URI implementation that is used by VS Code and its extensions",
+      "purl": "pkg:npm/vscode-uri@3.2.0",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/vscode-uri"
+        },
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/vscode-uri/-/vscode-uri-3.2.0.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/microsoft/vscode-uri.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/microsoft/vscode-uri#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/microsoft/vscode-uri/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "9b6817a376e7d06d644fd227ccc7f4edf4dba8c6c6b727248f76c7e64b4b3bed52b2ffb28804d9e1d870690bfd5195b1261e84f481469d0ca3816543595043ae"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "vue@3.5.46",
+      "type": "library",
+      "name": "vue",
+      "version": "3.5.46",
+      "scope": "required",
+      "author": "Evan You",
+      "description": "The progressive JavaScript framework for building modern web UI.",
+      "purl": "pkg:npm/vue@3.5.46",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/vue"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/vue/-/vue-3.5.46.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/vuejs/core.git"
+        },
+        {
+          "type": "website",
+          "url": "https://vuejs.org/"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/vuejs/core/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "d245b90a07e330f06a987d79f34e3d49a1359aeb9fa7e2bf672af0bd2130af0624cba401ef32f6cbc9177ebba778a6fd3b5d9e874c4024be82552a736fda342a"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "vue-demi@0.14.10",
+      "type": "library",
+      "name": "vue-demi",
+      "version": "0.14.10",
+      "scope": "required",
+      "author": "Anthony Fu",
+      "purl": "pkg:npm/vue-demi@0.14.10",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/vue-demi"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/vue-demi/-/vue-demi-0.14.10.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/antfu/vue-demi.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/antfu/vue-demi#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/antfu/vue-demi/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "9cc6413b0bb369b50ed272e021c73aaf271911e6c5e9e7947da890c7df964a4f1edbd21b2ef3d4f5f788eada96e244e8de1be8600264321f27f03d1fb884a986"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "vue-router@4.6.5",
+      "type": "library",
+      "name": "vue-router",
+      "version": "4.6.5",
+      "scope": "required",
+      "author": "Eduardo San Martin Morote",
+      "purl": "pkg:npm/vue-router@4.6.5",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/vue-router"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/vue-router/-/vue-router-4.6.5.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/vuejs/router.git"
+        },
+        {
+          "type": "website",
+          "url": "https://router.vuejs.org"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/vuejs/router/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "1c1a06aa2c690767a3d64235ecda2d74e6ad51d288b22df27ce439be1c0085ca0793dd3e26dc2d232ecc11e3aa74f8b5fa7a66415304bb917e1efc3edd3538f3"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "vue-tsc@2.2.12",
+      "type": "library",
+      "name": "vue-tsc",
+      "version": "2.2.12",
+      "scope": "optional",
+      "purl": "pkg:npm/vue-tsc@2.2.12",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/vue-tsc"
+        },
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/vue-tsc/-/vue-tsc-2.2.12.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/vuejs/language-tools.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/vuejs/language-tools#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/vuejs/language-tools/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "3fb38fefb6f687f3e693e959749d185acfb9b49e89dbeb8e40fa3bb65067638e10a9048f62f4b4a954f8c2a0c9830ad968b7b8edeb492cb4111626bbd466084f"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "traceguard-web@0.1.0",
+      "dependsOn": [
+        "@lucide/vue@1.77.0",
+        "pinia@2.3.1",
+        "vue@3.5.46",
+        "vue-router@4.6.5",
+        "@vitejs/plugin-vue@5.2.4",
+        "typescript@5.6.3",
+        "vite@6.4.6",
+        "vue-tsc@2.2.12"
+      ]
+    },
+    {
+      "ref": "@babel/helper-string-parser@7.29.15",
+      "dependsOn": []
+    },
+    {
+      "ref": "@babel/helper-validator-identifier@7.29.7",
+      "dependsOn": []
+    },
+    {
+      "ref": "@babel/parser@7.29.15",
+      "dependsOn": [
+        "@babel/types@7.29.15"
+      ]
+    },
+    {
+      "ref": "@babel/types@7.29.15",
+      "dependsOn": [
+        "@babel/helper-string-parser@7.29.15",
+        "@babel/helper-validator-identifier@7.29.7"
+      ]
+    },
+    {
+      "ref": "@esbuild/darwin-arm64@0.25.12",
+      "dependsOn": []
+    },
+    {
+      "ref": "@jridgewell/sourcemap-codec@1.6.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "@lucide/vue@1.77.0",
+      "dependsOn": [
+        "vue@3.5.46"
+      ]
+    },
+    {
+      "ref": "@rollup/rollup-darwin-arm64@4.68.8",
+      "dependsOn": []
+    },
+    {
+      "ref": "@types/estree@1.0.10",
+      "dependsOn": []
+    },
+    {
+      "ref": "@vitejs/plugin-vue@5.2.4",
+      "dependsOn": [
+        "vite@6.4.6",
+        "vue@3.5.46"
+      ]
+    },
+    {
+      "ref": "@volar/language-core@2.4.15",
+      "dependsOn": [
+        "@volar/source-map@2.4.15"
+      ]
+    },
+    {
+      "ref": "@volar/source-map@2.4.15",
+      "dependsOn": []
+    },
+    {
+      "ref": "@volar/typescript@2.4.15",
+      "dependsOn": [
+        "@volar/language-core@2.4.15",
+        "path-browserify@1.0.1",
+        "vscode-uri@3.2.0"
+      ]
+    },
+    {
+      "ref": "@vue/compiler-core@3.5.46",
+      "dependsOn": [
+        "@babel/parser@7.29.15",
+        "@vue/shared@3.5.46",
+        "entities@7.0.1",
+        "estree-walker@2.0.2",
+        "source-map-js@1.2.4"
+      ]
+    },
+    {
+      "ref": "@vue/compiler-dom@3.5.46",
+      "dependsOn": [
+        "@vue/shared@3.5.46",
+        "@vue/compiler-core@3.5.46"
+      ]
+    },
+    {
+      "ref": "@vue/compiler-sfc@3.5.46",
+      "dependsOn": [
+        "@babel/parser@7.29.15",
+        "@vue/compiler-core@3.5.46",
+        "@vue/compiler-dom@3.5.46",
+        "@vue/compiler-ssr@3.5.46",
+        "@vue/shared@3.5.46",
+        "estree-walker@2.0.2",
+        "magic-string@0.30.21",
+        "postcss@8.5.33",
+        "source-map-js@1.2.4"
+      ]
+    },
+    {
+      "ref": "@vue/compiler-ssr@3.5.46",
+      "dependsOn": [
+        "@vue/shared@3.5.46",
+        "@vue/compiler-dom@3.5.46"
+      ]
+    },
+    {
+      "ref": "@vue/compiler-vue2@2.7.16",
+      "dependsOn": [
+        "de-indent@1.0.2",
+        "he@1.2.0"
+      ]
+    },
+    {
+      "ref": "@vue/devtools-api@6.6.4",
+      "dependsOn": []
+    },
+    {
+      "ref": "@vue/language-core@2.2.12",
+      "dependsOn": [
+        "typescript@5.6.3",
+        "@volar/language-core@2.4.15",
+        "@vue/compiler-dom@3.5.46",
+        "@vue/compiler-vue2@2.7.16",
+        "@vue/shared@3.5.46",
+        "alien-signals@1.0.13",
+        "minimatch@9.0.9",
+        "muggle-string@0.4.1",
+        "path-browserify@1.0.1"
+      ]
+    },
+    {
+      "ref": "@vue/reactivity@3.5.46",
+      "dependsOn": [
+        "@vue/shared@3.5.46"
+      ]
+    },
+    {
+      "ref": "@vue/runtime-core@3.5.46",
+      "dependsOn": [
+        "@vue/shared@3.5.46",
+        "@vue/reactivity@3.5.46"
+      ]
+    },
+    {
+      "ref": "@vue/runtime-dom@3.5.46",
+      "dependsOn": [
+        "@vue/shared@3.5.46",
+        "@vue/runtime-core@3.5.46",
+        "@vue/reactivity@3.5.46",
+        "csstype@3.2.4"
+      ]
+    },
+    {
+      "ref": "@vue/server-renderer@3.5.46",
+      "dependsOn": [
+        "@vue/shared@3.5.46",
+        "@vue/compiler-ssr@3.5.46",
+        "@vue/runtime-dom@3.5.46"
+      ]
+    },
+    {
+      "ref": "@vue/shared@3.5.46",
+      "dependsOn": []
+    },
+    {
+      "ref": "alien-signals@1.0.13",
+      "dependsOn": []
+    },
+    {
+      "ref": "balanced-match@1.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "brace-expansion@2.1.8",
+      "dependsOn": [
+        "balanced-match@1.0.2"
+      ]
+    },
+    {
+      "ref": "csstype@3.2.4",
+      "dependsOn": []
+    },
+    {
+      "ref": "de-indent@1.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "entities@7.0.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "esbuild@0.25.12",
+      "dependsOn": [
+        "@esbuild/darwin-arm64@0.25.12"
+      ]
+    },
+    {
+      "ref": "estree-walker@2.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "fdir@6.5.0",
+      "dependsOn": [
+        "picomatch@4.0.7"
+      ]
+    },
+    {
+      "ref": "fsevents@2.3.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "he@1.2.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "magic-string@0.30.21",
+      "dependsOn": [
+        "@jridgewell/sourcemap-codec@1.6.0"
+      ]
+    },
+    {
+      "ref": "minimatch@9.0.9",
+      "dependsOn": [
+        "brace-expansion@2.1.8"
+      ]
+    },
+    {
+      "ref": "muggle-string@0.4.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "nanoid@3.3.20",
+      "dependsOn": []
+    },
+    {
+      "ref": "path-browserify@1.0.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "picocolors@1.1.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "picomatch@4.0.7",
+      "dependsOn": []
+    },
+    {
+      "ref": "pinia@2.3.1",
+      "dependsOn": [
+        "vue@3.5.46",
+        "typescript@5.6.3",
+        "@vue/devtools-api@6.6.4",
+        "vue-demi@0.14.10"
+      ]
+    },
+    {
+      "ref": "postcss@8.5.33",
+      "dependsOn": [
+        "nanoid@3.3.20",
+        "picocolors@1.1.1",
+        "source-map-js@1.2.4"
+      ]
+    },
+    {
+      "ref": "rollup@4.68.8",
+      "dependsOn": [
+        "@types/estree@1.0.10",
+        "fsevents@2.3.3",
+        "@rollup/rollup-darwin-arm64@4.68.8"
+      ]
+    },
+    {
+      "ref": "source-map-js@1.2.4",
+      "dependsOn": []
+    },
+    {
+      "ref": "tinyglobby@0.2.17",
+      "dependsOn": [
+        "fdir@6.5.0",
+        "picomatch@4.0.7"
+      ]
+    },
+    {
+      "ref": "typescript@5.6.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "vite@6.4.6",
+      "dependsOn": [
+        "esbuild@0.25.12",
+        "fdir@6.5.0",
+        "picomatch@4.0.7",
+        "postcss@8.5.33",
+        "rollup@4.68.8",
+        "tinyglobby@0.2.17",
+        "fsevents@2.3.3"
+      ]
+    },
+    {
+      "ref": "vscode-uri@3.2.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "vue@3.5.46",
+      "dependsOn": [
+        "typescript@5.6.3",
+        "@vue/shared@3.5.46",
+        "@vue/compiler-dom@3.5.46",
+        "@vue/runtime-dom@3.5.46",
+        "@vue/compiler-sfc@3.5.46",
+        "@vue/server-renderer@3.5.46"
+      ]
+    },
+    {
+      "ref": "vue-demi@0.14.10",
+      "dependsOn": [
+        "vue@3.5.46"
+      ]
+    },
+    {
+      "ref": "vue-router@4.6.5",
+      "dependsOn": [
+        "vue@3.5.46",
+        "@vue/devtools-api@6.6.4"
+      ]
+    },
+    {
+      "ref": "vue-tsc@2.2.12",
+      "dependsOn": [
+        "typescript@5.6.3",
+        "@volar/typescript@2.4.15",
+        "@vue/language-core@2.2.12"
+      ]
+    }
+  ]
+}

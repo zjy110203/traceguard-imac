@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { Crosshair, Minus, Plus, RotateCcw } from '@lucide/vue'
+import { computed, nextTick, ref, watch } from 'vue'
+import { Crosshair, Maximize2, Minus, Plus, RotateCcw } from '@lucide/vue'
 import type { EvidenceGraph, GraphEdge, GraphNode } from '../types'
 
 const props = defineProps<{ graph: EvidenceGraph | null }>()
@@ -23,13 +23,26 @@ const hiddenTypes = ref<string[]>([])
 const found = ref('')
 const scale = ref(1)
 const pan = ref({ x: 0, y: 0 })
+const stage = ref<HTMLElement | null>(null)
 const drag = ref<{ x: number; y: number; px: number; py: number } | null>(null)
 
 function toggleType(k: string) {
   hiddenTypes.value = hiddenTypes.value.includes(k) ? hiddenTypes.value.filter((x) => x !== k) : [...hiddenTypes.value, k]
 }
-function zoom(delta: number) { scale.value = Math.min(2.4, Math.max(0.5, Number((scale.value + delta).toFixed(2)))) }
-function resetView() { scale.value = 1; pan.value = { x: 0, y: 0 }; found.value = '' }
+function zoom(delta: number) { scale.value = Math.min(2.4, Math.max(0.35, Number((scale.value + delta).toFixed(2)))) }
+function resetView() { fit(); found.value = '' }
+
+/** 适应画布：把整张图缩放到可视区域内（默认视图，避免节点被裁切）。 */
+function fit() {
+  const el = stage.value
+  const w = layout.value.contentW
+  const h = layout.value.contentH
+  if (!el || !w || !h) { scale.value = 1; pan.value = { x: 0, y: 0 }; return }
+  const sw = Math.max(240, el.clientWidth - 12)
+  const sh = Math.max(200, el.clientHeight - 12)
+  scale.value = Math.max(0.35, Math.min(1, Number(Math.min(sw / w, sh / h).toFixed(2))))
+  pan.value = { x: 6, y: 6 }
+}
 function onPointerDown(e: PointerEvent) { drag.value = { x: e.clientX, y: e.clientY, px: pan.value.x, py: pan.value.y } }
 function onPointerMove(e: PointerEvent) {
   if (!drag.value) return
@@ -52,6 +65,9 @@ interface Pos {
   y: number
 }
 
+const NODE_W = 112
+const NODE_H = 22
+
 const layout = computed(() => {
   const nodes = (props.graph?.nodes ?? []).filter((n) => !hiddenTypes.value.includes(ORDER.includes(n.node_type) ? n.node_type : 'Source'))
   const grouped: Record<string, GraphNode[]> = {}
@@ -61,7 +77,6 @@ const layout = computed(() => {
   }
   const cols = ORDER.filter((k) => grouped[k]?.length)
   const positions: Record<string, Pos> = {}
-  const W = Math.max(760, cols.length * 165)
   cols.forEach((k, ci) => {
     const q = found.value.trim().toLowerCase()
     const pool = q
@@ -71,13 +86,18 @@ const layout = computed(() => {
     const total = list.length
     list.forEach((n, i) => {
       const y = total === 1 ? 210 : 40 + (i * 380) / (total - 1)
-      positions[n.node_id] = { node: n, x: 60 + ci * 165, y }
+      positions[n.node_id] = { node: n, x: 60 + ci * 172, y }
     })
   })
   const edges = (props.graph?.edges ?? []).filter(
     (e) => positions[e.src] && positions[e.dst] && e.relation !== 'same_execution_context',
   )
-  return { positions, edges, width: W, cols, grouped }
+  // 真实内容尺寸：用于"适应画布"与 SVG 画布尺寸，避免节点被裁切或超出容器
+  const xs = Object.values(positions).map((p) => p.x)
+  const ys = Object.values(positions).map((p) => p.y)
+  const contentW = xs.length ? Math.max(...xs) + NODE_W + 40 : 760
+  const contentH = ys.length ? Math.max(...ys) + NODE_H + 40 : 430
+  return { positions, edges, cols, grouped, contentW, contentH }
 })
 
 const activeSet = computed(() => {
@@ -93,10 +113,10 @@ const activeSet = computed(() => {
 function edgePath(e: GraphEdge): string {
   const a = layout.value.positions[e.src]
   const b = layout.value.positions[e.dst]
-  const x1 = a.x + 104
-  const y1 = a.y + 10
+  const x1 = a.x + NODE_W
+  const y1 = a.y + NODE_H / 2
   const x2 = b.x
-  const y2 = b.y + 10
+  const y2 = b.y + NODE_H / 2
   const mx = (x1 + x2) / 2
   return `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`
 }
@@ -116,6 +136,16 @@ function label(n: GraphNode): string {
 function isDim(n: GraphNode) {
   return activeSet.value ? !activeSet.value.has(n.node_id) : false
 }
+
+// 图或画布尺寸变化时自动适应画布（默认整图可见，避免节点被裁切）
+watch(
+  () => [props.graph, layout.value.contentW, layout.value.contentH],
+  async () => {
+    await nextTick()
+    fit()
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -133,15 +163,16 @@ function isDim(n: GraphNode) {
         <button class="sm" type="button" aria-label="缩小" @click="zoom(-0.15)"><Minus :size="13" /></button>
         <span class="small mono">{{ Math.round(scale * 100) }}%</span>
         <button class="sm" type="button" aria-label="放大" @click="zoom(0.15)"><Plus :size="13" /></button>
+        <button class="sm" type="button" aria-label="适应画布" @click="fit"><Maximize2 :size="13" /></button>
         <button class="sm" type="button" aria-label="重置视图" @click="resetView"><RotateCcw :size="13" /></button>
       </div>
     </div>
     <div v-if="(graph?.stats?.nodes ?? 0) > Object.keys(layout.positions).length" class="small muted" style="margin-bottom: 6px">
       当前显示 {{ Object.keys(layout.positions).length }} / {{ graph?.stats?.nodes }} 节点；可输入节点 ID 定位被折叠的节点。
     </div>
-    <div class="graph-stage" @pointerdown="onPointerDown" @pointermove="onPointerMove"
+    <div ref="stage" class="graph-stage" @pointerdown="onPointerDown" @pointermove="onPointerMove"
       @pointerup="drag = null" @pointerleave="drag = null" @wheel.prevent="onWheel">
-      <svg :width="layout.width" height="430" style="display: block"
+      <svg :width="layout.contentW" :height="layout.contentH" style="display: block"
         :style="{ transform: `scale(${scale}) translate(${pan.x}px, ${pan.y}px)`, transformOrigin: '0 0' }">
         <g v-for="e in layout.edges" :key="e.edge_id">
           <path
@@ -154,10 +185,10 @@ function isDim(n: GraphNode) {
         <g v-for="p in Object.values(layout.positions)" :key="p.node.node_id" :opacity="isDim(p.node) ? 0.25 : 1"
           style="cursor: pointer"
           @mouseenter="hovered = p.node.node_id" @mouseleave="hovered = null" @click="emit('select', p.node)">
-          <rect :x="p.x" :y="p.y" width="104" height="22" rx="5"
+          <rect :x="p.x" :y="p.y" :width="NODE_W" :height="NODE_H" rx="5"
             :fill="COLOR[p.node.node_type] || '#475467'" />
           <text :x="p.x + 8" :y="p.y + 15" fill="#fff" font-size="10.5" font-family="ui-monospace, monospace">
-            {{ label(p.node).slice(0, 15) }}
+            {{ label(p.node).length > 15 ? label(p.node).slice(0, 14) + '…' : label(p.node) }}
           </text>
           <title>{{ p.node.node_type }} · {{ p.node.ref_id }}</title>
         </g>

@@ -1,0 +1,535 @@
+{
+  "round": "RUN-007-RESUME",
+  "arm": "LLM",
+  "label": "pro",
+  "api": "http://127.0.0.1:8022",
+  "teamflow": "http://127.0.0.1:8021",
+  "subset": 8,
+  "subset_note": "故障场景子集（预算约束），不是全量 19 个故障场景",
+  "started_at": "2026-11-23T13:58:13Z",
+  "duration_s": 422.7,
+  "llm_candidate_accuracy": {
+    "num": 5,
+    "den": 8,
+    "value": 0.625
+  },
+  "final_diagnosis_accuracy": {
+    "num": 6,
+    "den": 8,
+    "value": 0.75
+  },
+  "models_seen": {
+    "deepseek-v4-pro": 8
+  },
+  "llm_calls": {
+    "total_delta": 8,
+    "median_per_case": 1.0
+  },
+  "llm_not_called": [],
+  "rows": [
+    {
+      "scenario": "TF-DB-001",
+      "testcase_id": "tcase_tf_false_pass",
+      "gt": "PERSISTENCE",
+      "run_id": "run_17954422934152ba88411d900",
+      "elapsed_s": 6.2,
+      "verdict": "FAILED",
+      "execution_status": "COMPLETED",
+      "worker": "pro-w1",
+      "diagnose_s": 50.1,
+      "outcome": "CONFIRMED",
+      "pred_final": "PERSISTENCE",
+      "pred_final_basis": "CONFIRMED",
+      "pred": "PERSISTENCE",
+      "pred_basis": "SUPPORTED",
+      "correct": true,
+      "final_correct": true,
+      "llm": {
+        "engine": "rule-v1+llm-advisor",
+        "called": true,
+        "model": "deepseek-v4-pro",
+        "added": [
+          {
+            "description": "后端未持久化创建的项目：API 状态查询返回 0 个项目，而测试期间曾 POST /api/projects，可能导致后续 UI 断言/状态校验失败。",
+            "domain": "PERSISTENCE",
+            "confidence": 0.55,
+            "evidence_ids": [
+              "evd_1795442299303b70b4644c441",
+              "evd_179544229746240fd10fe611e"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "前端元素定位或断言失败：多个 fp_s7/fp_s8 断言步骤涉及浏览器 artifact，可能存在元素定位不稳定、文本不匹配或 UI 状态未更新，导致断言报错。",
+            "domain": "LOCATOR",
+            "confidence": 0.4,
+            "evidence_ids": [
+              "evd_1795442299143e87639c28f6e",
+              "evd_17954422991435581e9460335",
+              "evd_179544229914214c43ca83105",
+              "evd_17954422991014d5ecc83034f",
+              "evd_179544229910088d1493efde7",
+              "evd_179544229910002fff40499a1"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "等待步骤超时：fp_s6 的 wait 操作可能等待目标元素或条件超时，导致后续断言无法继续或失败。",
+            "domain": "TIMEOUT",
+            "confidence": 0.3,
+            "evidence_ids": [
+              "evd_179544229905773a43e172386",
+              "evd_179544229905686740efc8ad0",
+              "evd_1795442299056eaf958a4b10b"
+            ],
+            "warnings": []
+          }
+        ],
+        "skipped": null,
+        "fallbacks": [],
+        "calls_delta": 1
+      }
+    },
+    {
+      "scenario": "TF-DB-002",
+      "testcase_id": "tcase_bench_db002",
+      "gt": "PERSISTENCE",
+      "run_id": "run_1795442349660ebc749a92746",
+      "elapsed_s": 9.9,
+      "verdict": "FAILED",
+      "execution_status": "COMPLETED",
+      "worker": "pro-w2",
+      "diagnose_s": 41.3,
+      "outcome": "CONFIRMED",
+      "pred_final": "PERSISTENCE",
+      "pred_final_basis": "CONFIRMED",
+      "pred": "UI_RENDERING",
+      "pred_basis": "SUPPORTED",
+      "correct": false,
+      "final_correct": true,
+      "llm": {
+        "engine": "rule-v1+llm-advisor",
+        "called": true,
+        "model": "deepseek-v4-pro",
+        "added": [
+          {
+            "description": "前端JS错误导致UI未正确渲染新建项目，尽管API已返回项目存在，导致断言失败。",
+            "domain": "JS",
+            "confidence": 0.6,
+            "evidence_ids": [
+              "evd_179544235933642d80085b74e",
+              "evd_179544235915622c8430cb2d7",
+              "evd_1795442359156ca547093561f",
+              "evd_17954423591556742070e0705"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "等待的项目元素定位器失效或超时，导致后续断言失败。",
+            "domain": "TIMEOUT",
+            "confidence": 0.5,
+            "evidence_ids": [
+              "evd_1795442359112a50c65df5d19",
+              "evd_17954423591112ec62e9b6f2a",
+              "evd_1795442359111182914b79813"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "UI断言期望的内容与API实际返回的数据不一致，例如项目名称不匹配。",
+            "domain": "API",
+            "confidence": 0.4,
+            "evidence_ids": [
+              "evd_179544235933642d80085b74e",
+              "evd_179544235915622c8430cb2d7"
+            ],
+            "warnings": []
+          }
+        ],
+        "skipped": null,
+        "fallbacks": [],
+        "calls_delta": 1
+      }
+    },
+    {
+      "scenario": "TF-DB-004",
+      "testcase_id": "tcase_bench_db004",
+      "gt": "TIMING",
+      "run_id": "run_1795442400852859d2056a1e1",
+      "elapsed_s": 4.9,
+      "verdict": "FAILED",
+      "execution_status": "COMPLETED",
+      "worker": "pro-w2",
+      "diagnose_s": 55.4,
+      "outcome": "CONFIRMED",
+      "pred_final": "PERSISTENCE",
+      "pred_final_basis": "CONFIRMED",
+      "pred": "API",
+      "pred_basis": "SUPPORTED",
+      "correct": false,
+      "final_correct": false,
+      "llm": {
+        "engine": "rule-v1+llm-advisor",
+        "called": true,
+        "model": "deepseek-v4-pro",
+        "added": [
+          {
+            "description": "后端 API 在 POST /api/projects 后未能成功创建项目或持久化，导致权威状态查询返回空列表，前端断言失败。",
+            "domain": "API",
+            "confidence": 0.6,
+            "evidence_ids": [
+              "evd_17954424038774d696a2d29d3",
+              "evd_1795442405681809268800315"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "前端 UI 在项目创建操作后未能正确渲染新项目，可能是 JavaScript 状态更新失败或 DOM 更新延迟，导致断言失败。",
+            "domain": "UI",
+            "confidence": 0.5,
+            "evidence_ids": [
+              "evd_17954424054975ae4f3d3b764",
+              "evd_1795442405543a9d5de42115c"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "等待时间不足，异步项目创建过程在断言时未完成，导致断言过早执行而失败。",
+            "domain": "TIMEOUT",
+            "confidence": 0.4,
+            "evidence_ids": [
+              "evd_17954424054447023ed59adb2",
+              "evd_17954424054975ae4f3d3b764"
+            ],
+            "warnings": []
+          }
+        ],
+        "skipped": null,
+        "fallbacks": [],
+        "calls_delta": 1
+      }
+    },
+    {
+      "scenario": "TF-UI-001",
+      "testcase_id": "tcase_tf_ui_missing",
+      "gt": "UI_RENDERING",
+      "run_id": "run_1795442461233480d9deb7e40",
+      "elapsed_s": 5.3,
+      "verdict": "FAILED",
+      "execution_status": "COMPLETED",
+      "worker": "pro-w2",
+      "diagnose_s": 56.1,
+      "outcome": "CONFIRMED",
+      "pred_final": "UI_RENDERING",
+      "pred_final_basis": "CONFIRMED",
+      "pred": "UI_RENDERING",
+      "pred_basis": "SUPPORTED",
+      "correct": true,
+      "final_correct": true,
+      "llm": {
+        "engine": "rule-v1+llm-advisor",
+        "called": true,
+        "model": "deepseek-v4-pro",
+        "added": [
+          {
+            "description": "点击创建项目后，API 请求成功且项目已存在于后端（API 证据显示 keys 包含 TF-010603），但前端 UI 未正确更新项目列表或页面展示，导致后续断言失败。",
+            "domain": "UI",
+            "confidence": 0.45,
+            "evidence_ids": [
+              "evd_1795442466457cbc2c48a0666",
+              "evd_17954424646121c0c1fe07ef7",
+              "evd_17954424662959253702bf230",
+              "evd_17954424662516d000680a3f6"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "断言步骤中使用的元素定位器无法唯一匹配目标元素，或者匹配到错误/过时元素，导致断言条件不满足。",
+            "domain": "LOCATOR",
+            "confidence": 0.35,
+            "evidence_ids": [
+              "evd_17954424662959253702bf230",
+              "evd_17954424662941246237b329d",
+              "evd_1795442466294c70194629903",
+              "evd_17954424662501f6074aebc0a"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "等待步骤 ui_s6 可能未满足预期条件或超时过短，页面尚未完全渲染/加载新数据，导致后续断言在旧状态下执行。",
+            "domain": "TIMEOUT",
+            "confidence": 0.2,
+            "evidence_ids": [
+              "evd_1795442466209e8788180f1be",
+              "evd_1795442466208c9f32b3d2d1b",
+              "evd_179544246620895b68446251b",
+              "evd_17954424646121c0c1fe07ef7"
+            ],
+            "warnings": []
+          }
+        ],
+        "skipped": null,
+        "fallbacks": [],
+        "calls_delta": 1
+      }
+    },
+    {
+      "scenario": "TF-UI-002",
+      "testcase_id": "tcase_bench_ui002",
+      "gt": "UI_RENDERING",
+      "run_id": "run_1795442522669720ebeb1cfb7",
+      "elapsed_s": 5.3,
+      "verdict": "FAILED",
+      "execution_status": "COMPLETED",
+      "worker": "pro-w2",
+      "diagnose_s": 56.1,
+      "outcome": "PROBABLE",
+      "pred_final": "API",
+      "pred_final_basis": "SUPPORTED",
+      "pred": "API",
+      "pred_basis": "SUPPORTED",
+      "correct": false,
+      "final_correct": false,
+      "llm": {
+        "engine": "rule-v1+llm-advisor",
+        "called": true,
+        "model": "deepseek-v4-pro",
+        "added": [
+          {
+            "description": "后端 API 返回空项目列表（count=0, keys=[]），前端页面因此未渲染任何项目，导致断言步骤（ui2_n6/ui2_n7）检查项目存在性时失败。",
+            "domain": "API",
+            "confidence": 0.6,
+            "evidence_ids": [
+              "evd_1795442527799e90c892ef4a9",
+              "evd_1795442527639ede4c148901a",
+              "evd_17954425276396acf44326470",
+              "evd_1795442527639634962cc8c90"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "UI 断言使用的定位器无法匹配预期元素，可能由于页面结构变化或动态内容未加载，导致断言失败。",
+            "domain": "LOCATOR",
+            "confidence": 0.3,
+            "evidence_ids": [
+              "evd_1795442527575cc1ae13f8642",
+              "evd_1795442527575ee3b929cf364",
+              "evd_1795442527575c638ab0a5243",
+              "evd_1795442527517609b55ffa69b",
+              "evd_179544252751777459ebc866b",
+              "evd_17954425275167909fa256223"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "等待步骤（ui2_n5）后元素仍未就绪，可能是前端异步渲染未完成或超时，导致后续断言检查失败。",
+            "domain": "TIMEOUT",
+            "confidence": 0.2,
+            "evidence_ids": [
+              "evd_1795442527517609b55ffa69b",
+              "evd_179544252751777459ebc866b",
+              "evd_17954425275167909fa256223",
+              "evd_1795442527575cc1ae13f8642",
+              "evd_1795442527575ee3b929cf364",
+              "evd_1795442527575c638ab0a5243"
+            ],
+            "warnings": []
+          }
+        ],
+        "skipped": null,
+        "fallbacks": [],
+        "calls_delta": 1
+      }
+    },
+    {
+      "scenario": "TF-UI-003",
+      "testcase_id": "tcase_bench_ui003",
+      "gt": "UI_RENDERING",
+      "run_id": "run_17954425841463f15903de07e",
+      "elapsed_s": 4.9,
+      "verdict": "FAILED",
+      "execution_status": "COMPLETED",
+      "worker": "pro-w1",
+      "diagnose_s": 34.8,
+      "outcome": "CONFIRMED",
+      "pred_final": "UI_RENDERING",
+      "pred_final_basis": "CONFIRMED",
+      "pred": "UI_RENDERING",
+      "pred_basis": "SUPPORTED",
+      "correct": true,
+      "final_correct": true,
+      "llm": {
+        "engine": "rule-v1+llm-advisor",
+        "called": true,
+        "model": "deepseek-v4-pro",
+        "added": [
+          {
+            "description": "在 UI 断言步骤（ui3_n6 或 ui3_n7）中，界面元素的状态、文本或可见性与预期不符，导致断言失败。",
+            "domain": "UI",
+            "confidence": 0.6,
+            "evidence_ids": [
+              "evd_1795442588790ca277231f89e",
+              "evd_17954425887908acea0014bd1",
+              "evd_1795442588790416b6e309754",
+              "evd_1795442588744820f0f4dbac6",
+              "evd_17954425887439765f6f2554f",
+              "evd_1795442588742bb9ba16ec942"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "在 wait 步骤（ui3_n5）中，等待某个条件（如元素出现或消失）超时，导致后续流程中断或断言失败。",
+            "domain": "TIMEOUT",
+            "confidence": 0.3,
+            "evidence_ids": [
+              "evd_17954425887024da635db4694",
+              "evd_1795442588702c3fb60090798",
+              "evd_1795442588701858428844ba2"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "API 创建项目成功（返回 ok true 且包含 TF-953287），但 UI 界面未能正确反映数据变化，可能是前端 JavaScript 状态管理或渲染问题，导致断言失败。",
+            "domain": "JS",
+            "confidence": 0.4,
+            "evidence_ids": [
+              "evd_17954425889418b7c3c7636d8",
+              "evd_1795442587102f24b222d276d",
+              "evd_1795442588790ca277231f89e"
+            ],
+            "warnings": []
+          }
+        ],
+        "skipped": null,
+        "fallbacks": [],
+        "calls_delta": 1
+      }
+    },
+    {
+      "scenario": "TF-API-001",
+      "testcase_id": "tcase_tf_api_error",
+      "gt": "API",
+      "run_id": "run_17954426238543239c01f9e8d",
+      "elapsed_s": 3.7,
+      "verdict": "FAILED",
+      "execution_status": "COMPLETED",
+      "worker": "pro-w2",
+      "diagnose_s": 46.8,
+      "outcome": "CONFIRMED",
+      "pred_final": "API",
+      "pred_final_basis": "CONFIRMED",
+      "pred": "API",
+      "pred_basis": "SUPPORTED",
+      "correct": true,
+      "final_correct": true,
+      "llm": {
+        "engine": "rule-v1+llm-advisor",
+        "called": true,
+        "model": "deepseek-v4-pro",
+        "added": [
+          {
+            "description": "POST /api/projects 在点击提交后返回 HTTP 500，表明服务端处理请求时出现内部错误，导致项目创建失败；后续前台状态仍为空（count=0），可能因此造成断言失败。",
+            "domain": "API",
+            "confidence": 0.85,
+            "evidence_ids": [
+              "evd_1795442625925f1ca4452dd35",
+              "evd_17954426273114c761f0cd7b6"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "点击提交后 API 返回 500，前端可能未正确展示错误信息或未回退到可断言的失败状态，导致测试的后续断言（如成功提示或项目列表更新）找不到预期元素而失败。",
+            "domain": "UI",
+            "confidence": 0.4,
+            "evidence_ids": [
+              "evd_1795442625925f1ca4452dd35",
+              "evd_1795442627173945c9238d473",
+              "evd_1795442627173a26616f33879",
+              "evd_17954426271721a1fcae509a6"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "由于 POST /api/projects 返回 500，等待步骤可能一直在等待项目创建成功的标志（如新项目出现在列表或成功通知），但该标志始终未出现，导致等待/断言超时或失败。",
+            "domain": "TIMEOUT",
+            "confidence": 0.25,
+            "evidence_ids": [
+              "evd_1795442625925f1ca4452dd35",
+              "evd_1795442627105bebe2a304e6c",
+              "evd_1795442627105556a84d5f4f0",
+              "evd_179544262710517934eabc7a2"
+            ],
+            "warnings": []
+          }
+        ],
+        "skipped": null,
+        "fallbacks": [],
+        "calls_delta": 1
+      }
+    },
+    {
+      "scenario": "TF-API-002",
+      "testcase_id": "tcase_bench_api002",
+      "gt": "API",
+      "run_id": "run_17954426743819eb19d9cbd54",
+      "elapsed_s": 5.4,
+      "verdict": "FAILED",
+      "execution_status": "COMPLETED",
+      "worker": "pro-w1",
+      "diagnose_s": 36.4,
+      "outcome": "CONFIRMED",
+      "pred_final": "API",
+      "pred_final_basis": "CONFIRMED",
+      "pred": "API",
+      "pred_basis": "SUPPORTED",
+      "correct": true,
+      "final_correct": true,
+      "llm": {
+        "engine": "rule-v1+llm-advisor",
+        "called": true,
+        "model": "deepseek-v4-pro",
+        "added": [
+          {
+            "description": "后端API服务不可用，创建项目请求POST /api/projects返回503 Service Unavailable，导致测试步骤失败。",
+            "domain": "API",
+            "confidence": 0.8,
+            "evidence_ids": [
+              "evd_179544267741848c173e81e0d"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "后端依赖的持久化存储（如数据库）不可用，导致API返回503。",
+            "domain": "PERSISTENCE",
+            "confidence": 0.3,
+            "evidence_ids": [
+              "evd_179544267741848c173e81e0d",
+              "evd_17954426793189b9568a791e2"
+            ],
+            "warnings": []
+          },
+          {
+            "description": "前端页面因API错误未能正确渲染，导致断言失败。",
+            "domain": "UI",
+            "confidence": 0.2,
+            "evidence_ids": [
+              "evd_179544267916850fc40013a3d",
+              "evd_17954426791684a88071490f2",
+              "evd_17954426791683cf2e814cb78"
+            ],
+            "warnings": []
+          }
+        ],
+        "skipped": null,
+        "fallbacks": [],
+        "calls_delta": 1
+      }
+    }
+  ],
+  "limits": [
+    "子集样本，不做显著性外推；不得用该数字代表全量能力",
+    "模型由服务端路由决定，臂标签只用于区分批次，不代表命令行指定模型",
+    "LLM 候选状态固定为 CANDIDATE（不能 CONFIRMED），因此以 LLM 候选机制计分，不以最终根因计分",
+    "llm_not_called 非空时，该臂不是完整 LLM 覆盖（缺凭据/超预算），必须如实标注"
+  ]
+}

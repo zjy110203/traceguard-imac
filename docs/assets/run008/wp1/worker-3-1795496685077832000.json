@@ -1,0 +1,1 @@
+{"pid": 71096, "scope": "run008-kill", "reserved": 7, "rejected": 13, "reasons": {"PROBE_COUNT_BUDGET_EXHAUSTED": 13}, "error": "", "probes_used_seen": 20, "closed_seen": false}

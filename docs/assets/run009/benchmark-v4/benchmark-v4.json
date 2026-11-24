@@ -1,0 +1,3766 @@
+{
+  "round": "RUN-009",
+  "artifact": "Benchmark v4 / WP7 多臂消融",
+  "created_at": "2026-11-24T08:22:59Z",
+  "method": {
+    "evidence_source": "RUN-008 真实执行落盘样本（不修改、不覆盖原始证据）",
+    "arms_ACDE": "直接加载 scripts/bench_run007.py 的原函数，保留原语义",
+    "arms_new": "真实内核函数离线重算：merge_signals + DiagnosisEngine.diagnose",
+    "kernel_modified": false,
+    "new_fault_injection": false,
+    "statistical_significance": "不做统计显著性宣称；n=19/轮，仅报告分子分母与样本数"
+  },
+  "source_report": "docs/assets/run008/wp7/benchmark-v3.json",
+  "v3_dataset": {
+    "dataset": "teamflow-faultbench-v2",
+    "dataset_version": "v2.0",
+    "scoring_samples_per_pass": 19,
+    "passes": 2
+  },
+  "v4_dataset": {
+    "dataset": "teamflow-faultbench-v4",
+    "dataset_version": "v4.0",
+    "scenario_count": 14,
+    "family_count": 11,
+    "gt_isolation": {
+      "gt_count": 14,
+      "visible_ref_count": 14,
+      "no_token_read_count": 0,
+      "token_granted_read_count": 14,
+      "isolated": true,
+      "note": "无令牌读取返回 0 条；有令牌读取返回全部；不通过 API 暴露 GT 正文"
+    },
+    "scenarios": [
+      {
+        "scenario_id": "V4-MULTISRC-001",
+        "family": "多源冲突",
+        "description": "UI 断言 PASSED、API 网络轨迹出现 500、权威业务状态 count=0：三源冲突时以可确认的权威证据裁决主因。",
+        "required_evidence": [
+          "ui_assertion",
+          "network_5xx",
+          "authoritative_state"
+        ],
+        "expected_execution_status": "COMPLETED",
+        "expected_test_verdict": "FAILED",
+        "seeded": false,
+        "execution_state": "BLOCKED_NOT_SEEDED",
+        "suggested_testcase": "tcase_bench_comp001"
+      },
+      {
+        "scenario_id": "V4-MULTISRC-002",
+        "family": "多源冲突",
+        "description": "API 回报成功且 UI 成功，权威状态 count=0：UI+API 同为表层证据，不能压倒权威状态。",
+        "required_evidence": [
+          "ui_assertion",
+          "api_success",
+          "authoritative_state"
+        ],
+        "expected_execution_status": "COMPLETED",
+        "expected_test_verdict": "FAILED",
+        "seeded": false,
+        "execution_state": "BLOCKED_NOT_SEEDED",
+        "suggested_testcase": "tcase_tf_false_pass"
+      },
+      {
+        "scenario_id": "V4-SIMILAR-001",
+        "family": "相似故障",
+        "description": "DOM 中期望 test_id 存在但成功提示未渲染：与定位器失效表现相似，主因是渲染。",
+        "required_evidence": [
+          "dom_snapshot",
+          "ui_assertion",
+          "business_state"
+        ],
+        "expected_execution_status": "COMPLETED",
+        "expected_test_verdict": "FAILED",
+        "seeded": false,
+        "execution_state": "BLOCKED_NOT_SEEDED",
+        "suggested_testcase": "tcase_tf_ui_missing"
+      },
+      {
+        "scenario_id": "V4-SIMILAR-002",
+        "family": "相似故障",
+        "description": "DOM 中期望 test_id 缺失导致步骤超时，业务状态未改变：主因是定位器资产，不是产品渲染缺陷。",
+        "required_evidence": [
+          "dom_snapshot",
+          "locator_timeout",
+          "business_state"
+        ],
+        "expected_execution_status": "COMPLETED",
+        "expected_test_verdict": "FAILED",
+        "seeded": false,
+        "execution_state": "BLOCKED_NOT_SEEDED",
+        "suggested_testcase": "tcase_bench_loc001"
+      },
+      {
+        "scenario_id": "V4-TEMPORAL-001",
+        "family": "时序",
+        "description": "状态查询滞后 9000ms：断言窗口内读到旧值，但延迟后数据最终落库；症状像未持久化，主因是时序。",
+        "required_evidence": [
+          "network_latency",
+          "assertion_outcome",
+          "delayed_state"
+        ],
+        "expected_execution_status": "COMPLETED",
+        "expected_test_verdict": "FAILED",
+        "seeded": false,
+        "execution_state": "BLOCKED_NOT_SEEDED",
+        "suggested_testcase": "tcase_bench_db004"
+      },
+      {
+        "scenario_id": "V4-COMPOUND-001",
+        "family": "复合",
+        "description": "接口 500 同时成功提示被误导为成功文案：多现象并发，需区分主因与伴随症状。",
+        "required_evidence": [
+          "network_5xx",
+          "ui_assertion",
+          "authoritative_state"
+        ],
+        "expected_execution_status": "COMPLETED",
+        "expected_test_verdict": "FAILED",
+        "seeded": false,
+        "execution_state": "BLOCKED_NOT_SEEDED",
+        "suggested_testcase": "tcase_bench_comp001"
+      },
+      {
+        "scenario_id": "V4-UIOK-BACKEND-001",
+        "family": "UI 正常后端失败",
+        "description": "UI 全程正常且成功提示出现，权威状态 count=0：典型 False Pass，UI 证据不能作通过结论。",
+        "required_evidence": [
+          "ui_assertion",
+          "authoritative_state",
+          "business_state"
+        ],
+        "expected_execution_status": "COMPLETED",
+        "expected_test_verdict": "FAILED",
+        "seeded": false,
+        "execution_state": "BLOCKED_NOT_SEEDED",
+        "suggested_testcase": "tcase_tf_false_pass"
+      },
+      {
+        "scenario_id": "V4-NETVSAPP-001",
+        "family": "网络与应用错误混淆",
+        "description": "网络请求失败（status=0 / timeout）但无 5xx：链路问题，不应误判为接口返回错误。",
+        "required_evidence": [
+          "network_failure",
+          "no_5xx",
+          "timing_observation"
+        ],
+        "expected_execution_status": "COMPLETED",
+        "expected_test_verdict": "FAILED",
+        "seeded": false,
+        "execution_state": "BLOCKED_NOT_SEEDED",
+        "suggested_testcase": "tcase_bench_net002"
+      },
+      {
+        "scenario_id": "V4-NETVSAPP-002",
+        "family": "网络与应用错误混淆",
+        "description": "网络轨迹覆盖失败步骤且存在 500：应用接口故障，不是链路层抖动。",
+        "required_evidence": [
+          "network_5xx",
+          "failed_step_coverage",
+          "server_log"
+        ],
+        "expected_execution_status": "COMPLETED",
+        "expected_test_verdict": "FAILED",
+        "seeded": false,
+        "execution_state": "BLOCKED_NOT_SEEDED",
+        "suggested_testcase": "tcase_bench_api002"
+      },
+      {
+        "scenario_id": "V4-LOCFLUX-001",
+        "family": "定位器波动",
+        "description": "test_id 在 5 次回放中 4 次可解析、1 次超时：定位器资产波动，不是产品缺陷。",
+        "required_evidence": [
+          "repeated_dom_snapshots",
+          "locator_timeout",
+          "stable_business_state"
+        ],
+        "expected_execution_status": "COMPLETED",
+        "expected_test_verdict": "FAILED",
+        "seeded": false,
+        "execution_state": "BLOCKED_NOT_SEEDED",
+        "suggested_testcase": "tcase_bench_loc001"
+      },
+      {
+        "scenario_id": "V4-FLAKY-001",
+        "family": "Flaky",
+        "description": "同一用例 5 次回放 2 次 PASSED / 3 次 FAILED：Flaky 是稳定性特征，不能当作主因本身。",
+        "required_evidence": [
+          "repeated_verdicts",
+          "state_diff",
+          "timing_observation"
+        ],
+        "expected_execution_status": "COMPLETED",
+        "expected_test_verdict": "FAILED",
+        "seeded": false,
+        "execution_state": "BLOCKED_NOT_SEEDED",
+        "suggested_testcase": "tcase_bench_flaky001"
+      },
+      {
+        "scenario_id": "V4-AUTH-001",
+        "family": "权限错误",
+        "description": "创建接口返回 403，UI 只显示通用失败文案：需要 HTTP 状态码证据才能与 5xx / 渲染区分。",
+        "required_evidence": [
+          "http_403",
+          "ui_assertion",
+          "business_state"
+        ],
+        "expected_execution_status": "COMPLETED",
+        "expected_test_verdict": "FAILED",
+        "seeded": false,
+        "execution_state": "BLOCKED_NOT_SEEDED",
+        "suggested_testcase": "tcase_bench_sec001"
+      },
+      {
+        "scenario_id": "V4-INCOMPLETE-001",
+        "family": "证据不完整",
+        "description": "执行在断言前中断，只有网络轨迹、无 DOM / 无权威状态：必须判 INCONCLUSIVE 并请求补证据。",
+        "required_evidence": [
+          "network_trace_only"
+        ],
+        "expected_execution_status": "FAILED",
+        "expected_test_verdict": "NOT_EVALUATED",
+        "seeded": false,
+        "execution_state": "BLOCKED_NOT_SEEDED",
+        "suggested_testcase": "tcase_bench_comp003"
+      },
+      {
+        "scenario_id": "V4-DUP-001",
+        "family": "派生重复证据",
+        "description": "同一浏览器源派生出 3 条证据，另 1 条来自独立 API：来源独立性分析后只能算 2 条独立佐证。",
+        "required_evidence": [
+          "derived_evidence",
+          "independent_api_evidence",
+          "ui_assertion"
+        ],
+        "expected_execution_status": "COMPLETED",
+        "expected_test_verdict": "FAILED",
+        "seeded": false,
+        "execution_state": "BLOCKED_NOT_SEEDED",
+        "suggested_testcase": "tcase_tf_ui_missing"
+      }
+    ],
+    "live_execution": {
+      "status": "BLOCKED_NOT_SEEDED",
+      "reason": "v4 新场景未在 TeamFlow 植入故障；禁止修改源码/seed，本轮不产出 v4 实测数值"
+    }
+  },
+  "llm_arm": {
+    "name": "受约束 LLM 诊断臂",
+    "credential_present": true,
+    "provider_enabled": false,
+    "external_billing_authorized": false,
+    "runnable": false,
+    "status": "BLOCKED",
+    "reason": "需要 TG_LLM_PROVIDER=deepseek、真实凭据与显式 --allow-llm 授权；本轮未发起外网计费调用，绝不以规则结果冒充 LLM 结论",
+    "note": "密钥存在性只做布尔判断，不读取/记录密钥内容"
+  },
+  "passes": [
+    {
+      "repeat_pass": 0,
+      "source_samples": "docs/assets/run008/wp7/samples.jsonl",
+      "output_samples": "docs/assets/run009/benchmark-v4/samples.jsonl",
+      "scoring_samples": 19,
+      "probe_states": {
+        "INCONCLUSIVE": 0,
+        "OK": 19,
+        "NOT_RUN": 0
+      },
+      "confusion": {
+        "A_raw_report": {
+          "labels": [
+            "API",
+            "AUTHORIZATION",
+            "LOCATOR",
+            "NETWORK",
+            "NONE",
+            "PERSISTENCE",
+            "TIMING",
+            "UI_RENDERING"
+          ],
+          "rows_gt_cols_pred": {
+            "API": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "NONE": 2,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 2
+            },
+            "AUTHORIZATION": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "NONE": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 2
+            },
+            "LOCATOR": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "NONE": 3,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0
+            },
+            "NETWORK": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "NONE": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1
+            },
+            "NONE": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "NONE": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0
+            },
+            "PERSISTENCE": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "NONE": 4,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0
+            },
+            "TIMING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "NONE": 2,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0
+            },
+            "UI_RENDERING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "NONE": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 3
+            }
+          }
+        },
+        "C_rule": {
+          "labels": [
+            "API",
+            "AUTHORIZATION",
+            "LOCATOR",
+            "NETWORK",
+            "PERSISTENCE",
+            "TIMING",
+            "UI_RENDERING",
+            "UNKNOWN"
+          ],
+          "rows_gt_cols_pred": {
+            "API": {
+              "API": 3,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 0
+            },
+            "AUTHORIZATION": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 1
+            },
+            "LOCATOR": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 3
+            },
+            "NETWORK": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "PERSISTENCE": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 4,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            },
+            "TIMING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 1,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "UI_RENDERING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 2,
+              "UNKNOWN": 1
+            },
+            "UNKNOWN": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            }
+          }
+        },
+        "D_graph": {
+          "labels": [
+            "API",
+            "AUTHORIZATION",
+            "LOCATOR",
+            "NETWORK",
+            "PERSISTENCE",
+            "TIMING",
+            "UI_RENDERING",
+            "UNKNOWN"
+          ],
+          "rows_gt_cols_pred": {
+            "API": {
+              "API": 3,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 0
+            },
+            "AUTHORIZATION": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 1
+            },
+            "LOCATOR": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 3
+            },
+            "NETWORK": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "PERSISTENCE": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 4,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            },
+            "TIMING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 1,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "UI_RENDERING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 2,
+              "UNKNOWN": 1
+            },
+            "UNKNOWN": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            }
+          }
+        },
+        "E_probe_v3": {
+          "labels": [
+            "API",
+            "AUTHORIZATION",
+            "LOCATOR",
+            "NETWORK",
+            "PERSISTENCE",
+            "TIMING",
+            "UI_RENDERING",
+            "UNKNOWN"
+          ],
+          "rows_gt_cols_pred": {
+            "API": {
+              "API": 3,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 0
+            },
+            "AUTHORIZATION": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 1
+            },
+            "LOCATOR": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 3
+            },
+            "NETWORK": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "PERSISTENCE": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 4,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            },
+            "TIMING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 1,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "UI_RENDERING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 2,
+              "UNKNOWN": 1
+            },
+            "UNKNOWN": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            }
+          }
+        },
+        "F_probe_feedback_b1": {
+          "labels": [
+            "API",
+            "AUTHORIZATION",
+            "LOCATOR",
+            "NETWORK",
+            "PERSISTENCE",
+            "TIMING",
+            "UI_RENDERING",
+            "UNKNOWN"
+          ],
+          "rows_gt_cols_pred": {
+            "API": {
+              "API": 3,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 0
+            },
+            "AUTHORIZATION": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 1
+            },
+            "LOCATOR": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 3
+            },
+            "NETWORK": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "PERSISTENCE": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 4,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            },
+            "TIMING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 1,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "UI_RENDERING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 2,
+              "UNKNOWN": 1
+            },
+            "UNKNOWN": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            }
+          }
+        },
+        "G_probe_feedback_b2": {
+          "labels": [
+            "API",
+            "AUTHORIZATION",
+            "LOCATOR",
+            "NETWORK",
+            "PERSISTENCE",
+            "TIMING",
+            "UI_RENDERING",
+            "UNKNOWN"
+          ],
+          "rows_gt_cols_pred": {
+            "API": {
+              "API": 3,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 0
+            },
+            "AUTHORIZATION": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 1
+            },
+            "LOCATOR": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 3
+            },
+            "NETWORK": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "PERSISTENCE": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 4,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            },
+            "TIMING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 1,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "UI_RENDERING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 2,
+              "UNKNOWN": 1
+            },
+            "UNKNOWN": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            }
+          }
+        },
+        "H_probe_feedback_b3": {
+          "labels": [
+            "API",
+            "AUTHORIZATION",
+            "LOCATOR",
+            "NETWORK",
+            "PERSISTENCE",
+            "TIMING",
+            "UI_RENDERING",
+            "UNKNOWN"
+          ],
+          "rows_gt_cols_pred": {
+            "API": {
+              "API": 3,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 0
+            },
+            "AUTHORIZATION": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 1
+            },
+            "LOCATOR": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 3
+            },
+            "NETWORK": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "PERSISTENCE": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 4,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            },
+            "TIMING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 1,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "UI_RENDERING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 2,
+              "UNKNOWN": 1
+            },
+            "UNKNOWN": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            }
+          }
+        },
+        "CF_time_aligned_probe": {
+          "labels": [
+            "API",
+            "AUTHORIZATION",
+            "LOCATOR",
+            "NETWORK",
+            "PERSISTENCE",
+            "TIMING",
+            "UI_RENDERING",
+            "UNKNOWN"
+          ],
+          "rows_gt_cols_pred": {
+            "API": {
+              "API": 3,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 0
+            },
+            "AUTHORIZATION": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 1
+            },
+            "LOCATOR": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 3
+            },
+            "NETWORK": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "PERSISTENCE": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 4,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            },
+            "TIMING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 1,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "UI_RENDERING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 2,
+              "UNKNOWN": 1
+            },
+            "UNKNOWN": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            }
+          }
+        },
+        "GRAPH_SEM": {
+          "labels": [
+            "API",
+            "AUTHORIZATION",
+            "LOCATOR",
+            "NETWORK",
+            "PERSISTENCE",
+            "TIMING",
+            "UI_RENDERING",
+            "UNKNOWN"
+          ],
+          "rows_gt_cols_pred": {
+            "API": {
+              "API": 3,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 0
+            },
+            "AUTHORIZATION": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 1
+            },
+            "LOCATOR": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 3
+            },
+            "NETWORK": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "PERSISTENCE": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 4,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            },
+            "TIMING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 1,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "UI_RENDERING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 2,
+              "UNKNOWN": 1
+            },
+            "UNKNOWN": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "repeat_pass": 1,
+      "source_samples": "docs/assets/run008/wp7/samples.repeat1.jsonl",
+      "output_samples": "docs/assets/run009/benchmark-v4/samples.repeat1.jsonl",
+      "scoring_samples": 19,
+      "probe_states": {
+        "INCONCLUSIVE": 0,
+        "OK": 19,
+        "NOT_RUN": 0
+      },
+      "confusion": {
+        "A_raw_report": {
+          "labels": [
+            "API",
+            "AUTHORIZATION",
+            "LOCATOR",
+            "NETWORK",
+            "NONE",
+            "PERSISTENCE",
+            "TIMING",
+            "UI_RENDERING"
+          ],
+          "rows_gt_cols_pred": {
+            "API": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "NONE": 2,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 2
+            },
+            "AUTHORIZATION": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "NONE": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 2
+            },
+            "LOCATOR": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "NONE": 3,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0
+            },
+            "NETWORK": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "NONE": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1
+            },
+            "NONE": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "NONE": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0
+            },
+            "PERSISTENCE": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "NONE": 4,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0
+            },
+            "TIMING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "NONE": 2,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0
+            },
+            "UI_RENDERING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "NONE": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 3
+            }
+          }
+        },
+        "C_rule": {
+          "labels": [
+            "API",
+            "AUTHORIZATION",
+            "LOCATOR",
+            "NETWORK",
+            "PERSISTENCE",
+            "TIMING",
+            "UI_RENDERING",
+            "UNKNOWN"
+          ],
+          "rows_gt_cols_pred": {
+            "API": {
+              "API": 3,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 0
+            },
+            "AUTHORIZATION": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 1
+            },
+            "LOCATOR": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 3
+            },
+            "NETWORK": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "PERSISTENCE": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 4,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            },
+            "TIMING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 1,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "UI_RENDERING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 2,
+              "UNKNOWN": 1
+            },
+            "UNKNOWN": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            }
+          }
+        },
+        "D_graph": {
+          "labels": [
+            "API",
+            "AUTHORIZATION",
+            "LOCATOR",
+            "NETWORK",
+            "PERSISTENCE",
+            "TIMING",
+            "UI_RENDERING",
+            "UNKNOWN"
+          ],
+          "rows_gt_cols_pred": {
+            "API": {
+              "API": 3,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 0
+            },
+            "AUTHORIZATION": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 1
+            },
+            "LOCATOR": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 3
+            },
+            "NETWORK": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "PERSISTENCE": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 4,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            },
+            "TIMING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 1,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "UI_RENDERING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 2,
+              "UNKNOWN": 1
+            },
+            "UNKNOWN": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            }
+          }
+        },
+        "E_probe_v3": {
+          "labels": [
+            "API",
+            "AUTHORIZATION",
+            "LOCATOR",
+            "NETWORK",
+            "PERSISTENCE",
+            "TIMING",
+            "UI_RENDERING",
+            "UNKNOWN"
+          ],
+          "rows_gt_cols_pred": {
+            "API": {
+              "API": 3,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 0
+            },
+            "AUTHORIZATION": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 1
+            },
+            "LOCATOR": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 3
+            },
+            "NETWORK": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "PERSISTENCE": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 4,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            },
+            "TIMING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 1,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "UI_RENDERING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 2,
+              "UNKNOWN": 1
+            },
+            "UNKNOWN": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            }
+          }
+        },
+        "F_probe_feedback_b1": {
+          "labels": [
+            "API",
+            "AUTHORIZATION",
+            "LOCATOR",
+            "NETWORK",
+            "PERSISTENCE",
+            "TIMING",
+            "UI_RENDERING",
+            "UNKNOWN"
+          ],
+          "rows_gt_cols_pred": {
+            "API": {
+              "API": 3,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 0
+            },
+            "AUTHORIZATION": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 1
+            },
+            "LOCATOR": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 3
+            },
+            "NETWORK": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "PERSISTENCE": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 4,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            },
+            "TIMING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 1,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "UI_RENDERING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 2,
+              "UNKNOWN": 1
+            },
+            "UNKNOWN": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            }
+          }
+        },
+        "G_probe_feedback_b2": {
+          "labels": [
+            "API",
+            "AUTHORIZATION",
+            "LOCATOR",
+            "NETWORK",
+            "PERSISTENCE",
+            "TIMING",
+            "UI_RENDERING",
+            "UNKNOWN"
+          ],
+          "rows_gt_cols_pred": {
+            "API": {
+              "API": 3,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 0
+            },
+            "AUTHORIZATION": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 1
+            },
+            "LOCATOR": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 3
+            },
+            "NETWORK": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "PERSISTENCE": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 4,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            },
+            "TIMING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 1,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "UI_RENDERING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 2,
+              "UNKNOWN": 1
+            },
+            "UNKNOWN": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            }
+          }
+        },
+        "H_probe_feedback_b3": {
+          "labels": [
+            "API",
+            "AUTHORIZATION",
+            "LOCATOR",
+            "NETWORK",
+            "PERSISTENCE",
+            "TIMING",
+            "UI_RENDERING",
+            "UNKNOWN"
+          ],
+          "rows_gt_cols_pred": {
+            "API": {
+              "API": 3,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 0
+            },
+            "AUTHORIZATION": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 1
+            },
+            "LOCATOR": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 3
+            },
+            "NETWORK": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "PERSISTENCE": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 4,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            },
+            "TIMING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 1,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "UI_RENDERING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 2,
+              "UNKNOWN": 1
+            },
+            "UNKNOWN": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            }
+          }
+        },
+        "CF_time_aligned_probe": {
+          "labels": [
+            "API",
+            "AUTHORIZATION",
+            "LOCATOR",
+            "NETWORK",
+            "PERSISTENCE",
+            "TIMING",
+            "UI_RENDERING",
+            "UNKNOWN"
+          ],
+          "rows_gt_cols_pred": {
+            "API": {
+              "API": 3,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 0
+            },
+            "AUTHORIZATION": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 1
+            },
+            "LOCATOR": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 3
+            },
+            "NETWORK": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "PERSISTENCE": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 4,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            },
+            "TIMING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 1,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "UI_RENDERING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 2,
+              "UNKNOWN": 1
+            },
+            "UNKNOWN": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            }
+          }
+        },
+        "GRAPH_SEM": {
+          "labels": [
+            "API",
+            "AUTHORIZATION",
+            "LOCATOR",
+            "NETWORK",
+            "PERSISTENCE",
+            "TIMING",
+            "UI_RENDERING",
+            "UNKNOWN"
+          ],
+          "rows_gt_cols_pred": {
+            "API": {
+              "API": 3,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 0
+            },
+            "AUTHORIZATION": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 1,
+              "UNKNOWN": 1
+            },
+            "LOCATOR": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 3
+            },
+            "NETWORK": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "PERSISTENCE": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 4,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            },
+            "TIMING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 1,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 1
+            },
+            "UI_RENDERING": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 2,
+              "UNKNOWN": 1
+            },
+            "UNKNOWN": {
+              "API": 0,
+              "AUTHORIZATION": 0,
+              "LOCATOR": 0,
+              "NETWORK": 0,
+              "PERSISTENCE": 0,
+              "TIMING": 0,
+              "UI_RENDERING": 0,
+              "UNKNOWN": 0
+            }
+          }
+        }
+      }
+    }
+  ],
+  "metrics": [
+    {
+      "metric": "primary_cause_accuracy[A_raw_report]",
+      "value": 0.1579,
+      "numerator": 6,
+      "denominator": 38,
+      "n": 38,
+      "note": "主因类别命中/计分样本数；分子=命中数，分母=计分样本数"
+    },
+    {
+      "metric": "diagnosis_coverage[A_raw_report]",
+      "value": 1.0,
+      "numerator": 38,
+      "denominator": 38,
+      "n": 38,
+      "note": "给出确定结论的样本/计分样本数"
+    },
+    {
+      "metric": "selective_accuracy[A_raw_report]",
+      "value": 0.1579,
+      "numerator": 6,
+      "denominator": 38,
+      "n": 38,
+      "note": "有结论且主因正确/有结论样本数；须与 coverage 同看"
+    },
+    {
+      "metric": "macro_f1[A_raw_report]",
+      "value": 0.0682,
+      "numerator": 0.5454545454545454,
+      "denominator": 8,
+      "excluded": 0,
+      "note": "macro_f1 = (1/C) * Σ_c F1_c；分子=各类别F1之和（浮点），分母=类别数C；缺失预测计为该类别FN；无预测且无GT的类别不参与",
+      "class_count": 8,
+      "per_class_f1": {
+        "API": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 4,
+          "support": 4,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "AUTHORIZATION": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "support": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "LOCATOR": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 3,
+          "support": 3,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "NETWORK": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 1,
+          "support": 1,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "NONE": {
+          "tp": 0,
+          "fp": 11,
+          "fn": 0,
+          "support": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "PERSISTENCE": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 4,
+          "support": 4,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "TIMING": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "support": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "UI_RENDERING": {
+          "tp": 3,
+          "fp": 5,
+          "fn": 0,
+          "support": 3,
+          "precision": 0.375,
+          "recall": 1.0,
+          "f1": 0.5455
+        }
+      },
+      "formula": "macro_f1 = (1/C) * Σ_c 2*P_c*R_c/(P_c+R_c)",
+      "f1_sum": 0.545455,
+      "n": 8
+    },
+    {
+      "metric": "false_pass_rate[A_raw_report]",
+      "value": 1.0,
+      "numerator": 8,
+      "denominator": 8,
+      "n": 8,
+      "note": "GT持久化故障却输出 verdict=PASSED 的样本/持久化故障样本数；INCONCLUSIVE/UNKNOWN 不计 PASSED（仅 A 臂直接产出 verdict）"
+    },
+    {
+      "metric": "probes_per_sample[A_raw_report]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "真实执行的只读探针数/计分样本数（无回灌臂为 0）"
+    },
+    {
+      "metric": "evidence_per_sample[A_raw_report]",
+      "value": 28.8947,
+      "numerator": 1098,
+      "denominator": 38,
+      "n": 38,
+      "note": "关联证据数/计分样本数"
+    },
+    {
+      "metric": "latency_ms_mean[A_raw_report]",
+      "value": null,
+      "numerator": 0,
+      "denominator": 0,
+      "n": 0,
+      "note": "离线重算臂的引擎计算耗时（毫秒）；A/C/D/E 未单独计时，不含执行时间"
+    },
+    {
+      "metric": "llm_calls[A_raw_report]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "确定性臂 LLM 调用数为 0；LLM 臂未授权运行时不产出数值"
+    },
+    {
+      "metric": "llm_tokens[A_raw_report]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "确定性臂 token 为 0"
+    },
+    {
+      "metric": "llm_cost_usd[A_raw_report]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "确定性臂无 LLM 成本；非实测计费值"
+    },
+    {
+      "metric": "primary_cause_accuracy[C_rule]",
+      "value": 0.4737,
+      "numerator": 18,
+      "denominator": 38,
+      "n": 38,
+      "note": "主因类别命中/计分样本数；分子=命中数，分母=计分样本数"
+    },
+    {
+      "metric": "diagnosis_coverage[C_rule]",
+      "value": 0.6316,
+      "numerator": 24,
+      "denominator": 38,
+      "n": 38,
+      "note": "给出确定结论的样本/计分样本数"
+    },
+    {
+      "metric": "selective_accuracy[C_rule]",
+      "value": 0.75,
+      "numerator": 18,
+      "denominator": 24,
+      "n": 24,
+      "note": "有结论且主因正确/有结论样本数；须与 coverage 同看"
+    },
+    {
+      "metric": "macro_f1[C_rule]",
+      "value": 0.2897,
+      "numerator": 2.3174603174603177,
+      "denominator": 8,
+      "excluded": 0,
+      "note": "macro_f1 = (1/C) * Σ_c F1_c；分子=各类别F1之和（浮点），分母=类别数C；缺失预测计为该类别FN；无预测且无GT的类别不参与",
+      "class_count": 8,
+      "per_class_f1": {
+        "API": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 1,
+          "support": 4,
+          "precision": 1.0,
+          "recall": 0.75,
+          "f1": 0.8571
+        },
+        "AUTHORIZATION": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "support": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "LOCATOR": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 3,
+          "support": 3,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "NETWORK": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 1,
+          "support": 1,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "PERSISTENCE": {
+          "tp": 4,
+          "fp": 1,
+          "fn": 0,
+          "support": 4,
+          "precision": 0.8,
+          "recall": 1.0,
+          "f1": 0.8889
+        },
+        "TIMING": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "support": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "UI_RENDERING": {
+          "tp": 2,
+          "fp": 2,
+          "fn": 1,
+          "support": 3,
+          "precision": 0.5,
+          "recall": 0.6667,
+          "f1": 0.5714
+        },
+        "UNKNOWN": {
+          "tp": 0,
+          "fp": 7,
+          "fn": 0,
+          "support": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        }
+      },
+      "formula": "macro_f1 = (1/C) * Σ_c 2*P_c*R_c/(P_c+R_c)",
+      "f1_sum": 2.31746,
+      "n": 8
+    },
+    {
+      "metric": "false_pass_rate[C_rule]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 8,
+      "n": 8,
+      "note": "GT持久化故障却输出 verdict=PASSED 的样本/持久化故障样本数；INCONCLUSIVE/UNKNOWN 不计 PASSED（仅 A 臂直接产出 verdict）"
+    },
+    {
+      "metric": "probes_per_sample[C_rule]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "真实执行的只读探针数/计分样本数（无回灌臂为 0）"
+    },
+    {
+      "metric": "evidence_per_sample[C_rule]",
+      "value": 28.8947,
+      "numerator": 1098,
+      "denominator": 38,
+      "n": 38,
+      "note": "关联证据数/计分样本数"
+    },
+    {
+      "metric": "latency_ms_mean[C_rule]",
+      "value": null,
+      "numerator": 0,
+      "denominator": 0,
+      "n": 0,
+      "note": "离线重算臂的引擎计算耗时（毫秒）；A/C/D/E 未单独计时，不含执行时间"
+    },
+    {
+      "metric": "llm_calls[C_rule]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "确定性臂 LLM 调用数为 0；LLM 臂未授权运行时不产出数值"
+    },
+    {
+      "metric": "llm_tokens[C_rule]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "确定性臂 token 为 0"
+    },
+    {
+      "metric": "llm_cost_usd[C_rule]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "确定性臂无 LLM 成本；非实测计费值"
+    },
+    {
+      "metric": "primary_cause_accuracy[D_graph]",
+      "value": 0.4737,
+      "numerator": 18,
+      "denominator": 38,
+      "n": 38,
+      "note": "主因类别命中/计分样本数；分子=命中数，分母=计分样本数"
+    },
+    {
+      "metric": "diagnosis_coverage[D_graph]",
+      "value": 0.6316,
+      "numerator": 24,
+      "denominator": 38,
+      "n": 38,
+      "note": "给出确定结论的样本/计分样本数"
+    },
+    {
+      "metric": "selective_accuracy[D_graph]",
+      "value": 0.75,
+      "numerator": 18,
+      "denominator": 24,
+      "n": 24,
+      "note": "有结论且主因正确/有结论样本数；须与 coverage 同看"
+    },
+    {
+      "metric": "macro_f1[D_graph]",
+      "value": 0.2897,
+      "numerator": 2.3174603174603177,
+      "denominator": 8,
+      "excluded": 0,
+      "note": "macro_f1 = (1/C) * Σ_c F1_c；分子=各类别F1之和（浮点），分母=类别数C；缺失预测计为该类别FN；无预测且无GT的类别不参与",
+      "class_count": 8,
+      "per_class_f1": {
+        "API": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 1,
+          "support": 4,
+          "precision": 1.0,
+          "recall": 0.75,
+          "f1": 0.8571
+        },
+        "AUTHORIZATION": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "support": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "LOCATOR": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 3,
+          "support": 3,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "NETWORK": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 1,
+          "support": 1,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "PERSISTENCE": {
+          "tp": 4,
+          "fp": 1,
+          "fn": 0,
+          "support": 4,
+          "precision": 0.8,
+          "recall": 1.0,
+          "f1": 0.8889
+        },
+        "TIMING": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "support": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "UI_RENDERING": {
+          "tp": 2,
+          "fp": 2,
+          "fn": 1,
+          "support": 3,
+          "precision": 0.5,
+          "recall": 0.6667,
+          "f1": 0.5714
+        },
+        "UNKNOWN": {
+          "tp": 0,
+          "fp": 7,
+          "fn": 0,
+          "support": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        }
+      },
+      "formula": "macro_f1 = (1/C) * Σ_c 2*P_c*R_c/(P_c+R_c)",
+      "f1_sum": 2.31746,
+      "n": 8
+    },
+    {
+      "metric": "false_pass_rate[D_graph]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 8,
+      "n": 8,
+      "note": "GT持久化故障却输出 verdict=PASSED 的样本/持久化故障样本数；INCONCLUSIVE/UNKNOWN 不计 PASSED（仅 A 臂直接产出 verdict）"
+    },
+    {
+      "metric": "probes_per_sample[D_graph]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "真实执行的只读探针数/计分样本数（无回灌臂为 0）"
+    },
+    {
+      "metric": "evidence_per_sample[D_graph]",
+      "value": 28.8947,
+      "numerator": 1098,
+      "denominator": 38,
+      "n": 38,
+      "note": "关联证据数/计分样本数"
+    },
+    {
+      "metric": "latency_ms_mean[D_graph]",
+      "value": null,
+      "numerator": 0,
+      "denominator": 0,
+      "n": 0,
+      "note": "离线重算臂的引擎计算耗时（毫秒）；A/C/D/E 未单独计时，不含执行时间"
+    },
+    {
+      "metric": "llm_calls[D_graph]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "确定性臂 LLM 调用数为 0；LLM 臂未授权运行时不产出数值"
+    },
+    {
+      "metric": "llm_tokens[D_graph]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "确定性臂 token 为 0"
+    },
+    {
+      "metric": "llm_cost_usd[D_graph]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "确定性臂无 LLM 成本；非实测计费值"
+    },
+    {
+      "metric": "primary_cause_accuracy[E_probe_v3]",
+      "value": 0.4737,
+      "numerator": 18,
+      "denominator": 38,
+      "n": 38,
+      "note": "主因类别命中/计分样本数；分子=命中数，分母=计分样本数"
+    },
+    {
+      "metric": "diagnosis_coverage[E_probe_v3]",
+      "value": 0.6316,
+      "numerator": 24,
+      "denominator": 38,
+      "n": 38,
+      "note": "给出确定结论的样本/计分样本数"
+    },
+    {
+      "metric": "selective_accuracy[E_probe_v3]",
+      "value": 0.75,
+      "numerator": 18,
+      "denominator": 24,
+      "n": 24,
+      "note": "有结论且主因正确/有结论样本数；须与 coverage 同看"
+    },
+    {
+      "metric": "macro_f1[E_probe_v3]",
+      "value": 0.2897,
+      "numerator": 2.3174603174603177,
+      "denominator": 8,
+      "excluded": 0,
+      "note": "macro_f1 = (1/C) * Σ_c F1_c；分子=各类别F1之和（浮点），分母=类别数C；缺失预测计为该类别FN；无预测且无GT的类别不参与",
+      "class_count": 8,
+      "per_class_f1": {
+        "API": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 1,
+          "support": 4,
+          "precision": 1.0,
+          "recall": 0.75,
+          "f1": 0.8571
+        },
+        "AUTHORIZATION": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "support": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "LOCATOR": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 3,
+          "support": 3,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "NETWORK": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 1,
+          "support": 1,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "PERSISTENCE": {
+          "tp": 4,
+          "fp": 1,
+          "fn": 0,
+          "support": 4,
+          "precision": 0.8,
+          "recall": 1.0,
+          "f1": 0.8889
+        },
+        "TIMING": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "support": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "UI_RENDERING": {
+          "tp": 2,
+          "fp": 2,
+          "fn": 1,
+          "support": 3,
+          "precision": 0.5,
+          "recall": 0.6667,
+          "f1": 0.5714
+        },
+        "UNKNOWN": {
+          "tp": 0,
+          "fp": 7,
+          "fn": 0,
+          "support": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        }
+      },
+      "formula": "macro_f1 = (1/C) * Σ_c 2*P_c*R_c/(P_c+R_c)",
+      "f1_sum": 2.31746,
+      "n": 8
+    },
+    {
+      "metric": "false_pass_rate[E_probe_v3]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 8,
+      "n": 8,
+      "note": "GT持久化故障却输出 verdict=PASSED 的样本/持久化故障样本数；INCONCLUSIVE/UNKNOWN 不计 PASSED（仅 A 臂直接产出 verdict）"
+    },
+    {
+      "metric": "probes_per_sample[E_probe_v3]",
+      "value": 2.6316,
+      "numerator": 100,
+      "denominator": 38,
+      "n": 38,
+      "note": "真实执行的只读探针数/计分样本数（无回灌臂为 0）"
+    },
+    {
+      "metric": "evidence_per_sample[E_probe_v3]",
+      "value": 28.8947,
+      "numerator": 1098,
+      "denominator": 38,
+      "n": 38,
+      "note": "关联证据数/计分样本数"
+    },
+    {
+      "metric": "latency_ms_mean[E_probe_v3]",
+      "value": null,
+      "numerator": 0,
+      "denominator": 0,
+      "n": 0,
+      "note": "离线重算臂的引擎计算耗时（毫秒）；A/C/D/E 未单独计时，不含执行时间"
+    },
+    {
+      "metric": "llm_calls[E_probe_v3]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "确定性臂 LLM 调用数为 0；LLM 臂未授权运行时不产出数值"
+    },
+    {
+      "metric": "llm_tokens[E_probe_v3]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "确定性臂 token 为 0"
+    },
+    {
+      "metric": "llm_cost_usd[E_probe_v3]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "确定性臂无 LLM 成本；非实测计费值"
+    },
+    {
+      "metric": "primary_cause_accuracy[F_probe_feedback_b1]",
+      "value": 0.4737,
+      "numerator": 18,
+      "denominator": 38,
+      "n": 38,
+      "note": "主因类别命中/计分样本数；分子=命中数，分母=计分样本数"
+    },
+    {
+      "metric": "diagnosis_coverage[F_probe_feedback_b1]",
+      "value": 0.6316,
+      "numerator": 24,
+      "denominator": 38,
+      "n": 38,
+      "note": "给出确定结论的样本/计分样本数"
+    },
+    {
+      "metric": "selective_accuracy[F_probe_feedback_b1]",
+      "value": 0.75,
+      "numerator": 18,
+      "denominator": 24,
+      "n": 24,
+      "note": "有结论且主因正确/有结论样本数；须与 coverage 同看"
+    },
+    {
+      "metric": "macro_f1[F_probe_feedback_b1]",
+      "value": 0.2897,
+      "numerator": 2.3174603174603177,
+      "denominator": 8,
+      "excluded": 0,
+      "note": "macro_f1 = (1/C) * Σ_c F1_c；分子=各类别F1之和（浮点），分母=类别数C；缺失预测计为该类别FN；无预测且无GT的类别不参与",
+      "class_count": 8,
+      "per_class_f1": {
+        "API": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 1,
+          "support": 4,
+          "precision": 1.0,
+          "recall": 0.75,
+          "f1": 0.8571
+        },
+        "AUTHORIZATION": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "support": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "LOCATOR": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 3,
+          "support": 3,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "NETWORK": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 1,
+          "support": 1,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "PERSISTENCE": {
+          "tp": 4,
+          "fp": 1,
+          "fn": 0,
+          "support": 4,
+          "precision": 0.8,
+          "recall": 1.0,
+          "f1": 0.8889
+        },
+        "TIMING": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "support": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "UI_RENDERING": {
+          "tp": 2,
+          "fp": 2,
+          "fn": 1,
+          "support": 3,
+          "precision": 0.5,
+          "recall": 0.6667,
+          "f1": 0.5714
+        },
+        "UNKNOWN": {
+          "tp": 0,
+          "fp": 7,
+          "fn": 0,
+          "support": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        }
+      },
+      "formula": "macro_f1 = (1/C) * Σ_c 2*P_c*R_c/(P_c+R_c)",
+      "f1_sum": 2.31746,
+      "n": 8
+    },
+    {
+      "metric": "false_pass_rate[F_probe_feedback_b1]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 8,
+      "n": 8,
+      "note": "GT持久化故障却输出 verdict=PASSED 的样本/持久化故障样本数；INCONCLUSIVE/UNKNOWN 不计 PASSED（仅 A 臂直接产出 verdict）"
+    },
+    {
+      "metric": "probes_per_sample[F_probe_feedback_b1]",
+      "value": 0.7895,
+      "numerator": 30,
+      "denominator": 38,
+      "n": 38,
+      "note": "真实执行的只读探针数/计分样本数（无回灌臂为 0）"
+    },
+    {
+      "metric": "evidence_per_sample[F_probe_feedback_b1]",
+      "value": 28.8947,
+      "numerator": 1098,
+      "denominator": 38,
+      "n": 38,
+      "note": "关联证据数/计分样本数"
+    },
+    {
+      "metric": "latency_ms_mean[F_probe_feedback_b1]",
+      "value": 0.033,
+      "numerator": 0.993,
+      "denominator": 30,
+      "n": 30,
+      "note": "离线重算臂的引擎计算耗时（毫秒）；A/C/D/E 未单独计时，不含执行时间"
+    },
+    {
+      "metric": "llm_calls[F_probe_feedback_b1]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "确定性臂 LLM 调用数为 0；LLM 臂未授权运行时不产出数值"
+    },
+    {
+      "metric": "llm_tokens[F_probe_feedback_b1]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "确定性臂 token 为 0"
+    },
+    {
+      "metric": "llm_cost_usd[F_probe_feedback_b1]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "确定性臂无 LLM 成本；非实测计费值"
+    },
+    {
+      "metric": "primary_cause_accuracy[G_probe_feedback_b2]",
+      "value": 0.4737,
+      "numerator": 18,
+      "denominator": 38,
+      "n": 38,
+      "note": "主因类别命中/计分样本数；分子=命中数，分母=计分样本数"
+    },
+    {
+      "metric": "diagnosis_coverage[G_probe_feedback_b2]",
+      "value": 0.4211,
+      "numerator": 16,
+      "denominator": 38,
+      "n": 38,
+      "note": "给出确定结论的样本/计分样本数"
+    },
+    {
+      "metric": "selective_accuracy[G_probe_feedback_b2]",
+      "value": 0.875,
+      "numerator": 14,
+      "denominator": 16,
+      "n": 16,
+      "note": "有结论且主因正确/有结论样本数；须与 coverage 同看"
+    },
+    {
+      "metric": "macro_f1[G_probe_feedback_b2]",
+      "value": 0.2897,
+      "numerator": 2.3174603174603177,
+      "denominator": 8,
+      "excluded": 0,
+      "note": "macro_f1 = (1/C) * Σ_c F1_c；分子=各类别F1之和（浮点），分母=类别数C；缺失预测计为该类别FN；无预测且无GT的类别不参与",
+      "class_count": 8,
+      "per_class_f1": {
+        "API": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 1,
+          "support": 4,
+          "precision": 1.0,
+          "recall": 0.75,
+          "f1": 0.8571
+        },
+        "AUTHORIZATION": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "support": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "LOCATOR": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 3,
+          "support": 3,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "NETWORK": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 1,
+          "support": 1,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "PERSISTENCE": {
+          "tp": 4,
+          "fp": 1,
+          "fn": 0,
+          "support": 4,
+          "precision": 0.8,
+          "recall": 1.0,
+          "f1": 0.8889
+        },
+        "TIMING": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "support": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "UI_RENDERING": {
+          "tp": 2,
+          "fp": 2,
+          "fn": 1,
+          "support": 3,
+          "precision": 0.5,
+          "recall": 0.6667,
+          "f1": 0.5714
+        },
+        "UNKNOWN": {
+          "tp": 0,
+          "fp": 7,
+          "fn": 0,
+          "support": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        }
+      },
+      "formula": "macro_f1 = (1/C) * Σ_c 2*P_c*R_c/(P_c+R_c)",
+      "f1_sum": 2.31746,
+      "n": 8
+    },
+    {
+      "metric": "false_pass_rate[G_probe_feedback_b2]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 8,
+      "n": 8,
+      "note": "GT持久化故障却输出 verdict=PASSED 的样本/持久化故障样本数；INCONCLUSIVE/UNKNOWN 不计 PASSED（仅 A 臂直接产出 verdict）"
+    },
+    {
+      "metric": "probes_per_sample[G_probe_feedback_b2]",
+      "value": 1.5789,
+      "numerator": 60,
+      "denominator": 38,
+      "n": 38,
+      "note": "真实执行的只读探针数/计分样本数（无回灌臂为 0）"
+    },
+    {
+      "metric": "evidence_per_sample[G_probe_feedback_b2]",
+      "value": 28.8947,
+      "numerator": 1098,
+      "denominator": 38,
+      "n": 38,
+      "note": "关联证据数/计分样本数"
+    },
+    {
+      "metric": "latency_ms_mean[G_probe_feedback_b2]",
+      "value": 0.023,
+      "numerator": 0.703,
+      "denominator": 30,
+      "n": 30,
+      "note": "离线重算臂的引擎计算耗时（毫秒）；A/C/D/E 未单独计时，不含执行时间"
+    },
+    {
+      "metric": "llm_calls[G_probe_feedback_b2]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "确定性臂 LLM 调用数为 0；LLM 臂未授权运行时不产出数值"
+    },
+    {
+      "metric": "llm_tokens[G_probe_feedback_b2]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "确定性臂 token 为 0"
+    },
+    {
+      "metric": "llm_cost_usd[G_probe_feedback_b2]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "确定性臂无 LLM 成本；非实测计费值"
+    },
+    {
+      "metric": "primary_cause_accuracy[H_probe_feedback_b3]",
+      "value": 0.4737,
+      "numerator": 18,
+      "denominator": 38,
+      "n": 38,
+      "note": "主因类别命中/计分样本数；分子=命中数，分母=计分样本数"
+    },
+    {
+      "metric": "diagnosis_coverage[H_probe_feedback_b3]",
+      "value": 0.4211,
+      "numerator": 16,
+      "denominator": 38,
+      "n": 38,
+      "note": "给出确定结论的样本/计分样本数"
+    },
+    {
+      "metric": "selective_accuracy[H_probe_feedback_b3]",
+      "value": 0.875,
+      "numerator": 14,
+      "denominator": 16,
+      "n": 16,
+      "note": "有结论且主因正确/有结论样本数；须与 coverage 同看"
+    },
+    {
+      "metric": "macro_f1[H_probe_feedback_b3]",
+      "value": 0.2897,
+      "numerator": 2.3174603174603177,
+      "denominator": 8,
+      "excluded": 0,
+      "note": "macro_f1 = (1/C) * Σ_c F1_c；分子=各类别F1之和（浮点），分母=类别数C；缺失预测计为该类别FN；无预测且无GT的类别不参与",
+      "class_count": 8,
+      "per_class_f1": {
+        "API": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 1,
+          "support": 4,
+          "precision": 1.0,
+          "recall": 0.75,
+          "f1": 0.8571
+        },
+        "AUTHORIZATION": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "support": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "LOCATOR": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 3,
+          "support": 3,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "NETWORK": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 1,
+          "support": 1,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "PERSISTENCE": {
+          "tp": 4,
+          "fp": 1,
+          "fn": 0,
+          "support": 4,
+          "precision": 0.8,
+          "recall": 1.0,
+          "f1": 0.8889
+        },
+        "TIMING": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "support": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "UI_RENDERING": {
+          "tp": 2,
+          "fp": 2,
+          "fn": 1,
+          "support": 3,
+          "precision": 0.5,
+          "recall": 0.6667,
+          "f1": 0.5714
+        },
+        "UNKNOWN": {
+          "tp": 0,
+          "fp": 7,
+          "fn": 0,
+          "support": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        }
+      },
+      "formula": "macro_f1 = (1/C) * Σ_c 2*P_c*R_c/(P_c+R_c)",
+      "f1_sum": 2.31746,
+      "n": 8
+    },
+    {
+      "metric": "false_pass_rate[H_probe_feedback_b3]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 8,
+      "n": 8,
+      "note": "GT持久化故障却输出 verdict=PASSED 的样本/持久化故障样本数；INCONCLUSIVE/UNKNOWN 不计 PASSED（仅 A 臂直接产出 verdict）"
+    },
+    {
+      "metric": "probes_per_sample[H_probe_feedback_b3]",
+      "value": 2.0,
+      "numerator": 76,
+      "denominator": 38,
+      "n": 38,
+      "note": "真实执行的只读探针数/计分样本数（无回灌臂为 0）"
+    },
+    {
+      "metric": "evidence_per_sample[H_probe_feedback_b3]",
+      "value": 28.8947,
+      "numerator": 1098,
+      "denominator": 38,
+      "n": 38,
+      "note": "关联证据数/计分样本数"
+    },
+    {
+      "metric": "latency_ms_mean[H_probe_feedback_b3]",
+      "value": 0.022,
+      "numerator": 0.664,
+      "denominator": 30,
+      "n": 30,
+      "note": "离线重算臂的引擎计算耗时（毫秒）；A/C/D/E 未单独计时，不含执行时间"
+    },
+    {
+      "metric": "llm_calls[H_probe_feedback_b3]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "确定性臂 LLM 调用数为 0；LLM 臂未授权运行时不产出数值"
+    },
+    {
+      "metric": "llm_tokens[H_probe_feedback_b3]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "确定性臂 token 为 0"
+    },
+    {
+      "metric": "llm_cost_usd[H_probe_feedback_b3]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "确定性臂无 LLM 成本；非实测计费值"
+    },
+    {
+      "metric": "primary_cause_accuracy[CF_time_aligned_probe]",
+      "value": 0.4737,
+      "numerator": 18,
+      "denominator": 38,
+      "n": 38,
+      "note": "主因类别命中/计分样本数；分子=命中数，分母=计分样本数"
+    },
+    {
+      "metric": "diagnosis_coverage[CF_time_aligned_probe]",
+      "value": 0.5789,
+      "numerator": 22,
+      "denominator": 38,
+      "n": 38,
+      "note": "给出确定结论的样本/计分样本数"
+    },
+    {
+      "metric": "selective_accuracy[CF_time_aligned_probe]",
+      "value": 0.8182,
+      "numerator": 18,
+      "denominator": 22,
+      "n": 22,
+      "note": "有结论且主因正确/有结论样本数；须与 coverage 同看"
+    },
+    {
+      "metric": "macro_f1[CF_time_aligned_probe]",
+      "value": 0.2897,
+      "numerator": 2.3174603174603177,
+      "denominator": 8,
+      "excluded": 0,
+      "note": "macro_f1 = (1/C) * Σ_c F1_c；分子=各类别F1之和（浮点），分母=类别数C；缺失预测计为该类别FN；无预测且无GT的类别不参与",
+      "class_count": 8,
+      "per_class_f1": {
+        "API": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 1,
+          "support": 4,
+          "precision": 1.0,
+          "recall": 0.75,
+          "f1": 0.8571
+        },
+        "AUTHORIZATION": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "support": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "LOCATOR": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 3,
+          "support": 3,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "NETWORK": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 1,
+          "support": 1,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "PERSISTENCE": {
+          "tp": 4,
+          "fp": 1,
+          "fn": 0,
+          "support": 4,
+          "precision": 0.8,
+          "recall": 1.0,
+          "f1": 0.8889
+        },
+        "TIMING": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "support": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "UI_RENDERING": {
+          "tp": 2,
+          "fp": 2,
+          "fn": 1,
+          "support": 3,
+          "precision": 0.5,
+          "recall": 0.6667,
+          "f1": 0.5714
+        },
+        "UNKNOWN": {
+          "tp": 0,
+          "fp": 7,
+          "fn": 0,
+          "support": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        }
+      },
+      "formula": "macro_f1 = (1/C) * Σ_c 2*P_c*R_c/(P_c+R_c)",
+      "f1_sum": 2.31746,
+      "n": 8
+    },
+    {
+      "metric": "false_pass_rate[CF_time_aligned_probe]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 8,
+      "n": 8,
+      "note": "GT持久化故障却输出 verdict=PASSED 的样本/持久化故障样本数；INCONCLUSIVE/UNKNOWN 不计 PASSED（仅 A 臂直接产出 verdict）"
+    },
+    {
+      "metric": "probes_per_sample[CF_time_aligned_probe]",
+      "value": 2.0,
+      "numerator": 76,
+      "denominator": 38,
+      "n": 38,
+      "note": "真实执行的只读探针数/计分样本数（无回灌臂为 0）"
+    },
+    {
+      "metric": "evidence_per_sample[CF_time_aligned_probe]",
+      "value": 28.8947,
+      "numerator": 1098,
+      "denominator": 38,
+      "n": 38,
+      "note": "关联证据数/计分样本数"
+    },
+    {
+      "metric": "latency_ms_mean[CF_time_aligned_probe]",
+      "value": 0.068,
+      "numerator": 2.044,
+      "denominator": 30,
+      "n": 30,
+      "note": "离线重算臂的引擎计算耗时（毫秒）；A/C/D/E 未单独计时，不含执行时间"
+    },
+    {
+      "metric": "llm_calls[CF_time_aligned_probe]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "确定性臂 LLM 调用数为 0；LLM 臂未授权运行时不产出数值"
+    },
+    {
+      "metric": "llm_tokens[CF_time_aligned_probe]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "确定性臂 token 为 0"
+    },
+    {
+      "metric": "llm_cost_usd[CF_time_aligned_probe]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "确定性臂无 LLM 成本；非实测计费值"
+    },
+    {
+      "metric": "primary_cause_accuracy[GRAPH_SEM]",
+      "value": 0.4737,
+      "numerator": 18,
+      "denominator": 38,
+      "n": 38,
+      "note": "主因类别命中/计分样本数；分子=命中数，分母=计分样本数"
+    },
+    {
+      "metric": "diagnosis_coverage[GRAPH_SEM]",
+      "value": 0.6316,
+      "numerator": 24,
+      "denominator": 38,
+      "n": 38,
+      "note": "给出确定结论的样本/计分样本数"
+    },
+    {
+      "metric": "selective_accuracy[GRAPH_SEM]",
+      "value": 0.75,
+      "numerator": 18,
+      "denominator": 24,
+      "n": 24,
+      "note": "有结论且主因正确/有结论样本数；须与 coverage 同看"
+    },
+    {
+      "metric": "macro_f1[GRAPH_SEM]",
+      "value": 0.2897,
+      "numerator": 2.3174603174603177,
+      "denominator": 8,
+      "excluded": 0,
+      "note": "macro_f1 = (1/C) * Σ_c F1_c；分子=各类别F1之和（浮点），分母=类别数C；缺失预测计为该类别FN；无预测且无GT的类别不参与",
+      "class_count": 8,
+      "per_class_f1": {
+        "API": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 1,
+          "support": 4,
+          "precision": 1.0,
+          "recall": 0.75,
+          "f1": 0.8571
+        },
+        "AUTHORIZATION": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "support": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "LOCATOR": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 3,
+          "support": 3,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "NETWORK": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 1,
+          "support": 1,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "PERSISTENCE": {
+          "tp": 4,
+          "fp": 1,
+          "fn": 0,
+          "support": 4,
+          "precision": 0.8,
+          "recall": 1.0,
+          "f1": 0.8889
+        },
+        "TIMING": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "support": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "UI_RENDERING": {
+          "tp": 2,
+          "fp": 2,
+          "fn": 1,
+          "support": 3,
+          "precision": 0.5,
+          "recall": 0.6667,
+          "f1": 0.5714
+        },
+        "UNKNOWN": {
+          "tp": 0,
+          "fp": 7,
+          "fn": 0,
+          "support": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        }
+      },
+      "formula": "macro_f1 = (1/C) * Σ_c 2*P_c*R_c/(P_c+R_c)",
+      "f1_sum": 2.31746,
+      "n": 8
+    },
+    {
+      "metric": "false_pass_rate[GRAPH_SEM]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 8,
+      "n": 8,
+      "note": "GT持久化故障却输出 verdict=PASSED 的样本/持久化故障样本数；INCONCLUSIVE/UNKNOWN 不计 PASSED（仅 A 臂直接产出 verdict）"
+    },
+    {
+      "metric": "probes_per_sample[GRAPH_SEM]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "真实执行的只读探针数/计分样本数（无回灌臂为 0）"
+    },
+    {
+      "metric": "evidence_per_sample[GRAPH_SEM]",
+      "value": 28.8947,
+      "numerator": 1098,
+      "denominator": 38,
+      "n": 38,
+      "note": "关联证据数/计分样本数"
+    },
+    {
+      "metric": "latency_ms_mean[GRAPH_SEM]",
+      "value": null,
+      "numerator": 0,
+      "denominator": 0,
+      "n": 0,
+      "note": "离线重算臂的引擎计算耗时（毫秒）；A/C/D/E 未单独计时，不含执行时间"
+    },
+    {
+      "metric": "llm_calls[GRAPH_SEM]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "确定性臂 LLM 调用数为 0；LLM 臂未授权运行时不产出数值"
+    },
+    {
+      "metric": "llm_tokens[GRAPH_SEM]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "确定性臂 token 为 0"
+    },
+    {
+      "metric": "llm_cost_usd[GRAPH_SEM]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "确定性臂无 LLM 成本；非实测计费值"
+    },
+    {
+      "metric": "false_pass_rate[execution]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 8,
+      "n": 8,
+      "note": "GT 为持久化故障却判 PASSED 的样本/持久化故障样本数"
+    },
+    {
+      "metric": "probe_applied_to_diagnosis_rate[v3]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 100,
+      "n": 100,
+      "note": "RUN-008 探针步骤中真正回灌诊断的比例；0 表示 AP 闭环断裂"
+    },
+    {
+      "metric": "graph_changed_prediction_count",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "D 臂相对 C 臂主因类别发生变化的样本数；0 表示 EG 未参与主因裁决"
+    },
+    {
+      "metric": "probe_changed_prediction_count[v3]",
+      "value": 0.0,
+      "numerator": 0,
+      "denominator": 38,
+      "n": 38,
+      "note": "RUN-008 原 E 臂相对 C 臂主因类别变化的样本数；0 表示 AP 未产生增益"
+    },
+    {
+      "metric": "assertion_preservation_rate",
+      "value": 1.0,
+      "numerator": 2,
+      "denominator": 2,
+      "excluded": 0,
+      "note": "保持必需断言不变的修复数/总修复数"
+    },
+    {
+      "metric": "acceptance_rate",
+      "value": 1.0,
+      "numerator": 2,
+      "denominator": 2,
+      "excluded": 0,
+      "note": "审批通过且回归通过的修复数/总修复提案数；无保护LLM不得晋升"
+    },
+    {
+      "metric": "repair_regression_pass_rate",
+      "value": 1.0,
+      "numerator": 2,
+      "denominator": 2,
+      "note": "晋升后按固定版本回归执行 PASSED 的比例（样本量小，不作外推）"
+    }
+  ],
+  "error_analysis": {
+    "scoring_samples": 19,
+    "error_count": 10,
+    "cases": [
+      {
+        "scenario": "TF-COMP-003",
+        "gt": "LOCATOR",
+        "pred_c": "UNKNOWN",
+        "pred_correct": false,
+        "conclusive_c": false,
+        "diagnosis_available": false,
+        "probe_state_v3": "OK",
+        "probe_applied_v3": [
+          false,
+          false,
+          false
+        ],
+        "graph_prediction_changed": false,
+        "probe_prediction_changed_v3": false,
+        "probe_feedback_b3_changed_hypothesis": false,
+        "probe_feedback_b3_outcome": "NO_DIAGNOSIS",
+        "reason": "样本无诊断结论（执行在断言前中断），不能归因于诊断臂本身"
+      },
+      {
+        "scenario": "TF-DB-004",
+        "gt": "TIMING",
+        "pred_c": "PERSISTENCE",
+        "pred_correct": false,
+        "conclusive_c": true,
+        "diagnosis_available": true,
+        "probe_state_v3": "OK",
+        "probe_applied_v3": [
+          false,
+          false
+        ],
+        "graph_prediction_changed": false,
+        "probe_prediction_changed_v3": false,
+        "probe_feedback_b3_changed_hypothesis": false,
+        "probe_feedback_b3_outcome": "CONFIRMED",
+        "reason": "时序症状被误判为未持久化：规则把断言窗口内旧值当成权威状态，缺少延迟读取/耗时证据"
+      },
+      {
+        "scenario": "TF-FLAKY-002",
+        "gt": "API",
+        "pred_c": "UI_RENDERING",
+        "pred_correct": false,
+        "conclusive_c": true,
+        "diagnosis_available": true,
+        "probe_state_v3": "OK",
+        "probe_applied_v3": [
+          false,
+          false,
+          false
+        ],
+        "graph_prediction_changed": false,
+        "probe_prediction_changed_v3": false,
+        "probe_feedback_b3_changed_hypothesis": true,
+        "probe_feedback_b3_outcome": "INCONCLUSIVE",
+        "reason": "Flaky 样本该次执行未观测到 5xx，单次证据不足以识别接口故障；需多次执行差异证据"
+      },
+      {
+        "scenario": "TF-LOC-001",
+        "gt": "LOCATOR",
+        "pred_c": "UNKNOWN",
+        "pred_correct": false,
+        "conclusive_c": false,
+        "diagnosis_available": false,
+        "probe_state_v3": "OK",
+        "probe_applied_v3": [
+          false,
+          false,
+          false
+        ],
+        "graph_prediction_changed": false,
+        "probe_prediction_changed_v3": false,
+        "probe_feedback_b3_changed_hypothesis": false,
+        "probe_feedback_b3_outcome": "NO_DIAGNOSIS",
+        "reason": "样本无诊断结论（执行在断言前中断），不能归因于诊断臂本身"
+      },
+      {
+        "scenario": "TF-LOC-002",
+        "gt": "LOCATOR",
+        "pred_c": "UNKNOWN",
+        "pred_correct": false,
+        "conclusive_c": false,
+        "diagnosis_available": false,
+        "probe_state_v3": "OK",
+        "probe_applied_v3": [
+          false,
+          false,
+          false
+        ],
+        "graph_prediction_changed": false,
+        "probe_prediction_changed_v3": false,
+        "probe_feedback_b3_changed_hypothesis": false,
+        "probe_feedback_b3_outcome": "NO_DIAGNOSIS",
+        "reason": "样本无诊断结论（执行在断言前中断），不能归因于诊断臂本身"
+      },
+      {
+        "scenario": "TF-NET-002",
+        "gt": "NETWORK",
+        "pred_c": "UNKNOWN",
+        "pred_correct": false,
+        "conclusive_c": false,
+        "diagnosis_available": true,
+        "probe_state_v3": "OK",
+        "probe_applied_v3": [
+          false,
+          false,
+          false
+        ],
+        "graph_prediction_changed": false,
+        "probe_prediction_changed_v3": false,
+        "probe_feedback_b3_changed_hypothesis": false,
+        "probe_feedback_b3_outcome": "INCONCLUSIVE",
+        "reason": "网络假设缺少 TRUSTED directly_confirming 证据；且探针结果未回灌，无法升级"
+      },
+      {
+        "scenario": "TF-SEC-001",
+        "gt": "AUTHORIZATION",
+        "pred_c": "UNKNOWN",
+        "pred_correct": false,
+        "conclusive_c": false,
+        "diagnosis_available": true,
+        "probe_state_v3": "OK",
+        "probe_applied_v3": [
+          false,
+          false,
+          false
+        ],
+        "graph_prediction_changed": false,
+        "probe_prediction_changed_v3": false,
+        "probe_feedback_b3_changed_hypothesis": false,
+        "probe_feedback_b3_outcome": "INCONCLUSIVE",
+        "reason": "规则只有 5xx 模式，不识别 403；缺少 HTTP 状态码证据，无法生成 AUTHORIZATION 假设"
+      },
+      {
+        "scenario": "TF-SEC-002",
+        "gt": "AUTHORIZATION",
+        "pred_c": "UI_RENDERING",
+        "pred_correct": false,
+        "conclusive_c": true,
+        "diagnosis_available": true,
+        "probe_state_v3": "OK",
+        "probe_applied_v3": [
+          false,
+          false,
+          false
+        ],
+        "graph_prediction_changed": false,
+        "probe_prediction_changed_v3": false,
+        "probe_feedback_b3_changed_hypothesis": true,
+        "probe_feedback_b3_outcome": "INCONCLUSIVE",
+        "reason": "403 触发 UI 断言失败，规则把表层 UI 失败当成主因（症状冒充根因）"
+      },
+      {
+        "scenario": "TF-TIME-003",
+        "gt": "TIMING",
+        "pred_c": "UNKNOWN",
+        "pred_correct": false,
+        "conclusive_c": false,
+        "diagnosis_available": false,
+        "probe_state_v3": "OK",
+        "probe_applied_v3": [
+          false,
+          false,
+          false
+        ],
+        "graph_prediction_changed": false,
+        "probe_prediction_changed_v3": false,
+        "probe_feedback_b3_changed_hypothesis": false,
+        "probe_feedback_b3_outcome": "NO_DIAGNOSIS",
+        "reason": "样本无诊断结论（执行在断言前中断），不能归因于诊断臂本身"
+      },
+      {
+        "scenario": "TF-UI-002",
+        "gt": "UI_RENDERING",
+        "pred_c": "UNKNOWN",
+        "pred_correct": false,
+        "conclusive_c": false,
+        "diagnosis_available": true,
+        "probe_state_v3": "OK",
+        "probe_applied_v3": [
+          false,
+          false,
+          false
+        ],
+        "graph_prediction_changed": false,
+        "probe_prediction_changed_v3": false,
+        "probe_feedback_b3_changed_hypothesis": false,
+        "probe_feedback_b3_outcome": "INCONCLUSIVE",
+        "reason": "规则未生成任何假设（提交被静默忽略/无失败断言）；探针只能在已有假设上作用，不能新建假设"
+      }
+    ]
+  },
+  "primary_conclusion": {
+    "arms_compared": [
+      "A_raw_report",
+      "CF_time_aligned_probe",
+      "C_rule",
+      "D_graph",
+      "E_probe_v3",
+      "F_probe_feedback_b1",
+      "GRAPH_SEM",
+      "G_probe_feedback_b2",
+      "H_probe_feedback_b3"
+    ],
+    "note": "数值见 metrics；增益/无增益的解释见 docs/RUN-009-WP6-AGENT-DIAGNOSIS.md 与 docs/RUN-009-WP7-BENCHMARK.md"
+  },
+  "blocked": [
+    {
+      "name": "受约束 LLM 诊断臂",
+      "credential_present": true,
+      "provider_enabled": false,
+      "external_billing_authorized": false,
+      "runnable": false,
+      "status": "BLOCKED",
+      "reason": "需要 TG_LLM_PROVIDER=deepseek、真实凭据与显式 --allow-llm 授权；本轮未发起外网计费调用，绝不以规则结果冒充 LLM 结论",
+      "note": "密钥存在性只做布尔判断，不读取/记录密钥内容"
+    },
+    {
+      "name": "v4 新场景真实执行",
+      "status": "BLOCKED",
+      "reason": "未植入故障；仅有场景定义与独立 GT，不足以产生真实证据"
+    },
+    {
+      "name": "人工诊断/修复基线",
+      "status": "BLOCKED",
+      "reason": "无真实人类工程师参与，不伪造人工基线数值"
+    }
+  ],
+  "limitations": [
+    "v3 证据为 RUN-008 真实落盘；新臂是在其上重算，不是新一轮故障注入执行",
+    "CF 臂是反事实设计模拟，明确标注，不计入实测结论",
+    "n=19/轮，小样本；所有比例只报分子/分母/样本数，不做显著性检验或外推",
+    "latency 只覆盖离线引擎重算，不含浏览器执行与 LLM 网络往返"
+  ]
+}

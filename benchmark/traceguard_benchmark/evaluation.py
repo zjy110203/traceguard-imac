@@ -17,13 +17,14 @@ from typing import Any
 class Metric:
     name: str
     value: float
-    numerator: int
+    numerator: float
     denominator: int
     note: str  # 统计口径说明
     excluded: int = 0
+    extra: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        out = {
             "metric": self.name,
             "value": round(self.value, 4),
             "numerator": self.numerator,
@@ -31,9 +32,12 @@ class Metric:
             "excluded": self.excluded,
             "note": self.note,
         }
+        if self.extra:
+            out.update(self.extra)
+        return out
 
 
-def safe_ratio(num: int, den: int) -> float:
+def safe_ratio(num: float, den: float) -> float:
     return num / den if den else 0.0
 
 
@@ -45,13 +49,23 @@ class DiagnosisEvaluator:
         self._gt = ground_truth
 
     def macro_f1(self, predictions: dict[str, str]) -> Metric:
-        """多类别宏平均 F1。"""
+        """多类别宏平均 F1。
+
+        RUN-007-FINALIZATION-2（D1）：此前用 `int(value * len(f1s))` 反推分子，
+        是一个"看起来自洽"的假分子（截断误差、且并非真实统计量）。现在：
+        - 分子是**各类别 F1 之和**（浮点，可精确复核）；
+        - 分母是参与宏平均的类别数 C；
+        - 同时输出每个类别的 TP/FP/FN、precision/recall/F1 与 support，
+          以及明确的统计公式。
+        """
         classes = sorted(set(self._gt.values()) | set(predictions.values()))
+        per_class: dict[str, dict[str, Any]] = {}
         f1s: list[float] = []
         for c in classes:
             tp = sum(1 for k in self._gt if self._gt[k] == c and predictions.get(k) == c)
             fp = sum(1 for k in predictions if predictions[k] == c and self._gt.get(k) != c)
             fn = sum(1 for k in self._gt if self._gt[k] == c and predictions.get(k) != c)
+            support = sum(1 for k in self._gt if self._gt[k] == c)
             precision = safe_ratio(tp, tp + fp)
             recall = safe_ratio(tp, tp + fn)
             f1 = (
@@ -60,13 +74,31 @@ class DiagnosisEvaluator:
                 else 0.0
             )
             f1s.append(f1)
-        value = sum(f1s) / len(f1s) if f1s else 0.0
+            per_class[c] = {
+                "tp": tp,
+                "fp": fp,
+                "fn": fn,
+                "support": support,
+                "precision": round(precision, 4),
+                "recall": round(recall, 4),
+                "f1": round(f1, 4),
+            }
+        numerator = sum(f1s)
+        denominator = len(f1s)
+        value = safe_ratio(numerator, denominator)
         return Metric(
             "macro_f1",
             value,
-            len(f1s) and int(value * len(f1s)) or 0,
-            len(f1s),
-            "各类别F1宏平均；分母=类别数；缺失预测计为该类别FN",
+            numerator if f1s else 0.0,
+            denominator,
+            "macro_f1 = (1/C) * Σ_c F1_c；分子=各类别F1之和（浮点），分母=类别数C；"
+            "缺失预测计为该类别FN；无预测且无GT的类别不参与",
+            extra={
+                "class_count": denominator,
+                "per_class_f1": per_class,
+                "formula": "macro_f1 = (1/C) * Σ_c 2*P_c*R_c/(P_c+R_c)",
+                "f1_sum": round(numerator, 6),
+            },
         )
 
     def primary_cause_accuracy(self, predictions: dict[str, str]) -> Metric:

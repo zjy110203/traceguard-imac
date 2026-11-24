@@ -1,0 +1,103 @@
+{
+  "started_at": "2026-11-24T05:04:48Z",
+  "db": "/Users/dlp--test/Desktop/traceguard/.traceguard/run008/wp1-close.db",
+  "scope": "run008-close",
+  "budget_id": "pbudget_run008-close",
+  "max_probes": 20,
+  "procs": 4,
+  "attempts_per_proc": 20,
+  "cost_per_probe": 1.0,
+  "kill_one": false,
+  "killed_pid": 0,
+  "close_first": true,
+  "reserved_total": 0,
+  "final_probes_used": 0,
+  "final_snapshot": {
+    "id": "pbudget_run008-close",
+    "kind": "probe_budget",
+    "workspace_id": "default",
+    "ref_id": null,
+    "version": 2,
+    "status": "CLOSED",
+    "created_at": "2026-11-24T05:04:47.269702Z",
+    "updated_at": "2026-11-24T05:04:47.271755Z",
+    "budget_id": "pbudget_run008-close",
+    "scope_key": "run008-close",
+    "owner_run_id": "",
+    "owner_diagnosis_id": "",
+    "max_probes": 20,
+    "probes_used": 0,
+    "probes_left": 20,
+    "max_total_cost": 200.0,
+    "cost_used": 0.0,
+    "cost_left": 200.0,
+    "max_duration_seconds": 3600.0,
+    "elapsed_seconds": 0.002,
+    "time_left": 0.0,
+    "closed": true,
+    "close_reason": "TEST_CLOSED",
+    "provisional": true,
+    "note": "P06 待负责人确认：以下预算与风险阈值为 provisional 配置，仅用于本轮实现与测试，不得视为正式冻结的工程决策。",
+    "started_at": 1795496687.269678,
+    "closed_at": 1795496687.27174
+  },
+  "children": [
+    {
+      "pid": 71904,
+      "scope": "run008-close",
+      "reserved": 0,
+      "rejected": 20,
+      "reasons": {
+        "PROBE_BUDGET_CLOSED": 20
+      },
+      "error": "",
+      "probes_used_seen": 0,
+      "closed_seen": true
+    },
+    {
+      "pid": 71905,
+      "scope": "run008-close",
+      "reserved": 0,
+      "rejected": 20,
+      "reasons": {
+        "PROBE_BUDGET_CLOSED": 20
+      },
+      "error": "",
+      "probes_used_seen": 0,
+      "closed_seen": true
+    },
+    {
+      "pid": 71907,
+      "scope": "run008-close",
+      "reserved": 0,
+      "rejected": 20,
+      "reasons": {
+        "PROBE_BUDGET_CLOSED": 20
+      },
+      "error": "",
+      "probes_used_seen": 0,
+      "closed_seen": true
+    },
+    {
+      "pid": 71909,
+      "scope": "run008-close",
+      "reserved": 0,
+      "rejected": 20,
+      "reasons": {
+        "PROBE_BUDGET_CLOSED": 20
+      },
+      "error": "",
+      "probes_used_seen": 0,
+      "closed_seen": true
+    }
+  ],
+  "errors": [],
+  "checks": {
+    "no_overdraft": true,
+    "counter_persisted": true,
+    "not_reset_after_kill": true,
+    "doc_readable": true,
+    "closed_not_bypassed": true
+  },
+  "passed": true
+}

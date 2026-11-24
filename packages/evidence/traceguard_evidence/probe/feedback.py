@@ -34,7 +34,13 @@ _ERROR_PATTERN = re.compile(r"\b(ERROR|CRITICAL|Traceback|Exception|HTTP/1\.1\" 
 
 @dataclass
 class ProbeSignal:
-    """一次探针执行的可判定事实。"""
+    """一次探针执行的可判定事实。
+
+    RUN-010 WP4 时间对齐字段：
+    - observed_at：探针观测发生时刻（epoch 秒；0 = 未知）；
+    - run_scope：证据是否来自 Run 执行作用域（True=Run 内采集；
+      False=Run 结束后的事后观测，只能反映"当前状态"，不能冒充"历史状态"）。
+    """
 
     probe_id: str
     execution_id: str
@@ -43,6 +49,13 @@ class ProbeSignal:
     data: dict[str, Any] = field(default_factory=dict)
     params: dict[str, Any] = field(default_factory=dict)
     gap_id: str = ""
+    observed_at: float = 0.0
+    run_scope: bool = False
+
+
+#: 时间对齐标记：ALIGNED = 可作为历史状态的证据；POST_HOC = 事后观测。
+ALIGNED = "ALIGNED"
+POST_HOC = "POST_HOC"
 
 
 @dataclass
@@ -53,6 +66,11 @@ class HypothesisUpdate:
     evidence_ids: list[str]
     exclude: bool
     reason: str
+    time_alignment: str = ALIGNED
+
+    @property
+    def post_hoc(self) -> bool:
+        return self.time_alignment == POST_HOC
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -62,6 +80,7 @@ class HypothesisUpdate:
             "evidence_ids": list(self.evidence_ids),
             "exclude": self.exclude,
             "reason": self.reason,
+            "time_alignment": self.time_alignment,
         }
 
 
@@ -73,10 +92,13 @@ class FeedbackResult:
     updates: list[HypothesisUpdate] = field(default_factory=list)
     skipped_reason: str = ""
     notes: dict[str, Any] = field(default_factory=dict)
+    time_alignment: str = ALIGNED
+    #: POST_HOC 信号与 Run 作用域证据冲突时产生的"新假设"（如写入延迟/TIMING）
+    new_hypotheses: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def produced_evidence(self) -> bool:
-        return bool(self.updates)
+        return bool(self.updates or self.new_hypotheses)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -86,6 +108,8 @@ class FeedbackResult:
             "updates": [u.to_dict() for u in self.updates],
             "skipped_reason": self.skipped_reason,
             "notes": dict(self.notes),
+            "time_alignment": self.time_alignment,
+            "new_hypotheses": [dict(x) for x in self.new_hypotheses],
             "claimed_as_target_failure": False,
         }
 
@@ -149,13 +173,48 @@ def _hypotheses_by_mechanism(
 
 
 # ------------------------------------------------------------------ assessment
+def resolve_alignment(signal: ProbeSignal, run_ended_at: float | None) -> tuple[str, str]:
+    """判定探针观测与 Run 历史状态的时间对齐性。
+
+    - run_scope=True：Run 作用域内采集 → ALIGNED；
+    - 事后观测（observed_at > run_ended_at）：只能反映"当前状态" → POST_HOC；
+    - 时间未知：保守视为 ALIGNED，但在 notes 中如实标注 unknown_timing。
+    """
+    if signal.run_scope:
+        return ALIGNED, ""
+    if run_ended_at and signal.observed_at and signal.observed_at > run_ended_at:
+        return POST_HOC, (
+            f"probe observed_at={signal.observed_at:.0f} > run_ended_at={run_ended_at:.0f}: "
+            "事后观测反映当前状态，不能冒充 Run 时历史状态"
+        )
+    return ALIGNED, "unknown_timing: 未能证明 run 作用域，按 ALIGNED 保守处理并留痕"
+
+
 def assess(
-    signal: ProbeSignal, hypotheses: list[dict[str, Any]], run_report: dict[str, Any]
+    signal: ProbeSignal,
+    hypotheses: list[dict[str, Any]],
+    run_report: dict[str, Any],
+    *,
+    run_ended_at: float | None = None,
 ) -> FeedbackResult:
-    """把一次探针结果映射成对现有假设的支持/反驳/排除。"""
+    """把一次探针结果映射成对现有假设的支持/反驳/排除。
+
+    RUN-010 WP4：所有更新带 time_alignment。
+    POST_HOC（事后观测）的裁决权降级：
+    - 不得作为权威确认（confirming 强制 False）；
+    - 不得单独排除假设（exclude 强制 False，只记反驳）；
+    - 事后状态与 Run 时假设冲突时 → 生成"状态查询滞后（TIMING）"新假设，
+      而不是错误反驳 Run 时假设（RUN-009 误差分析的主根因之一）。
+    """
+    alignment, alignment_note = resolve_alignment(signal, run_ended_at)
     result = FeedbackResult(
-        probe_id=signal.probe_id, execution_id=signal.execution_id, status=signal.status
+        probe_id=signal.probe_id,
+        execution_id=signal.execution_id,
+        status=signal.status,
+        time_alignment=alignment,
     )
+    if alignment_note:
+        result.notes["alignment"] = alignment_note
     if signal.status != "SUCCEEDED":
         # 关键安全约束：探针本身失败不等于被测系统出问题
         result.skipped_reason = f"PROBE_{signal.status}_NOT_EVIDENCE"
@@ -166,6 +225,22 @@ def assess(
 
     evidence_id = signal.evidence_ids[0]
     failed_steps = _failed_step_ids(run_report)
+
+    def upd(
+        hid: str,
+        relation: str,
+        confirming: bool,
+        exclude: bool,
+        reason: str,
+    ) -> HypothesisUpdate:
+        # POST_HOC 裁决权降级（见 docstring）
+        if alignment == POST_HOC:
+            confirming = False
+            exclude = False
+            reason = f"[POST_HOC] {reason}"
+        return HypothesisUpdate(
+            hid, relation, confirming, [evidence_id], exclude, reason, time_alignment=alignment
+        )
 
     if signal.probe_id == "http_state":
         count = _state_count(signal)
@@ -179,45 +254,60 @@ def assess(
             if mech == "PERSISTENCE":
                 if count == 0:
                     result.updates.append(
-                        HypothesisUpdate(
+                        upd(
                             hid,
                             SUPPORT,
                             True,
-                            [evidence_id],
                             False,
                             "独立状态查询 count=0：业务数据确实未持久化",
                         )
                     )
                 else:
                     result.updates.append(
-                        HypothesisUpdate(
+                        upd(
                             hid,
                             CONTRADICT,
                             False,
-                            [evidence_id],
                             True,
                             f"独立状态查询 count={count}：数据已存在，排除'未持久化'",
                         )
                     )
+                    # RUN-010 WP4：事后观测与 Run 时"未落库"假设冲突 →
+                    # 不是错误反驳，而是生成 TIMING（写入延迟/查询滞后）新假设
+                    if alignment == POST_HOC:
+                        result.new_hypotheses.append(
+                            {
+                                "description": (
+                                    "业务状态查询滞后（写入延迟）：Run 作用域证据显示未落库，"
+                                    "事后探针显示数据已存在"
+                                ),
+                                "failure_domain": "TEST_EXECUTION",
+                                "failure_mechanism": "TIMING",
+                                "supporting": [evidence_id],
+                                "time_alignment": POST_HOC,
+                                "suggested_by": "rule:probe-timing",
+                                "reason": (
+                                    f"Run 时未持久化（假设 PERSISTENCE），探针事后观测 count={count}"
+                                ),
+                            }
+                        )
             else:  # UI_RENDERING
                 if count >= 1:
                     result.updates.append(
-                        HypothesisUpdate(
+                        upd(
                             hid,
                             SUPPORT,
                             True,
-                            [evidence_id],
                             False,
                             f"业务数据已存在（count={count}）但界面断言失败：支持渲染缺陷",
                         )
                     )
                 else:
                     result.updates.append(
-                        HypothesisUpdate(
+                        upd(
                             hid,
                             CONTRADICT,
                             False,
-                            [evidence_id],
                             False,
                             "业务数据不存在，渲染缺陷假设不成立",
                         )
@@ -245,22 +335,14 @@ def assess(
             hid = str(h["hypothesis_id"])
             if has_5xx:
                 result.updates.append(
-                    HypothesisUpdate(
-                        hid,
-                        SUPPORT,
-                        True,
-                        [evidence_id],
-                        False,
-                        "网络观测中存在 5xx，支持接口故障假设",
-                    )
+                    upd(hid, SUPPORT, True, False, "网络观测中存在 5xx，支持接口故障假设")
                 )
             elif covers_failure:
                 result.updates.append(
-                    HypothesisUpdate(
+                    upd(
                         hid,
                         CONTRADICT,
                         False,
-                        [evidence_id],
                         True,
                         "网络观测覆盖失败步骤且无 5xx，排除'接口返回 5xx'",
                     )
@@ -269,25 +351,11 @@ def assess(
             hid = str(h["hypothesis_id"])
             if has_failure:
                 result.updates.append(
-                    HypothesisUpdate(
-                        hid,
-                        SUPPORT,
-                        True,
-                        [evidence_id],
-                        False,
-                        "网络观测存在失败请求，支持链路问题假设",
-                    )
+                    upd(hid, SUPPORT, False, False, "网络观测存在失败请求，支持链路问题假设")
                 )
             else:
                 result.updates.append(
-                    HypothesisUpdate(
-                        hid,
-                        CONTRADICT,
-                        False,
-                        [evidence_id],
-                        False,
-                        "网络观测无失败请求，网络层问题假设不成立",
-                    )
+                    upd(hid, CONTRADICT, False, False, "网络观测无失败请求，网络层问题假设不成立")
                 )
         return result
 
@@ -310,22 +378,20 @@ def assess(
             hid = str(h["hypothesis_id"])
             if missing:
                 result.updates.append(
-                    HypothesisUpdate(
+                    upd(
                         hid,
                         CONTRADICT,
                         False,
-                        [evidence_id],
                         False,
                         f"DOM 中不存在期望元素 {sorted(missing)}，定位策略不是主因",
                     )
                 )
             else:
                 result.updates.append(
-                    HypothesisUpdate(
+                    upd(
                         hid,
                         SUPPORT,
                         False,
-                        [evidence_id],
                         False,
                         "DOM 中存在全部期望元素，更可能是定位策略/等待条件问题",
                     )
@@ -334,25 +400,17 @@ def assess(
             hid = str(h["hypothesis_id"])
             if missing:
                 result.updates.append(
-                    HypothesisUpdate(
+                    upd(
                         hid,
                         SUPPORT,
                         False,
-                        [evidence_id],
                         False,
                         f"DOM 缺失期望元素 {sorted(missing)}，支持渲染缺陷",
                     )
                 )
             else:
                 result.updates.append(
-                    HypothesisUpdate(
-                        hid,
-                        CONTRADICT,
-                        False,
-                        [evidence_id],
-                        False,
-                        "DOM 已渲染期望元素，'未渲染'假设不成立",
-                    )
+                    upd(hid, CONTRADICT, False, False, "DOM 已渲染期望元素，'未渲染'假设不成立")
                 )
         return result
 
@@ -368,11 +426,10 @@ def assess(
             return result
         for h in _hypotheses_by_mechanism(hypotheses, "API", "PERSISTENCE"):
             result.updates.append(
-                HypothesisUpdate(
+                upd(
                     str(h["hypothesis_id"]),
                     SUPPORT,
                     False,
-                    [evidence_id],
                     False,
                     "后端日志出现异常/错误，支持服务端故障方向（不单独确认根因）",
                 )
@@ -387,8 +444,18 @@ def merge_signals(
     hypotheses: list[dict[str, Any]],
     signals: list[ProbeSignal],
     run_report: dict[str, Any],
+    *,
+    run_ended_at: float | None = None,
 ) -> tuple[list[dict[str, Any]], list[FeedbackResult]]:
-    """把多条探针信号合并进假设（返回新的假设字典列表，不改原对象）。"""
+    """把多条探针信号合并进假设（返回新的假设字典列表，不改原对象）。
+
+    RUN-010 WP4：
+    - POST_HOC（事后观测）证据以 trust="POST_HOC" 附着 —— 不满足 CONFIRMED 的
+      TRUSTED 权威门槛，也不触发排除（时间未对齐的裁决记为 INCONCLUSIVE 方向）；
+    - 探针结果（含 skipped）全部真实回灌到 probe_feedback，回灌率可审计；
+    - POST_HOC 与 Run 作用域假设冲突时，assess() 生成的 TIMING 新假设在此
+      追加进假设列表（由确定性规则提出，供引擎重新裁决）。
+    """
     merged = [
         {
             **h,
@@ -401,8 +468,9 @@ def merge_signals(
     ]
     index = {str(h["hypothesis_id"]): h for h in merged}
     results: list[FeedbackResult] = []
+    next_hyp_seq = len(merged)
     for signal in signals:
-        assessment = assess(signal, merged, run_report)
+        assessment = assess(signal, merged, run_report, run_ended_at=run_ended_at)
         results.append(assessment)
         for update in assessment.updates:
             h = index.get(update.hypothesis_id)
@@ -413,12 +481,17 @@ def merge_signals(
             for eid in update.evidence_ids:
                 if eid in existing:
                     continue
-                ref = {"id": eid, "trust": "TRUSTED"}
+                # POST_HOC 证据不持有 TRUSTED：无法用于权威确认/排除
+                ref = {
+                    "id": eid,
+                    "trust": "POST_HOC" if update.post_hoc else "TRUSTED",
+                    "time_alignment": update.time_alignment,
+                }
                 if bucket == "supporting":
                     ref["confirming"] = update.confirming
                 h[bucket].append(ref)
                 existing.add(eid)
-            if update.exclude:
+            if update.exclude and not update.post_hoc:
                 h["excluded_by"].append(
                     {
                         "probe_id": signal.probe_id,
@@ -434,19 +507,55 @@ def merge_signals(
                     "confirming": update.confirming,
                     "exclude": update.exclude,
                     "reason": update.reason,
+                    "time_alignment": update.time_alignment,
                 }
             )
             h.setdefault("contributing_factors", []).append(f"[{signal.probe_id}] {update.reason}")
+        # 新假设追加（确定性规则提出；LLM 语义不适用——这是规则内核自生成）
+        for cand in assessment.new_hypotheses:
+            hid = f"hyp_probe_new_{next_hyp_seq + 1}"
+            next_hyp_seq += 1
+            hyp = {
+                "hypothesis_id": hid,
+                "description": cand.get("description", ""),
+                "failure_domain": cand.get("failure_domain", "UNKNOWN"),
+                "failure_mechanism": cand.get("failure_mechanism", "UNKNOWN"),
+                "supporting": [
+                    {
+                        "id": eid,
+                        "trust": "POST_HOC",
+                        "confirming": False,
+                        "time_alignment": POST_HOC,
+                    }
+                    for eid in cand.get("supporting", [])
+                ],
+                "contradicting": [],
+                "status": "CANDIDATE",
+                "suggested_by": cand.get("suggested_by", "rule:probe"),
+                "probe_feedback": [
+                    {
+                        "probe_id": signal.probe_id,
+                        "relation": SUPPORT,
+                        "reason": cand.get("reason", ""),
+                        "time_alignment": POST_HOC,
+                    }
+                ],
+            }
+            merged.append(hyp)
+            index[hid] = hyp
     return merged, results
 
 
 __all__ = [
+    "ALIGNED",
     "CONTRADICT",
     "NONE",
+    "POST_HOC",
     "SUPPORT",
     "FeedbackResult",
     "HypothesisUpdate",
     "ProbeSignal",
     "assess",
     "merge_signals",
+    "resolve_alignment",
 ]

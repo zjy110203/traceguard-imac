@@ -1,0 +1,46 @@
+=== dist 密钥模式扫描（仅文件名）===
+exit=1
+(无命中)
+=== dist 中 source map / 备份文件 ===
+(空则无)
+=== pyproject.toml 依赖段 ===
+[project]
+name = "traceguard"
+version = "0.1.0"
+description = "Agentic Web UI Testing & Quality Intelligence Platform"
+requires-python = ">=3.11,<3.14"
+readme = "README.md"
+# 运行时依赖见 requirements.txt；此文件主要供工具（ruff/pytest/mypy）配置使用
+dependencies = []
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = [
+    "E501",  # 行宽由 formatter 管理
+    "UP042", # 保留 class X(str, Enum) 写法：跨 Python 版本兼容性优于 StrEnum，避免语义改动
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [
+    "packages/core", "packages/contracts", "packages/execution",
+    "packages/agents", "packages/evidence", "packages/persistence",
+    "apps/api", "apps/teamflow", "apps/workers", "benchmark",
+]
+addopts = "-ra --strict-markers --basetemp=.pytest-tmp/run"
+markers = [
+    "unit: 单元测试",
+    "contract: 契约测试",
+    "integration: 集成测试",
+    "e2e: 端到端测试",
+    "slow: 慢速测试",
+]
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_configs = true
+plugins = []

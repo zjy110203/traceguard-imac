@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { api, fmtTime } from '../api'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import PageHeader from '../components/PageHeader.vue'
@@ -14,6 +15,13 @@ const error = ref('')
 const busy = ref('')
 const showCreate = ref(false)
 const keyword = ref('')
+// 全局搜索把意图 ID 带到这里；没有 /intents/:id 详情路由，必须在列表页真实过滤。
+const route = useRoute()
+const focusId = ref(typeof route.query.id === 'string' ? route.query.id : '')
+watch(
+  () => route.query.id,
+  (v) => { focusId.value = typeof v === 'string' ? v : '' },
+)
 const form = ref({ title: '', description: '', owner: 'qa-team', candidate_assertions: '' })
 /** 候选用例链接来自真实 /testcases 列表，不再用页面内本地状态伪装持久结果。 */
 const compiledByIntent = ref<Record<string, string>>({})
@@ -41,9 +49,17 @@ async function explore(intentId: string) {
   }
 }
 
-const filtered = computed(() =>
-  items.value.filter((i) => !keyword.value || (i.title + i.description).toLowerCase().includes(keyword.value.toLowerCase())),
-)
+const filtered = computed(() => {
+  const kw = focusId.value || keyword.value
+  return items.value.filter((i) => {
+    if (!kw) return true
+    const k = kw.toLowerCase()
+    return (
+      i.intent_id.toLowerCase() === k ||
+      (i.title + i.description + i.intent_id).toLowerCase().includes(k)
+    )
+  })
+})
 
 async function load() {
   loading.value = true
@@ -125,7 +141,7 @@ onMounted(load)
     </PageHeader>
 
     <div class="toolbar" style="margin-bottom: 12px">
-      <input v-model="keyword" placeholder="搜索需求" style="max-width: 260px" />
+      <input id="intents-search" v-model="keyword" aria-label="搜索需求" placeholder="搜索需求" style="max-width: 260px" />
       <span class="small muted">{{ filtered.length }} 条需求</span>
     </div>
 
@@ -171,20 +187,20 @@ onMounted(load)
 
     <ModalShell v-if="showCreate" title="新建测试需求" @close="showCreate = false">
       <div>
-        <label>标题</label>
-        <input v-model="form.title" placeholder="例如：创建项目后数据必须真实持久化" />
+        <label for="intent-title">标题</label>
+        <input id="intent-title" v-model="form.title" placeholder="例如：创建项目后数据必须真实持久化" />
       </div>
       <div>
-        <label>描述</label>
-        <textarea v-model="form.description" rows="4" placeholder="业务背景、用户操作路径、预期结果" />
+        <label for="intent-desc">描述</label>
+        <textarea id="intent-desc" v-model="form.description" rows="4" placeholder="业务背景、用户操作路径、预期结果" />
       </div>
       <div>
-        <label>Owner</label>
-        <input v-model="form.owner" />
+        <label for="intent-owner">Owner</label>
+        <input id="intent-owner" v-model="form.owner" />
       </div>
       <div>
-        <label>候选断言（每行一条，可留空）</label>
-        <textarea v-model="form.candidate_assertions" rows="3" />
+        <label for="intent-assertions">候选断言（每行一条，可留空）</label>
+        <textarea id="intent-assertions" v-model="form.candidate_assertions" rows="3" />
       </div>
       <template #footer>
         <button @click="showCreate = false">取消</button>

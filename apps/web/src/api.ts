@@ -1,8 +1,21 @@
-/** 统一 API 客户端：真实后端调用，不做任何 Mock。 */
+/** 统一 API 客户端：真实后端调用，不做任何 Mock。
+ *
+ * RUN-010 WP1：
+ * - 非 GET 请求自动附带 X-CSRF-Token（登录后由 sessionStorage 提供）；
+ * - 401 统一走 fireUnauthorized()（清状态 + 跳登录），调用方无需重复处理；
+ * - 403 (PERMISSION_DENIED/WORKSPACE_FORBIDDEN/CSRF_FAILED) 抛 ApiError 由视图提示。
+ */
 
 import type { BrowserHealth, LLMUsageSummary, SystemHealth } from './types'
 
 const BASE = '/api/v1'
+
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
+
+function csrfHeader(): Record<string, string> {
+  const token = sessionStorage.getItem('tg-csrf') ?? ''
+  return token ? { 'X-CSRF-Token': token } : {}
+}
 
 export class ApiError extends Error {
   status: number
@@ -34,11 +47,23 @@ async function parseError(res: Response): Promise<ApiError> {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(BASE + path, {
-    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
-    ...init,
-  })
-  if (!res.ok) throw await parseError(res)
+  const method = (init?.method ?? 'GET').toUpperCase()
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(method && !SAFE_METHODS.has(method) ? csrfHeader() : {}),
+    ...((init?.headers as Record<string, string>) ?? {}),
+  }
+  const res = await fetch(BASE + path, { ...init, headers })
+  if (!res.ok) {
+    const err = await parseError(res)
+    if (res.status === 401) {
+      // 会话过期 / 未登录：清空本地凭据并触发全局跳转；错误继续抛出供局部 UI 使用。
+      sessionStorage.removeItem('tg-csrf')
+      const { fireUnauthorized } = await import('./auth')
+      fireUnauthorized()
+    }
+    throw err
+  }
   if (res.status === 204) return undefined as T
   const text = await res.text()
   return (text ? JSON.parse(text) : undefined) as T

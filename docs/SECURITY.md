@@ -1,5 +1,20 @@
 # 安全测试报告（RUN-002 实测）
 
+> **RUN-010 更新（2026-11-24）**：认证生产候选达成（环境分级 fail-closed、DB 限速、
+> 对象级授权、审计链并发安全）；用户态三层网络防护实测（未授权 0 请求）；
+> 宿主级隔离 BLOCKED（无 pf 权限）；B-20 AgentDR 事件已按安全边界处置（见 blockers.md）。
+> 详见 `docs/RUN-010-WP1-AUTH-PRODUCT.md` / `RUN-010-WP2-EGRESS-INTEGRATION.md` / `RUN-010-FINAL-REPORT.md`。
+
+> **RUN-009 更新（2026-11-24）**：本文件下方为 RUN-002 历史实测口径。RUN-009 新增：
+> 1) 真实认证/RBAC/CSRF/审计（`docs/RUN-009-WP2-AUTH-RBAC.md`）——`TG_AUTH_ENABLED=true` 时未认证请求
+>    fail-closed（401），审批主体只来自服务端 Principal，请求体声明的审批人被忽略；
+> 2) 受控出站代理（`docs/RUN-009-WP3-NETWORK-SECURITY.md`）——HTTP/HTTPS/CONNECT 在出站前校验，
+>    真实验证中未授权服务器收到请求数为 0；宿主级出口封锁、浏览器内核 DNS、TLS 内容检查仍 BLOCKED/PARTIAL；
+> 3) 供应链审计（`docs/RUN-009-WP8-SUPPLY-CHAIN.md`）——npm 3 个 moderate 均为 dev-only 链
+>    （vue-tsc→@vue/language-core→minimatch，生产制品零影响），Python pip-audit 无已知漏洞；
+>    唯一修复路径 `vue-tsc@3` 为 semver-major，标 NEEDS_DECISION，未用 `--force`。
+> 两套 URL 安全规则并存的现状未变：`policy.py`（旧）与 `target_policy.py`（现行）不得混用。
+
 ## 1. 威胁模型（本地受控环境）
 
 | 威胁 | 攻击面 | 本版本对策 | 验证 |
@@ -55,3 +70,14 @@ API 层新增验证（`tests/integration/test_api_flow.py`）：
 4. **速率限制**：仅探针预算；API 层未做全局限流。
 5. **供应链**：未做依赖漏洞扫描（无网络策略约束下的 CI 插件）。
 6. **日志留存**：未实现轮转与集中采集。
+
+## RUN-008 补充（2026-11-24）
+
+- 本轮真实修复两处权限/脱敏缺陷：`SelfHealingService.approve/reject` 统一
+  `require_human_actor`（堵住 `system:*`/`llm:*`/`bot:*`/`worker:*` 自批），
+  `redact()` 字符串路径补齐 cookie/access_key/private_key/credential。
+  证据：`docs/RUN-008-SECURITY-AUDIT.md`、`test_healing.py` 17/17、`test_core.py` 36/36。
+- CI 真实 audit（commit `40efee6`）：high=0 / critical=0 / moderate=3（dev-only）。
+- 安全边界不变：无真实用户认证（主体类型门禁不是 RBAC）、顶层 302 出站请求会到达目标、
+  DNS 钉住无法覆盖浏览器内核缓存窗口；生产需前置 OIDC/网关与受控出站代理。
+- AgentDR `info_theft_steal_env_keys` 两次拦截按策略保留 BLOCKED，未绕过、未读取/传递真实凭据。

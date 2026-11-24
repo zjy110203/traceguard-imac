@@ -1,0 +1,14 @@
+=== 项目 LICENSE 文件探测 ===
+(项目根目录无 LICENSE 文件)
+=== .env 是否被 git 忽略/跟踪 ===
+.gitignore:2:.env	.env
+error: pathspec '.env' did not match any file(s) known to git
+Did you forget to 'git add'?
+(未被 git 跟踪 -> 正确)
+=== dist 是否被 git 跟踪 ===
+(以上为空则未跟踪)
+=== gitignore 关键模式 ===
+.gitignore:2:.env	.env
+.gitignore:30:apps/web/dist/	apps/web/dist
+=== 构建制品清单 (Python 侧) ===
+./apps/web/dist

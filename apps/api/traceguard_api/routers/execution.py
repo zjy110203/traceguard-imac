@@ -232,9 +232,7 @@ async def run_timeline(run_id: str, catch_up: bool = True) -> dict[str, Any]:
     try:
         return get_services().timeline.get_timeline(run_id, catch_up=catch_up)
     except AppError as exc:
-        raise HTTPException(
-            404, detail={"code": exc.code.value, "message": exc.message}
-        ) from exc
+        raise HTTPException(404, detail={"code": exc.code.value, "message": exc.message}) from exc
 
 
 @router.get("/inbox/stats")

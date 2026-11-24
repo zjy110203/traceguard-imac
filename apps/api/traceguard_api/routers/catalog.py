@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 from traceguard_core.errors import AppError
 from traceguard_core.ids import new_id, utc_now_iso
 
+from ..auth import trusted_actor
 from ..services import get_services
 
 router = APIRouter(prefix="/api/v1", tags=["catalog"])
@@ -201,13 +202,18 @@ class ReviewReq(BaseModel):
 
 
 @router.post("/testcases/{testcase_id}/versions/{version}/review")
-async def review(testcase_id: str, version: int, req: ReviewReq) -> dict[str, Any]:
+async def review(
+    testcase_id: str, version: int, req: ReviewReq, request: Request
+) -> dict[str, Any]:
+    reviewer = trusted_actor(
+        request, req.reviewer, "testcase.review", resource_type="testcase", resource_id=testcase_id
+    )
     try:
         return get_services().rt.catalog.review_testcase(
             testcase_id,
             version,
             req.decision,
-            req.reviewer,
+            reviewer,
             req.note,
             require_stability=req.require_stability,
         )
@@ -223,10 +229,15 @@ class OracleBindingReq(BaseModel):
 
 
 @router.post("/testcases/{testcase_id}/versions/{version}/oracle-bindings")
-async def bind_oracles(testcase_id: str, version: int, req: OracleBindingReq) -> dict[str, Any]:
+async def bind_oracles(
+    testcase_id: str, version: int, req: OracleBindingReq, request: Request
+) -> dict[str, Any]:
+    actor = trusted_actor(
+        request, req.actor, "oracle.bind", resource_type="testcase", resource_id=testcase_id
+    )
     try:
         return get_services().rt.catalog.bind_oracles(
-            testcase_id, version, req.bindings, actor=req.actor
+            testcase_id, version, req.bindings, actor=actor
         )
     except AppError as exc:
         raise _handle(exc) from exc
@@ -253,7 +264,16 @@ async def list_oracles(workspace_id: str | None = None) -> list[dict[str, Any]]:
 
 
 @router.post("/oracles", status_code=201)
-async def create_oracle(req: OracleReq) -> dict[str, Any]:
+async def create_oracle(req: OracleReq, request: Request) -> dict[str, Any]:
+    approved_by = ""
+    if req.approved:
+        approved_by = trusted_actor(
+            request,
+            req.approved_by,
+            "oracle.create",
+            resource_type="oracle",
+            resource_id=req.assertion_id,
+        )
     payload = {
         "oracle_id": req.oracle_id or new_id("oracle"),
         "assertion_id": req.assertion_id,
@@ -268,7 +288,7 @@ async def create_oracle(req: OracleReq) -> dict[str, Any]:
     try:
         return get_services().rt.catalog.create_oracle(
             payload,
-            approved_by=req.approved_by,
+            approved_by=approved_by,
             approval_note=req.approval_note,
             approved=req.approved,
         )

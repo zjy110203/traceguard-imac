@@ -25,12 +25,15 @@ from traceguard_core.ids import new_id, utc_now_iso
 from traceguard_core.logging import get_logger
 from traceguard_persistence.catalog import require_human_actor
 
-from traceguard_api.runtime import Runtime
+from traceguard_api.runtime import TERMINAL_RUN_STATUSES, Runtime
 
 logger = get_logger("traceguard.service.repair")
 
 
 class RepairService:
+    #: 沙箱 Run 的等待上限（秒）：必须由独立 Worker 真实执行完，超时即失败而非伪造结论
+    _sandbox_timeout_s: float = 300.0
+
     def __init__(self, rt: Runtime) -> None:
         self.rt = rt
 
@@ -230,14 +233,25 @@ class RepairService:
             mode="sandbox",
         )
         run = self.rt.tasks.create_run(task["task_id"], f"{sandbox_case_id}@{version}")
-        outcome = self.rt.execute_run(run["run_id"])
-        doc["sandbox_run_id"] = outcome["run_id"]
+        # RUN-007-RESUME：沙箱属于正式执行，必须由独立 Worker 消费队列，
+        # 不在 API 线程里直接 execute_run（否则等于"API 线程池冒充 Worker"）。
+        final = self.rt.wait_for_run(run["run_id"], timeout_s=self._sandbox_timeout_s)
+        status = str((final or {}).get("execution_status") or "")
+        if status not in TERMINAL_RUN_STATUSES:
+            raise AppError(
+                ErrorCode.PRECONDITION_FAILED,
+                f"沙箱 Run 在 {self._sandbox_timeout_s:.0f}s 内未被 Worker 执行完成"
+                f"（当前状态 {status or 'UNKNOWN'}）：请确认独立 Worker 已启动",
+            )
+        doc["sandbox_run_id"] = final["run_id"]
         doc["sandbox_testcase_id"] = sandbox_case_id
-        doc["sandbox_status"] = "PASSED" if outcome["test_verdict"] == "PASSED" else "FAILED"
-        doc["sandbox_verdict"] = outcome["test_verdict"]
-        doc["sandbox_observer_mode"] = outcome["observer_mode"]
-        if outcome["test_verdict"] != "PASSED":
-            doc["failure_reason"] = f"SANDBOX_{outcome['test_verdict']}"
+        doc["sandbox_status"] = "PASSED" if final["test_verdict"] == "PASSED" else "FAILED"
+        doc["sandbox_verdict"] = final["test_verdict"]
+        doc["sandbox_observer_mode"] = final.get("observer_mode", "")
+        doc["sandbox_executed_by"] = final.get("lease_owner") or ""
+        doc["sandbox_fencing_token"] = final.get("fencing_token")
+        if final["test_verdict"] != "PASSED":
+            doc["failure_reason"] = f"SANDBOX_{final['test_verdict']}"
         doc["candidate_version"] = version
         return self._save(doc)
 
@@ -286,17 +300,42 @@ class RepairService:
         doc = self.get(proposal_id)
 
         # 1) 幂等回执命中（含"上一进程 CAS 已提交但没来得及保存提案"的崩溃恢复）
-        receipt = self._match_receipt(proposal_id, idempotency_key, kind="PROMOTE")
+        receipt = self._match_receipt(
+            doc, idempotency_key, kind="PROMOTE", base_version=int(doc["base_version"])
+        )
         if receipt is not None:
             return self._settle_promoted(doc, receipt, idempotency_key, recovered=True)
 
         status = RepairStatus(doc["status"])
         if status is RepairStatus.PROMOTED:
-            # 已晋升但没有回执（历史数据）：补一条回执，保持幂等语义
-            receipt = {
-                "target_version": int(doc.get("promoted_version") or 0),
-                "base_version": int(doc["base_version"]),
-            }
+            # 已晋升但没有回执（历史数据）：**真正补写一条持久化回执**，
+            # 而不是在内存里造一个临时字典就宣称幂等。
+            target_version = int(doc.get("promoted_version") or 0)
+            if target_version <= 0:
+                raise AppError(
+                    ErrorCode.CONFLICT,
+                    "PROMOTED proposal 缺少有效 promoted_version，无法补回执",
+                )
+            self.rt.catalog.record_receipt(
+                idempotency_key=idempotency_key,
+                kind="PROMOTE",
+                proposal_id=proposal_id,
+                testcase_id=doc["testcase_id"],
+                workspace_id=doc["workspace_id"],
+                base_version=int(doc["base_version"]),
+                target_version=target_version,
+                result={
+                    "version": target_version,
+                    "testcase_id": doc["testcase_id"],
+                    "kind": "PROMOTE",
+                    "backfilled_from": "repair_doc",
+                },
+            )
+            receipt = self._match_receipt(
+                doc, idempotency_key, kind="PROMOTE", base_version=int(doc["base_version"])
+            )
+            if receipt is None:  # pragma: no cover - 写入后必然可读
+                raise AppError(ErrorCode.CONFLICT, "回执补写失败，无法恢复幂等语义")
             return self._settle_promoted(doc, receipt, idempotency_key, recovered=True)
         if status is not RepairStatus.APPROVED and status is not RepairStatus.PROMOTING:
             raise AppError(
@@ -341,18 +380,85 @@ class RepairService:
             "target_version": created.get("version"),
             "base_version": int(doc["base_version"]),
         }
+        # Fail-closed：晋升结果必须是一个有效的新版本号；否则不能宣告 PROMOTED
+        if not isinstance(receipt["target_version"], int) or receipt["target_version"] <= 0:
+            doc["failure_reason"] = "PROMOTION_RESULT_INVALID"
+            doc["promotion_record"] = {
+                **(doc.get("promotion_record") or {}),
+                "idempotency_key": idempotency_key,
+                "result": "PROMOTION_RESULT_INVALID",
+                "response": created,
+                "at": utc_now_iso(),
+            }
+            self._transition(doc, RepairStatus.PROMOTION_FAILED)
+            return self._save(doc)
         return self._settle_promoted(doc, receipt, idempotency_key, recovered=False)
 
     def _match_receipt(
-        self, proposal_id: str, idempotency_key: str, *, kind: str
+        self,
+        doc: dict[str, Any],
+        idempotency_key: str,
+        *,
+        kind: str,
+        base_version: int,
     ) -> dict[str, Any] | None:
-        """幂等键命中，或同一提案的同类回执命中（不同幂等键也不重复创建版本）。"""
-        receipt = self.rt.catalog.get_promotion_receipt(idempotency_key)
+        """幂等键命中，或同一提案的同类回执命中（不同幂等键也不重复创建版本）。
+
+        RUN-007-FINALIZATION-2（WP1-B）：回执必须与本次动作身份完全一致
+        （kind / proposal_id / testcase_id / workspace_id / base_version）。
+        不一致时显式返回冲突——绝不能把另一个 Proposal 的 promoted_version
+        当成自己的结果，也不能让 PROMOTE 与 ROLLBACK 共用一条回执。
+        """
+        receipt = (
+            self.rt.catalog.get_promotion_receipt(idempotency_key) if idempotency_key else None
+        )
         if receipt is None:
-            receipt = self.rt.catalog.find_promotion_receipt(proposal_id, kind=kind)
-        if receipt is None or receipt.get("kind") != kind:
+            receipt = self.rt.catalog.find_promotion_receipt(doc["proposal_id"], kind=kind)
+        if receipt is None:
             return None
+        self._assert_receipt_identity(
+            receipt, doc, kind=kind, base_version=base_version, idempotency_key=idempotency_key
+        )
         return receipt
+
+    @staticmethod
+    def _assert_receipt_identity(
+        receipt: dict[str, Any],
+        doc: dict[str, Any],
+        *,
+        kind: str,
+        base_version: int,
+        idempotency_key: str,
+    ) -> None:
+        expected = {
+            "kind": kind,
+            "proposal_id": doc["proposal_id"],
+            "testcase_id": doc["testcase_id"],
+            "workspace_id": doc["workspace_id"],
+        }
+        mismatched = [
+            {"field": f, "receipt": receipt.get(f), "request": v}
+            for f, v in expected.items()
+            if str(receipt.get(f) or "") != str(v or "")
+        ]
+        if int(receipt.get("base_version") or 0) != int(base_version or 0):
+            mismatched.append(
+                {
+                    "field": "base_version",
+                    "receipt": receipt.get("base_version"),
+                    "request": base_version,
+                }
+            )
+        if mismatched:
+            raise AppError(
+                ErrorCode.CONFLICT,
+                "IDEMPOTENCY_KEY_REUSED: 幂等键/回执已绑定到其它提案、用例、工作区或操作类型",
+                details={
+                    "idempotency_key": idempotency_key or receipt.get("idempotency_key"),
+                    "mismatched": mismatched,
+                    "receipt": receipt,
+                },
+            )
 
     def _settle_promoted(
         self,
@@ -411,7 +517,7 @@ class RepairService:
         if not promoted_version:
             raise AppError(ErrorCode.PRECONDITION_FAILED, "提案缺少 promoted_version，无法回滚")
         key = idempotency_key or f"rollback:{proposal_id}:v{promoted_version}"
-        receipt = self._match_receipt(proposal_id, key, kind="ROLLBACK")
+        receipt = self._match_receipt(doc, key, kind="ROLLBACK", base_version=promoted_version)
         if receipt is not None:
             return self._settle_rolled_back(doc, receipt, operator, reason, recovered=True)
 
@@ -440,6 +546,11 @@ class RepairService:
             "target_version": created.get("version"),
             "base_version": promoted_version,
         }
+        if not isinstance(receipt["target_version"], int) or receipt["target_version"] <= 0:
+            raise AppError(
+                ErrorCode.CONFLICT,
+                "ROLLBACK_RESULT_INVALID: 回滚未返回有效的新版本号，不视为成功",
+            )
         return self._settle_rolled_back(doc, receipt, actor, reason, recovered=False)
 
     def _settle_rolled_back(

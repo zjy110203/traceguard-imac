@@ -1,5 +1,30 @@
 # 功能状态矩阵（更新至 2026-11-23 RUN-004-FE）
 
+> **RUN-010 状态（2026-11-24 22:45 CST，权威）**：`docs/RUN-010-FINAL-REPORT.md` 为准。
+> WP0~WP9 全部完成：认证产品化（生产候选）、Egress 接入正式内核、Task 幂等冻结、
+> 诊断 v2（时间对齐+图裁决+403 规则）、Benchmark v4 两轮真实执行（C 臂 64.3%）、
+> axe 13 路由 0 violations、供应链治理（npm 0 漏洞）、完整闭环验收 3/3。
+> BLOCKED：B-17、宿主级网络隔离、LLM/人工基线；NEEDS_DECISION：LICENSE。
+
+> **RUN-009 WP0 状态更正（2026-11-24 16:05 CST）**：下方条目为历史快照。
+> 当前 HEAD `cb80591`。RUN-008 三段 CI 在 `40efee6` 上全绿（PR `45335765297` / Nightly `45335777381` / Release `45336007166`），
+> 下方将 Release `45336007166` 标为「进行中」的条目已过时；`cb80591` 只改恢复文件，不得外推 CI 结论。
+> 前端旧验收仅覆盖 12 视图（原始 JSON 中 run_id/diagnosis_id 为空），RUN-009 WP1 正在补齐 14/14；认证/RBAC NOT_IMPLEMENTED。
+> 权威基线见 `docs/RUN-009-BASELINE.md`。历史条目保留不覆盖。
+
+## RUN-009 功能状态（2026-11-24，权威）
+
+| 能力 | 状态 | 证据 / 说明 |
+|---|---|---|
+| 真实身份认证 / RBAC / CSRF / 审计 | 已运行验证 | `docs/RUN-009-WP2-AUTH-RBAC.md`；9 个安全用例 + 全量回归；前端登录页未接入 |
+| 受控出站代理（用户态） | 已运行验证（部分） | `docs/RUN-009-WP3-NETWORK-SECURITY.md`；未授权命中 0；宿主级封锁 BLOCKED |
+| 14/14 前端业务路由验收 | 已运行验证 | `docs/RUN-009-WP1-FRONTEND-REPORT.md`；154 截图；axe 自动化 BLOCKED |
+| 资源监控 / 多 Worker 性能基线 | 已运行验证 | `docs/RUN-009-WP5-PERFORMANCE.md`；吞吐 12.37→32.74 runs/min |
+| 诊断增益（EG/AP）研究 | 已运行验证（含负结果） | `docs/RUN-009-WP6-AGENT-DIAGNOSIS.md` |
+| Benchmark v4 | 已运行验证（LLM/人工臂 BLOCKED） | `docs/RUN-009-WP7-BENCHMARK.md` |
+| Worker 四场景故障注入 | 阻塞 | B-17 未解除，契约级测试已补 |
+| 依赖升级（vue-tsc 3.x） | 待决策 | `docs/RUN-009-WP8-SUPPLY-CHAIN.md` |
+
 > 历史口径：RUN-002 基线状态保留在本文件原有条目中；RUN-003-G 真实 LLM 接入与 RUN-004-FE 前端产品化升级按下列条目更新。历史 RUN-002/RUN-003 报告不改写。
 
 状态口径：
@@ -188,3 +213,54 @@
 | PostgreSQL / 4 Worker / 60 分钟长稳 | **BLOCKED** | 环境/时间窗限制 |
 | CI 三级门禁真实运行 | **BLOCKED** | 未触发真实 Actions |
 | Benchmark v3 | **NOT_IMPLEMENTED（本轮）** | 不引用历史数字 |
+
+## RUN-007 续跑（2026-11-23，追加；不改写上面历史条目）
+
+> 口径：VERIFIED = 有本轮真实运行证据；IMPLEMENTED = 代码完成但缺本轮运行证据；
+> PARTIAL = 部分完成/证据不完整；BLOCKED = 外部条件阻塞；NEEDS_DECISION = 待批准。
+
+| 能力 | 状态 | 证据 / 说明 |
+|---|---|---|
+| E2E 由独立 Worker 消费队列执行 | **VERIFIED** | `e2e-worker-run007.json`：55 步 0 失败，5 个 Run 均由 w1–w4 领取，`api_inline_worker=false` |
+| 执行归属可见（Worker/attempt/fencing/租约） | **VERIFIED** | Run 详情「执行归属」条 + 质量总览 Worker 面板（截图 `ui/07-run-detail-1440.png`） |
+| Evidence 取真实来源 + 证据图绑定校验 | **VERIFIED** | A 场景 18 条、B 场景 28 条；图 54 节点/70 边含 `Evidence`+来源关系 |
+| 沙箱走队列（无 Worker 时 fail-closed） | **VERIFIED** | `test_sandbox_worker_queue.py`(2) + E2E D 场景 `sandbox_executed_by=run007-w1` |
+| Run 级状态缓存隔离 | **VERIFIED** | `test_pipeline_state_cache.py`(2) + E2E B 场景假成功判 FAILED |
+| 迁移 v8 幂等 / v7 旧库升级 / 并发启动 | **VERIFIED（SQLite）** | `test_migration_v8.py`(4)；修复前并发用例失败 |
+| PostgreSQL 16 平台级契约 | **VERIFIED（CI）** | `test_postgres_platform.py`(6) 在 Nightly 的 `postgres:16`（实测 16.16）上全过；本机无 PG 仍 skip |
+| Worker 被杀 → 同 Run 接管 + 代次隔离 | **VERIFIED** | `worker-fault-recovery-verified.json`（真实 kill、`killed_after_s`>0、`fencing_token` 递增） |
+| 60 分钟长稳（独立 API + 4 Worker） | **VERIFIED** | `soak-60min.json` + `soak-samples.jsonl`，19 项 checks 全真 |
+| 前端 15 视图 × 4 断点 + 深色 + 四态 | **VERIFIED（视觉人工复核）** | `ui/ui-review.json` 75/75；79 张截图 |
+| 证据图完整可见 / 窄屏筛选栏 | **VERIFIED（已修）** | 修复裁切与 390px 错位，见 `RUN-007-UI-REVIEW.md` §3 |
+| CI 门禁去掩盖（PR/Nightly/Release） | **VERIFIED** | 同 commit `cc3339d` 三级全绿：PR Gate [#45201761239](https://github.com/zjy110203/traceguard-imac/actions/runs/45201761239) / Nightly [#45201774473](https://github.com/zjy110203/traceguard-imac/actions/runs/45201774473) / Release [#45202185410](https://github.com/zjy110203/traceguard-imac/actions/runs/45202185410)；首跑暴露 8 个缺陷已修 |
+| UI-FaultBench v3 四臂 30 场景 | **见 Benchmark 报告** | `docs/RUN-007-BENCHMARK-REPORT.md` |
+| LLM 对照臂（受预算子集） | **见 Benchmark 报告** | `llm-arm-*.json`，模型由服务端路由决定，按实际模型记录 |
+| 身份认证 / RBAC | **NOT_IMPLEMENTED（NEEDS_DECISION）** | D-01 未批准；主体类型门禁 ≠ 身份认证 |
+| 外部站点泛化 | **BLOCKED** | P03 未批准授权清单，本轮未访问未授权站点 |
+
+---
+
+# RUN-008 功能状态（2026-11-24，追加；不改写上面历史条目）
+
+> 口径：VERIFIED = 本轮真实执行证据；IMPLEMENTED = 代码实现但缺本轮运行证据；
+> PARTIAL = 部分证据；BLOCKED = 外部条件或安全策略阻塞；NOT_IMPLEMENTED = 本轮未做。
+
+| 能力 | 状态 | 证据 / 说明 |
+|---|---|---|
+| P0 缺陷复核（多进程预算 + 长稳真实健康检查） | **VERIFIED** | 16/16 集成回归；`docs/assets/run008/wp1/` 3 组真实 SIGKILL/正常证据 |
+| 长稳脚本恒真判断修复 + 守卫回归 | **VERIFIED** | `test_soak_run007_guards.py`；冒烟 22 checks |
+| 本机全量回归 | **VERIFIED** | 567 passed / 13 skipped（WP5/WP6 后）；E2E 12/12 |
+| 三级 CI 门禁（最终 commit `40efee6`） | **VERIFIED（PR/Nightly）** | PR Gate `45335765297` success；Nightly `45335777381` success（含 PG16 5+8 passed）；Release `45336007166` 进行中 |
+| LLM smoke | **BLOCKED（缺 Secret）** | CI 明确标注不得用于 Release 放行，不写为通过 |
+| 4 Worker 并发 | **VERIFIED** | `worker-concurrency.json`：峰值 4、单 Run 单 owner、14/14 |
+| 执行中途 SIGKILL 故障恢复 | **VERIFIED** | `worker-fault-recovery.json`：真实 kill、17/17、fencing 递增 |
+| 补充故障矩阵 4 场景 | **BLOCKED** | AgentDR 两次拦截（含白名单重写），见 `blockers.md` B-17 |
+| 前端 14 视图审查 | **VERIFIED** | 60 checks 全过（48 light + 12 dark）、64 截图；修复 5 个真实缺陷 |
+| 前端全局搜索意图死链 | **VERIFIED（已修）** | `fix-verification.json` 4/4 |
+| 深色验收假证据 | **VERIFIED（已修）** | 旧脚本改为真主题 + 亮度断言，30/0 |
+| Repair 主体门禁一致性 | **VERIFIED（已修）** | `test_healing.py` 17/17；`system:*`/`llm:*`/`bot:*`/`worker:*` 全拒 |
+| 日志字符串脱敏词表 | **VERIFIED（已修）** | `test_core.py` 36/36 合计 |
+| 身份认证 / RBAC | **NOT_IMPLEMENTED** | 仍只有主体类型门禁，不是真实认证（B-09） |
+| 依赖 moderate 漏洞（dev-only） | **PARTIAL（已登记）** | high=0 / critical=0 / moderate=3；semver-major 升级未实施 |
+| 60 分钟长稳 | **进行中** | `BZ1Hp8`，每周期 real PASSED；报告未生成前不标通过 |
+| Benchmark v3 本轮实验 | **进行中** | 隔离 API/Worker/TeamFlow，2 次重复；完成前不引用历史数字冒充本轮 |

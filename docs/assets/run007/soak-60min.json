@@ -1,0 +1,87 @@
+{
+  "round": "RUN-007-RESUME",
+  "started_at": "2026-11-23T12:34:25Z",
+  "finished_at": "2026-11-23T13:34:27Z",
+  "duration_minutes": 60.03,
+  "architecture": {
+    "api_port": 8030,
+    "api_inline_worker": false,
+    "db": ".traceguard/run007soak/api.db",
+    "artifact_dir": ".traceguard/run007soak/artifacts",
+    "workers": 4,
+    "worker_pids": {
+      "soak-w1": 25531,
+      "soak-w2": 25532,
+      "soak-w3": 25533,
+      "soak-w4": 25534
+    },
+    "teamflow": "http://127.0.0.1:8021"
+  },
+  "interval_s": 60.0,
+  "case": "tcase_tf_create_normal",
+  "cycles": 65,
+  "counts": {
+    "ok": 65,
+    "failed": 0,
+    "not_evaluated": 0,
+    "api_error": 0,
+    "timeout": 0
+  },
+  "sse": {
+    "cycles_with_events": 65,
+    "cycles_without_events": 0,
+    "resume_ok": 38,
+    "resume_no_new": 27,
+    "heartbeats": 158,
+    "duplicate_ids": 0
+  },
+  "worker_deaths": [],
+  "errors": [],
+  "integrity": {
+    "run_verdicts": {
+      "PASSED": 65
+    },
+    "run_status": {
+      "COMPLETED": 65
+    },
+    "runs_without_report": 0,
+    "duplicate_event_keys": 0,
+    "orphan_steps": 0,
+    "runs_without_evidence": 0,
+    "unrecovered_leases": 0,
+    "quick_check": "ok",
+    "final_counts": {
+      "runs": 65,
+      "tasks": 65,
+      "events": 845,
+      "evidence": 1820,
+      "steps": 520,
+      "repairs": 0,
+      "size_mb": 5.35,
+      "wal_mb": 3.97
+    }
+  },
+  "checks": {
+    "duration_reached": true,
+    "cycles_reached": true,
+    "api_inline_worker_off": true,
+    "no_api_errors": true,
+    "no_unexpected_failed": true,
+    "no_not_evaluated": true,
+    "all_runs_passed": true,
+    "no_run_timeouts": true,
+    "teamflow_healthy_all_cycles": true,
+    "no_worker_death": true,
+    "no_runs_without_report": true,
+    "no_duplicate_events": true,
+    "no_orphan_steps": true,
+    "no_runs_without_evidence": true,
+    "no_unrecovered_leases": true,
+    "db_integrity_ok": true,
+    "sse_received_events": true,
+    "sse_resume_verified": true,
+    "api_survived": true
+  },
+  "passed": true,
+  "samples_file": "docs/assets/run007/soak-samples.jsonl"
+}

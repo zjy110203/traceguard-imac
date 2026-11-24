@@ -1,5 +1,36 @@
 # TraceGuard 持续开发任务台账
 
+> **RUN-010 台账（2026-11-24；2026-11-25 收尾更正）**：10 个工作包全部完成。
+> **统计以收尾复核为准**：RUN-010 提交 **17**（含收尾修复 `d4d59ba`）、改动文件 **79**、
+> **+8,314 / −336** 行；全量测试 **657 收集 / 644 passed / 13 skipped / 0 failed**；
+> E2E **30** 个真实浏览器用例；PR #2 差异 **695 文件 / 62 提交**。
+> （旧值"15 提交、66 文件、+7,736 行、601 passed、35 E2E"为 WP9 之前快照，已作废。）
+> 真实新增：认证产品闭环、Egress 内核集成、提交回执幂等、诊断 v2、Benchmark v4 执行框架、
+> axe 审查、依赖一致性测试。真实缺陷修复 **12** 项（含收尾 CL-01/CL-02，见 FINAL-REPORT §3）。
+> 三级 CI 门禁在 `d4d59ba` 上全部 success；BLOCKED 项与生产风险如实记录；
+> PR #2 保持 **open / HOLD** 待负责人决策（未合并）。
+> 收尾与独立验收见 `docs/RUN-010-CLOSEOUT-REPORT.md`。以下历史台账保留。
+
+> **RUN-009 WP0 状态更正（2026-11-24 16:05 CST）**：下方 RUN-002~RUN-008 条目为历史台账。
+> 当前 HEAD `cb80591`；RUN-008 实际结论：WP4/WP7 VERIFIED、WP8 完成，R8-08/R8-11/R8-12 原标「进行中」已过时；
+> WP3/WP6 仍是 PARTIAL，B-17/LLM/Benchmark LLM 与人工基线 BLOCKED，认证/RBAC NOT_IMPLEMENTED。
+> 权威基线见 `docs/RUN-009-BASELINE.md`，复核见 `docs/RUN-009-REVIEW-REPORT.md`。历史条目保留不覆盖。
+
+## RUN-009 任务台账（2026-11-24，权威）
+
+| 编号 | 任务 | 状态 | 证据 |
+|---|---|---|---|
+| R9-01 | WP0 状态复核 + PR 集成 | PASS | `docs/RUN-009-BASELINE.md`、`docs/RUN-009-REVIEW-REPORT.md`、PR #2（open/HOLD） |
+| R9-02 | WP1 14/14 路由验收 | PASS（功能）/ PARTIAL（axe 缺失） | `docs/RUN-009-WP1-FRONTEND-REPORT.md`、154 张截图、`route-coverage.json` |
+| R9-03 | WP2 认证/RBAC/CSRF/审计 | PASS | `docs/RUN-009-WP2-AUTH-RBAC.md`、9 个安全用例 + 全量回归 |
+| R9-04 | WP3 受控出站代理 | PARTIAL（宿主级封锁 BLOCKED） | `docs/RUN-009-WP3-NETWORK-SECURITY.md`、17/17 检查、未授权命中 0 |
+| R9-05 | WP4 Worker 故障矩阵 | PARTIAL（4 场景 BLOCKED/B-17） | `docs/RUN-009-WP4-WORKER-FAULT-MATRIX.md`、契约测试 4/4 |
+| R9-06 | WP5 资源监控与性能基线 | PASS | `docs/RUN-009-WP5-PERFORMANCE.md`、33 帧真实采样 |
+| R9-07 | WP6 诊断增益研究 | PASS（含明确负结果） | `docs/RUN-009-WP6-AGENT-DIAGNOSIS.md` |
+| R9-08 | WP7 Benchmark v4 | PASS（LLM/人工臂 BLOCKED） | `docs/RUN-009-WP7-BENCHMARK.md`、2 轮原始样本 |
+| R9-09 | WP8 供应链治理 | PARTIAL（升级 NEEDS_DECISION） | `docs/RUN-009-WP8-SUPPLY-CHAIN.md`、SBOM 三份 |
+| R9-10 | WP9 最终集成与交付 | 见 `docs/RUN-009-FINAL-REPORT.md` | — |
+
 > 生成时间：2026-11-22（RUN-002）
 > 依据：工作区真实代码 + `资料/` 设计资料 + `.workbuddy-run/` 历史记录。
 > 状态枚举：TODO / IN_PROGRESS / PASS / FAIL / BLOCKED / NEEDS_REVIEW
@@ -137,3 +168,41 @@
 | R6-21 | CI 三级门禁真实运行 | BLOCKED | 未触发真实 Actions |
 | R6-22 | UI-FaultBench 深化（30 场景多臂） | NOT_IMPLEMENTED（本轮） | 不引用历史数字 |
 | R6-23 | 稳定性回放 F08 完善 | PARTIAL（继承 RUN-005） | 未改动 |
+
+## RUN-007-RESUME 任务清单（2026-11-23，追加；历史条目不改写）
+
+| 编号 | 任务 | 状态 | 证据 | 备注 |
+|---|---|---|---|---|
+| R7-01 | 基线审计（origin/main = `ac2876e`） | PASS | `docs/RUN-007-BASELINE.md` | fetch 成功，远程 HEAD 与指令基线一致 |
+| R7-02 | WP1 五项修复复核 | PASS | 163 passed / 0 failed | 见 TEST-REPORT §3 |
+| R7-03 | 迁移 v8 幂等 + 旧库升级 | PASS | `test_migration_v8.py`(4) | 修复前并发用例失败 → 已修 `db.py` |
+| R7-04 | E2E 改独立 Worker 消费队列 | PASS | `e2e-worker-run007.json` 55 步 | 不覆盖旧 `e2e-run007.json` |
+| R7-05 | Evidence 来源修正 + 图绑定校验 | PASS | 18/28 条证据 + 图节点/边 | 不再读空的 `report.evidence_ids` |
+| R7-06 | 沙箱改队列（fail-closed） | PASS | `test_sandbox_worker_queue.py`(2) | 无 Worker → PRECONDITION_FAILED |
+| R7-07 | Run 级状态缓存隔离 | PASS | `test_pipeline_state_cache.py`(2) | 修复真实假通过漏检 |
+| R7-08 | 前端 15 视图 × 4 断点 + 深色 + 四态 | PASS | `ui/ui-review.json` 75/75，79 图 | 修 3 处真实视觉缺陷 |
+| R7-09 | Worker 故障恢复实验（重写脚本） | PASS | `worker-fault-recovery-verified.json` | 真实计时/同 Run 接管/陈旧代次拒绝 |
+| R7-10 | 60 分钟长稳（重写脚本） | PASS | `soak-60min.json` + `soak-samples.jsonl` | 独立 API + 4 Worker + SSE 续传 |
+| R7-11 | PostgreSQL 16 扩展验证 | **PASS（CI）** | `test_postgres_platform.py`(6)，Nightly `postgres:16`（16.16） | 本机无 PG 仍 skip；CI 已真跑 |
+| R7-12 | CI 三级门禁修复 | **PASS** | PR/Nightly/Release 同 commit `cc3339d` 全绿；`ci-gates.json` | 首跑暴露 8 个缺陷，4 轮修完 |
+| R7-13 | UI-FaultBench v3 四臂 | PASS | `docs/RUN-007-BENCHMARK-REPORT.md` | 30 场景 + Flaky×5 |
+| R7-14 | LLM 对照臂（预算内子集） | PASS（子集） | `llm-arm-*.json` | 模型由路由决定，按实际记录；不外推 |
+| R7-15 | 七份 RUN-007 报告 + README/台账 | PASS | `docs/RUN-007-*.md` | 状态枚举统一 |
+| R7-16 | 分支推送 + PR | **PASS** | PR #1 → `main@ac2876e`，head `cc3339d` | token 由用户临时提供；用完即撤销 |
+
+## RUN-008 任务清单（2026-11-24，追加；历史条目不改写）
+
+| 编号 | 任务 | 状态 | 证据 | 备注 |
+|---|---|---|---|---|
+| R8-01 | 基线审计与起点状态恢复 | PASS | `docs/RUN-008-BASELINE.md` | 分支/提交/证据逐项核对，不照抄旧快照 |
+| R8-02 | WP1 P0 复核 + 长稳脚本守卫 | PASS | 16/16 回归；`wp1/` 三场景真实 PID/SIGKILL | 起点已修，以真实执行验证而非重复改坏 |
+| R8-03 | WP2 本机全量回归 | PASS | 567 passed / 13 skipped；E2E 12/12；Ruff 全绿 | 本机 PG parity skip 不写 passed |
+| R8-04 | WP2 三级 CI 真实运行 | PASS | PR `45335765297` / Nightly `45335777381` / Release `45336007166` 全 success（commit `40efee6`） | LLM smoke BLOCKED 不冒充通过；错误输入 Release `45331793408` 失败是 fail-closed 正确行为 |
+| R8-05 | WP3 4 Worker 并发 | PASS | `worker-concurrency.json` 峰值 4、14/14 | 真实 OS 进程 |
+| R8-06 | WP3 执行中途 SIGKILL 故障恢复 | PASS | `worker-fault-recovery.json` 17/17 | 2.77s 时真实 kill PID 80665 |
+| R8-07 | WP3 补充故障矩阵 4 场景 | BLOCKED | `blockers.md` B-17 | AgentDR 两次拦截（含白名单重写）；不重试不绕过 |
+| R8-08 | WP4 60 分钟长稳 | 进行中 | `BZ1Hp8` 每 60s 采样，全部 PASSED | 报告生成前不标 PASS |
+| R8-09 | WP5 前端 14 视图审查 | PASS | 60 checks 全过、64 截图；`fix-verification.json` 4/4 | 修复 5 个真实缺陷 + 假深色断言 |
+| R8-10 | WP6 安全主体门禁与脱敏修复 | PASS | `test_healing.py` 17/17、`test_core.py` 36/36 | 其余为已披露设计边界 |
+| R8-11 | WP7 Benchmark v3 本轮实验 | 进行中 | 隔离 API/Worker/TeamFlow，2 次重复 | 完成前不引用历史数字 |
+| R8-12 | WP8 文档、决策与交付 | 进行中 | `RUN-008-FINAL-REPORT.md` 草稿、`RUN-008-DECISIONS.md` | 实验收尾后定稿 |

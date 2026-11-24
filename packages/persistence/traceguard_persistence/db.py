@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import threading
+import time
 from collections.abc import Callable, Generator, Iterator
 from contextlib import contextmanager
 from typing import Any
@@ -89,13 +90,34 @@ class Database:
             s.close()
 
     def create_schema(self) -> None:
-        """建表 + 应用迁移（幂等）。"""
+        """建表 + 应用迁移（幂等，且**并发启动安全**）。
+
+        多进程同时启动（API + 多个 Worker 指向同一个库）时，`create_all` 内部的
+        "先检查再建" 不是原子的，可能抛出 `table ... already exists`；迁移记录的
+        `INSERT` 也可能撞主键。这里显式重试 + 容忍重复，避免启动期随机崩溃。
+        """
         from . import models  # noqa: F401  确保模型注册到 metadata
 
         with self._schema_lock:
             if self._schema_ready:
                 return
-            Base.metadata.create_all(self.engine)
+            last_error: Exception | None = None
+            # 并发启动（API + N 个 Worker）时会同时建表：既可能撞"已存在"，
+            # 也可能撞 SQLite 的 DDL 排他锁（database is locked）。两类都重试，
+            # 退避采用指数形式，避免 CI 慢盘上 6 次×50ms 不够用。
+            for attempt in range(8):
+                try:
+                    Base.metadata.create_all(self.engine)
+                    last_error = None
+                    break
+                except Exception as exc:  # noqa: BLE001 - 并发建表的重复 DDL/锁竞争
+                    retryable = _is_duplicate_ddl_error(exc) or _is_transient_lock_error(exc)
+                    if not retryable or attempt == 7:
+                        raise
+                    last_error = exc
+                    time.sleep(min(0.1 * (2**attempt), 2.0))
+            if last_error is not None:  # pragma: no cover - 重试耗尽才会到这里
+                raise last_error
             _apply_migrations(self)
             self._schema_ready = True
 
@@ -103,19 +125,66 @@ class Database:
         self.engine.dispose()
 
 
+def _is_duplicate_ddl_error(exc: BaseException) -> bool:
+    """并发建表/建索引时的"已存在"错误：可以容忍并重试。"""
+    msg = str(exc).lower()
+    return (
+        "already exists" in msg
+        or "duplicate table" in msg
+        or "duplicate key" in msg
+        or "unique constraint" in msg
+        or "duplicate column" in msg
+    )
+
+
+def _is_transient_lock_error(exc: BaseException) -> bool:
+    """并发 DDL 的暂时性锁冲突：不是"已存在"，但等待后重试即可成功。
+
+    SQLite 在多个连接同时执行 `CREATE TABLE` 时会抛 `database is locked`
+    （busy_timeout 只覆盖普通写事务，DDL 的排他锁竞争仍可能直接返回）；
+    PostgreSQL 在并发 DDL 下可能抛 `deadlock detected`。两者都属可重试。
+    """
+    msg = str(exc).lower()
+    return (
+        "database is locked" in msg
+        or "database table is locked" in msg
+        or "deadlock detected" in msg
+        or "could not obtain lock" in msg
+    )
+
+
+#: PostgreSQL 事务级 advisory lock 键：串行化并发启动时的建表/迁移（CL-03）
+_MIGRATION_LOCK_KEY = 918_273_645
+
+
 def _apply_migrations(db: Database) -> None:
     """按序应用迁移。当前 v1 由 metadata.create_all 完成；v2 起为增量 DDL。
 
     迁移必须是幂等的：多进程同时启动时使用 IF NOT EXISTS / 捕获重复错误。
+
+    RUN-010 收尾缺陷 CL-03：PostgreSQL 的 `CREATE TABLE IF NOT EXISTS` **不是原子的**——
+    多个进程同时启动时，两个会话都可能通过"不存在"检查，随后在系统表
+    `pg_type` 的唯一索引上撞车（`duplicate key value violates unique constraint
+    "pg_type_typname_nsp_index"`）。CI 实测 4 并发建表时 3 个线程因此抛
+    `IntegrityError`（多 Worker 同时启动即会随机失败）。
+    处置：①PG 下先取事务级 advisory lock 串行化建表/迁移（commit 自动释放）；
+    ②首个建表语句与其余 DDL 一样包在 SAVEPOINT 中并容忍重复错误（SQLite/兜底）。
     """
     with db.engine.begin() as conn:
-        conn.execute(
-            text(
-                "CREATE TABLE IF NOT EXISTS tg_schema_migration ("
-                "version INTEGER PRIMARY KEY, name VARCHAR(120) NOT NULL, "
-                "applied_at VARCHAR(40) NOT NULL)"
-            )
-        )
+        if conn.dialect.name == "postgresql":
+            conn.execute(text("SELECT pg_advisory_xact_lock(:k)"), {"k": _MIGRATION_LOCK_KEY})
+        try:
+            with conn.begin_nested():
+                conn.execute(
+                    text(
+                        "CREATE TABLE IF NOT EXISTS tg_schema_migration ("
+                        "version INTEGER PRIMARY KEY, name VARCHAR(120) NOT NULL, "
+                        "applied_at VARCHAR(40) NOT NULL)"
+                    )
+                )
+        except Exception as exc:  # noqa: BLE001 - 并发启动下的重复 DDL
+            if not _is_duplicate_ddl_error(exc):
+                raise
         applied = {
             int(r[0])
             for r in conn.execute(text("SELECT version FROM tg_schema_migration")).fetchall()
@@ -127,24 +196,31 @@ def _apply_migrations(db: Database) -> None:
                 statement = statement.strip()
                 if not statement:
                     continue
-                if statement.startswith("__CALLABLE__:"):
-                    _MIGRATION_CALLABLES[statement.split(":", 1)[1]](conn)
-                    continue
+                # 每个 DDL 包在 SAVEPOINT 里：PostgreSQL 下普通语句报错会让整个事务
+                # 进入 aborted 状态，必须回滚到保存点才能继续执行后续迁移。
                 try:
-                    conn.execute(text(statement))
+                    with conn.begin_nested():
+                        if statement.startswith("__CALLABLE__:"):
+                            _MIGRATION_CALLABLES[statement.split(":", 1)[1]](conn)
+                        else:
+                            conn.execute(text(statement))
                 except Exception as exc:  # noqa: BLE001 - 并发启动下的重复 DDL
-                    if (
-                        "already exists" not in str(exc).lower()
-                        and "duplicate" not in str(exc).lower()
-                    ):
+                    if not _is_duplicate_ddl_error(exc):
                         raise
-            conn.execute(
-                text(
-                    "INSERT INTO tg_schema_migration (version, name, applied_at) "
-                    "VALUES (:v, :n, :a)"
-                ),
-                {"v": version, "n": name, "a": _now()},
-            )
+            # 记录迁移版本：并发启动时可能已被另一进程写入同一 version（主键冲突），
+            # 属于正常竞争，吞掉即可（绝不能因此启动失败）。
+            try:
+                with conn.begin_nested():
+                    conn.execute(
+                        text(
+                            "INSERT INTO tg_schema_migration (version, name, applied_at) "
+                            "VALUES (:v, :n, :a)"
+                        ),
+                        {"v": version, "n": name, "a": _now()},
+                    )
+            except Exception as exc:  # noqa: BLE001
+                if not _is_duplicate_ddl_error(exc):
+                    raise
 
 
 def _now() -> str:
@@ -215,7 +291,161 @@ MIGRATIONS: list[tuple[int, str, list[str]]] = [
             "ON tg_promotion_receipt (testcase_id)",
         ],
     ),
+    (
+        9,
+        "evidence_digest_semantics",
+        ["__CALLABLE__:_migrate_evidence_digest_semantics"],
+    ),
+    (
+        10,
+        "widen_testcase_intent_ref",
+        ["__CALLABLE__:_migrate_widen_intent_ref"],
+    ),
+    (
+        11,
+        "auth_rbac_audit",
+        [
+            "CREATE TABLE IF NOT EXISTS tg_user ("
+            "user_id VARCHAR(64) PRIMARY KEY, "
+            "username VARCHAR(120) NOT NULL UNIQUE, "
+            "password_hash VARCHAR(255) NOT NULL, "
+            "roles VARCHAR(500) NOT NULL, "
+            "active INTEGER NOT NULL DEFAULT 1, "
+            "created_at VARCHAR(40) NOT NULL DEFAULT '', "
+            "updated_at VARCHAR(40) NOT NULL DEFAULT '')",
+            "CREATE TABLE IF NOT EXISTS tg_session ("
+            "token_hash VARCHAR(64) PRIMARY KEY, "
+            "user_id VARCHAR(64) NOT NULL, "
+            "csrf_token VARCHAR(64) NOT NULL, "
+            "expires_at FLOAT NOT NULL DEFAULT 0, "
+            "revoked INTEGER NOT NULL DEFAULT 0, "
+            "created_at VARCHAR(40) NOT NULL DEFAULT '')",
+            "CREATE INDEX IF NOT EXISTS ix_tg_session_user ON tg_session (user_id)",
+            "CREATE TABLE IF NOT EXISTS tg_audit_log ("
+            "audit_id VARCHAR(64) PRIMARY KEY, "
+            "actor_id VARCHAR(120) NOT NULL, "
+            "role VARCHAR(120) NOT NULL DEFAULT '', "
+            "action VARCHAR(120) NOT NULL, "
+            "resource_type VARCHAR(120) NOT NULL DEFAULT '', "
+            "resource_id VARCHAR(160) NOT NULL DEFAULT '', "
+            "timestamp VARCHAR(40) NOT NULL DEFAULT '', "
+            "result VARCHAR(40) NOT NULL DEFAULT '', "
+            "request_id VARCHAR(120) NOT NULL DEFAULT '', "
+            "before_json JSON, after_json JSON, "
+            "prev_hash VARCHAR(64) NOT NULL DEFAULT '', "
+            "entry_hash VARCHAR(64) NOT NULL DEFAULT '')",
+            "CREATE INDEX IF NOT EXISTS ix_tg_audit_actor ON tg_audit_log (actor_id)",
+            "CREATE INDEX IF NOT EXISTS ix_tg_audit_action ON tg_audit_log (action)",
+        ],
+    ),
+    (
+        12,
+        "auth_run010_login_attempt_user_scope_audit_seq",
+        [
+            "CREATE TABLE IF NOT EXISTS tg_login_attempt ("
+            "attempt_id VARCHAR(64) PRIMARY KEY, "
+            "username VARCHAR(120) NOT NULL, "
+            "client VARCHAR(120) NOT NULL DEFAULT '', "
+            "ok INTEGER NOT NULL DEFAULT 0, "
+            "created_at VARCHAR(40) NOT NULL DEFAULT '')",
+            "CREATE INDEX IF NOT EXISTS ix_tg_login_attempt_key "
+            "ON tg_login_attempt (username, client, created_at)",
+            "__CALLABLE__:_migrate_audit_seq",
+            "CREATE UNIQUE INDEX IF NOT EXISTS ux_tg_audit_seq ON tg_audit_log (seq)",
+            "ALTER TABLE tg_user ADD COLUMN workspaces VARCHAR(500) NOT NULL DEFAULT '[\"*\"]'",
+        ],
+    ),
+    (
+        13,
+        "run_submission_receipts",
+        [
+            "CREATE TABLE IF NOT EXISTS tg_run_submission ("
+            "idempotency_key VARCHAR(160) PRIMARY KEY, "
+            "run_id VARCHAR(64) NOT NULL, "
+            "fencing_token INTEGER NOT NULL DEFAULT 0, "
+            "worker_id VARCHAR(120) NOT NULL DEFAULT '', "
+            "execution_status VARCHAR(24) NOT NULL DEFAULT '', "
+            "test_verdict VARCHAR(24) NOT NULL DEFAULT 'NOT_EVALUATED', "
+            "report_json JSON, error TEXT, "
+            "observer_mode VARCHAR(24) NOT NULL DEFAULT '', "
+            "submitted_at FLOAT NOT NULL DEFAULT 0)",
+            "CREATE INDEX IF NOT EXISTS ix_tg_run_submission_run ON tg_run_submission (run_id)",
+        ],
+    ),
 ]
+
+
+def _migrate_audit_seq(conn) -> None:  # type: ignore[no-untyped-def]
+    """给 tg_audit_log 追加单调 seq 列并回填（RUN-010 WP1）。
+
+    旧行没有 seq；按 (timestamp, audit_id) 排序回填 1..N，保证既有哈希链顺序
+    与新的 seq 顺序一致。跨进程并发追加依赖 seq 上的唯一索引做乐观分配。
+    """
+    from sqlalchemy import inspect
+
+    inspector = inspect(conn)
+    if "tg_audit_log" not in inspector.get_table_names():
+        return
+    cols = {c["name"] for c in inspector.get_columns("tg_audit_log")}
+    if "seq" in cols:
+        return
+    conn.execute(text("ALTER TABLE tg_audit_log ADD COLUMN seq INTEGER"))
+    rows = conn.execute(
+        text("SELECT audit_id FROM tg_audit_log ORDER BY timestamp ASC, audit_id ASC")
+    ).fetchall()
+    for idx, row in enumerate(rows, start=1):
+        conn.execute(
+            text("UPDATE tg_audit_log SET seq = :s WHERE audit_id = :a"),
+            {"s": idx, "a": row[0]},
+        )
+
+
+def _migrate_evidence_digest_semantics(conn) -> None:  # type: ignore[no-untyped-def]
+    """区分"原始来源摘要"与"持久化内容摘要"（RUN-007-FINALIZATION-2 / WP2）。
+
+    历史行的 `sha256` 是脱敏前原始内容的摘要，而库里存的是脱敏后内容：
+    两者混用会使"服务端用持久化内容重算摘要"必然对不上。新增列并存，
+    历史行标记为 `legacy_backfilled`（内容摘要无法回溯证明，校验时如实报 NOT_RUN）。
+    """
+    from sqlalchemy import inspect
+
+    inspector = inspect(conn)
+    if "tg_evidence" not in inspector.get_table_names():
+        return
+    cols = {c["name"] for c in inspector.get_columns("tg_evidence")}
+    additions = [
+        ("stored_content_sha256", "VARCHAR(64) DEFAULT ''"),
+        ("attachment_sha256", "VARCHAR(64) DEFAULT ''"),
+        ("integrity_detail", "JSON"),
+    ]
+    for name, ddl in additions:
+        if name in cols:
+            continue
+        conn.execute(text(f"ALTER TABLE tg_evidence ADD COLUMN {name} {ddl}"))
+
+
+def _migrate_widen_intent_ref(conn) -> None:  # type: ignore[no-untyped-def]
+    """把 tg_testcase.intent_ref 从 VARCHAR(64) 放宽到 VARCHAR(255)（RUN-007-FINALIZATION-2）。
+
+    真实缺陷：探索编译曾把"需求正文"写进 intent_ref，SQLite 不校验 VARCHAR 长度所以
+    一直正常，PostgreSQL 抛 `value too long for type character varying(64)` → 500。
+    语义修复见 compiler/exploration_service；这里同时放宽列以兼容历史长引用。
+    """
+    from sqlalchemy import inspect
+
+    inspector = inspect(conn)
+    if "tg_testcase" not in inspector.get_table_names():
+        return
+    cols = {c["name"]: c for c in inspector.get_columns("tg_testcase")}
+    col = cols.get("intent_ref")
+    if col is None:
+        return
+    length = getattr(col.get("type"), "length", None)
+    if length is not None and int(length) >= 255:
+        return
+    if conn.dialect.name == "sqlite":
+        return  # SQLite 不强制 VARCHAR 长度，无需重建表
+    conn.execute(text("ALTER TABLE tg_testcase ALTER COLUMN intent_ref TYPE VARCHAR(255)"))
 
 
 def _migrate_step_primary_key(conn) -> None:  # type: ignore[no-untyped-def]
@@ -306,6 +536,9 @@ _MIGRATION_CALLABLES = {
     "_migrate_step_primary_key": _migrate_step_primary_key,
     "_migrate_inbox_states": _migrate_inbox_states,
     "_migrate_review_revision": _migrate_review_revision,
+    "_migrate_evidence_digest_semantics": _migrate_evidence_digest_semantics,
+    "_migrate_widen_intent_ref": _migrate_widen_intent_ref,
+    "_migrate_audit_seq": _migrate_audit_seq,
 }
 
 _lock = threading.RLock()

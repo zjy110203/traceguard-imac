@@ -1,0 +1,223 @@
+{
+  "engine": "axe-core (npm)",
+  "routes": 13,
+  "rules": [
+    "label",
+    "button-name",
+    "image-alt",
+    "heading-order",
+    "th-has-data-cells",
+    "select-name",
+    "empty-table-header",
+    "aria-valid-attr-value",
+    "aria-allowed-attr",
+    "color-contrast",
+    "link-name",
+    "listitem",
+    "definition-list"
+  ],
+  "results": [
+    {
+      "route": "login",
+      "path": "/login",
+      "axe_engine": "axe-core (npm)",
+      "violations": [],
+      "violation_count": 0,
+      "pass_count": 8,
+      "label_check": {
+        "inputs": 0,
+        "unlabeled": []
+      },
+      "console_errors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ]
+    },
+    {
+      "route": "dashboard",
+      "path": "/",
+      "axe_engine": "axe-core (npm)",
+      "violations": [],
+      "violation_count": 0,
+      "pass_count": 8,
+      "label_check": {
+        "inputs": 0,
+        "unlabeled": []
+      },
+      "console_errors": []
+    },
+    {
+      "route": "intents",
+      "path": "/intents",
+      "axe_engine": "axe-core (npm)",
+      "violations": [],
+      "violation_count": 0,
+      "pass_count": 8,
+      "label_check": {
+        "inputs": 1,
+        "unlabeled": []
+      },
+      "console_errors": []
+    },
+    {
+      "route": "testcases",
+      "path": "/testcases",
+      "axe_engine": "axe-core (npm)",
+      "violations": [],
+      "violation_count": 0,
+      "pass_count": 10,
+      "label_check": {
+        "inputs": 2,
+        "unlabeled": []
+      },
+      "console_errors": []
+    },
+    {
+      "route": "oracles",
+      "path": "/oracles",
+      "axe_engine": "axe-core (npm)",
+      "violations": [],
+      "violation_count": 0,
+      "pass_count": 9,
+      "label_check": {
+        "inputs": 1,
+        "unlabeled": []
+      },
+      "console_errors": []
+    },
+    {
+      "route": "runs",
+      "path": "/runs",
+      "axe_engine": "axe-core (npm)",
+      "violations": [],
+      "violation_count": 0,
+      "pass_count": 8,
+      "label_check": {
+        "inputs": 3,
+        "unlabeled": []
+      },
+      "console_errors": []
+    },
+    {
+      "route": "explorer",
+      "path": "/explorer",
+      "axe_engine": "axe-core (npm)",
+      "violations": [],
+      "violation_count": 0,
+      "pass_count": 8,
+      "label_check": {
+        "inputs": 4,
+        "unlabeled": []
+      },
+      "console_errors": []
+    },
+    {
+      "route": "models",
+      "path": "/models",
+      "axe_engine": "axe-core (npm)",
+      "violations": [],
+      "violation_count": 0,
+      "pass_count": 8,
+      "label_check": {
+        "inputs": 0,
+        "unlabeled": []
+      },
+      "console_errors": []
+    },
+    {
+      "route": "diagnoses",
+      "path": "/diagnoses",
+      "axe_engine": "axe-core (npm)",
+      "violations": [],
+      "violation_count": 0,
+      "pass_count": 8,
+      "label_check": {
+        "inputs": 2,
+        "unlabeled": []
+      },
+      "console_errors": []
+    },
+    {
+      "route": "repairs",
+      "path": "/repairs",
+      "axe_engine": "axe-core (npm)",
+      "violations": [],
+      "violation_count": 0,
+      "pass_count": 7,
+      "label_check": {
+        "inputs": 1,
+        "unlabeled": []
+      },
+      "console_errors": []
+    },
+    {
+      "route": "benchmark",
+      "path": "/benchmark",
+      "axe_engine": "axe-core (npm)",
+      "violations": [],
+      "violation_count": 0,
+      "pass_count": 6,
+      "label_check": {
+        "inputs": 0,
+        "unlabeled": []
+      },
+      "console_errors": []
+    },
+    {
+      "route": "system",
+      "path": "/system",
+      "axe_engine": "axe-core (npm)",
+      "violations": [],
+      "violation_count": 0,
+      "pass_count": 8,
+      "label_check": {
+        "inputs": 0,
+        "unlabeled": []
+      },
+      "console_errors": []
+    },
+    {
+      "route": "users",
+      "path": "/users",
+      "axe_engine": "axe-core (npm)",
+      "violations": [],
+      "violation_count": 0,
+      "pass_count": 8,
+      "label_check": {
+        "inputs": 0,
+        "unlabeled": []
+      },
+      "console_errors": []
+    }
+  ],
+  "fixed_views_recheck": {
+    "intents": {
+      "inputs": 1,
+      "unlabeled": []
+    },
+    "testcases": {
+      "inputs": 2,
+      "unlabeled": []
+    },
+    "oracles": {
+      "inputs": 1,
+      "unlabeled": []
+    },
+    "runs": {
+      "inputs": 3,
+      "unlabeled": []
+    },
+    "diagnoses": {
+      "inputs": 2,
+      "unlabeled": []
+    },
+    "users": {
+      "inputs": 0,
+      "unlabeled": []
+    }
+  },
+  "total_violations": 0
+}

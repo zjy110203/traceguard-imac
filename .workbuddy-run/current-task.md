@@ -1,3 +1,34 @@
+
+# 当前任务（RUN-010 交付，2026-11-24）
+
+> **2026-11-25 00:30 CST 收尾完成（RUN-010-FINAL-CLOSEOUT）**：统计更正、CL-01/CL-02 缺陷修复、
+> WP4/WP6 报告补齐、PR #2 标题与描述更新；三级 CI 门禁在 `d4d59ba` 上全部 success。
+> 待负责人决策：PR #2 合并时机、LICENSE 选择、B-17 安全批准。
+> 权威报告：`docs/RUN-010-CLOSEOUT-REPORT.md`、`docs/RUN-010-FINAL-REPORT.md`。
+> 历史内容保留在下方。
+
+---
+
+# 当前任务（RUN-010 交付，2026-11-24 22:45 CST）
+
+> RUN-010 已完成：全部 10 个工作包交付，见 `docs/RUN-010-FINAL-REPORT.md`。
+> 待负责人决策：PR #2 合并时机、LICENSE 选择、B-17 安全批准。
+> 历史内容保留在下方。
+
+---
+
+# 当前任务（RUN-009 交付，2026-11-24）
+
+> 历史标题「RUN-002 结束点」保留在下方。RUN-009 已完成，最终状态见 `docs/RUN-009-FINAL-REPORT.md`。
+
+## RUN-009 收尾
+
+- WP0/1/2/5/6/7 通过；WP3/WP4/WP8 PARTIAL（宿主级网络封锁、B-17 四场景、vue-tsc 升级如实 BLOCKED/NEEDS_DECISION）。
+- 新增认证/RBAC、受控出站代理、14/14 路由验收、资源监控、Benchmark v4、供应链审计与完整交付报告。
+- PR #2 保持 open/HOLD，合并决策记录在 `docs/RUN-009-REVIEW-REPORT.md` 与最终报告。
+
+## 历史快照（RUN-002 结束点）
+
 # 当前任务（RUN-002 结束点）
 
 ## 已完成
@@ -51,3 +82,17 @@
 - 真实环境：正常/故障 Run、诊断、probe-plan、真实 http_state 回灌、图节点均已实测（`docs/assets/run006/`）。
 - 未完成：WP2 全链 E2E（PARTIAL）、WP3 前端（NOT_IMPLEMENTED 本轮）、WP4 PG/Worker/长稳（BLOCKED）、
   WP5 CI 真实运行（BLOCKED）、WP6 Benchmark v3（NOT_IMPLEMENTED 本轮）。
+
+---
+
+## RUN-007-RESUME 更新（2026-11-23，追加）
+
+- 分支：`workbuddy/run007-resume-20261123`（基于 `origin/main` `ac2876e`）
+- 已完成（VERIFIED）：WP1 复核（163 passed）、迁移 v8 幂等/旧库升级、E2E 独立 Worker 队列（55 步 0 失败）、
+  证据来源修正与图绑定校验、沙箱走队列（fail-closed）、Run 级状态缓存隔离、前端 15 视图验收（75/75）、
+  Worker 故障恢复（17/17）、60 分钟长稳（65 周期/19 checks）、Benchmark 四臂 30 场景 + LLM 两臂。
+- 已完成（IMPLEMENTED，未运行）：CI 三级门禁修复（PR 分支过滤、Nightly 去掩盖、Release 去 RUN-005 依赖 +
+  Actions API 校验 Nightly `head_sha`）。**无 GitHub 凭据 → 未触发**。
+- 阻塞：分支推送/PR（无 https 凭据、无 SSH key、无 token）；本机 PG16 运行时（无 Docker/psql）；
+  人工诊断基线（无人力）；Routed 臂（未触发 reasoning 升级）。
+- 未完成（如实登记）：Benchmark 中定位器场景的自愈"沙箱通过 → 晋升"断点未定位（回归 0/1）。

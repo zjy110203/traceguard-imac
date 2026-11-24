@@ -1,0 +1,387 @@
+{
+  "config": {
+    "workers": 2,
+    "runs_submitted": 6,
+    "case_id": "tcase_tf_create_normal",
+    "api": "http://127.0.0.1:8030"
+  },
+  "wall_s": 15.21,
+  "completed": 6,
+  "failed_or_timeout": 0,
+  "incomplete": 0,
+  "completion_rate": 1.0,
+  "throughput_runs_per_min": 23.67,
+  "queue_wait_s": {
+    "avg": 5.353,
+    "max": 10.33,
+    "n": 6
+  },
+  "api_latency_ms": {
+    "count": 387,
+    "p50_ms": 1.903,
+    "p95_ms": 3.724,
+    "p99_ms": 5.705,
+    "max_ms": 40.328,
+    "by_path": {
+      "/api/v1/runs/run_17955098608800ce4758087be": {
+        "count": 34,
+        "p50_ms": 2.543,
+        "p95_ms": 3.999,
+        "p99_ms": 8.447
+      },
+      "/api/v1/runs/run_17955098608859636f3d0e537": {
+        "count": 34,
+        "p50_ms": 1.818,
+        "p95_ms": 3.045,
+        "p99_ms": 7.192
+      },
+      "/api/v1/runs/run_17955098608871860baf2fb60": {
+        "count": 63,
+        "p50_ms": 1.991,
+        "p95_ms": 3.988,
+        "p99_ms": 4.802
+      },
+      "/api/v1/runs/run_17955098608899a10adc863ab": {
+        "count": 63,
+        "p50_ms": 1.657,
+        "p95_ms": 2.997,
+        "p99_ms": 3.761
+      },
+      "/api/v1/runs/run_1795509860892acd21d01b9fa": {
+        "count": 93,
+        "p50_ms": 1.817,
+        "p95_ms": 3.689,
+        "p99_ms": 4.178
+      },
+      "/api/v1/runs/run_1795509860894a8217ef884a6": {
+        "count": 93,
+        "p50_ms": 1.721,
+        "p95_ms": 2.646,
+        "p99_ms": 3.18
+      },
+      "/api/v1/system/seed": {
+        "count": 1,
+        "p50_ms": 40.328,
+        "p95_ms": 40.328,
+        "p99_ms": 40.328
+      },
+      "/api/v1/testcases/tcase_tf_create_normal/execute": {
+        "count": 6,
+        "p50_ms": 2.335,
+        "p95_ms": 11.67,
+        "p99_ms": 13.896
+      }
+    },
+    "non_2xx_count": 0
+  },
+  "resource": {
+    "avg": {
+      "api": {
+        "avg": 0.09,
+        "max": 0.14,
+        "n": 8
+      },
+      "workers": {
+        "avg": 0.12,
+        "max": 0.28,
+        "n": 8
+      }
+    },
+    "rss": {
+      "api": {
+        "avg": 86.51,
+        "max": 86.64,
+        "n": 8
+      },
+      "workers": {
+        "avg": 164.14,
+        "max": 168.69,
+        "n": 8
+      }
+    },
+    "chromium_avg": {
+      "cpu_pct": 0.48,
+      "rss_mb": 520.92,
+      "browser_instance_count_max": 2
+    }
+  },
+  "db_final": {
+    "source": "sqlite3 只读连接 + os.stat（真实文件/表统计）",
+    "db_path": "/Users/dlp--test/Desktop/traceguard/.traceguard/run009/wp5/perf-2w-164418/traceguard.db",
+    "file_bytes": 1003520,
+    "wal_bytes": 4239512,
+    "shm_bytes": 32768,
+    "evidence_dir_bytes": 1357751,
+    "journal_mode": "wal",
+    "busy_timeout_ms": 500,
+    "synchronous": 2,
+    "page_count": 261,
+    "freelist_count": 0,
+    "migrations": [
+      {
+        "version": 2,
+        "name": "event_and_evidence_indexes",
+        "applied_at": "2026-11-24T08:44:19.571494Z"
+      },
+      {
+        "version": 3,
+        "name": "doc_store_index",
+        "applied_at": "2026-11-24T08:44:19.571944Z"
+      },
+      {
+        "version": 4,
+        "name": "step_primary_key_scoped_by_run",
+        "applied_at": "2026-11-24T08:44:19.572494Z"
+      },
+      {
+        "version": 5,
+        "name": "consumer_inbox_states",
+        "applied_at": "2026-11-24T08:44:19.572894Z"
+      },
+      {
+        "version": 6,
+        "name": "producer_sequence_allocator",
+        "applied_at": "2026-11-24T08:44:19.573119Z"
+      },
+      {
+        "version": 7,
+        "name": "testcase_review_revision",
+        "applied_at": "2026-11-24T08:44:19.573439Z"
+      },
+      {
+        "version": 8,
+        "name": "promotion_receipts",
+        "applied_at": "2026-11-24T08:44:19.573992Z"
+      },
+      {
+        "version": 9,
+        "name": "evidence_digest_semantics",
+        "applied_at": "2026-11-24T08:44:19.574341Z"
+      },
+      {
+        "version": 10,
+        "name": "widen_testcase_intent_ref",
+        "applied_at": "2026-11-24T08:44:19.574643Z"
+      },
+      {
+        "version": 11,
+        "name": "auth_rbac_audit",
+        "applied_at": "2026-11-24T08:44:19.575795Z"
+      }
+    ],
+    "row_counts": {
+      "tg_run": 6,
+      "tg_event": 78,
+      "tg_evidence": 168,
+      "tg_step": 48
+    },
+    "indexes": [
+      {
+        "name": "ix_tg_artifact_sha256",
+        "table": "tg_artifact"
+      },
+      {
+        "name": "ix_tg_artifact_workspace_id",
+        "table": "tg_artifact"
+      },
+      {
+        "name": "ix_tg_audit_action",
+        "table": "tg_audit_log"
+      },
+      {
+        "name": "ix_tg_audit_actor",
+        "table": "tg_audit_log"
+      },
+      {
+        "name": "ix_tg_doc_kind_ws",
+        "table": "tg_doc"
+      },
+      {
+        "name": "ix_tg_doc_ref_id",
+        "table": "tg_doc"
+      },
+      {
+        "name": "ix_tg_event_event_type",
+        "table": "tg_event"
+      },
+      {
+        "name": "ix_tg_event_workspace_id",
+        "table": "tg_event"
+      },
+      {
+        "name": "ix_tg_event_ws_type",
+        "table": "tg_event"
+      },
+      {
+        "name": "ix_tg_evidence_kind",
+        "table": "tg_evidence"
+      },
+      {
+        "name": "ix_tg_evidence_run",
+        "table": "tg_evidence"
+      },
+      {
+        "name": "ix_tg_evidence_run_id",
+        "table": "tg_evidence"
+      },
+      {
+        "name": "ix_tg_evidence_source_type",
+        "table": "tg_evidence"
+      },
+      {
+        "name": "ix_tg_evidence_workspace_id",
+        "table": "tg_evidence"
+      },
+      {
+        "name": "ix_tg_intent_workspace_id",
+        "table": "tg_intent"
+      },
+      {
+        "name": "ix_tg_metric_experiment_id",
+        "table": "tg_metric"
+      },
+      {
+        "name": "ix_tg_oracle_oracle_id",
+        "table": "tg_oracle"
+      },
+      {
+        "name": "ix_tg_oracle_workspace_id",
+        "table": "tg_oracle"
+      },
+      {
+        "name": "ix_tg_promotion_receipt_proposal",
+        "table": "tg_promotion_receipt"
+      },
+      {
+        "name": "ix_tg_promotion_receipt_proposal_id",
+        "table": "tg_promotion_receipt"
+      },
+      {
+        "name": "ix_tg_promotion_receipt_testcase",
+        "table": "tg_promotion_receipt"
+      },
+      {
+        "name": "ix_tg_promotion_receipt_testcase_id",
+        "table": "tg_promotion_receipt"
+      },
+      {
+        "name": "ix_tg_run_queue",
+        "table": "tg_run"
+      },
+      {
+        "name": "ix_tg_run_task_id",
+        "table": "tg_run"
+      },
+      {
+        "name": "ix_tg_run_workspace_id",
+        "table": "tg_run"
+      },
+      {
+        "name": "ix_tg_session_user",
+        "table": "tg_session"
+      },
+      {
+        "name": "ix_tg_step_run_id",
+        "table": "tg_step"
+      },
+      {
+        "name": "ix_tg_step_run_idx",
+        "table": "tg_step"
+      },
+      {
+        "name": "ix_tg_step_step_id",
+        "table": "tg_step"
+      },
+      {
+        "name": "ix_tg_task_idempotency_key",
+        "table": "tg_task"
+      },
+      {
+        "name": "ix_tg_task_workspace_id",
+        "table": "tg_task"
+      },
+      {
+        "name": "ix_tg_testcase_intent_ref",
+        "table": "tg_testcase"
+      },
+      {
+        "name": "ix_tg_testcase_workspace_id",
+        "table": "tg_testcase"
+      },
+      {
+        "name": "ix_tg_testcase_version_testcase_id",
+        "table": "tg_testcase_version"
+      },
+      {
+        "name": "ix_tg_testcase_version_workspace_id",
+        "table": "tg_testcase_version"
+      }
+    ],
+    "query_probes": {
+      "events_limit500": {
+        "ms": 0.92,
+        "rows": 78
+      },
+      "evidence_limit500": {
+        "ms": 0.03,
+        "error": "no such column: created_at"
+      }
+    }
+  },
+  "runs": [
+    {
+      "index": 0,
+      "run_id": "run_17955098608800ce4758087be",
+      "ok": true,
+      "final_status": "COMPLETED",
+      "test_verdict": "PASSED",
+      "elapsed_s": 5.554,
+      "queue_wait_s": 0.181
+    },
+    {
+      "index": 1,
+      "run_id": "run_17955098608859636f3d0e537",
+      "ok": true,
+      "final_status": "COMPLETED",
+      "test_verdict": "PASSED",
+      "elapsed_s": 5.552,
+      "queue_wait_s": 0.179
+    },
+    {
+      "index": 2,
+      "run_id": "run_17955098608871860baf2fb60",
+      "ok": true,
+      "final_status": "COMPLETED",
+      "test_verdict": "PASSED",
+      "elapsed_s": 10.331,
+      "queue_wait_s": 5.551
+    },
+    {
+      "index": 3,
+      "run_id": "run_17955098608899a10adc863ab",
+      "ok": true,
+      "final_status": "COMPLETED",
+      "test_verdict": "PASSED",
+      "elapsed_s": 10.331,
+      "queue_wait_s": 5.55
+    },
+    {
+      "index": 4,
+      "run_id": "run_1795509860892acd21d01b9fa",
+      "ok": true,
+      "final_status": "COMPLETED",
+      "test_verdict": "PASSED",
+      "elapsed_s": 15.181,
+      "queue_wait_s": 10.33
+    },
+    {
+      "index": 5,
+      "run_id": "run_1795509860894a8217ef884a6",
+      "ok": true,
+      "final_status": "COMPLETED",
+      "test_verdict": "PASSED",
+      "elapsed_s": 15.18,
+      "queue_wait_s": 10.329
+    }
+  ]
+}

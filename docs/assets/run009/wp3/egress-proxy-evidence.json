@@ -1,0 +1,891 @@
+{
+  "started_at": "2026-11-24T08:18:23Z",
+  "proxy_url": "http://127.0.0.1:52690",
+  "policy_origins": [
+    "http://127.0.0.1:52683",
+    "http://127.0.0.1:52685",
+    "http://::1:52686",
+    "http://safe.example:52689",
+    "https://127.0.0.1:52688",
+    "ws://127.0.0.1:52688"
+  ],
+  "policy_pinned_dns": {
+    "safe.example": [
+      "127.0.0.1"
+    ]
+  },
+  "ports": {
+    "proxy": 52690,
+    "allowed": 52683,
+    "forbidden": 52684,
+    "chain": 52685,
+    "ipv6_allowed": 52686,
+    "ipv6_forbidden": 52687,
+    "dns_flip": 52689,
+    "ws_echo": 52688
+  },
+  "scenarios": [
+    {
+      "name": "allowed_target",
+      "navigation": {
+        "status": 200,
+        "url": "http://127.0.0.1:52683/page"
+      },
+      "fetch_status": 200,
+      "allowed_hits": [
+        "/page",
+        "/ok"
+      ]
+    },
+    {
+      "name": "unauthorized_target",
+      "navigation": {
+        "status": 403,
+        "url": "http://127.0.0.1:52684/steal"
+      },
+      "forbidden_hits": []
+    },
+    {
+      "name": "cross_origin_fetch",
+      "fetch_result": "rejected:TypeError",
+      "forbidden_hits": []
+    },
+    {
+      "name": "top_level_302",
+      "navigation": {
+        "status": 403,
+        "url": "http://127.0.0.1:52684/steal"
+      },
+      "final_url": "http://127.0.0.1:52684/steal",
+      "unauthorized_new_hits": 0
+    },
+    {
+      "name": "multi_hop_redirect",
+      "navigation": {
+        "status": 403,
+        "url": "http://127.0.0.1:52684/steal"
+      },
+      "chain_hits": [
+        "/redirect_ext",
+        "/chain1",
+        "/chain2"
+      ],
+      "unauthorized_new_hits": 0
+    },
+    {
+      "name": "dns_change",
+      "pinned": [
+        "127.0.0.1"
+      ],
+      "answer_after": [
+        "::1"
+      ],
+      "navigation_before": {
+        "status": 200,
+        "url": "http://safe.example:52689/before-flip"
+      },
+      "navigation_after": {
+        "status": 403,
+        "url": "http://safe.example:52689/steal2"
+      },
+      "dns_v4_hits": [
+        "/before-flip"
+      ],
+      "flip_target_hits": []
+    },
+    {
+      "name": "websocket",
+      "authorized_result": "msg:echo:ping",
+      "unauthorized_result": "error",
+      "forbidden_hits": []
+    },
+    {
+      "name": "ipv4_ipv6",
+      "ipv6_authorized": {
+        "status": 200,
+        "url": "http://[::1]:52686/page"
+      },
+      "ipv6_unauthorized": {
+        "status": 403,
+        "url": "http://[::1]:52687/steal"
+      },
+      "ipv6_unauthorized_hits": []
+    },
+    {
+      "name": "private_network",
+      "cases": {
+        "private_10": {
+          "status": 403,
+          "reason": "403 PRIVATE_NETWORK_BLOCKED"
+        },
+        "link_local_metadata": {
+          "status": 403,
+          "reason": "403 PRIVATE_NETWORK_BLOCKED"
+        },
+        "unauth_host_resolves_private": {
+          "status": 403,
+          "reason": "403 DNS_RESOLVES_TO_PRIVATE_NETWORK"
+        }
+      }
+    },
+    {
+      "name": "illegal_schemes",
+      "cases": {
+        "ftp": {
+          "status": 403,
+          "reason": "403 SCHEME_NOT_ALLOWED"
+        },
+        "file": {
+          "status": 403,
+          "reason": "403 SCHEME_NOT_ALLOWED"
+        },
+        "gopher": {
+          "status": 403,
+          "reason": "403 SCHEME_NOT_ALLOWED"
+        },
+        "userinfo": {
+          "status": 403,
+          "reason": "403 URL_USERINFO_FORBIDDEN"
+        },
+        "connect_wrong_port": {
+          "status": 403,
+          "reason": "403 PORT_NOT_ALLOWED"
+        },
+        "connect_forbidden": {
+          "status": 403,
+          "reason": "403 PORT_NOT_ALLOWED"
+        }
+      }
+    }
+  ],
+  "unauthorized_servers": {
+    "forbidden": {
+      "count": 0,
+      "hits": []
+    },
+    "ipv6-forbidden": {
+      "count": 0,
+      "hits": []
+    },
+    "dns-flip-target": {
+      "count": 0,
+      "hits": []
+    }
+  },
+  "authorized_servers": {
+    "allowed": {
+      "count": 5,
+      "hits": [
+        {
+          "at_ms": 1795508302018,
+          "method": "GET",
+          "path": "/page",
+          "header_names": [
+            "accept",
+            "accept-encoding",
+            "connection",
+            "host",
+            "sec-ch-ua",
+            "sec-ch-ua-mobile",
+            "sec-ch-ua-platform",
+            "sec-fetch-dest",
+            "sec-fetch-mode",
+            "sec-fetch-site",
+            "sec-fetch-user",
+            "upgrade-insecure-requests",
+            "user-agent"
+          ]
+        },
+        {
+          "at_ms": 1795508302157,
+          "method": "GET",
+          "path": "/ok",
+          "header_names": [
+            "accept",
+            "accept-encoding",
+            "connection",
+            "host",
+            "referer",
+            "sec-ch-ua",
+            "sec-ch-ua-mobile",
+            "sec-ch-ua-platform",
+            "sec-fetch-dest",
+            "sec-fetch-mode",
+            "sec-fetch-site",
+            "user-agent"
+          ]
+        },
+        {
+          "at_ms": 1795508302293,
+          "method": "GET",
+          "path": "/page",
+          "header_names": [
+            "accept",
+            "accept-encoding",
+            "connection",
+            "host",
+            "sec-ch-ua",
+            "sec-ch-ua-mobile",
+            "sec-ch-ua-platform",
+            "sec-fetch-dest",
+            "sec-fetch-mode",
+            "sec-fetch-site",
+            "sec-fetch-user",
+            "upgrade-insecure-requests",
+            "user-agent"
+          ]
+        },
+        {
+          "at_ms": 1795508303013,
+          "method": "GET",
+          "path": "/page",
+          "header_names": [
+            "accept",
+            "accept-encoding",
+            "connection",
+            "host",
+            "sec-ch-ua",
+            "sec-ch-ua-mobile",
+            "sec-ch-ua-platform",
+            "sec-fetch-dest",
+            "sec-fetch-mode",
+            "sec-fetch-site",
+            "sec-fetch-user",
+            "upgrade-insecure-requests",
+            "user-agent"
+          ]
+        },
+        {
+          "at_ms": 1795508303525,
+          "method": "GET",
+          "path": "/auth-probe",
+          "header_names": [
+            "authorization",
+            "connection",
+            "cookie",
+            "host"
+          ]
+        }
+      ]
+    },
+    "chain": {
+      "count": 3,
+      "hits": [
+        {
+          "at_ms": 1795508302432,
+          "method": "GET",
+          "path": "/redirect_ext",
+          "header_names": [
+            "accept",
+            "accept-encoding",
+            "connection",
+            "host",
+            "sec-ch-ua",
+            "sec-ch-ua-mobile",
+            "sec-ch-ua-platform",
+            "sec-fetch-dest",
+            "sec-fetch-mode",
+            "sec-fetch-site",
+            "sec-fetch-user",
+            "upgrade-insecure-requests",
+            "user-agent"
+          ]
+        },
+        {
+          "at_ms": 1795508302571,
+          "method": "GET",
+          "path": "/chain1",
+          "header_names": [
+            "accept",
+            "accept-encoding",
+            "connection",
+            "host",
+            "sec-ch-ua",
+            "sec-ch-ua-mobile",
+            "sec-ch-ua-platform",
+            "sec-fetch-dest",
+            "sec-fetch-mode",
+            "sec-fetch-site",
+            "sec-fetch-user",
+            "upgrade-insecure-requests",
+            "user-agent"
+          ]
+        },
+        {
+          "at_ms": 1795508302572,
+          "method": "GET",
+          "path": "/chain2",
+          "header_names": [
+            "accept",
+            "accept-encoding",
+            "connection",
+            "host",
+            "sec-ch-ua",
+            "sec-ch-ua-mobile",
+            "sec-ch-ua-platform",
+            "sec-fetch-dest",
+            "sec-fetch-mode",
+            "sec-fetch-site",
+            "sec-fetch-user",
+            "upgrade-insecure-requests",
+            "user-agent"
+          ]
+        }
+      ]
+    },
+    "ipv6": {
+      "count": 1,
+      "hits": [
+        {
+          "at_ms": 1795508303201,
+          "method": "GET",
+          "path": "/page",
+          "header_names": [
+            "accept",
+            "accept-encoding",
+            "connection",
+            "host",
+            "sec-ch-ua",
+            "sec-ch-ua-mobile",
+            "sec-ch-ua-platform",
+            "sec-fetch-dest",
+            "sec-fetch-mode",
+            "sec-fetch-site",
+            "sec-fetch-user",
+            "upgrade-insecure-requests",
+            "user-agent"
+          ]
+        }
+      ]
+    },
+    "dns-v4": {
+      "count": 1,
+      "hits": [
+        {
+          "at_ms": 1795508302705,
+          "method": "GET",
+          "path": "/before-flip",
+          "header_names": [
+            "accept",
+            "accept-encoding",
+            "connection",
+            "host",
+            "upgrade-insecure-requests",
+            "user-agent"
+          ]
+        }
+      ]
+    }
+  },
+  "proxy_audit": [
+    {
+      "ts": "2026-11-24T08:18:22Z",
+      "channel": "http",
+      "method": "GET",
+      "scheme": "http",
+      "host": "127.0.0.1",
+      "port": 52683,
+      "path": "/page",
+      "resolved_ips": [
+        "127.0.0.1"
+      ],
+      "chosen_ip": "127.0.0.1",
+      "decision": "ALLOW",
+      "reason": "ALLOWED",
+      "connected": true
+    },
+    {
+      "ts": "2026-11-24T08:18:22Z",
+      "channel": "http",
+      "method": "GET",
+      "scheme": "http",
+      "host": "127.0.0.1",
+      "port": 52683,
+      "path": "/ok",
+      "resolved_ips": [
+        "127.0.0.1"
+      ],
+      "chosen_ip": "127.0.0.1",
+      "decision": "ALLOW",
+      "reason": "ALLOWED",
+      "connected": true
+    },
+    {
+      "ts": "2026-11-24T08:18:22Z",
+      "channel": "http",
+      "method": "GET",
+      "scheme": "http",
+      "host": "127.0.0.1",
+      "port": 52684,
+      "path": "/steal",
+      "resolved_ips": [],
+      "chosen_ip": "",
+      "decision": "BLOCK",
+      "reason": "PORT_NOT_ALLOWED",
+      "connected": false
+    },
+    {
+      "ts": "2026-11-24T08:18:22Z",
+      "channel": "http",
+      "method": "GET",
+      "scheme": "http",
+      "host": "127.0.0.1",
+      "port": 52683,
+      "path": "/page",
+      "resolved_ips": [
+        "127.0.0.1"
+      ],
+      "chosen_ip": "127.0.0.1",
+      "decision": "ALLOW",
+      "reason": "ALLOWED",
+      "connected": true
+    },
+    {
+      "ts": "2026-11-24T08:18:22Z",
+      "channel": "http",
+      "method": "GET",
+      "scheme": "http",
+      "host": "127.0.0.1",
+      "port": 52684,
+      "path": "/steal",
+      "resolved_ips": [],
+      "chosen_ip": "",
+      "decision": "BLOCK",
+      "reason": "PORT_NOT_ALLOWED",
+      "connected": false
+    },
+    {
+      "ts": "2026-11-24T08:18:22Z",
+      "channel": "http",
+      "method": "GET",
+      "scheme": "http",
+      "host": "127.0.0.1",
+      "port": 52685,
+      "path": "/redirect_ext",
+      "resolved_ips": [
+        "127.0.0.1"
+      ],
+      "chosen_ip": "127.0.0.1",
+      "decision": "ALLOW",
+      "reason": "ALLOWED",
+      "connected": true
+    },
+    {
+      "ts": "2026-11-24T08:18:22Z",
+      "channel": "http",
+      "method": "GET",
+      "scheme": "http",
+      "host": "127.0.0.1",
+      "port": 52684,
+      "path": "/steal",
+      "resolved_ips": [],
+      "chosen_ip": "",
+      "decision": "BLOCK",
+      "reason": "PORT_NOT_ALLOWED",
+      "connected": false
+    },
+    {
+      "ts": "2026-11-24T08:18:22Z",
+      "channel": "http",
+      "method": "GET",
+      "scheme": "http",
+      "host": "127.0.0.1",
+      "port": 52685,
+      "path": "/chain1",
+      "resolved_ips": [
+        "127.0.0.1"
+      ],
+      "chosen_ip": "127.0.0.1",
+      "decision": "ALLOW",
+      "reason": "ALLOWED",
+      "connected": true
+    },
+    {
+      "ts": "2026-11-24T08:18:22Z",
+      "channel": "http",
+      "method": "GET",
+      "scheme": "http",
+      "host": "127.0.0.1",
+      "port": 52685,
+      "path": "/chain2",
+      "resolved_ips": [
+        "127.0.0.1"
+      ],
+      "chosen_ip": "127.0.0.1",
+      "decision": "ALLOW",
+      "reason": "ALLOWED",
+      "connected": true
+    },
+    {
+      "ts": "2026-11-24T08:18:22Z",
+      "channel": "http",
+      "method": "GET",
+      "scheme": "http",
+      "host": "127.0.0.1",
+      "port": 52684,
+      "path": "/steal",
+      "resolved_ips": [],
+      "chosen_ip": "",
+      "decision": "BLOCK",
+      "reason": "PORT_NOT_ALLOWED",
+      "connected": false
+    },
+    {
+      "ts": "2026-11-24T08:18:22Z",
+      "channel": "http",
+      "method": "GET",
+      "scheme": "http",
+      "host": "safe.example",
+      "port": 52689,
+      "path": "/before-flip",
+      "resolved_ips": [
+        "127.0.0.1"
+      ],
+      "chosen_ip": "127.0.0.1",
+      "decision": "ALLOW",
+      "reason": "ALLOWED",
+      "connected": true
+    },
+    {
+      "ts": "2026-11-24T08:18:22Z",
+      "channel": "http",
+      "method": "GET",
+      "scheme": "http",
+      "host": "safe.example",
+      "port": 52689,
+      "path": "/steal2",
+      "resolved_ips": [],
+      "chosen_ip": "",
+      "decision": "BLOCK",
+      "reason": "DNS_REBINDING_DETECTED",
+      "connected": false
+    },
+    {
+      "ts": "2026-11-24T08:18:23Z",
+      "channel": "http",
+      "method": "GET",
+      "scheme": "http",
+      "host": "127.0.0.1",
+      "port": 52683,
+      "path": "/page",
+      "resolved_ips": [
+        "127.0.0.1"
+      ],
+      "chosen_ip": "127.0.0.1",
+      "decision": "ALLOW",
+      "reason": "ALLOWED",
+      "connected": true
+    },
+    {
+      "ts": "2026-11-24T08:18:23Z",
+      "channel": "connect",
+      "method": "CONNECT",
+      "scheme": "https",
+      "host": "127.0.0.1",
+      "port": 52688,
+      "path": "",
+      "resolved_ips": [
+        "127.0.0.1"
+      ],
+      "chosen_ip": "127.0.0.1",
+      "decision": "ALLOW",
+      "reason": "ALLOWED",
+      "connected": true
+    },
+    {
+      "ts": "2026-11-24T08:18:23Z",
+      "channel": "connect",
+      "method": "CONNECT",
+      "scheme": "https",
+      "host": "127.0.0.1",
+      "port": 52684,
+      "path": "",
+      "resolved_ips": [],
+      "chosen_ip": "",
+      "decision": "BLOCK",
+      "reason": "PORT_NOT_ALLOWED",
+      "connected": false
+    },
+    {
+      "ts": "2026-11-24T08:18:23Z",
+      "channel": "http",
+      "method": "GET",
+      "scheme": "http",
+      "host": "::1",
+      "port": 52686,
+      "path": "/page",
+      "resolved_ips": [
+        "::1"
+      ],
+      "chosen_ip": "::1",
+      "decision": "ALLOW",
+      "reason": "ALLOWED",
+      "connected": true
+    },
+    {
+      "ts": "2026-11-24T08:18:23Z",
+      "channel": "http",
+      "method": "GET",
+      "scheme": "http",
+      "host": "::1",
+      "port": 52687,
+      "path": "/steal",
+      "resolved_ips": [],
+      "chosen_ip": "",
+      "decision": "BLOCK",
+      "reason": "PORT_NOT_ALLOWED",
+      "connected": false
+    },
+    {
+      "ts": "2026-11-24T08:18:23Z",
+      "channel": "http",
+      "method": "GET",
+      "scheme": "http",
+      "host": "10.0.0.5",
+      "port": 80,
+      "path": "/",
+      "resolved_ips": [],
+      "chosen_ip": "",
+      "decision": "BLOCK",
+      "reason": "PRIVATE_NETWORK_BLOCKED",
+      "connected": false
+    },
+    {
+      "ts": "2026-11-24T08:18:23Z",
+      "channel": "http",
+      "method": "GET",
+      "scheme": "http",
+      "host": "169.254.169.254",
+      "port": 80,
+      "path": "/latest/meta-data/",
+      "resolved_ips": [],
+      "chosen_ip": "",
+      "decision": "BLOCK",
+      "reason": "PRIVATE_NETWORK_BLOCKED",
+      "connected": false
+    },
+    {
+      "ts": "2026-11-24T08:18:23Z",
+      "channel": "http",
+      "method": "GET",
+      "scheme": "http",
+      "host": "evil.example",
+      "port": 80,
+      "path": "/steal",
+      "resolved_ips": [],
+      "chosen_ip": "",
+      "decision": "BLOCK",
+      "reason": "DNS_RESOLVES_TO_PRIVATE_NETWORK",
+      "connected": false
+    },
+    {
+      "ts": "2026-11-24T08:18:23Z",
+      "channel": "http",
+      "method": "GET",
+      "scheme": "ftp",
+      "host": "",
+      "port": 0,
+      "path": "",
+      "resolved_ips": [],
+      "chosen_ip": "",
+      "decision": "BLOCK",
+      "reason": "SCHEME_NOT_ALLOWED",
+      "connected": false
+    },
+    {
+      "ts": "2026-11-24T08:18:23Z",
+      "channel": "http",
+      "method": "GET",
+      "scheme": "file",
+      "host": "",
+      "port": 0,
+      "path": "",
+      "resolved_ips": [],
+      "chosen_ip": "",
+      "decision": "BLOCK",
+      "reason": "SCHEME_NOT_ALLOWED",
+      "connected": false
+    },
+    {
+      "ts": "2026-11-24T08:18:23Z",
+      "channel": "http",
+      "method": "GET",
+      "scheme": "gopher",
+      "host": "",
+      "port": 0,
+      "path": "",
+      "resolved_ips": [],
+      "chosen_ip": "",
+      "decision": "BLOCK",
+      "reason": "SCHEME_NOT_ALLOWED",
+      "connected": false
+    },
+    {
+      "ts": "2026-11-24T08:18:23Z",
+      "channel": "http",
+      "method": "GET",
+      "scheme": "http",
+      "host": "",
+      "port": 0,
+      "path": "",
+      "resolved_ips": [],
+      "chosen_ip": "",
+      "decision": "BLOCK",
+      "reason": "URL_USERINFO_FORBIDDEN",
+      "connected": false
+    },
+    {
+      "ts": "2026-11-24T08:18:23Z",
+      "channel": "connect",
+      "method": "CONNECT",
+      "scheme": "https",
+      "host": "127.0.0.1",
+      "port": 52683,
+      "path": "",
+      "resolved_ips": [],
+      "chosen_ip": "",
+      "decision": "BLOCK",
+      "reason": "PORT_NOT_ALLOWED",
+      "connected": false
+    },
+    {
+      "ts": "2026-11-24T08:18:23Z",
+      "channel": "connect",
+      "method": "CONNECT",
+      "scheme": "https",
+      "host": "127.0.0.1",
+      "port": 52684,
+      "path": "",
+      "resolved_ips": [],
+      "chosen_ip": "",
+      "decision": "BLOCK",
+      "reason": "PORT_NOT_ALLOWED",
+      "connected": false
+    },
+    {
+      "ts": "2026-11-24T08:18:23Z",
+      "channel": "http",
+      "method": "GET",
+      "scheme": "http",
+      "host": "127.0.0.1",
+      "port": 52683,
+      "path": "/auth-probe",
+      "resolved_ips": [
+        "127.0.0.1"
+      ],
+      "chosen_ip": "127.0.0.1",
+      "decision": "ALLOW",
+      "reason": "ALLOWED",
+      "connected": true
+    }
+  ],
+  "raw_evidence": {
+    "chromium_proxy_argv": [
+      "--proxy-server=http://127.0.0.1:52690",
+      "--proxy-bypass-list=<-loopback>"
+    ],
+    "playwright_proxy_config": {
+      "server": "http://127.0.0.1:52690",
+      "bypass": "<-loopback>",
+      "note": "Playwright 把 bypass 映射为 Chromium 的 --proxy-bypass-list=<-loopback>；功能证据是 127.0.0.1/::1 请求确实出现在代理审计中且未授权目标 0 命中。"
+    },
+    "auth_header_probe": {
+      "upstream_header_names": [
+        "authorization",
+        "connection",
+        "cookie",
+        "host"
+      ],
+      "upstream_received_proxy_authorization": false,
+      "audit_entry_count": 27,
+      "audit_leaked_any_token": false,
+      "audit_sample": [
+        {
+          "ts": "2026-11-24T08:18:22Z",
+          "channel": "http",
+          "method": "GET",
+          "scheme": "http",
+          "host": "127.0.0.1",
+          "port": 52683,
+          "path": "/page",
+          "resolved_ips": [
+            "127.0.0.1"
+          ],
+          "chosen_ip": "127.0.0.1",
+          "decision": "ALLOW",
+          "reason": "ALLOWED",
+          "connected": true
+        },
+        {
+          "ts": "2026-11-24T08:18:22Z",
+          "channel": "http",
+          "method": "GET",
+          "scheme": "http",
+          "host": "127.0.0.1",
+          "port": 52683,
+          "path": "/ok",
+          "resolved_ips": [
+            "127.0.0.1"
+          ],
+          "chosen_ip": "127.0.0.1",
+          "decision": "ALLOW",
+          "reason": "ALLOWED",
+          "connected": true
+        },
+        {
+          "ts": "2026-11-24T08:18:22Z",
+          "channel": "http",
+          "method": "GET",
+          "scheme": "http",
+          "host": "127.0.0.1",
+          "port": 52684,
+          "path": "/steal",
+          "resolved_ips": [],
+          "chosen_ip": "",
+          "decision": "BLOCK",
+          "reason": "PORT_NOT_ALLOWED",
+          "connected": false
+        }
+      ]
+    }
+  },
+  "checks": {
+    "allowed_target_200": true,
+    "unauthorized_http_status_403": true,
+    "unauthorized_target_zero_requests": true,
+    "cross_origin_fetch_zero_requests": true,
+    "top_level_302_zero_requests": true,
+    "multi_hop_redirect_zero_requests": true,
+    "dns_change_blocked": true,
+    "websocket_authorized": true,
+    "websocket_unauthorized_zero_requests": true,
+    "ipv6_authorized_200": true,
+    "ipv6_unauthorized_403": true,
+    "ipv6_unauthorized_zero_requests": true,
+    "private_network_all_blocked": true,
+    "illegal_schemes_all_blocked": true,
+    "proxy_auth_not_forwarded": true,
+    "audit_no_auth_headers": true,
+    "all_unauthorized_servers_zero_requests": true
+  },
+  "unauthorized_request_count": 0,
+  "passed": true,
+  "blocked_items": [
+    {
+      "item": "浏览器内核 DNS / 应用绕过代理",
+      "status": "BLOCKED",
+      "detail": "未取得宿主级网络命名空间控制（无防火墙/iptables/网络策略）；本代理只在浏览器被正确配置且流量经过它时有效。直连 socket、扩展、非浏览器组件或代理配置丢失都不受约束。"
+    },
+    {
+      "item": "CONNECT/TLS 内部内容检查",
+      "status": "BLOCKED",
+      "detail": "CONNECT 是字节隧道，代理不解密 TLS，看不到 HTTPS 内的路径、Header 与重定向链；仅强制目标 host:port 白名单与 IP 校验。内容级检查需 TLS 中间人，会破坏证书信任模型，刻意不实现。"
+    },
+    {
+      "item": "宿主级出口封锁验证",
+      "status": "BLOCKED",
+      "detail": "未验证「即使绕过代理，目标也不可达」；这要求主机防火墙或容器网络策略，超出本机用户态代理能力。"
+    }
+  ],
+  "limitations": "未授权请求计数基于本地记录器的实际命中，不等于「互联网上不可达」。DNS rebinding 的跨 TCP 连接窗口由连接已校验 IP 关闭；但浏览器内核 DNS 缓存、TLS 内部跳转与应用绕过代理不在本代理覆盖范围。"
+}

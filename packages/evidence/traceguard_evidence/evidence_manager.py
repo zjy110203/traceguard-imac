@@ -27,9 +27,15 @@ class EvidenceRecord:
     kind: str  # raw / normalized / derived / diagnostic
     source_type: str  # browser / network / api / backend_log / database / agent / probe
     source_ref: str
-    sha256: str
+    sha256: str  # 原始来源 payload（脱敏前）的摘要，历史字段名，保持兼容
     workspace_id: str
     content: dict[str, Any] = field(default_factory=dict)
+    #: 实际持久化内容（脱敏后）的摘要；服务端完整性校验以它为准
+    stored_content_sha256: str = ""
+    #: 附件（ArtifactStore 落盘字节）的摘要
+    attachment_sha256: str = ""
+    #: 完整性与来源比对的明细（分开记录，不合并成一个 PASS）
+    integrity_detail: dict[str, Any] = field(default_factory=dict)
     raw_ref: str | None = None
     derivation_rule: str | None = None
     model_version: str | None = None
@@ -46,6 +52,9 @@ class EvidenceRecord:
             "source_type": self.source_type,
             "source_ref": self.source_ref,
             "sha256": self.sha256,
+            "stored_content_sha256": self.stored_content_sha256,
+            "attachment_sha256": self.attachment_sha256,
+            "integrity_detail": dict(self.integrity_detail),
             "workspace_id": self.workspace_id,
             "content": dict(self.content),
             "raw_ref": self.raw_ref,
@@ -81,7 +90,13 @@ class EvidenceManager:
         do_redact: bool = True,
         captured_at: str = "",
     ) -> EvidenceRecord:
-        """采集原始证据。脱敏后存 content，但 sha256 基于脱敏前原始内容记录。"""
+        """采集原始证据。
+
+        摘要语义（RUN-007-FINALIZATION-2 / WP2）：
+        - `sha256` = 脱敏前**原始来源 payload** 的摘要（兼容历史字段名）；
+        - `stored_content_sha256` = 实际持久化内容（脱敏后）的摘要。
+        二者不可混用：库里保存的是脱敏后内容，只有后者能通过"读回内容重算"来验证。
+        """
         raw_hash = _content_hash(content)  # 基于原始内容
         stored_content = redact(content) if do_redact else content
         rec = EvidenceRecord(
@@ -92,6 +107,7 @@ class EvidenceManager:
             sha256=raw_hash,
             workspace_id=workspace_id,
             content=stored_content,
+            stored_content_sha256=_content_hash(stored_content),
             source_trust=source_trust,
             redacted=do_redact,
             captured_at=captured_at or utc_now_iso(),
@@ -130,6 +146,7 @@ class EvidenceManager:
             sha256=_content_hash(content),
             workspace_id=workspace_id,
             content=content,
+            stored_content_sha256=_content_hash(content),
             raw_ref=raw_ref,
             derivation_rule=derivation_rule,
             model_version=model_version,
@@ -141,14 +158,77 @@ class EvidenceManager:
         return rec
 
     def verify_integrity(self, evidence_id: str, original_content: dict[str, Any]) -> bool:
-        """校验内容完整性：基于原始内容重算 SHA-256。"""
+        """**旧语义**：调用者重新提交"原始内容"做来源摘要比对。
+
+        这不是存储完整性校验：它只能证明"调用者手上的内容与采集时的原始 payload 一致"，
+        不能证明库里持久化的内容未被篡改。旧的 `integrity_check` 字段不再由它写入，
+        以免把来源比对冒充成持久化完整性（RUN-007-FINALIZATION-2 / C3）。
+        """
         with self._lock:
             rec = self._records.get(evidence_id)
             if not rec:
                 return False
             ok = rec.sha256 == _content_hash(original_content)
-            rec.integrity_check = "PASS" if ok else "FAIL"
+            rec.integrity_detail = {
+                **rec.integrity_detail,
+                "source_payload_match": "PASS" if ok else "FAIL",
+                "source_payload_checked_with": "caller_supplied_content",
+            }
             return ok
+
+    def verify_storage_integrity(
+        self, evidence_id: str, *, expected_workspace: str | None = None
+    ) -> dict[str, Any]:
+        """服务端存储完整性：读持久化内容 → 重算摘要 → 与保存时摘要比较。
+
+        返回 {status: PASS|FAIL|NOT_RUN, checks: {...}, reason}，并且**不接收**调用者内容。
+        """
+        with self._lock:
+            rec = self._records.get(evidence_id)
+            if not rec:
+                return {"status": "FAIL", "reason": "EVIDENCE_NOT_FOUND", "checks": {}}
+            checks: dict[str, Any] = {"record_found": True}
+            reasons: list[str] = []
+            if expected_workspace:
+                checks["workspace_match"] = rec.workspace_id == expected_workspace
+                if not checks["workspace_match"]:
+                    reasons.append("WORKSPACE_MISMATCH")
+            recomputed = _content_hash(rec.content)
+            if not rec.stored_content_sha256:
+                checks["stored_content_match"] = None
+                reasons.append("STORED_DIGEST_NOT_RECORDED_AT_CAPTURE")
+            else:
+                checks["stored_content_match"] = recomputed == rec.stored_content_sha256
+                if not checks["stored_content_match"]:
+                    reasons.append("STORED_CONTENT_MISMATCH")
+            if rec.kind == "derived":
+                raw = self._records.get(rec.raw_ref or "")
+                checks["derived_source_exists"] = raw is not None
+                checks["derived_source_is_raw"] = bool(raw and raw.kind == "raw")
+                checks["derivation_rule_recorded"] = bool(rec.derivation_rule)
+                for key in (
+                    "derived_source_exists",
+                    "derived_source_is_raw",
+                    "derivation_rule_recorded",
+                ):
+                    if checks[key] is False:
+                        reasons.append(key.upper())
+            if any(v is False for v in checks.values()):
+                status = "FAIL"
+            elif checks.get("stored_content_match") is None:
+                status = "NOT_RUN"
+            else:
+                status = "PASS"
+            rec.integrity_check = status
+            rec.integrity_detail = {**rec.integrity_detail, "storage": checks, "reasons": reasons}
+            return {
+                "status": status,
+                "reason": reasons[0] if reasons else "",
+                "reasons": reasons,
+                "checks": checks,
+                "stored_content_sha256": rec.stored_content_sha256,
+                "recomputed_sha256": recomputed,
+            }
 
     def get(self, evidence_id: str) -> EvidenceRecord | None:
         with self._lock:

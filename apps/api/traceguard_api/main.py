@@ -22,6 +22,9 @@ from traceguard_core.config import get_settings
 from traceguard_core.errors import AppError, ErrorCode, app_error_handler, error_response
 from traceguard_core.logging import configure_logging, get_logger
 
+from .auth import auth_middleware
+from .auth_policy import apply_auth_policy
+
 logger = get_logger("traceguard.api")
 
 DIST_DIR = Path(__file__).resolve().parents[2] / "web" / "dist"
@@ -53,6 +56,16 @@ def create_app() -> FastAPI:
     settings = get_settings()
     configure_logging(settings.log_level, settings.log_json)
 
+    # RUN-010 WP1：认证环境策略启动期强制。
+    # production 下认证关闭 / Cookie 不安全 / TTL 超限 → 直接启动失败（fail-closed）；
+    # staging 同样强制认证；development 显式关闭时打醒目警告。
+    decision = apply_auth_policy(settings)
+    for warning in decision.warnings_or_empty:
+        logger.warning("auth_policy_warning", warning=warning)
+    if not decision.ok:
+        logger.error("auth_policy_violation", reason=decision.fail_reason)
+        raise RuntimeError(decision.fail_reason)
+
     app = FastAPI(
         title=settings.app_name,
         version="0.2.0",
@@ -62,6 +75,12 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
     app.add_exception_handler(AppError, app_error_handler)
+    # RUN-009 WP2：认证开关显式化。未开启时必须明确记录，不得静默回退匿名管理员。
+    if not decision.auth_effective:
+        logger.warning("auth_disabled_explicitly", environment=settings.environment)
+    else:
+        logger.info("auth_enabled", session_ttl_s=settings.auth_session_ttl_s)
+    app.middleware("http")(auth_middleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_origins,
@@ -161,9 +180,7 @@ def create_app() -> FastAPI:
                             return
                     now = _time.monotonic()
                     if now - last_beat >= max(0.2, heartbeat_seconds):
-                        yield sse_util.format_heartbeat(
-                            cursor=f"at={at};eid={eid}" if at else None
-                        )
+                        yield sse_util.format_heartbeat(cursor=f"at={at};eid={eid}" if at else None)
                         last_beat = now
                     await asyncio.sleep(max(0.05, poll_interval))
             except asyncio.CancelledError:  # 客户端断开
@@ -179,9 +196,11 @@ def create_app() -> FastAPI:
             },
         )
 
+    from .routers import auth as auth_router
     from .routers import catalog, evidence, execution, intelligence, system
 
     app.include_router(system.router)
+    app.include_router(auth_router.router)
     app.include_router(catalog.router)
     app.include_router(execution.router)
     app.include_router(evidence.router)

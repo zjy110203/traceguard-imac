@@ -1,5 +1,17 @@
 # UI-FaultBench 实验报告（真实运行，2026-11-22）
 
+> **RUN-010 更新（2026-11-24，Benchmark v4 真实执行）**：14 场景×2 轮真实注入执行
+> （`docs/RUN-010-WP5-BENCHMARK.md` + `docs/assets/run010/benchmark/` 原始 JSONL）。
+> 主因准确率：A 臂 7.1% → C 臂（规则 v2+图裁决）**64.3%**（selective 88.9%）；
+> graph_changed 2/14（图首次参与裁决）；5 个缺口如实记录（时序延迟复测待做）。
+
+> **RUN-009 更新（2026-11-24，Benchmark v4）**：新增消融实验（`docs/RUN-009-WP7-BENCHMARK.md`）。
+> 关键负结果：v3 的 D/E=C 不是偶然——D 臂仅升置信度不改主因（38 样本主因改变 0/38），
+> E 臂探针证据 0 回灌；v4 真实回灌臂因探针读取「当前状态而非 Run 当时状态」出现**负增益**
+> （Coverage 24/38→16/38），反事实时间对齐回到 22/38 仍未提升主因。
+> 结论：EG/AP 增益的前提是回灌时序对齐、图进入裁决层、规则补齐 403/时序/定位器/Flaky 假设。
+> 下方 v2/v3 历史口径保留，不与本轮混用。
+
 > 所有数值来自本机真实执行（Chromium 159 + TeamFlow），可用
 > `GET /api/v1/benchmark/experiments/{id}` 复核，`observations` 中保存了每个样本的 run_id。
 > 小样本（n=3）置信区间很宽，**不做过度外推**。
@@ -135,3 +147,11 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/benchmark/experiments \
 
 实验记录持久化在 `tg_doc(kind=experiment)` 与 `tg_metric`，包含每个样本的 `run_id`，
 可回到 Run 详情查看截图、DOM、断言与诊断依据。
+
+## RUN-008 补充（2026-11-24）
+
+- 本轮在隔离 API `8060` / TeamFlow `8061` / 独立 Worker `run008-bench-w1` 上真实执行
+  UI-FaultBench v3（30 场景 + 故障样本，2 次独立重复），原始样本写入
+  `docs/assets/run008/wp7/samples*.jsonl`，不覆盖 `docs/assets/run007/`。
+- 未配置 LLM Secret 的臂保持 BLOCKED；不得用历史数据或 Mock 冒充本轮实验。
+- 最终分子/分母/样本量/模型状态以 `docs/RUN-008-BENCHMARK-REPORT.md` 为准。

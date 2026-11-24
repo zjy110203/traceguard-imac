@@ -1,21 +1,28 @@
 <script setup lang="ts">
-/** RUN-004-FE AppShell：统一导航、面包屑、健康/模型状态、全局搜索、主题与移动抽屉。 */
+/** RUN-004-FE AppShell：统一导航、面包屑、健康/模型状态、全局搜索、主题与移动抽屉。
+ * RUN-010 WP1：用户会话区（当前用户/角色、修改密码、退出）、认证 401 全局跳转、管理菜单按角色显示。
+ */
 import { computed, onMounted, onUnmounted, ref, watch, type Component } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import {
   ArrowRight, Bot, ChevronRight, CircleCheck, CircleX, Command, Cpu, Database,
-  FileCode2, GitCompare, LayoutDashboard, ListChecks, LoaderCircle, Menu, Moon,
+  FileCode2, GitCompare, KeyRound, LayoutDashboard, ListChecks, LoaderCircle, LogOut, Menu, Moon,
   PanelLeftClose, PanelLeftOpen, PlayCircle, Search, Settings2, ShieldCheck,
-  Stethoscope, Sun, Wrench, X,
+  Stethoscope, Sun, UserRound, Users, Wrench, X,
 } from '@lucide/vue'
 import { api, endpoints } from './api'
+import {
+  authState, can, changePassword, onUnauthorized, roleLabel,
+} from './auth'
 import ToastHost from './components/ToastHost.vue'
+import { notify, notifyError } from './toast'
 import type { LLMUsageSummary, SystemHealth } from './types'
 
-interface NavItem { label: string; to: string; icon: Component; count?: number }
+interface NavItem { label: string; to: string; icon: Component; count?: number; adminOnly?: boolean }
 interface NavGroup { title: string; items: NavItem[] }
 
 const route = useRoute()
+const router = useRouter()
 const health = ref<SystemHealth | null>(null)
 const healthError = ref('')
 const model = ref<LLMUsageSummary | null>(null)
@@ -28,6 +35,13 @@ const query = ref('')
 const searching = ref(false)
 const results = ref<{ label: string; sub: string; to: string }[]>([])
 const theme = ref<'light' | 'dark'>(localStorage.getItem('tg-theme') === 'dark' ? 'dark' : 'light')
+const userMenuOpen = ref(false)
+const passwordDialogOpen = ref(false)
+const oldPassword = ref('')
+const newPassword = ref('')
+const newPassword2 = ref('')
+const passwordError = ref('')
+const changingPassword = ref(false)
 let timer: number | undefined
 
 async function load() {
@@ -76,9 +90,58 @@ const groups = computed<NavGroup[]>(() => [
   },
   {
     title: '运行',
-    items: [{ label: '系统与浏览器', to: '/system', icon: Settings2 }],
+    items: [
+      { label: '系统与浏览器', to: '/system', icon: Settings2 },
+      // platform-admin 专属菜单（路由守卫与服务端双重校验）
+      ...(can('user.manage') ? [{ label: '用户与角色', to: '/users', icon: Users, adminOnly: true } satisfies NavItem] : []),
+    ],
   },
 ])
+
+const currentUser = computed(() => authState.user)
+const displayName = computed(() => currentUser.value?.username ?? '')
+const authEnabled = computed(() => authState.status?.auth_enabled ?? true)
+
+function openPasswordDialog(): void {
+  userMenuOpen.value = false
+  oldPassword.value = ''
+  newPassword.value = ''
+  newPassword2.value = ''
+  passwordError.value = ''
+  passwordDialogOpen.value = true
+}
+
+async function submitPasswordChange(): Promise<void> {
+  passwordError.value = ''
+  if (newPassword.value.length < 8) { passwordError.value = '新密码至少 8 位'; return }
+  if (newPassword.value !== newPassword2.value) { passwordError.value = '两次输入的新密码不一致'; return }
+  changingPassword.value = true
+  try {
+    await changePassword(oldPassword.value, newPassword.value)
+    passwordDialogOpen.value = false
+    notify('密码已修改，请重新登录')
+    await router.replace({ name: 'login', query: { redirect: route.fullPath } })
+  } catch (e) {
+    passwordError.value = e instanceof Error ? e.message : String(e)
+    notifyError(passwordError.value)
+  } finally {
+    changingPassword.value = false
+  }
+}
+
+async function doLogout(): Promise<void> {
+  userMenuOpen.value = false
+  try {
+    const { logout } = await import('./auth')
+    await logout()
+  } catch { /* 会话可能已失效 */ }
+  await router.replace({ name: 'login' })
+}
+
+function handleClickOutside(e: MouseEvent): void {
+  const target = e.target as HTMLElement
+  if (userMenuOpen.value && !target.closest('.user-menu-anchor')) userMenuOpen.value = false
+}
 
 const crumb = computed(() => String(route.meta.crumb ?? ''))
 const env = computed(() => health.value?.environment ?? 'local')
@@ -121,7 +184,8 @@ async function runSearch() {
     api.get<Record<string, unknown>[]>('/diagnoses?limit=100&workspace_id=default'),
   ])
   const labels = ['run_id', 'testcase_id', 'intent_id', 'diagnosis_id']
-  const routes = ['/runs/', '/testcases/', '/intents/', '/diagnoses/']
+  // 只有存在详情路由的实体才可下钻；Intents 无详情路由，改为列表页带 id 过滤参数。
+  const routes = ['/runs/', '/testcases/', '/intents?id=', '/diagnoses/']
   jobs.forEach((job, idx) => {
     if (job.status !== 'fulfilled') return
     const idKey = labels[idx]
@@ -164,15 +228,26 @@ onMounted(() => {
   load()
   timer = window.setInterval(load, 20000)
   window.addEventListener('keydown', onKey)
+  window.addEventListener('click', handleClickOutside)
+  // RUN-010：全局 401 → 跳转登录页并记录回跳地址
+  onUnauthorized(() => {
+    const current = route.fullPath
+    if (route.name !== 'login') {
+      void router.replace({ name: 'login', query: current && current !== '/' ? { redirect: current } : {} })
+    }
+  })
 })
 onUnmounted(() => {
   window.clearInterval(timer)
   window.removeEventListener('keydown', onKey)
+  window.removeEventListener('click', handleClickOutside)
 })
 </script>
 
 <template>
-  <div class="app" :class="{ 'shell-collapsed': collapsed }">
+  <!-- 登录页：全屏独立渲染，不套用工作台壳层 -->
+  <router-view v-if="route.name === 'login'" />
+  <div v-else class="app" :class="{ 'shell-collapsed': collapsed }">
     <div v-if="mobileOpen" class="mobile-backdrop" @click="mobileOpen = false" />
     <aside class="sidebar" :class="{ open: mobileOpen }" aria-label="主导航">
       <div class="brand">
@@ -226,6 +301,29 @@ onUnmounted(() => {
           <CircleCheck v-if="!healthError && dbOk" :size="13" /><CircleX v-else :size="13" />
           <span class="hide-sm">{{ healthError ? '后端不可达' : '后端正常' }}</span>
         </span>
+        <!-- 用户会话区：认证开启时显示当前用户；认证关闭（开发模式）显示提示 -->
+        <div v-if="authEnabled && currentUser" class="user-menu-anchor">
+          <button class="user-chip" type="button" aria-haspopup="menu" :aria-expanded="userMenuOpen" @click.stop="userMenuOpen = !userMenuOpen">
+            <UserRound :size="14" />
+            <span class="user-name">{{ displayName }}</span>
+            <span class="badge info">{{ roleLabel }}</span>
+          </button>
+          <div v-if="userMenuOpen" class="user-menu" role="menu" aria-label="用户菜单">
+            <div class="user-menu-info">
+              <div class="strong">{{ displayName }}</div>
+              <div class="small muted mono">{{ currentUser.user_id }}</div>
+              <div class="small muted">角色：{{ currentUser.roles.map(r => r).join(' / ') }}</div>
+            </div>
+            <button class="user-menu-item" type="button" role="menuitem" @click="openPasswordDialog">
+              <KeyRound :size="14" /> 修改密码
+            </button>
+            <button class="user-menu-item danger" type="button" role="menuitem" @click="doLogout">
+              <LogOut :size="14" /> 退出登录
+            </button>
+          </div>
+        </div>
+        <span v-else-if="authEnabled" class="badge warn" title="未登录">未登录</span>
+        <span v-else class="badge warn" title="认证关闭（开发模式）">匿名（开发模式）</span>
         <button class="icon-btn" type="button" :aria-label="theme === 'light' ? '切换深色主题' : '切换浅色主题'" @click="toggleTheme">
           <Sun v-if="theme === 'light'" :size="16" /><Moon v-else :size="16" />
         </button>
@@ -253,5 +351,64 @@ onUnmounted(() => {
         <div class="search-foot small muted">数据源：真实后端列表接口 · Esc 关闭</div>
       </div>
     </div>
+
+    <!-- 修改密码（密码变更后服务端撤销全部会话 → 回登录页） -->
+    <div v-if="passwordDialogOpen" class="modal-backdrop" @click.self="passwordDialogOpen = false">
+      <div class="modal password-modal" role="dialog" aria-modal="true" aria-label="修改密码">
+        <div class="card-head"><h2>修改密码</h2></div>
+        <div class="card-body">
+          <div class="field">
+            <label for="pwd-old">当前密码</label>
+            <input id="pwd-old" v-model="oldPassword" type="password" autocomplete="current-password" required />
+          </div>
+          <div class="field">
+            <label for="pwd-new">新密码（至少 8 位）</label>
+            <input id="pwd-new" v-model="newPassword" type="password" autocomplete="new-password" required minlength="8" />
+          </div>
+          <div class="field">
+            <label for="pwd-new2">确认新密码</label>
+            <input id="pwd-new2" v-model="newPassword2" type="password" autocomplete="new-password" required minlength="8" />
+          </div>
+          <div v-if="passwordError" class="password-error" role="alert">{{ passwordError }}</div>
+          <p class="small muted">密码修改成功后所有会话将被撤销，需要重新登录。</p>
+        </div>
+        <div class="modal-foot">
+          <button class="ghost" type="button" @click="passwordDialogOpen = false">取消</button>
+          <button class="primary" type="button" :disabled="changingPassword" @click="submitPasswordChange">
+            <LoaderCircle v-if="changingPassword" :size="14" class="spin-slow" /> 确认修改
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.user-menu-anchor { position: relative; }
+.user-chip {
+  display: inline-flex; align-items: center; gap: 7px; padding: 5px 10px;
+  border-radius: 999px; background: var(--neutral-weak); border: 1px solid var(--border);
+  cursor: pointer; font-size: 12.5px;
+}
+.user-chip:hover { background: var(--surface-3); }
+.user-name { font-weight: 600; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-menu {
+  position: absolute; right: 0; top: calc(100% + 6px); min-width: 230px; z-index: 90;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: var(--shadow-lg); padding: 6px; display: grid; gap: 2px;
+}
+.user-menu-info { padding: 10px 12px; border-bottom: 1px solid var(--border); margin-bottom: 4px; display: grid; gap: 3px; }
+.user-menu-item {
+  display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+  padding: 8px 12px; border: none; background: transparent; border-radius: 8px;
+  font-size: 12.5px; cursor: pointer;
+}
+.user-menu-item:hover { background: var(--neutral-weak); }
+.user-menu-item.danger { color: var(--fail); }
+.password-modal { width: min(420px, 92vw); }
+.password-error {
+  background: var(--fail-weak); color: var(--fail); border: 1px solid var(--fail-border);
+  border-radius: 8px; padding: 8px 12px; font-size: 12.5px;
+}
+.field { margin-bottom: 12px; }
+</style>

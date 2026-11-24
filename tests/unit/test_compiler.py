@@ -145,3 +145,16 @@ def test_review_rejection() -> None:
     r = c.compile(_trace(), "login")
     result = c.review(r.candidate, approver="human:qa", approve=False)
     assert result is None and r.candidate.review_status == "REJECTED"
+
+
+def test_intent_text_is_not_written_into_intent_ref() -> None:
+    """RUN-007-FINALIZATION-2：需求正文不得写进引用字段。
+
+    PG 的 varchar(64) 会直接拒绝长正文（SQLite 静默接受，所以只在 PG 暴露）；
+    语义上 intent_ref 也只能是引用，正文放 intent_text。
+    """
+    c = Compiler()
+    long_intent = "登录 TeamFlow 并检查 " + "很长的需求正文" * 20
+    r = c.compile(_trace(), long_intent)
+    assert r.candidate.intent_text == long_intent
+    assert r.candidate.intent_ref is None  # 由探索服务补 intent_id

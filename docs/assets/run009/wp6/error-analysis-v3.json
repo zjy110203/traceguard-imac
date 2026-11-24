@@ -1,0 +1,1358 @@
+{
+  "scoring_samples": 19,
+  "note": "19 个 diagnosis_eligible 计分样本；GT 仅评测端读取；新证据是否改变假设由真实内核重算 H 臂得出",
+  "per_scenario": [
+    {
+      "scenario": "TF-API-001",
+      "gt": "API",
+      "evidence_source_file": "docs/assets/run008/wp7/samples.jsonl",
+      "run_id": "run_1795499188576031963b45e1c",
+      "execution_status": "COMPLETED",
+      "test_verdict": "FAILED",
+      "a_pred": "NONE",
+      "c_pred": "API",
+      "d_pred": "API",
+      "e_pred": "API",
+      "h_probe_feedback_b3_pred": "API",
+      "c_correct": true,
+      "a_correct": false,
+      "c_abstain": false,
+      "probe_state_v3": "OK",
+      "probe_count_v3": 2,
+      "probe_applied_v3": [
+        false,
+        false
+      ],
+      "probe_stop_reason_v3": "STOP_NO_HIGH_VALUE_PROBE",
+      "probe_feedback_b3_outcome": "CONFIRMED",
+      "probe_feedback_b3_changed_hypothesis": false,
+      "graph_audit": {
+        "nodes": 38,
+        "edges": 46,
+        "node_types": {
+          "Run": 1,
+          "Step": 6,
+          "Event": 9,
+          "Evidence": 18,
+          "Assertion": 2,
+          "Source": 1,
+          "Hypothesis": 1
+        },
+        "relations": {
+          "parent_child": 9,
+          "same_execution_context": 5,
+          "emitted_by": 5,
+          "evaluates": 23,
+          "supports": 4
+        },
+        "evidence_sources": [
+          "api",
+          "browser",
+          "network"
+        ],
+        "edges_with_basis": 46,
+        "derived_from_edges": 0,
+        "supports_edges": 4,
+        "contradicts_edges": 0,
+        "temporal_edges": 0,
+        "direct_causal_edges": 0
+      }
+    },
+    {
+      "scenario": "TF-API-002",
+      "gt": "API",
+      "evidence_source_file": "docs/assets/run008/wp7/samples.jsonl",
+      "run_id": "run_1795499192258b27b0e3317cd",
+      "execution_status": "COMPLETED",
+      "test_verdict": "FAILED",
+      "a_pred": "UI_RENDERING",
+      "c_pred": "API",
+      "d_pred": "API",
+      "e_pred": "API",
+      "h_probe_feedback_b3_pred": "API",
+      "c_correct": true,
+      "a_correct": false,
+      "c_abstain": false,
+      "probe_state_v3": "OK",
+      "probe_count_v3": 3,
+      "probe_applied_v3": [
+        false,
+        false,
+        false
+      ],
+      "probe_stop_reason_v3": "STOP_ITERATION_LIMIT",
+      "probe_feedback_b3_outcome": "CONFIRMED",
+      "probe_feedback_b3_changed_hypothesis": false,
+      "graph_audit": {
+        "nodes": 49,
+        "edges": 63,
+        "node_types": {
+          "Run": 1,
+          "Step": 8,
+          "Event": 11,
+          "Evidence": 25,
+          "Assertion": 2,
+          "Source": 1,
+          "Hypothesis": 1
+        },
+        "relations": {
+          "parent_child": 11,
+          "same_execution_context": 5,
+          "emitted_by": 7,
+          "evaluates": 36,
+          "supports": 4
+        },
+        "evidence_sources": [
+          "api",
+          "browser",
+          "network"
+        ],
+        "edges_with_basis": 63,
+        "derived_from_edges": 0,
+        "supports_edges": 4,
+        "contradicts_edges": 0,
+        "temporal_edges": 0,
+        "direct_causal_edges": 0
+      }
+    },
+    {
+      "scenario": "TF-COMP-001",
+      "gt": "API",
+      "evidence_source_file": "docs/assets/run008/wp7/samples.jsonl",
+      "run_id": "run_1795499332892d08efe9b939a",
+      "execution_status": "COMPLETED",
+      "test_verdict": "FAILED",
+      "a_pred": "NONE",
+      "c_pred": "API",
+      "d_pred": "API",
+      "e_pred": "API",
+      "h_probe_feedback_b3_pred": "API",
+      "c_correct": true,
+      "a_correct": false,
+      "c_abstain": false,
+      "probe_state_v3": "OK",
+      "probe_count_v3": 2,
+      "probe_applied_v3": [
+        false,
+        false
+      ],
+      "probe_stop_reason_v3": "STOP_NO_HIGH_VALUE_PROBE",
+      "probe_feedback_b3_outcome": "CONFIRMED",
+      "probe_feedback_b3_changed_hypothesis": false,
+      "graph_audit": {
+        "nodes": 47,
+        "edges": 55,
+        "node_types": {
+          "Run": 1,
+          "Step": 8,
+          "Event": 10,
+          "Evidence": 25,
+          "Assertion": 1,
+          "Source": 1,
+          "Hypothesis": 1
+        },
+        "relations": {
+          "parent_child": 10,
+          "same_execution_context": 4,
+          "emitted_by": 7,
+          "evaluates": 30,
+          "supports": 4
+        },
+        "evidence_sources": [
+          "api",
+          "browser",
+          "network"
+        ],
+        "edges_with_basis": 55,
+        "derived_from_edges": 0,
+        "supports_edges": 4,
+        "contradicts_edges": 0,
+        "temporal_edges": 0,
+        "direct_causal_edges": 0
+      }
+    },
+    {
+      "scenario": "TF-COMP-002",
+      "gt": "PERSISTENCE",
+      "evidence_source_file": "docs/assets/run008/wp7/samples.jsonl",
+      "run_id": "run_17954993382596058e31e63ef",
+      "execution_status": "COMPLETED",
+      "test_verdict": "FAILED",
+      "a_pred": "NONE",
+      "c_pred": "PERSISTENCE",
+      "d_pred": "PERSISTENCE",
+      "e_pred": "PERSISTENCE",
+      "h_probe_feedback_b3_pred": "PERSISTENCE",
+      "c_correct": true,
+      "a_correct": false,
+      "c_abstain": false,
+      "probe_state_v3": "OK",
+      "probe_count_v3": 2,
+      "probe_applied_v3": [
+        false,
+        false
+      ],
+      "probe_stop_reason_v3": "STOP_NO_HIGH_VALUE_PROBE",
+      "probe_feedback_b3_outcome": "CONFIRMED",
+      "probe_feedback_b3_changed_hypothesis": false,
+      "graph_audit": {
+        "nodes": 47,
+        "edges": 52,
+        "node_types": {
+          "Run": 1,
+          "Step": 8,
+          "Event": 10,
+          "Evidence": 25,
+          "Assertion": 1,
+          "Source": 1,
+          "Hypothesis": 1
+        },
+        "relations": {
+          "parent_child": 10,
+          "same_execution_context": 4,
+          "emitted_by": 7,
+          "evaluates": 30,
+          "supports": 1
+        },
+        "evidence_sources": [
+          "api",
+          "browser",
+          "network"
+        ],
+        "edges_with_basis": 52,
+        "derived_from_edges": 0,
+        "supports_edges": 1,
+        "contradicts_edges": 0,
+        "temporal_edges": 0,
+        "direct_causal_edges": 0
+      }
+    },
+    {
+      "scenario": "TF-COMP-003",
+      "gt": "LOCATOR",
+      "evidence_source_file": "docs/assets/run008/wp7/samples.jsonl",
+      "run_id": "run_1795499347288ddff4e6f15ee",
+      "execution_status": "FAILED",
+      "test_verdict": "NOT_EVALUATED",
+      "a_pred": "NONE",
+      "c_pred": "UNKNOWN",
+      "d_pred": "UNKNOWN",
+      "e_pred": "UNKNOWN",
+      "h_probe_feedback_b3_pred": "UNKNOWN",
+      "c_correct": false,
+      "a_correct": false,
+      "c_abstain": true,
+      "probe_state_v3": "OK",
+      "probe_count_v3": 3,
+      "probe_applied_v3": [
+        false,
+        false,
+        false
+      ],
+      "probe_stop_reason_v3": "STOP_ITERATION_LIMIT",
+      "probe_feedback_b3_outcome": "NO_DIAGNOSIS",
+      "probe_feedback_b3_changed_hypothesis": false,
+      "graph_audit": {
+        "nodes": 44,
+        "edges": 49,
+        "node_types": {
+          "Run": 1,
+          "Step": 8,
+          "Event": 10,
+          "Evidence": 24,
+          "Assertion": 1
+        },
+        "relations": {
+          "parent_child": 9,
+          "same_execution_context": 4,
+          "emitted_by": 7,
+          "evaluates": 29
+        },
+        "evidence_sources": [
+          "api",
+          "browser",
+          "network"
+        ],
+        "edges_with_basis": 49,
+        "derived_from_edges": 0,
+        "supports_edges": 0,
+        "contradicts_edges": 0,
+        "temporal_edges": 0,
+        "direct_causal_edges": 0
+      }
+    },
+    {
+      "scenario": "TF-DB-001",
+      "gt": "PERSISTENCE",
+      "evidence_source_file": "docs/assets/run008/wp7/samples.jsonl",
+      "run_id": "run_1795499126500932faf6af253",
+      "execution_status": "COMPLETED",
+      "test_verdict": "FAILED",
+      "a_pred": "NONE",
+      "c_pred": "PERSISTENCE",
+      "d_pred": "PERSISTENCE",
+      "e_pred": "PERSISTENCE",
+      "h_probe_feedback_b3_pred": "PERSISTENCE",
+      "c_correct": true,
+      "a_correct": false,
+      "c_abstain": false,
+      "probe_state_v3": "OK",
+      "probe_count_v3": 2,
+      "probe_applied_v3": [
+        false,
+        false
+      ],
+      "probe_stop_reason_v3": "STOP_NO_HIGH_VALUE_PROBE",
+      "probe_feedback_b3_outcome": "CONFIRMED",
+      "probe_feedback_b3_changed_hypothesis": false,
+      "graph_audit": {
+        "nodes": 51,
+        "edges": 56,
+        "node_types": {
+          "Run": 1,
+          "Step": 8,
+          "Event": 11,
+          "Evidence": 28,
+          "Assertion": 1,
+          "Source": 1,
+          "Hypothesis": 1
+        },
+        "relations": {
+          "parent_child": 10,
+          "same_execution_context": 4,
+          "emitted_by": 8,
+          "evaluates": 33,
+          "supports": 1
+        },
+        "evidence_sources": [
+          "api",
+          "browser",
+          "network"
+        ],
+        "edges_with_basis": 56,
+        "derived_from_edges": 0,
+        "supports_edges": 1,
+        "contradicts_edges": 0,
+        "temporal_edges": 0,
+        "direct_causal_edges": 0
+      }
+    },
+    {
+      "scenario": "TF-DB-002",
+      "gt": "PERSISTENCE",
+      "evidence_source_file": "docs/assets/run008/wp7/samples.jsonl",
+      "run_id": "run_179549913181061b60c591963",
+      "execution_status": "COMPLETED",
+      "test_verdict": "FAILED",
+      "a_pred": "NONE",
+      "c_pred": "PERSISTENCE",
+      "d_pred": "PERSISTENCE",
+      "e_pred": "PERSISTENCE",
+      "h_probe_feedback_b3_pred": "PERSISTENCE",
+      "c_correct": true,
+      "a_correct": false,
+      "c_abstain": false,
+      "probe_state_v3": "OK",
+      "probe_count_v3": 2,
+      "probe_applied_v3": [
+        false,
+        false
+      ],
+      "probe_stop_reason_v3": "STOP_NO_HIGH_VALUE_PROBE",
+      "probe_feedback_b3_outcome": "CONFIRMED",
+      "probe_feedback_b3_changed_hypothesis": false,
+      "graph_audit": {
+        "nodes": 80,
+        "edges": 88,
+        "node_types": {
+          "Run": 1,
+          "Step": 14,
+          "Event": 16,
+          "Evidence": 46,
+          "Assertion": 1,
+          "Source": 1,
+          "Hypothesis": 1
+        },
+        "relations": {
+          "parent_child": 16,
+          "same_execution_context": 4,
+          "emitted_by": 13,
+          "evaluates": 54,
+          "supports": 1
+        },
+        "evidence_sources": [
+          "api",
+          "browser",
+          "network"
+        ],
+        "edges_with_basis": 88,
+        "derived_from_edges": 0,
+        "supports_edges": 1,
+        "contradicts_edges": 0,
+        "temporal_edges": 0,
+        "direct_causal_edges": 0
+      }
+    },
+    {
+      "scenario": "TF-DB-004",
+      "gt": "TIMING",
+      "evidence_source_file": "docs/assets/run008/wp7/samples.jsonl",
+      "run_id": "run_179549914891939f4b30054c6",
+      "execution_status": "COMPLETED",
+      "test_verdict": "FAILED",
+      "a_pred": "NONE",
+      "c_pred": "PERSISTENCE",
+      "d_pred": "PERSISTENCE",
+      "e_pred": "PERSISTENCE",
+      "h_probe_feedback_b3_pred": "PERSISTENCE",
+      "c_correct": false,
+      "a_correct": false,
+      "c_abstain": false,
+      "probe_state_v3": "OK",
+      "probe_count_v3": 2,
+      "probe_applied_v3": [
+        false,
+        false
+      ],
+      "probe_stop_reason_v3": "STOP_NO_HIGH_VALUE_PROBE",
+      "probe_feedback_b3_outcome": "CONFIRMED",
+      "probe_feedback_b3_changed_hypothesis": false,
+      "graph_audit": {
+        "nodes": 49,
+        "edges": 60,
+        "node_types": {
+          "Run": 1,
+          "Step": 8,
+          "Event": 11,
+          "Evidence": 25,
+          "Assertion": 2,
+          "Source": 1,
+          "Hypothesis": 1
+        },
+        "relations": {
+          "parent_child": 11,
+          "same_execution_context": 5,
+          "emitted_by": 7,
+          "evaluates": 36,
+          "supports": 1
+        },
+        "evidence_sources": [
+          "api",
+          "browser",
+          "network"
+        ],
+        "edges_with_basis": 60,
+        "derived_from_edges": 0,
+        "supports_edges": 1,
+        "contradicts_edges": 0,
+        "temporal_edges": 0,
+        "direct_causal_edges": 0
+      }
+    },
+    {
+      "scenario": "TF-FLAKY-001",
+      "gt": "PERSISTENCE",
+      "evidence_source_file": "docs/assets/run008/wp7/samples.jsonl",
+      "run_id": "run_17954993596222061e28df874",
+      "execution_status": "COMPLETED",
+      "test_verdict": "FAILED",
+      "a_pred": "NONE",
+      "c_pred": "PERSISTENCE",
+      "d_pred": "PERSISTENCE",
+      "e_pred": "PERSISTENCE",
+      "h_probe_feedback_b3_pred": "PERSISTENCE",
+      "c_correct": true,
+      "a_correct": false,
+      "c_abstain": false,
+      "probe_state_v3": "OK",
+      "probe_count_v3": 2,
+      "probe_applied_v3": [
+        false,
+        false
+      ],
+      "probe_stop_reason_v3": "STOP_NO_HIGH_VALUE_PROBE",
+      "probe_feedback_b3_outcome": "CONFIRMED",
+      "probe_feedback_b3_changed_hypothesis": false,
+      "graph_audit": {
+        "nodes": 47,
+        "edges": 52,
+        "node_types": {
+          "Run": 1,
+          "Step": 8,
+          "Event": 10,
+          "Evidence": 25,
+          "Assertion": 1,
+          "Source": 1,
+          "Hypothesis": 1
+        },
+        "relations": {
+          "parent_child": 10,
+          "same_execution_context": 4,
+          "emitted_by": 7,
+          "evaluates": 30,
+          "supports": 1
+        },
+        "evidence_sources": [
+          "api",
+          "browser",
+          "network"
+        ],
+        "edges_with_basis": 52,
+        "derived_from_edges": 0,
+        "supports_edges": 1,
+        "contradicts_edges": 0,
+        "temporal_edges": 0,
+        "direct_causal_edges": 0
+      }
+    },
+    {
+      "scenario": "TF-FLAKY-002",
+      "gt": "API",
+      "evidence_source_file": "docs/assets/run008/wp7/samples.jsonl",
+      "run_id": "run_17954993845738906889f5726",
+      "execution_status": "COMPLETED",
+      "test_verdict": "FAILED",
+      "a_pred": "UI_RENDERING",
+      "c_pred": "UI_RENDERING",
+      "d_pred": "UI_RENDERING",
+      "e_pred": "UI_RENDERING",
+      "h_probe_feedback_b3_pred": "UI_RENDERING",
+      "c_correct": false,
+      "a_correct": false,
+      "c_abstain": false,
+      "probe_state_v3": "OK",
+      "probe_count_v3": 3,
+      "probe_applied_v3": [
+        false,
+        false,
+        false
+      ],
+      "probe_stop_reason_v3": "STOP_ITERATION_LIMIT",
+      "probe_feedback_b3_outcome": "INCONCLUSIVE",
+      "probe_feedback_b3_changed_hypothesis": true,
+      "graph_audit": {
+        "nodes": 54,
+        "edges": 79,
+        "node_types": {
+          "Run": 1,
+          "Step": 9,
+          "Event": 12,
+          "Evidence": 28,
+          "Assertion": 2,
+          "Source": 1,
+          "Hypothesis": 1
+        },
+        "relations": {
+          "parent_child": 12,
+          "same_execution_context": 5,
+          "emitted_by": 8,
+          "evaluates": 45,
+          "supports": 9
+        },
+        "evidence_sources": [
+          "api",
+          "browser",
+          "network"
+        ],
+        "edges_with_basis": 79,
+        "derived_from_edges": 0,
+        "supports_edges": 9,
+        "contradicts_edges": 0,
+        "temporal_edges": 0,
+        "direct_causal_edges": 0
+      }
+    },
+    {
+      "scenario": "TF-LOC-001",
+      "gt": "LOCATOR",
+      "evidence_source_file": "docs/assets/run008/wp7/samples.jsonl",
+      "run_id": "run_17954992602975cbb67bcd6ea",
+      "execution_status": "FAILED",
+      "test_verdict": "NOT_EVALUATED",
+      "a_pred": "NONE",
+      "c_pred": "UNKNOWN",
+      "d_pred": "UNKNOWN",
+      "e_pred": "UNKNOWN",
+      "h_probe_feedback_b3_pred": "UNKNOWN",
+      "c_correct": false,
+      "a_correct": false,
+      "c_abstain": true,
+      "probe_state_v3": "OK",
+      "probe_count_v3": 3,
+      "probe_applied_v3": [
+        false,
+        false,
+        false
+      ],
+      "probe_stop_reason_v3": "STOP_ITERATION_LIMIT",
+      "probe_feedback_b3_outcome": "NO_DIAGNOSIS",
+      "probe_feedback_b3_changed_hypothesis": false,
+      "graph_audit": {
+        "nodes": 44,
+        "edges": 49,
+        "node_types": {
+          "Run": 1,
+          "Step": 8,
+          "Event": 10,
+          "Evidence": 24,
+          "Assertion": 1
+        },
+        "relations": {
+          "parent_child": 9,
+          "same_execution_context": 4,
+          "emitted_by": 7,
+          "evaluates": 29
+        },
+        "evidence_sources": [
+          "api",
+          "browser",
+          "network"
+        ],
+        "edges_with_basis": 49,
+        "derived_from_edges": 0,
+        "supports_edges": 0,
+        "contradicts_edges": 0,
+        "temporal_edges": 0,
+        "direct_causal_edges": 0
+      }
+    },
+    {
+      "scenario": "TF-LOC-002",
+      "gt": "LOCATOR",
+      "evidence_source_file": "docs/assets/run008/wp7/samples.jsonl",
+      "run_id": "run_1795499273048274cb8fd3fa1",
+      "execution_status": "FAILED",
+      "test_verdict": "NOT_EVALUATED",
+      "a_pred": "NONE",
+      "c_pred": "UNKNOWN",
+      "d_pred": "UNKNOWN",
+      "e_pred": "UNKNOWN",
+      "h_probe_feedback_b3_pred": "UNKNOWN",
+      "c_correct": false,
+      "a_correct": false,
+      "c_abstain": true,
+      "probe_state_v3": "OK",
+      "probe_count_v3": 3,
+      "probe_applied_v3": [
+        false,
+        false,
+        false
+      ],
+      "probe_stop_reason_v3": "STOP_ITERATION_LIMIT",
+      "probe_feedback_b3_outcome": "NO_DIAGNOSIS",
+      "probe_feedback_b3_changed_hypothesis": false,
+      "graph_audit": {
+        "nodes": 41,
+        "edges": 46,
+        "node_types": {
+          "Run": 1,
+          "Step": 8,
+          "Event": 10,
+          "Evidence": 21,
+          "Assertion": 1
+        },
+        "relations": {
+          "parent_child": 9,
+          "same_execution_context": 4,
+          "emitted_by": 7,
+          "evaluates": 26
+        },
+        "evidence_sources": [
+          "api",
+          "browser",
+          "network"
+        ],
+        "edges_with_basis": 46,
+        "derived_from_edges": 0,
+        "supports_edges": 0,
+        "contradicts_edges": 0,
+        "temporal_edges": 0,
+        "direct_causal_edges": 0
+      }
+    },
+    {
+      "scenario": "TF-NET-002",
+      "gt": "NETWORK",
+      "evidence_source_file": "docs/assets/run008/wp7/samples.jsonl",
+      "run_id": "run_1795499244664061529116238",
+      "execution_status": "COMPLETED",
+      "test_verdict": "FAILED",
+      "a_pred": "UI_RENDERING",
+      "c_pred": "UNKNOWN",
+      "d_pred": "UNKNOWN",
+      "e_pred": "UNKNOWN",
+      "h_probe_feedback_b3_pred": "UNKNOWN",
+      "c_correct": false,
+      "a_correct": false,
+      "c_abstain": true,
+      "probe_state_v3": "OK",
+      "probe_count_v3": 3,
+      "probe_applied_v3": [
+        false,
+        false,
+        false
+      ],
+      "probe_stop_reason_v3": "STOP_ITERATION_LIMIT",
+      "probe_feedback_b3_outcome": "INCONCLUSIVE",
+      "probe_feedback_b3_changed_hypothesis": false,
+      "graph_audit": {
+        "nodes": 48,
+        "edges": 58,
+        "node_types": {
+          "Run": 1,
+          "Step": 8,
+          "Event": 11,
+          "Evidence": 25,
+          "Assertion": 2,
+          "Source": 1
+        },
+        "relations": {
+          "parent_child": 10,
+          "same_execution_context": 5,
+          "emitted_by": 7,
+          "evaluates": 36
+        },
+        "evidence_sources": [
+          "api",
+          "browser",
+          "network"
+        ],
+        "edges_with_basis": 58,
+        "derived_from_edges": 0,
+        "supports_edges": 0,
+        "contradicts_edges": 0,
+        "temporal_edges": 0,
+        "direct_causal_edges": 0
+      }
+    },
+    {
+      "scenario": "TF-SEC-001",
+      "gt": "AUTHORIZATION",
+      "evidence_source_file": "docs/assets/run008/wp7/samples.jsonl",
+      "run_id": "run_1795499320838727413c0d47b",
+      "execution_status": "COMPLETED",
+      "test_verdict": "FAILED",
+      "a_pred": "UI_RENDERING",
+      "c_pred": "UNKNOWN",
+      "d_pred": "UNKNOWN",
+      "e_pred": "UNKNOWN",
+      "h_probe_feedback_b3_pred": "UNKNOWN",
+      "c_correct": false,
+      "a_correct": false,
+      "c_abstain": true,
+      "probe_state_v3": "OK",
+      "probe_count_v3": 3,
+      "probe_applied_v3": [
+        false,
+        false,
+        false
+      ],
+      "probe_stop_reason_v3": "STOP_ITERATION_LIMIT",
+      "probe_feedback_b3_outcome": "INCONCLUSIVE",
+      "probe_feedback_b3_changed_hypothesis": false,
+      "graph_audit": {
+        "nodes": 48,
+        "edges": 58,
+        "node_types": {
+          "Run": 1,
+          "Step": 8,
+          "Event": 11,
+          "Evidence": 25,
+          "Assertion": 2,
+          "Source": 1
+        },
+        "relations": {
+          "parent_child": 10,
+          "same_execution_context": 5,
+          "emitted_by": 7,
+          "evaluates": 36
+        },
+        "evidence_sources": [
+          "api",
+          "browser",
+          "network"
+        ],
+        "edges_with_basis": 58,
+        "derived_from_edges": 0,
+        "supports_edges": 0,
+        "contradicts_edges": 0,
+        "temporal_edges": 0,
+        "direct_causal_edges": 0
+      }
+    },
+    {
+      "scenario": "TF-SEC-002",
+      "gt": "AUTHORIZATION",
+      "evidence_source_file": "docs/assets/run008/wp7/samples.jsonl",
+      "run_id": "run_17954993258409fa21e7b257e",
+      "execution_status": "COMPLETED",
+      "test_verdict": "FAILED",
+      "a_pred": "UI_RENDERING",
+      "c_pred": "UI_RENDERING",
+      "d_pred": "UI_RENDERING",
+      "e_pred": "UI_RENDERING",
+      "h_probe_feedback_b3_pred": "UI_RENDERING",
+      "c_correct": false,
+      "a_correct": false,
+      "c_abstain": false,
+      "probe_state_v3": "OK",
+      "probe_count_v3": 3,
+      "probe_applied_v3": [
+        false,
+        false,
+        false
+      ],
+      "probe_stop_reason_v3": "STOP_ITERATION_LIMIT",
+      "probe_feedback_b3_outcome": "INCONCLUSIVE",
+      "probe_feedback_b3_changed_hypothesis": true,
+      "graph_audit": {
+        "nodes": 58,
+        "edges": 96,
+        "node_types": {
+          "Run": 1,
+          "Step": 9,
+          "Event": 11,
+          "Evidence": 33,
+          "Assertion": 1,
+          "Source": 1,
+          "Hypothesis": 2
+        },
+        "relations": {
+          "parent_child": 12,
+          "same_execution_context": 4,
+          "emitted_by": 8,
+          "evaluates": 36,
+          "supports": 36
+        },
+        "evidence_sources": [
+          "api",
+          "browser",
+          "network"
+        ],
+        "edges_with_basis": 96,
+        "derived_from_edges": 0,
+        "supports_edges": 36,
+        "contradicts_edges": 0,
+        "temporal_edges": 0,
+        "direct_causal_edges": 0
+      }
+    },
+    {
+      "scenario": "TF-TIME-003",
+      "gt": "TIMING",
+      "evidence_source_file": "docs/assets/run008/wp7/samples.jsonl",
+      "run_id": "run_1795499308172b265c09b255e",
+      "execution_status": "FAILED",
+      "test_verdict": "NOT_EVALUATED",
+      "a_pred": "NONE",
+      "c_pred": "UNKNOWN",
+      "d_pred": "UNKNOWN",
+      "e_pred": "UNKNOWN",
+      "h_probe_feedback_b3_pred": "UNKNOWN",
+      "c_correct": false,
+      "a_correct": false,
+      "c_abstain": true,
+      "probe_state_v3": "OK",
+      "probe_count_v3": 3,
+      "probe_applied_v3": [
+        false,
+        false,
+        false
+      ],
+      "probe_stop_reason_v3": "STOP_ITERATION_LIMIT",
+      "probe_feedback_b3_outcome": "NO_DIAGNOSIS",
+      "probe_feedback_b3_changed_hypothesis": false,
+      "graph_audit": {
+        "nodes": 46,
+        "edges": 51,
+        "node_types": {
+          "Run": 1,
+          "Step": 7,
+          "Event": 11,
+          "Evidence": 25,
+          "Assertion": 2
+        },
+        "relations": {
+          "parent_child": 9,
+          "same_execution_context": 5,
+          "emitted_by": 7,
+          "evaluates": 30
+        },
+        "evidence_sources": [
+          "api",
+          "browser",
+          "network"
+        ],
+        "edges_with_basis": 51,
+        "derived_from_edges": 0,
+        "supports_edges": 0,
+        "contradicts_edges": 0,
+        "temporal_edges": 0,
+        "direct_causal_edges": 0
+      }
+    },
+    {
+      "scenario": "TF-UI-001",
+      "gt": "UI_RENDERING",
+      "evidence_source_file": "docs/assets/run008/wp7/samples.jsonl",
+      "run_id": "run_17954991660949f40c23eb5bb",
+      "execution_status": "COMPLETED",
+      "test_verdict": "FAILED",
+      "a_pred": "UI_RENDERING",
+      "c_pred": "UI_RENDERING",
+      "d_pred": "UI_RENDERING",
+      "e_pred": "UI_RENDERING",
+      "h_probe_feedback_b3_pred": "UI_RENDERING",
+      "c_correct": true,
+      "a_correct": true,
+      "c_abstain": false,
+      "probe_state_v3": "OK",
+      "probe_count_v3": 3,
+      "probe_applied_v3": [
+        false,
+        false,
+        false
+      ],
+      "probe_stop_reason_v3": "STOP_ITERATION_LIMIT",
+      "probe_feedback_b3_outcome": "INCONCLUSIVE",
+      "probe_feedback_b3_changed_hypothesis": true,
+      "graph_audit": {
+        "nodes": 53,
+        "edges": 69,
+        "node_types": {
+          "Run": 1,
+          "Step": 8,
+          "Event": 12,
+          "Evidence": 28,
+          "Assertion": 2,
+          "Source": 1,
+          "Hypothesis": 1
+        },
+        "relations": {
+          "parent_child": 11,
+          "same_execution_context": 5,
+          "emitted_by": 8,
+          "evaluates": 39,
+          "supports": 6
+        },
+        "evidence_sources": [
+          "api",
+          "browser",
+          "network"
+        ],
+        "edges_with_basis": 69,
+        "derived_from_edges": 0,
+        "supports_edges": 6,
+        "contradicts_edges": 0,
+        "temporal_edges": 0,
+        "direct_causal_edges": 0
+      }
+    },
+    {
+      "scenario": "TF-UI-002",
+      "gt": "UI_RENDERING",
+      "evidence_source_file": "docs/assets/run008/wp7/samples.jsonl",
+      "run_id": "run_17954991714168e3b539c7f82",
+      "execution_status": "COMPLETED",
+      "test_verdict": "FAILED",
+      "a_pred": "UI_RENDERING",
+      "c_pred": "UNKNOWN",
+      "d_pred": "UNKNOWN",
+      "e_pred": "UNKNOWN",
+      "h_probe_feedback_b3_pred": "UNKNOWN",
+      "c_correct": false,
+      "a_correct": true,
+      "c_abstain": true,
+      "probe_state_v3": "OK",
+      "probe_count_v3": 3,
+      "probe_applied_v3": [
+        false,
+        false,
+        false
+      ],
+      "probe_stop_reason_v3": "STOP_ITERATION_LIMIT",
+      "probe_feedback_b3_outcome": "INCONCLUSIVE",
+      "probe_feedback_b3_changed_hypothesis": false,
+      "graph_audit": {
+        "nodes": 47,
+        "edges": 57,
+        "node_types": {
+          "Run": 1,
+          "Step": 8,
+          "Event": 11,
+          "Evidence": 24,
+          "Assertion": 2,
+          "Source": 1
+        },
+        "relations": {
+          "parent_child": 10,
+          "same_execution_context": 5,
+          "emitted_by": 7,
+          "evaluates": 35
+        },
+        "evidence_sources": [
+          "api",
+          "browser",
+          "network"
+        ],
+        "edges_with_basis": 57,
+        "derived_from_edges": 0,
+        "supports_edges": 0,
+        "contradicts_edges": 0,
+        "temporal_edges": 0,
+        "direct_causal_edges": 0
+      }
+    },
+    {
+      "scenario": "TF-UI-003",
+      "gt": "UI_RENDERING",
+      "evidence_source_file": "docs/assets/run008/wp7/samples.jsonl",
+      "run_id": "run_1795499176320198a410a1626",
+      "execution_status": "COMPLETED",
+      "test_verdict": "FAILED",
+      "a_pred": "UI_RENDERING",
+      "c_pred": "UI_RENDERING",
+      "d_pred": "UI_RENDERING",
+      "e_pred": "UI_RENDERING",
+      "h_probe_feedback_b3_pred": "UI_RENDERING",
+      "c_correct": true,
+      "a_correct": true,
+      "c_abstain": false,
+      "probe_state_v3": "OK",
+      "probe_count_v3": 3,
+      "probe_applied_v3": [
+        false,
+        false,
+        false
+      ],
+      "probe_stop_reason_v3": "STOP_ITERATION_LIMIT",
+      "probe_feedback_b3_outcome": "INCONCLUSIVE",
+      "probe_feedback_b3_changed_hypothesis": true,
+      "graph_audit": {
+        "nodes": 49,
+        "edges": 65,
+        "node_types": {
+          "Run": 1,
+          "Step": 8,
+          "Event": 11,
+          "Evidence": 25,
+          "Assertion": 2,
+          "Source": 1,
+          "Hypothesis": 1
+        },
+        "relations": {
+          "parent_child": 11,
+          "same_execution_context": 5,
+          "emitted_by": 7,
+          "evaluates": 36,
+          "supports": 6
+        },
+        "evidence_sources": [
+          "api",
+          "browser",
+          "network"
+        ],
+        "edges_with_basis": 65,
+        "derived_from_edges": 0,
+        "supports_edges": 6,
+        "contradicts_edges": 0,
+        "temporal_edges": 0,
+        "direct_causal_edges": 0
+      }
+    }
+  ],
+  "confusion_matrix": {
+    "labels": [
+      "API",
+      "AUTHORIZATION",
+      "LOCATOR",
+      "NETWORK",
+      "PERSISTENCE",
+      "TIMING",
+      "UI_RENDERING",
+      "UNKNOWN"
+    ],
+    "rows_gt_cols_pred": {
+      "API": {
+        "API": 3,
+        "AUTHORIZATION": 0,
+        "LOCATOR": 0,
+        "NETWORK": 0,
+        "PERSISTENCE": 0,
+        "TIMING": 0,
+        "UI_RENDERING": 1,
+        "UNKNOWN": 0
+      },
+      "AUTHORIZATION": {
+        "API": 0,
+        "AUTHORIZATION": 0,
+        "LOCATOR": 0,
+        "NETWORK": 0,
+        "PERSISTENCE": 0,
+        "TIMING": 0,
+        "UI_RENDERING": 1,
+        "UNKNOWN": 1
+      },
+      "LOCATOR": {
+        "API": 0,
+        "AUTHORIZATION": 0,
+        "LOCATOR": 0,
+        "NETWORK": 0,
+        "PERSISTENCE": 0,
+        "TIMING": 0,
+        "UI_RENDERING": 0,
+        "UNKNOWN": 3
+      },
+      "NETWORK": {
+        "API": 0,
+        "AUTHORIZATION": 0,
+        "LOCATOR": 0,
+        "NETWORK": 0,
+        "PERSISTENCE": 0,
+        "TIMING": 0,
+        "UI_RENDERING": 0,
+        "UNKNOWN": 1
+      },
+      "PERSISTENCE": {
+        "API": 0,
+        "AUTHORIZATION": 0,
+        "LOCATOR": 0,
+        "NETWORK": 0,
+        "PERSISTENCE": 4,
+        "TIMING": 0,
+        "UI_RENDERING": 0,
+        "UNKNOWN": 0
+      },
+      "TIMING": {
+        "API": 0,
+        "AUTHORIZATION": 0,
+        "LOCATOR": 0,
+        "NETWORK": 0,
+        "PERSISTENCE": 1,
+        "TIMING": 0,
+        "UI_RENDERING": 0,
+        "UNKNOWN": 1
+      },
+      "UI_RENDERING": {
+        "API": 0,
+        "AUTHORIZATION": 0,
+        "LOCATOR": 0,
+        "NETWORK": 0,
+        "PERSISTENCE": 0,
+        "TIMING": 0,
+        "UI_RENDERING": 2,
+        "UNKNOWN": 1
+      },
+      "UNKNOWN": {
+        "API": 0,
+        "AUTHORIZATION": 0,
+        "LOCATOR": 0,
+        "NETWORK": 0,
+        "PERSISTENCE": 0,
+        "TIMING": 0,
+        "UI_RENDERING": 0,
+        "UNKNOWN": 0
+      }
+    }
+  },
+  "error_case_library": [
+    {
+      "scenario": "TF-COMP-003",
+      "gt": "LOCATOR",
+      "pred_c": "UNKNOWN",
+      "pred_correct": false,
+      "conclusive_c": false,
+      "diagnosis_available": false,
+      "probe_state_v3": "OK",
+      "probe_applied_v3": [
+        false,
+        false,
+        false
+      ],
+      "graph_prediction_changed": false,
+      "probe_prediction_changed_v3": false,
+      "probe_feedback_b3_changed_hypothesis": false,
+      "probe_feedback_b3_outcome": "NO_DIAGNOSIS",
+      "reason": "样本无诊断结论（执行在断言前中断），不能归因于诊断臂本身"
+    },
+    {
+      "scenario": "TF-DB-004",
+      "gt": "TIMING",
+      "pred_c": "PERSISTENCE",
+      "pred_correct": false,
+      "conclusive_c": true,
+      "diagnosis_available": true,
+      "probe_state_v3": "OK",
+      "probe_applied_v3": [
+        false,
+        false
+      ],
+      "graph_prediction_changed": false,
+      "probe_prediction_changed_v3": false,
+      "probe_feedback_b3_changed_hypothesis": false,
+      "probe_feedback_b3_outcome": "CONFIRMED",
+      "reason": "时序症状被误判为未持久化：规则把断言窗口内旧值当成权威状态，缺少延迟读取/耗时证据"
+    },
+    {
+      "scenario": "TF-FLAKY-002",
+      "gt": "API",
+      "pred_c": "UI_RENDERING",
+      "pred_correct": false,
+      "conclusive_c": true,
+      "diagnosis_available": true,
+      "probe_state_v3": "OK",
+      "probe_applied_v3": [
+        false,
+        false,
+        false
+      ],
+      "graph_prediction_changed": false,
+      "probe_prediction_changed_v3": false,
+      "probe_feedback_b3_changed_hypothesis": true,
+      "probe_feedback_b3_outcome": "INCONCLUSIVE",
+      "reason": "Flaky 样本该次执行未观测到 5xx，单次证据不足以识别接口故障；需多次执行差异证据"
+    },
+    {
+      "scenario": "TF-LOC-001",
+      "gt": "LOCATOR",
+      "pred_c": "UNKNOWN",
+      "pred_correct": false,
+      "conclusive_c": false,
+      "diagnosis_available": false,
+      "probe_state_v3": "OK",
+      "probe_applied_v3": [
+        false,
+        false,
+        false
+      ],
+      "graph_prediction_changed": false,
+      "probe_prediction_changed_v3": false,
+      "probe_feedback_b3_changed_hypothesis": false,
+      "probe_feedback_b3_outcome": "NO_DIAGNOSIS",
+      "reason": "样本无诊断结论（执行在断言前中断），不能归因于诊断臂本身"
+    },
+    {
+      "scenario": "TF-LOC-002",
+      "gt": "LOCATOR",
+      "pred_c": "UNKNOWN",
+      "pred_correct": false,
+      "conclusive_c": false,
+      "diagnosis_available": false,
+      "probe_state_v3": "OK",
+      "probe_applied_v3": [
+        false,
+        false,
+        false
+      ],
+      "graph_prediction_changed": false,
+      "probe_prediction_changed_v3": false,
+      "probe_feedback_b3_changed_hypothesis": false,
+      "probe_feedback_b3_outcome": "NO_DIAGNOSIS",
+      "reason": "样本无诊断结论（执行在断言前中断），不能归因于诊断臂本身"
+    },
+    {
+      "scenario": "TF-NET-002",
+      "gt": "NETWORK",
+      "pred_c": "UNKNOWN",
+      "pred_correct": false,
+      "conclusive_c": false,
+      "diagnosis_available": true,
+      "probe_state_v3": "OK",
+      "probe_applied_v3": [
+        false,
+        false,
+        false
+      ],
+      "graph_prediction_changed": false,
+      "probe_prediction_changed_v3": false,
+      "probe_feedback_b3_changed_hypothesis": false,
+      "probe_feedback_b3_outcome": "INCONCLUSIVE",
+      "reason": "网络假设缺少 TRUSTED directly_confirming 证据；且探针结果未回灌，无法升级"
+    },
+    {
+      "scenario": "TF-SEC-001",
+      "gt": "AUTHORIZATION",
+      "pred_c": "UNKNOWN",
+      "pred_correct": false,
+      "conclusive_c": false,
+      "diagnosis_available": true,
+      "probe_state_v3": "OK",
+      "probe_applied_v3": [
+        false,
+        false,
+        false
+      ],
+      "graph_prediction_changed": false,
+      "probe_prediction_changed_v3": false,
+      "probe_feedback_b3_changed_hypothesis": false,
+      "probe_feedback_b3_outcome": "INCONCLUSIVE",
+      "reason": "规则只有 5xx 模式，不识别 403；缺少 HTTP 状态码证据，无法生成 AUTHORIZATION 假设"
+    },
+    {
+      "scenario": "TF-SEC-002",
+      "gt": "AUTHORIZATION",
+      "pred_c": "UI_RENDERING",
+      "pred_correct": false,
+      "conclusive_c": true,
+      "diagnosis_available": true,
+      "probe_state_v3": "OK",
+      "probe_applied_v3": [
+        false,
+        false,
+        false
+      ],
+      "graph_prediction_changed": false,
+      "probe_prediction_changed_v3": false,
+      "probe_feedback_b3_changed_hypothesis": true,
+      "probe_feedback_b3_outcome": "INCONCLUSIVE",
+      "reason": "403 触发 UI 断言失败，规则把表层 UI 失败当成主因（症状冒充根因）"
+    },
+    {
+      "scenario": "TF-TIME-003",
+      "gt": "TIMING",
+      "pred_c": "UNKNOWN",
+      "pred_correct": false,
+      "conclusive_c": false,
+      "diagnosis_available": false,
+      "probe_state_v3": "OK",
+      "probe_applied_v3": [
+        false,
+        false,
+        false
+      ],
+      "graph_prediction_changed": false,
+      "probe_prediction_changed_v3": false,
+      "probe_feedback_b3_changed_hypothesis": false,
+      "probe_feedback_b3_outcome": "NO_DIAGNOSIS",
+      "reason": "样本无诊断结论（执行在断言前中断），不能归因于诊断臂本身"
+    },
+    {
+      "scenario": "TF-UI-002",
+      "gt": "UI_RENDERING",
+      "pred_c": "UNKNOWN",
+      "pred_correct": false,
+      "conclusive_c": false,
+      "diagnosis_available": true,
+      "probe_state_v3": "OK",
+      "probe_applied_v3": [
+        false,
+        false,
+        false
+      ],
+      "graph_prediction_changed": false,
+      "probe_prediction_changed_v3": false,
+      "probe_feedback_b3_changed_hypothesis": false,
+      "probe_feedback_b3_outcome": "INCONCLUSIVE",
+      "reason": "规则未生成任何假设（提交被静默忽略/无失败断言）；探针只能在已有假设上作用，不能新建假设"
+    }
+  ],
+  "summary": {
+    "A_correct": 3,
+    "C_correct": 9,
+    "D_correct": 9,
+    "E_correct": 9,
+    "C_abstain": 7,
+    "C_D_prediction_diffs": 0,
+    "C_E_prediction_diffs": 0
+  }
+}

@@ -85,3 +85,16 @@ propose → VALIDATED（断言保持 PASS / Oracle 完整 PASS / Diff 白名单 
 3. 长稳压测（≥1 小时）、Worker 崩溃恢复的自动化脚本（手工验证过租约回收）。
 4. 前端单元测试（仅类型检查 + 构建 + 浏览器人工核验）。
 5. 外部站点泛化（P-EXT 未授权）。
+
+## RUN-008 测试摘要（2026-11-24，追加）
+
+- 本机全量：`567 passed / 13 skipped / 12 warnings`（`logs/run008/pytest-full-wp6.log`）；
+  真实浏览器 E2E `12 passed`；Ruff check/format 全绿；前端 typecheck/build 通过。
+- 真实 CI（commit `40efee6`）：PR Gate `45335765297`、Nightly Gate `45335777381`、
+  Release Gate `45336007166` 均 success；LLM smoke 缺 Secret 标 BLOCKED。
+- 专项：多进程预算 16/16；长稳守卫 16/16；4 Worker 并发 14/14；SIGKILL 恢复 17/17；
+  前端 60/60 + 定点 4/4；安全修复 36/36。
+- 阻塞：WP3 补充故障矩阵因 AgentDR 拦截保持 BLOCKED；LLM smoke BLOCKED；
+  本机 PG parity skip（CI postgres:16 已真跑 13 用例）。
+- 详细说明见 `docs/RUN-008-WP2-REGRESSION-CI.md`、`docs/RUN-008-WP3-WORKER.md`、
+  `docs/RUN-008-WP5-FRONTEND-AUDIT.md`、`docs/RUN-008-SECURITY-AUDIT.md`。
