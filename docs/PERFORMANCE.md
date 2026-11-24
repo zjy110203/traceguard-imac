@@ -73,3 +73,10 @@
 3. SSE / WebSocket 替代轮询；
 4. 证据保留策略（按 workspace / 时间 / 大小）；
 5. 引入 k6/Locust 做 API 压测，形成容量基线。
+
+## RUN-008 补充（2026-11-24）
+
+- CPU/RSS 采集仍为 `source=liveness_only`（沙箱禁止 `ps`、无 `/proc`），不伪造资源数字。
+- 4 Worker 并发实测：峰值并行 Run 数 4，24.22s 完成 4 Run，24/24 检查（14 项业务 + DB 完整性）。
+- 真实 SIGKILL 故障恢复：执行 2.77s 后击杀，接管延迟见 `worker-fault-recovery.json`；17/17 检查。
+- 60 分钟长稳与 Benchmark v3 本轮实验运行中；结论以 `docs/RUN-008-FINAL-REPORT.md` 定稿为准。

@@ -55,3 +55,14 @@ API 层新增验证（`tests/integration/test_api_flow.py`）：
 4. **速率限制**：仅探针预算；API 层未做全局限流。
 5. **供应链**：未做依赖漏洞扫描（无网络策略约束下的 CI 插件）。
 6. **日志留存**：未实现轮转与集中采集。
+
+## RUN-008 补充（2026-11-24）
+
+- 本轮真实修复两处权限/脱敏缺陷：`SelfHealingService.approve/reject` 统一
+  `require_human_actor`（堵住 `system:*`/`llm:*`/`bot:*`/`worker:*` 自批），
+  `redact()` 字符串路径补齐 cookie/access_key/private_key/credential。
+  证据：`docs/RUN-008-SECURITY-AUDIT.md`、`test_healing.py` 17/17、`test_core.py` 36/36。
+- CI 真实 audit（commit `40efee6`）：high=0 / critical=0 / moderate=3（dev-only）。
+- 安全边界不变：无真实用户认证（主体类型门禁不是 RBAC）、顶层 302 出站请求会到达目标、
+  DNS 钉住无法覆盖浏览器内核缓存窗口；生产需前置 OIDC/网关与受控出站代理。
+- AgentDR `info_theft_steal_env_keys` 两次拦截按策略保留 BLOCKED，未绕过、未读取/传递真实凭据。

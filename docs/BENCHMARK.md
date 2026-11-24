@@ -135,3 +135,11 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/benchmark/experiments \
 
 实验记录持久化在 `tg_doc(kind=experiment)` 与 `tg_metric`，包含每个样本的 `run_id`，
 可回到 Run 详情查看截图、DOM、断言与诊断依据。
+
+## RUN-008 补充（2026-11-24）
+
+- 本轮在隔离 API `8060` / TeamFlow `8061` / 独立 Worker `run008-bench-w1` 上真实执行
+  UI-FaultBench v3（30 场景 + 故障样本，2 次独立重复），原始样本写入
+  `docs/assets/run008/wp7/samples*.jsonl`，不覆盖 `docs/assets/run007/`。
+- 未配置 LLM Secret 的臂保持 BLOCKED；不得用历史数据或 Mock 冒充本轮实验。
+- 最终分子/分母/样本量/模型状态以 `docs/RUN-008-BENCHMARK-REPORT.md` 为准。
