@@ -158,3 +158,20 @@
 | R7-14 | LLM 对照臂（预算内子集） | PASS（子集） | `llm-arm-*.json` | 模型由路由决定，按实际记录；不外推 |
 | R7-15 | 七份 RUN-007 报告 + README/台账 | PASS | `docs/RUN-007-*.md` | 状态枚举统一 |
 | R7-16 | 分支推送 + PR | **PASS** | PR #1 → `main@ac2876e`，head `cc3339d` | token 由用户临时提供；用完即撤销 |
+
+## RUN-008 任务清单（2026-11-24，追加；历史条目不改写）
+
+| 编号 | 任务 | 状态 | 证据 | 备注 |
+|---|---|---|---|---|
+| R8-01 | 基线审计与起点状态恢复 | PASS | `docs/RUN-008-BASELINE.md` | 分支/提交/证据逐项核对，不照抄旧快照 |
+| R8-02 | WP1 P0 复核 + 长稳脚本守卫 | PASS | 16/16 回归；`wp1/` 三场景真实 PID/SIGKILL | 起点已修，以真实执行验证而非重复改坏 |
+| R8-03 | WP2 本机全量回归 | PASS | 567 passed / 13 skipped；E2E 12/12；Ruff 全绿 | 本机 PG parity skip 不写 passed |
+| R8-04 | WP2 三级 CI 真实运行 | PASS | PR `45335765297` / Nightly `45335777381` / Release `45336007166` 全 success（commit `40efee6`） | LLM smoke BLOCKED 不冒充通过；错误输入 Release `45331793408` 失败是 fail-closed 正确行为 |
+| R8-05 | WP3 4 Worker 并发 | PASS | `worker-concurrency.json` 峰值 4、14/14 | 真实 OS 进程 |
+| R8-06 | WP3 执行中途 SIGKILL 故障恢复 | PASS | `worker-fault-recovery.json` 17/17 | 2.77s 时真实 kill PID 80665 |
+| R8-07 | WP3 补充故障矩阵 4 场景 | BLOCKED | `blockers.md` B-17 | AgentDR 两次拦截（含白名单重写）；不重试不绕过 |
+| R8-08 | WP4 60 分钟长稳 | 进行中 | `BZ1Hp8` 每 60s 采样，全部 PASSED | 报告生成前不标 PASS |
+| R8-09 | WP5 前端 14 视图审查 | PASS | 60 checks 全过、64 截图；`fix-verification.json` 4/4 | 修复 5 个真实缺陷 + 假深色断言 |
+| R8-10 | WP6 安全主体门禁与脱敏修复 | PASS | `test_healing.py` 17/17、`test_core.py` 36/36 | 其余为已披露设计边界 |
+| R8-11 | WP7 Benchmark v3 本轮实验 | 进行中 | 隔离 API/Worker/TeamFlow，2 次重复 | 完成前不引用历史数字 |
+| R8-12 | WP8 文档、决策与交付 | 进行中 | `RUN-008-FINAL-REPORT.md` 草稿、`RUN-008-DECISIONS.md` | 实验收尾后定稿 |
