@@ -54,8 +54,14 @@ async function load() {
 async function onCaseChange() {
   const c = cases.value.find((x) => x.testcase_id === form.value.testcase_id)
   form.value.base_version = c?.latest_version ?? 1
-  versions.value = await api.get(`/testcases/${form.value.testcase_id}/versions`)
-  await loadSteps()
+  try {
+    versions.value = await api.get(`/testcases/${form.value.testcase_id}/versions`)
+    await loadSteps()
+  } catch (e) {
+    versions.value = []
+    stepOptions.value = []
+    notifyError(e)
+  }
 }
 
 async function loadSteps() {

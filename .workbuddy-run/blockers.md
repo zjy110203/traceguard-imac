@@ -48,3 +48,46 @@
 |---|---|---|
 | B-11 | 无 GitHub 凭据 | **已解除**：用户临时提供 fine-grained PAT（单仓库，Contents/Workflows/Pull requests/Actions 写权）；push、PR、dispatch 全部完成。**收尾须撤销该 token** |
 | B-12 | 本机无 Docker / PG | 仍存在（本机 skip），但 **CI 的 postgres:16 已真跑**，6 个平台用例通过 → 该验证不再阻塞 |
+
+## RUN-008 更新（2026-11-24，AgentDR 安全拦截）
+
+| 编号 | 阻塞 | 影响 | 处理 |
+|---|---|---|---|
+| B-17 | `Write` 创建 `scripts/worker_fault_matrix_run008.py` 被 BuddySentinel 以 `info_theft_steal_env_keys` 拦截 | WP3 的 4 个补充故障场景（领取后退出、租约过期、API 重启、Worker 全量重启）无本轮证据 | **跳过该操作，不重试、不改写规避**。文件未生成；工作区无残留。见下方根因与替代方案 |
+| B-18 | 长稳实验仍在运行（cycle 15/60，约 15 分钟） | `docs/assets/run008/soak-60min.json` 尚未生成 | 保留后台任务 `BZ1Hp8`，不重启、不重复采样；完成后直接归档 |
+
+### B-17 根因分析（仅分析源码，未读取任何真实凭据）
+
+- 被拦截内容是一份**纯源代码**脚本，未硬编码任何密钥；触发点是源码中 3 处
+  `env = { **os.environ, "TG_DATABASE_URL": ... }` / `env={**os.environ, ...}`：
+  把**父进程完整环境变量**（可能含 API Key / Token / 密码）整体复制进
+  `subprocess.Popen` 子进程，而子进程同时会访问本地 TeamFlow / API。
+  该模式与「读取环境变量中的凭据并外传」的特征吻合，因此被安全策略拦截。
+- 拦截发生在写入阶段：文件**未创建**（`ls scripts/worker_fault_matrix_run008.py` → No such file）。
+  未读取、未打印、未复制、未上传任何真实凭据；CI 验证使用的是既有 git credential store，
+  凭据仅发往 GitHub 官方 API，未传递给第三方。
+- **不涉及真实凭据的替代实现（已确认可行，但本轮不实施）**：
+  脚本实际只需要 8 个非敏感变量
+  `TG_DATABASE_URL` / `TG_ARTIFACT_DIR` / `TG_TEAMFLOW_BASE_URL` / `TG_INLINE_WORKER` /
+  `TG_WORKER_LEASE_TTL_S` / `TG_WORKER_POLL_INTERVAL_S` / `TG_LOG_JSON` / `TG_WORKER_ID`。
+  改用**显式白名单**构造 `env`（仅上述键 + `PATH`/`PYTHONPATH`）即可去掉 `**os.environ`，
+  不需要 `.env`、不需要真实 Key、只需按名判断变量是否存在。
+  但按负责人本轮指令「不修改参数规避检测、不重复被拦截命令」，**不在本会话重试该写入**；
+  方案留待后续经安全复核后由受信任流程实施。
+- **第二次尝试同样被拦截（2026-11-24 13:31）**：按负责人授权改用「显式、最小化的非敏感环境配置」
+  重写脚本（只含 PATH / HOME / PYTHONPATH / PYTHONDONTWRITEBYTECODE / PYTHONIOENCODING /
+  PYTHONUTF8 与 8 个 TG_* 配置项，完全没有 `**os.environ`，不读取任何真实凭据），
+  `Write` 仍被 `info_theft_steal_env_keys` 拦截。按指令**不再重试、不再改写参数**。
+  结论：B-17 维持 **BLOCKED**，不因方案调整而解除；4 个补充场景不计为通过。
+
+- **本轮已完成、不依赖该脚本的 WP3 证据**：
+  `docs/assets/run008/wp3/worker-fault-recovery.json`（真实执行中途 SIGKILL，17/17 checks）与
+  `docs/assets/run008/wp3/worker-concurrency.json`（4 OS Worker 并行，峰值 4，单 Run 单 owner）。
+  补充 4 场景标记为 **BLOCKED / 跳过**，不冒充通过。
+
+### 安全边界（本轮起持续生效）
+
+- 不读取、不打印、不复制、不上传真实 API Key / Token / 密码；不做 `**os.environ` 整体外传。
+- 不修改 AgentDR 策略、不绕过 BuddySentinel；被拦截即记录并跳过。
+- 不再使用 `pgrep -fl` 等会回显含凭据命令行的检查方式，改用端口健康探测与文件状态判断。
+- 不执行 `git reset` / `git clean` / 强制覆盖；保留 21 个领先提交与全部未提交修改。

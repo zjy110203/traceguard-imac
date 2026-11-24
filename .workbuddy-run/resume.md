@@ -165,3 +165,31 @@ curl -X POST "http://127.0.0.1:8010/api/v1/runs/<run_id>/probe-plan?diagnosis_id
   任何中断保留原始采样，重跑必须完整 60 分钟。
 - 不覆盖 `docs/assets/run007/` 下任何证据；不删除保护目录；不 reset/clean/强推/改写历史。
 - 不输出 `.env`、Token、密码；不访问未授权外部站点；不创建正式 Release tag。
+
+### RUN-008 安全拦截与恢复状态（2026-11-24 13:22 CST）
+
+- **本轮安全事件**：`Write` 创建 `scripts/worker_fault_matrix_run008.py`
+  被 `info_theft_steal_env_keys` 拦截。根因是源码 3 处 `**os.environ` 整体复制进
+  `subprocess.Popen(env=...)`（子进程同时访问本地服务），并非硬编码密钥。
+  文件**未创建**，无真实凭据被读取/打印/上传。详见 `.workbuddy-run/blockers.md` B-17。
+- **处理决定**：不重试、不改参数规避、不改安全策略；补充故障矩阵 4 场景标记 BLOCKED 并跳过。
+  第二次以「显式非敏感白名单环境」（无 `**os.environ`、无真实凭据）重写仍被同一策略拦截，
+  按指令停止尝试；后续会话不要重试该脚本的写入，直接沿用 BLOCKED 结论。
+- **Git 现状**：分支 `workbuddy/run008-quality-hardening`，HEAD `1f8df24`，
+  相对 `origin/main` 领先 21 提交、落后 0。未提交项**必须保留**：
+  `docs/assets/run008/soak-samples.jsonl`、`docs/assets/run008/wp3/`、`scripts/worker_concurrency_run008.py`
+  （以及本次更新的 `.workbuddy-run/blockers.md` / `resume.md`）。**禁止 reset/clean/强推**。
+- **后台任务现状（不要重复启动）**：
+  - `BZ1Hp8`：60 分钟长稳，`Status: running`，已跑约 16 分钟，采样 cycle 15/60，
+    证据文件 `docs/assets/run008/soak-60min.json` 尚未生成。结束后直接归档，不重跑。
+  - TeamFlow 隔离服务：`8041`（长稳专用）、`8043`（WP3 专用）健康探测均 200；`8042` 为长稳 API。
+  - WP1 多进程测试与 WP3 并发/故障恢复脚本均已结束，非后台任务。
+- **已恢复工作包**：WP0（基线）、WP1（P0 修复 + 16/16 回归 + 冒烟 22 checks）、
+  WP2（本机 562 passed/13 skipped、E2E 12/12、Ruff 全绿、前端构建通过；
+  真实 PR Gate run 45331287430 与 Nightly Gate 45331346274 全绿，日志已归档）、
+  WP3 核心（4 Worker 并发 + 真实 SIGKILL 故障恢复证据齐备）。
+- **未完成**：WP3 补充故障矩阵（B-17 BLOCKED）、60 分钟长稳收尾（运行中）、
+  WP4 长稳报告、WP5 前端 14 视图审查、WP6 安全专项、WP7 Benchmark v3、WP8 最终报告。
+- **恢复第一步**：先看 `BZ1Hp8` 是否结束 → 若无则等其自然完成；再读 `blockers.md` B-17/B-18；
+  `docs/RUN-008-BASELINE.md` 与 `docs/RUN-008-WP1-IMPLEMENTATION.md`；
+  `docs/assets/run008/` 原始证据；最后按 WP4~WP8 顺序推进（均不需要真实凭据，Benchmark 除外）。

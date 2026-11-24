@@ -19,6 +19,7 @@ const plan = ref<ProbePlan | null>(null)
 const suggestions = ref<{ probe_id: string; params: Record<string, unknown>; why: string; score: number }[]>([])
 const loading = ref(true)
 const error = ref('')
+const partialError = ref('')
 const busy = ref('')
 const reviewer = ref('role:qa-lead')
 
@@ -46,14 +47,28 @@ async function runActiveLoop() {
 
 async function load() {
   loading.value = true
+  partialError.value = ''
   try {
     const d = await api.get<Diagnosis>(`/diagnoses/${id}`)
     diag.value = d
+    const partial: string[] = []
     const [disp, pe, pex, plans] = await Promise.all([
       api.get<Disposition[]>('/dispositions?limit=200'),
-      Promise.all((d.evidence_refs ?? []).map((eid) => api.get<Evidence>(`/evidence/${eid}`).catch(() => null))),
+      Promise.all(
+        (d.evidence_refs ?? []).map((eid) =>
+          api
+            .get<Evidence>(`/evidence/${eid}`)
+            .catch(() => {
+              partial.push(`证据 ${eid}`)
+              return null
+            }),
+        ),
+      ),
       api.get<ProbeExecution[]>(`/probes/executions?run_id=${d.run_id}&limit=50`),
-      api.get<ProbePlan[]>(`/probe-plans?run_id=${d.run_id}&limit=50`).catch(() => []),
+      api.get<ProbePlan[]>(`/probe-plans?run_id=${d.run_id}&limit=50`).catch(() => {
+        partial.push('探针计划')
+        return []
+      }),
     ])
     dispositions.value = disp
     evidence.value = pe.filter((x): x is Evidence => !!x)
@@ -63,7 +78,11 @@ async function load() {
       .get<{ probe_id: string; params: Record<string, unknown>; why: string; score: number }[]>(
         `/runs/${d.run_id}/probe-suggestions?diagnosis_id=${id}`,
       )
-      .catch(() => [])
+      .catch(() => {
+        partial.push('探针建议')
+        return []
+      })
+    if (partial.length) partialError.value = `以下数据加载失败，页面可能不完整：${partial.join('、')}`
     error.value = ''
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
@@ -113,6 +132,7 @@ onMounted(load)
 <template>
   <div>
     <AsyncBlock :loading="loading" :error="error">
+      <div v-if="partialError" class="alert-line" role="alert">{{ partialError }} · 请刷新重试</div>
       <div v-if="diag">
         <PageHeader eyebrow="Diagnosis Intelligence" title="诊断详情"
           :subtitle="`${diag.diagnosis_id} · run ${diag.run_id} · engine ${diag.engine}`">

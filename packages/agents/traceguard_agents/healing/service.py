@@ -209,15 +209,25 @@ class SelfHealingService:
         return prop
 
     def approve(self, proposal_id: str, approver: str) -> RepairProposal:
-        """人工审批；Agent 不得自批（P08 角色待确认，用 role 字符串不编造人员）。"""
-        if approver.lower().startswith("agent"):
-            raise AppError(ErrorCode.AUTHORIZATION_ERROR, "AGENT_CANNOT_SELF_APPROVE_REPAIR")
+        """人工审批；与 API 层 RepairService 共用同一主体类型门禁。
+
+        RUN-008 WP6：旧实现只挡 `agent*`，`system:*` / `llm:*` / `bot:*` / `worker:*`
+        等同样非人类的命名空间可以自批，和 `catalog.require_human_actor` 不一致。
+        这里复用同一判定，避免两层服务出现权限差异。
+        """
+        from traceguard_persistence.catalog import require_human_actor
+
+        actor = require_human_actor(approver, field="approver")
         prop = self._proposals[proposal_id]
         self._transition(prop, RepairStatus.APPROVED)
-        prop.approval_ref = f"approval:{proposal_id}:{approver}:{utc_now_iso()}"
+        prop.approval_ref = f"approval:{proposal_id}:{actor}:{utc_now_iso()}"
         return prop
 
-    def reject(self, proposal_id: str) -> RepairProposal:
+    def reject(self, proposal_id: str, reviewer: str = "human:qa") -> RepairProposal:
+        """拒绝同样必须来自人类主体，不能由 Agent/系统角色发起。"""
+        from traceguard_persistence.catalog import require_human_actor
+
+        require_human_actor(reviewer, field="rejected_by")
         prop = self._proposals[proposal_id]
         self._transition(prop, RepairStatus.REJECTED)
         return prop

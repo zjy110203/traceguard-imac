@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { api, fmtTime } from '../api'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import PageHeader from '../components/PageHeader.vue'
@@ -14,6 +15,13 @@ const error = ref('')
 const busy = ref('')
 const showCreate = ref(false)
 const keyword = ref('')
+// 全局搜索把意图 ID 带到这里；没有 /intents/:id 详情路由，必须在列表页真实过滤。
+const route = useRoute()
+const focusId = ref(typeof route.query.id === 'string' ? route.query.id : '')
+watch(
+  () => route.query.id,
+  (v) => { focusId.value = typeof v === 'string' ? v : '' },
+)
 const form = ref({ title: '', description: '', owner: 'qa-team', candidate_assertions: '' })
 /** 候选用例链接来自真实 /testcases 列表，不再用页面内本地状态伪装持久结果。 */
 const compiledByIntent = ref<Record<string, string>>({})
@@ -41,9 +49,17 @@ async function explore(intentId: string) {
   }
 }
 
-const filtered = computed(() =>
-  items.value.filter((i) => !keyword.value || (i.title + i.description).toLowerCase().includes(keyword.value.toLowerCase())),
-)
+const filtered = computed(() => {
+  const kw = focusId.value || keyword.value
+  return items.value.filter((i) => {
+    if (!kw) return true
+    const k = kw.toLowerCase()
+    return (
+      i.intent_id.toLowerCase() === k ||
+      (i.title + i.description + i.intent_id).toLowerCase().includes(k)
+    )
+  })
+})
 
 async function load() {
   loading.value = true

@@ -1,0 +1,37 @@
+{
+  "round": "RUN-008-WP5",
+  "checks": [
+    {
+      "check": "intent_search_route",
+      "ok": true,
+      "detail": {
+        "href": "/intents?id=intent_tf_create_normal",
+        "url": "http://127.0.0.1:5173/intents?id=intent_tf_create_normal",
+        "intent_visible": true
+      }
+    },
+    {
+      "check": "dark_theme_applied",
+      "ok": true,
+      "detail": {
+        "theme": "dark",
+        "lum": 19.67
+      }
+    },
+    {
+      "check": "mobile_no_overflow",
+      "ok": true,
+      "detail": {
+        "overflow_px": 0
+      }
+    },
+    {
+      "check": "no_page_errors",
+      "ok": true,
+      "detail": {
+        "errors": []
+      }
+    }
+  ],
+  "passed": true
+}

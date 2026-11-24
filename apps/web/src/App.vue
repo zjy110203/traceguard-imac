@@ -121,7 +121,8 @@ async function runSearch() {
     api.get<Record<string, unknown>[]>('/diagnoses?limit=100&workspace_id=default'),
   ])
   const labels = ['run_id', 'testcase_id', 'intent_id', 'diagnosis_id']
-  const routes = ['/runs/', '/testcases/', '/intents/', '/diagnoses/']
+  // 只有存在详情路由的实体才可下钻；Intents 无详情路由，改为列表页带 id 过滤参数。
+  const routes = ['/runs/', '/testcases/', '/intents?id=', '/diagnoses/']
   jobs.forEach((job, idx) => {
     if (job.status !== 'fulfilled') return
     const idKey = labels[idx]

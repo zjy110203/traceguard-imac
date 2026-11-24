@@ -182,13 +182,33 @@ def run(base: str, out_dir: Path, only: str = "") -> dict:
         mpage.screenshot(path=str(out_dir / "mobile-nav.png"), full_page=True)
         mobile.close()
 
-        # 6) 深色主题（如存在切换）
+        # 6) 深色主题：主题由 localStorage['tg-theme'] + data-theme 决定，
+        # 不能只设 prefers-color-scheme（那会得到假深色），必须写入偏好并做亮度断言。
         try:
-            page.emulate_media(color_scheme="dark")
-            page.reload(wait_until="domcontentloaded")
-            page.wait_for_timeout(600)
-            page.screenshot(path=str(out_dir / "dark-theme.png"), full_page=True)
-            record("theme:dark", True, "深色媒体查询下页面可渲染")
+            dark_ctx = browser.new_context(
+                viewport={"width": 1440, "height": 900}, color_scheme="dark"
+            )
+            dark_ctx.add_init_script("try{localStorage.setItem('tg-theme','dark');}catch(e){}")
+            dark_page = dark_ctx.new_page()
+            dark_page.goto(base + "/", wait_until="domcontentloaded")
+            dark_page.wait_for_timeout(700)
+            applied = dark_page.evaluate("() => document.documentElement.dataset.theme === 'dark'")
+            stats = dark_page.evaluate(
+                """() => {
+                    const s = getComputedStyle(document.body);
+                    const m = s.backgroundColor.match(/\\d+/g) || [255,255,255];
+                    return { lum: (Number(m[0])+Number(m[1])+Number(m[2]))/3,
+                             bg: s.backgroundColor };
+                }"""
+            )
+            dark_ok = bool(applied) and float(stats["lum"]) < 128
+            dark_page.screenshot(path=str(out_dir / "dark-theme.png"), full_page=True)
+            record(
+                "theme:dark",
+                dark_ok,
+                f"data-theme={'dark' if applied else 'light'}; body_bg={stats['bg']}; lum={stats['lum']}",
+            )
+            dark_ctx.close()
         except Exception as exc:  # noqa: BLE001
             record("theme:dark", False, str(exc))
 

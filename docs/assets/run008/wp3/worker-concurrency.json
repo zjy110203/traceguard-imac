@@ -1,0 +1,111 @@
+{
+  "round": "RUN-008",
+  "started_at": "2026-11-24T05:11:53Z",
+  "finished_at": "2026-11-24T05:12:17Z",
+  "duration_s": 24.22,
+  "db": "/Users/dlp--test/Desktop/traceguard/.traceguard/run008/wfr-concurrency/workers.db",
+  "teamflow": "http://127.0.0.1:8043",
+  "runs_queued": 4,
+  "worker_pids": {
+    "wcc-w1": 83405,
+    "wcc-w2": 83406,
+    "wcc-w3": 83407,
+    "wcc-w4": 83408
+  },
+  "owner_history": {
+    "run_1795497114171b8fa2487eefa": [
+      "wcc-w1"
+    ],
+    "run_17954971141737d9f5addff26": [
+      "wcc-w4"
+    ],
+    "run_17954971141740f63bd8870c1": [
+      "wcc-w3"
+    ],
+    "run_1795497114175bf977f4c645d": [
+      "wcc-w2"
+    ]
+  },
+  "peak_parallel_runs": 4,
+  "db_samples": 113,
+  "deaths_during_run": [],
+  "runs": [
+    {
+      "run_id": "run_1795497114171b8fa2487eefa",
+      "execution_status": "COMPLETED",
+      "test_verdict": "PASSED",
+      "attempt": 1,
+      "fencing_token": 1,
+      "final_owner": "wcc-w1",
+      "has_report": true,
+      "started_at": 1795497115.140052,
+      "ended_at": 1795497137.1786702
+    },
+    {
+      "run_id": "run_17954971141737d9f5addff26",
+      "execution_status": "COMPLETED",
+      "test_verdict": "PASSED",
+      "attempt": 1,
+      "fencing_token": 1,
+      "final_owner": "wcc-w4",
+      "has_report": true,
+      "started_at": 1795497115.142273,
+      "ended_at": 1795497137.187083
+    },
+    {
+      "run_id": "run_17954971141740f63bd8870c1",
+      "execution_status": "COMPLETED",
+      "test_verdict": "PASSED",
+      "attempt": 1,
+      "fencing_token": 1,
+      "final_owner": "wcc-w3",
+      "has_report": true,
+      "started_at": 1795497115.141902,
+      "ended_at": 1795497137.214987
+    },
+    {
+      "run_id": "run_1795497114175bf977f4c645d",
+      "execution_status": "COMPLETED",
+      "test_verdict": "PASSED",
+      "attempt": 1,
+      "fencing_token": 1,
+      "final_owner": "wcc-w2",
+      "has_report": true,
+      "started_at": 1795497115.1414468,
+      "ended_at": 1795497137.1964748
+    }
+  ],
+  "evidence_counts": {
+    "run_1795497114171b8fa2487eefa": 20,
+    "run_17954971141737d9f5addff26": 23,
+    "run_17954971141740f63bd8870c1": 21,
+    "run_1795497114175bf977f4c645d": 22
+  },
+  "step_counts": {
+    "run_1795497114171b8fa2487eefa": 8,
+    "run_17954971141737d9f5addff26": 8,
+    "run_17954971141740f63bd8870c1": 8,
+    "run_1795497114175bf977f4c645d": 8
+  },
+  "duplicate_steps": [],
+  "duplicate_events": [],
+  "orphan_steps": 0,
+  "quick_check": "ok",
+  "checks": {
+    "four_distinct_os_workers": true,
+    "no_worker_died_during_runs": true,
+    "parallel_execution_observed": true,
+    "each_run_single_owner": true,
+    "all_runs_terminal": true,
+    "attempt_not_inflated": true,
+    "fencing_token_stable": true,
+    "no_duplicate_steps": true,
+    "no_duplicate_events": true,
+    "no_orphan_steps": true,
+    "all_runs_have_evidence": true,
+    "all_runs_have_steps": true,
+    "all_runs_have_report": true,
+    "db_integrity_ok": true
+  },
+  "passed": true
+}

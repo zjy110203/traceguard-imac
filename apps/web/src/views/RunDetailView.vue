@@ -282,10 +282,10 @@ onUnmounted(() => {
           <span v-else-if="run.lease_owner" class="small muted">租约已释放（执行结束）</span>
         </div>
 
-        <div v-if="report?.errors?.length" class="card" style="border-color:#fecdca; margin-bottom: 14px">
+        <div v-if="report?.errors?.length" class="card" style="border-color:var(--fail-border); margin-bottom: 14px">
           <div class="card-body" style="background:var(--fail-weak); border-radius:8px">
             <div class="strong" style="color:var(--fail)">执行错误</div>
-            <div v-for="e in report.errors" :key="e" class="mono small" style="margin-top: 4px; color:#7a271a">{{ e }}</div>
+            <div v-for="e in report.errors" :key="e" class="mono small" style="margin-top: 4px; color:var(--fail)">{{ e }}</div>
           </div>
         </div>
 
