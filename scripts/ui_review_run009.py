@@ -85,7 +85,11 @@ INTERACT: dict[str, dict[str, str]] = {
     "explorer": {"kind": "fill", "selector": "input[aria-label='搜索探索']", "value": "TF"},
     "models": {"kind": "click", "text": "刷新"},
     "diagnoses": {"kind": "click", "text": "刷新"},
-    "diagnosis-detail": {"kind": "fill", "selector": "input:not([type=checkbox])", "value": "wp1-a11y"},
+    "diagnosis-detail": {
+        "kind": "fill",
+        "selector": "input:not([type=checkbox])",
+        "value": "wp1-a11y",
+    },
     "repairs": {"kind": "click", "text": "刷新"},
     "benchmark": {"kind": "click", "text": "刷新"},
     "system": {"kind": "click", "text": "刷新"},
@@ -94,7 +98,9 @@ INTERACT: dict[str, dict[str, str]] = {
 
 def _git_head() -> str:
     try:
-        return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, text=True).strip()
+        return subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, text=True
+        ).strip()
     except Exception:  # noqa: BLE001
         return "unknown"
 
@@ -173,7 +179,9 @@ def resolve_routes(manifest: dict[str, Any], ids: dict[str, str]) -> list[dict[s
             }.get(r["name"], param.group(1))
             value = ids.get(key, "")
             resolved_path = path.replace(param.group(0), value) if value else ""
-        resolved.append({**r, "resolved_path": resolved_path, "param": param.group(1) if param else None})
+        resolved.append(
+            {**r, "resolved_path": resolved_path, "param": param.group(1) if param else None}
+        )
     return resolved
 
 
@@ -326,7 +334,9 @@ def a11y_check(page: Any) -> dict[str, Any]:
 
 def keyboard_check(page: Any) -> dict[str, Any]:
     try:
-        page.evaluate("() => { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }")
+        page.evaluate(
+            "() => { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }"
+        )
         page.keyboard.press("Tab")
         active = page.evaluate(
             """() => {
@@ -344,7 +354,11 @@ def keyboard_check(page: Any) -> dict[str, Any]:
             }"""
         )
         if not active:
-            return {"tab_reached_focusable": False, "pass": False, "reason": "Tab 未到达任何可聚焦元素"}
+            return {
+                "tab_reached_focusable": False,
+                "pass": False,
+                "reason": "Tab 未到达任何可聚焦元素",
+            }
         ok = active["visible"] and bool(active["name"])
         return {"tab_reached_focusable": True, **active, "pass": bool(ok)}
     except Exception as exc:  # noqa: BLE001
@@ -366,13 +380,20 @@ def axe_attempt(page: Any) -> dict[str, Any]:
             if available:
                 page.add_script_tag(path=available[0])
             else:
-                page.add_script_tag(url="https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js")
+                page.add_script_tag(
+                    url="https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js"
+                )
             result = page.evaluate("async () => await axe.run(document)")
             violations = [
                 {"id": v["id"], "impact": v["impact"], "nodes": len(v["nodes"])}
                 for v in result.get("violations", [])
             ]
-            return {"status": "VERIFIED", "engine": "axe-core", "violations": violations, "pass_count": len(result.get("passes", []))}
+            return {
+                "status": "VERIFIED",
+                "engine": "axe-core",
+                "violations": violations,
+                "pass_count": len(result.get("passes", [])),
+            }
         except Exception as exc:  # noqa: BLE001
             return {"status": "BLOCKED", "reason": f"axe 引擎存在但运行失败：{str(exc)[:200]}"}
     return {
@@ -384,7 +405,9 @@ def axe_attempt(page: Any) -> dict[str, Any]:
     }
 
 
-def perform_interaction(page: Any, cfg: dict[str, str], api_counter: dict[str, int]) -> dict[str, Any]:
+def perform_interaction(
+    page: Any, cfg: dict[str, str], api_counter: dict[str, int]
+) -> dict[str, Any]:
     before_text = page.inner_text("body")
     before_api = api_counter["n"]
     out: dict[str, Any] = {"kind": cfg["kind"], "detail": "", "api_requests_triggered": 0}
@@ -500,11 +523,18 @@ def run(base_web: str, base_api: str, out: Path) -> dict[str, Any]:
             pg = ctx.new_page()
             pg.on(
                 "console",
-                lambda m: console.append(m.text)
-                if m.type == "error" and not any(k in m.text for k in IGNORABLE)
-                else None,
+                lambda m: (
+                    console.append(m.text)
+                    if m.type == "error" and not any(k in m.text for k in IGNORABLE)
+                    else None
+                ),
             )
-            pg.on("request", lambda r: api_counter.update(n=api_counter["n"] + 1) if "/api/v1/" in r.url else None)
+            pg.on(
+                "request",
+                lambda r: (
+                    api_counter.update(n=api_counter["n"] + 1) if "/api/v1/" in r.url else None
+                ),
+            )
             return pg
 
         # ---------------------------- 4 断点 × 双主题 × 全部视图 ----------------------------
@@ -532,7 +562,12 @@ def run(base_web: str, base_api: str, out: Path) -> dict[str, Any]:
                         shots += 1
                         rec.update(
                             {
-                                "status": "PASS" if ident["path_ok"] and ident["title_ok"] and ident["content_ok"] and overflow <= 2 else "FAIL",
+                                "status": "PASS"
+                                if ident["path_ok"]
+                                and ident["title_ok"]
+                                and ident["content_ok"]
+                                and overflow <= 2
+                                else "FAIL",
                                 "identity": ident,
                                 "overflow_px": overflow,
                                 "dark_applied": _theme_is_dark(page) if scheme == "dark" else None,
@@ -551,7 +586,9 @@ def run(base_web: str, base_api: str, out: Path) -> dict[str, Any]:
                                 page.reload(wait_until="domcontentloaded", timeout=30000)
                                 page.wait_for_selector(".app .sidebar", timeout=15000)
                                 if view.get("setup_tab"):
-                                    page.get_by_role("button", name=view["setup_tab"], exact=True).first.click(timeout=6000)
+                                    page.get_by_role(
+                                        "button", name=view["setup_tab"], exact=True
+                                    ).first.click(timeout=6000)
                                 page.wait_for_timeout(900)
                                 after = route_identity(page, view)
                                 refresh_shot = out / "shots" / f"{view['key']}-refresh.png"
@@ -567,7 +604,9 @@ def run(base_web: str, base_api: str, out: Path) -> dict[str, Any]:
                                 rec["refresh"] = {"ok": False, "error": str(exc)[:200]}
 
                             # 真实交互：搜索输入 / 刷新按钮 / Tab 切换
-                            rec["interaction"] = perform_interaction(page, view["interaction"], api_counter)
+                            rec["interaction"] = perform_interaction(
+                                page, view["interaction"], api_counter
+                            )
                             inter_shot = out / "shots" / f"{view['key']}-interaction.png"
                             page.screenshot(path=str(inter_shot), full_page=True)
                             shots += 1
@@ -604,6 +643,7 @@ def run(base_web: str, base_api: str, out: Path) -> dict[str, Any]:
         # Loading：真实拦截 API 并延迟
         page = new_page(1440, 900)
         try:
+
             def _slow(route: Any) -> None:
                 time.sleep(4)
                 route.continue_()
@@ -661,7 +701,9 @@ def run(base_web: str, base_api: str, out: Path) -> dict[str, Any]:
                     "state": "error",
                     "view": "run-detail",
                     "screenshot": str(shot.relative_to(ROOT)),
-                    "error_hint_visible": any(k in body.lower() for k in ("错误", "失败", "not found", "重试", "不存在")),
+                    "error_hint_visible": any(
+                        k in body.lower() for k in ("错误", "失败", "not found", "重试", "不存在")
+                    ),
                 }
             )
         except Exception as exc:  # noqa: BLE001
@@ -676,7 +718,9 @@ def run(base_web: str, base_api: str, out: Path) -> dict[str, Any]:
             shot = out / "shots" / "state-success-dashboard.png"
             page.screenshot(path=str(shot), full_page=True)
             shots += 1
-            states.append({"state": "success", "view": "dashboard", "screenshot": str(shot.relative_to(ROOT))})
+            states.append(
+                {"state": "success", "view": "dashboard", "screenshot": str(shot.relative_to(ROOT))}
+            )
         except Exception as exc:  # noqa: BLE001
             states.append({"state": "success", "error": str(exc)[:200]})
         page.context.close()
@@ -714,7 +758,9 @@ def run(base_web: str, base_api: str, out: Path) -> dict[str, Any]:
         }
         if rec.get("screenshot") is None or rec.get("status") != "PASS":
             entry["functional_status"] = "FAIL"
-            entry["issues"].append(f"{rec['breakpoint']}-{rec['theme']}: {rec.get('status')}: {rec.get('error', '')}")
+            entry["issues"].append(
+                f"{rec['breakpoint']}-{rec['theme']}: {rec.get('status')}: {rec.get('error', '')}"
+            )
         if rec.get("dark_applied") is False:
             entry["functional_status"] = "FAIL"
             entry["issues"].append(f"{rec['breakpoint']}-dark: 暗色主题未实际生效")
@@ -739,7 +785,9 @@ def run(base_web: str, base_api: str, out: Path) -> dict[str, Any]:
                 entry["issues"].append("页面刷新后路由身份/内容校验失败")
         if "interaction" in rec:
             entry["interaction"] = rec["interaction"]
-            entry["screenshots"]["interaction-1440-light"] = rec["interaction"].get("screenshot", "")
+            entry["screenshots"]["interaction-1440-light"] = rec["interaction"].get(
+                "screenshot", ""
+            )
             if not rec["interaction"].get("ok"):
                 entry["functional_status"] = "FAIL"
                 entry["issues"].append(f"真实交互失败：{rec['interaction'].get('error', '')}")
@@ -750,21 +798,32 @@ def run(base_web: str, base_api: str, out: Path) -> dict[str, Any]:
                 entry["issues"].append(f"前进后退未回到预期路由：{rec['history'].get('error', '')}")
         if rec.get("console_errors"):
             entry["functional_status"] = "FAIL"
-            entry["issues"].append(f"{rec['breakpoint']}-{rec['theme']}: console 错误 {rec['console_errors'][:1]}")
+            entry["issues"].append(
+                f"{rec['breakpoint']}-{rec['theme']}: console 错误 {rec['console_errors'][:1]}"
+            )
         entry["status"] = (
-            "FAIL" if entry["functional_status"] == "FAIL" or entry["a11y_status"] == "FAIL" else "PASS"
+            "FAIL"
+            if entry["functional_status"] == "FAIL" or entry["a11y_status"] == "FAIL"
+            else "PASS"
         )
 
     route_entries = []
     for r in routes:
         key = f"{r['index']:02d}-{r['name']}"
         entry = by_view.get(key, {"view": key, "status": "BLOCKED", "issues": ["未执行"]})
-        entry = {**entry, "route_index": r["index"], "route_name": r["name"], "component": r["component"]}
+        entry = {
+            **entry,
+            "route_index": r["index"],
+            "route_name": r["name"],
+            "component": r["component"],
+        }
         route_entries.append(entry)
     subview_entries = [e for e in by_view.values() if e["kind"] == "subview"]
 
     failures = [e for e in by_view.values() if e["status"] == "FAIL"]
-    functional_failures = [e["view"] for e in by_view.values() if e.get("functional_status") == "FAIL"]
+    functional_failures = [
+        e["view"] for e in by_view.values() if e.get("functional_status") == "FAIL"
+    ]
     a11y_failures = [e["view"] for e in by_view.values() if e.get("a11y_status") == "FAIL"]
     functional_passed = not functional_failures
     summary = {
@@ -785,9 +844,7 @@ def run(base_web: str, base_api: str, out: Path) -> dict[str, Any]:
         "axe": axe_result.get("status", "BLOCKED"),
         "breakpoints": [b[0] for b in BREAKPOINTS],
         "themes": ["light", "dark"],
-        "verdict": "VERIFIED"
-        if not failures
-        else ("PARTIAL" if functional_passed else "FAIL"),
+        "verdict": "VERIFIED" if not failures else ("PARTIAL" if functional_passed else "FAIL"),
         "passed": not failures,
     }
 

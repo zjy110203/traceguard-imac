@@ -591,12 +591,10 @@ def run_all_scenarios(out_dir: Path) -> dict[str, Any]:  # noqa: C901, PLR0915
                 f"Host: 127.0.0.1\r\n\r\n"
             ).encode(),
             "connect_wrong_port": (
-                f"CONNECT 127.0.0.1:{allowed_port} HTTP/1.1\r\n"
-                f"Host: 127.0.0.1\r\n\r\n"
+                f"CONNECT 127.0.0.1:{allowed_port} HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n"
             ).encode(),
             "connect_forbidden": (
-                f"CONNECT 127.0.0.1:{forbidden_port} HTTP/1.1\r\n"
-                f"Host: 127.0.0.1\r\n\r\n"
+                f"CONNECT 127.0.0.1:{forbidden_port} HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n"
             ).encode(),
         }
         illegal_results = {}
@@ -622,15 +620,12 @@ def run_all_scenarios(out_dir: Path) -> dict[str, Any]:  # noqa: C901, PLR0915
             ).encode(),
         )
         upstream_hits = allowed_rec.snapshot()[before_hits:]
-        upstream_header_names = (
-            upstream_hits[-1]["header_names"] if upstream_hits else ["NO_HIT"]
-        )
+        upstream_header_names = upstream_hits[-1]["header_names"] if upstream_hits else ["NO_HIT"]
         audit = runtime.proxy.audit_json()
         audit_text = json.dumps(audit, ensure_ascii=False)
         raw_evidence["auth_header_probe"] = {
             "upstream_header_names": upstream_header_names,
-            "upstream_received_proxy_authorization": "proxy-authorization"
-            in upstream_header_names,
+            "upstream_received_proxy_authorization": "proxy-authorization" in upstream_header_names,
             "audit_entry_count": len(audit),
             "audit_leaked_any_token": any(
                 token in audit_text
@@ -642,9 +637,7 @@ def run_all_scenarios(out_dir: Path) -> dict[str, Any]:  # noqa: C901, PLR0915
             ),
             "audit_sample": audit[:3],
         }
-        checks["proxy_auth_not_forwarded"] = (
-            "proxy-authorization" not in upstream_header_names
-        )
+        checks["proxy_auth_not_forwarded"] = "proxy-authorization" not in upstream_header_names
         checks["audit_no_auth_headers"] = not raw_evidence["auth_header_probe"][
             "audit_leaked_any_token"
         ]
@@ -685,9 +678,7 @@ def run_all_scenarios(out_dir: Path) -> dict[str, Any]:  # noqa: C901, PLR0915
             "started_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "proxy_url": proxy_url,
             "policy_origins": sorted(str(o) for o in policy.origins),
-            "policy_pinned_dns": {
-                k: sorted(v) for k, v in policy.pinned_dns.items()
-            },
+            "policy_pinned_dns": {k: sorted(v) for k, v in policy.pinned_dns.items()},
             "ports": {
                 "proxy": proxy_port,
                 "allowed": allowed_port,

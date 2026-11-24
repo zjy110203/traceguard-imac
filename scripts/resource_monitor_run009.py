@@ -142,16 +142,12 @@ class LibProc:
 
     def taskinfo(self, pid: int) -> ProcTaskInfo | None:
         info = ProcTaskInfo()
-        n = self.lib.proc_pidinfo(
-            pid, PROC_PIDTASKINFO, 0, ctypes.byref(info), self.taskinfo_size
-        )
+        n = self.lib.proc_pidinfo(pid, PROC_PIDTASKINFO, 0, ctypes.byref(info), self.taskinfo_size)
         return info if n == self.taskinfo_size else None
 
     def bsdinfo(self, pid: int) -> ProcBsdInfo | None:
         info = ProcBsdInfo()
-        n = self.lib.proc_pidinfo(
-            pid, PROC_PIDTBSDINFO, 0, ctypes.byref(info), self.bsdinfo_size
-        )
+        n = self.lib.proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, ctypes.byref(info), self.bsdinfo_size)
         return info if n == self.bsdinfo_size else None
 
     @staticmethod
@@ -185,9 +181,7 @@ class LatencyTracker:
         self._records: deque[dict[str, Any]] = deque(maxlen=max_records)
 
     def record(self, method: str, path: str, ms: float, status: int | None = None) -> None:
-        self._records.append(
-            {"method": method, "path": path, "ms": round(ms, 3), "status": status}
-        )
+        self._records.append({"method": method, "path": path, "ms": round(ms, 3), "status": status})
 
     def summary(self) -> dict[str, Any]:
         all_ms = [r["ms"] for r in self._records]
@@ -324,7 +318,8 @@ class ResourceSampler:
             growth = None
             if group in self._first_rss and now - self._t0 > 0:  # type: ignore[operator]
                 growth = round(
-                    (rss_total - self._first_rss[group]) / (now - self._t0), 4  # type: ignore[operator]
+                    (rss_total - self._first_rss[group]) / (now - self._t0),
+                    4,  # type: ignore[operator]
                 )
             group_stats[group] = {
                 "alive": alive,
@@ -467,8 +462,14 @@ class DbProbe:
                 ]
                 # 大 Event/Evidence 查询：真实执行，记录耗时与返回行数
                 for label, sql in (
-                    ("events_limit500", "SELECT * FROM tg_event ORDER BY recorded_at DESC LIMIT 500"),
-                    ("evidence_limit500", "SELECT * FROM tg_evidence ORDER BY created_at DESC LIMIT 500"),
+                    (
+                        "events_limit500",
+                        "SELECT * FROM tg_event ORDER BY recorded_at DESC LIMIT 500",
+                    ),
+                    (
+                        "evidence_limit500",
+                        "SELECT * FROM tg_evidence ORDER BY created_at DESC LIMIT 500",
+                    ),
                 ):
                     t0 = time.perf_counter()
                     try:

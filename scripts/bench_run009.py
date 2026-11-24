@@ -175,7 +175,7 @@ def _signals_from_sample(obs: dict[str, Any]) -> list[ProbeSignal]:
     """从真实落盘证据构造 ProbeSignal（不访问外部系统，不新造证据）。"""
     evidence = {e.get("evidence_id"): e for e in (obs.get("evidence") or [])}
     signals: list[ProbeSignal] = []
-    for step in ((obs.get("probe_plan") or {}).get("steps") or []):
+    for step in (obs.get("probe_plan") or {}).get("steps") or []:
         if step.get("status") != "SUCCEEDED":
             continue
         eids = list(step.get("evidence_ids") or [])
@@ -311,17 +311,23 @@ def run_samples(
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """在一轮真实样本上计算所有臂；返回 (raw_samples, arm_predictions)。"""
     raw: list[dict[str, Any]] = []
-    lines = [json.loads(x) for x in samples_path.read_text(encoding="utf-8").splitlines() if x.strip()]
+    lines = [
+        json.loads(x) for x in samples_path.read_text(encoding="utf-8").splitlines() if x.strip()
+    ]
     # 每个场景选一个计分样本：优先有 diagnose 结论，其次真实失败样本
     by_scenario: dict[str, dict[str, Any]] = {}
     for obs in lines:
         s = str(obs.get("scenario") or "")
         cur = by_scenario.get(s)
-        score = 2 if obs.get("diag_rule") else (
-            1 if obs.get("test_verdict") in {"FAILED", "NOT_EVALUATED"} else 0
+        score = (
+            2
+            if obs.get("diag_rule")
+            else (1 if obs.get("test_verdict") in {"FAILED", "NOT_EVALUATED"} else 0)
         )
-        cur_score = 2 if (cur and cur.get("diag_rule")) else (
-            1 if (cur and cur.get("test_verdict") in {"FAILED", "NOT_EVALUATED"}) else 0
+        cur_score = (
+            2
+            if (cur and cur.get("diag_rule"))
+            else (1 if (cur and cur.get("test_verdict") in {"FAILED", "NOT_EVALUATED"}) else 0)
         )
         if score >= cur_score:
             by_scenario[s] = obs
@@ -366,13 +372,20 @@ def run_samples(
         record("C_rule", diag_to_pred(diag), probes=0)
         d_pred = graph_enhanced(diag, graph)
         record("D_graph", d_pred, probes=0, note="图增强仅做跨源确认，不改主因类别")
-        record("E_probe_v3", probe_arm_prediction(obs), probes=obs.get("probe_count") or 0,
-               note="RUN-008 原 E 臂：探针证据未回灌诊断")
+        record(
+            "E_probe_v3",
+            probe_arm_prediction(obs),
+            probes=obs.get("probe_count") or 0,
+            note="RUN-008 原 E 臂：探针证据未回灌诊断",
+        )
 
         # F/G/H：真实探针回灌 + 真实引擎重算（不同预算）
         if diag:
-            for budget, name in ((1, "F_probe_feedback_b1"), (2, "G_probe_feedback_b2"),
-                                 (3, "H_probe_feedback_b3")):
+            for budget, name in (
+                (1, "F_probe_feedback_b1"),
+                (2, "G_probe_feedback_b2"),
+                (3, "H_probe_feedback_b3"),
+            ):
                 t0 = time.perf_counter()
                 pred = _predict_with_probe(diag, signals[:budget], report)
                 pred["latency_ms"] = round((time.perf_counter() - t0) * 1000, 3)
@@ -382,22 +395,37 @@ def run_samples(
             cf = _predict_with_probe(diag, cf_signals[:3], report)
             cf["latency_ms"] = round((time.perf_counter() - t0) * 1000, 3)
             cf["measurement_class"] = "COUNTERFACTUAL_NOT_MEASURED"
-            record("CF_time_aligned_probe", cf, probes=min(3, len(cf_signals)),
-                   note="反事实：用 Run 业务断言替代实时状态探针；不计入实测")
+            record(
+                "CF_time_aligned_probe",
+                cf,
+                probes=min(3, len(cf_signals)),
+                note="反事实：用 Run 业务断言替代实时状态探针；不计入实测",
+            )
         else:
-            for name in ("F_probe_feedback_b1", "G_probe_feedback_b2",
-                         "H_probe_feedback_b3", "CF_time_aligned_probe"):
-                record(name, {"mechanism": "UNKNOWN", "conclusive": False,
-                              "outcome": "NO_DIAGNOSIS"},
-                       probes=0, note="该样本无诊断结论（NOT_EVALUATED/执行中断），无法回灌")
+            for name in (
+                "F_probe_feedback_b1",
+                "G_probe_feedback_b2",
+                "H_probe_feedback_b3",
+                "CF_time_aligned_probe",
+            ):
+                record(
+                    name,
+                    {"mechanism": "UNKNOWN", "conclusive": False, "outcome": "NO_DIAGNOSIS"},
+                    probes=0,
+                    note="该样本无诊断结论（NOT_EVALUATED/执行中断），无法回灌",
+                )
 
         # GRAPH-SEM：图结构审计（诚实：不改变主因）
         g_audit = _graph_audit(graph)
-        record("GRAPH_SEM", graph_enhanced(diag, graph), probes=0,
-               note=f"图结构审计：{g_audit['nodes']} 节点/{g_audit['edges']} 边；"
-                    f"独立 supports={g_audit['supports_edges']}，"
-                    f"contradicts={g_audit['contradicts_edges']}，"
-                    f"direct_causal={g_audit['direct_causal_edges']}")
+        record(
+            "GRAPH_SEM",
+            graph_enhanced(diag, graph),
+            probes=0,
+            note=f"图结构审计：{g_audit['nodes']} 节点/{g_audit['edges']} 边；"
+            f"独立 supports={g_audit['supports_edges']}，"
+            f"contradicts={g_audit['contradicts_edges']}，"
+            f"direct_causal={g_audit['direct_causal_edges']}",
+        )
 
         # LLM：未授权 → BLOCKED，不产出任何预测数值
         arm_runs["LLM_CONSTRAINED"] = {
@@ -410,56 +438,63 @@ def run_samples(
         }
 
         plan = obs.get("probe_plan") or {}
-        raw.append({
-            "repeat_pass": pass_index,
-            "scenario": scenario,
-            "run_id": obs.get("run_id"),
-            "gt_mechanism": gt,
-            "gt_source": "evaluation_side:expected_failure_mechanism",
-            "executed_in_run008": True,
-            "evidence_source_file": str(samples_path.relative_to(ROOT)),
-            "execution_status": obs.get("execution_status"),
-            "test_verdict": obs.get("test_verdict"),
-            "diagnosis_available": bool(diag),
-            "diagnosis_hypotheses_before_probe": [
-                {
-                    "mechanism": h.get("failure_mechanism"),
-                    "status": h.get("status"),
-                    "suggested_by": h.get("suggested_by"),
-                    "supporting": len(h.get("supporting") or []),
-                    "contradicting": len(h.get("contradicting") or []),
-                }
-                for h in ((diag or {}).get("hypotheses") or [])
-            ],
-            "probe_state_v3": obs.get("probe_state"),
-            "probe_count_v3": obs.get("probe_count"),
-            "probe_applied_to_diagnosis_v3": [
-                s.get("applied_to_diagnosis") for s in (plan.get("steps") or [])
-            ],
-            "probe_assessments_v3": plan.get("assessments"),
-            "probe_stop_reason_v3": plan.get("stop_reason"),
-            "probe_signals_reconstructed": [
-                {"probe_id": s.probe_id, "evidence_ids": s.evidence_ids,
-                 "data_keys": sorted((s.data or {}).keys())}
-                for s in signals
-            ],
-            "graph_audit": g_audit,
-            "arms": arm_runs,
-            "counterfactual_note": "CF 臂只用真实 Run 报告推导状态，属于设计模拟，不是实测",
-        })
+        raw.append(
+            {
+                "repeat_pass": pass_index,
+                "scenario": scenario,
+                "run_id": obs.get("run_id"),
+                "gt_mechanism": gt,
+                "gt_source": "evaluation_side:expected_failure_mechanism",
+                "executed_in_run008": True,
+                "evidence_source_file": str(samples_path.relative_to(ROOT)),
+                "execution_status": obs.get("execution_status"),
+                "test_verdict": obs.get("test_verdict"),
+                "diagnosis_available": bool(diag),
+                "diagnosis_hypotheses_before_probe": [
+                    {
+                        "mechanism": h.get("failure_mechanism"),
+                        "status": h.get("status"),
+                        "suggested_by": h.get("suggested_by"),
+                        "supporting": len(h.get("supporting") or []),
+                        "contradicting": len(h.get("contradicting") or []),
+                    }
+                    for h in ((diag or {}).get("hypotheses") or [])
+                ],
+                "probe_state_v3": obs.get("probe_state"),
+                "probe_count_v3": obs.get("probe_count"),
+                "probe_applied_to_diagnosis_v3": [
+                    s.get("applied_to_diagnosis") for s in (plan.get("steps") or [])
+                ],
+                "probe_assessments_v3": plan.get("assessments"),
+                "probe_stop_reason_v3": plan.get("stop_reason"),
+                "probe_signals_reconstructed": [
+                    {
+                        "probe_id": s.probe_id,
+                        "evidence_ids": s.evidence_ids,
+                        "data_keys": sorted((s.data or {}).keys()),
+                    }
+                    for s in signals
+                ],
+                "graph_audit": g_audit,
+                "arms": arm_runs,
+                "counterfactual_note": "CF 臂只用真实 Run 报告推导状态，属于设计模拟，不是实测",
+            }
+        )
 
     arm_predictions: dict[str, list[dict[str, Any]]] = {}
     for r in raw:
         for name, run in r["arms"].items():
             if run.get("outcome") == "BLOCKED":
                 continue
-            arm_predictions.setdefault(name, []).append({
-                "scenario": r["scenario"],
-                "gt": r["gt_mechanism"],
-                "pred": run["mechanism"],
-                "conclusive": run["conclusive"],
-                "outcome": run["outcome"],
-            })
+            arm_predictions.setdefault(name, []).append(
+                {
+                    "scenario": r["scenario"],
+                    "gt": r["gt_mechanism"],
+                    "pred": run["mechanism"],
+                    "conclusive": run["conclusive"],
+                    "outcome": run["outcome"],
+                }
+            )
     return raw, arm_predictions
 
 
@@ -481,12 +516,24 @@ def _compute_metrics(
         conclusive = sum(1 for p in preds if p["conclusive"])
         concl_correct = sum(1 for p in preds if p["conclusive"] and p["pred"] == p["gt"])
         metrics += [
-            _metric(f"primary_cause_accuracy[{arm}]", correct, len(preds),
-                    "主因类别命中/计分样本数；分子=命中数，分母=计分样本数"),
-            _metric(f"diagnosis_coverage[{arm}]", conclusive, len(preds),
-                    "给出确定结论的样本/计分样本数"),
-            _metric(f"selective_accuracy[{arm}]", concl_correct, conclusive,
-                    "有结论且主因正确/有结论样本数；须与 coverage 同看"),
+            _metric(
+                f"primary_cause_accuracy[{arm}]",
+                correct,
+                len(preds),
+                "主因类别命中/计分样本数；分子=命中数，分母=计分样本数",
+            ),
+            _metric(
+                f"diagnosis_coverage[{arm}]",
+                conclusive,
+                len(preds),
+                "给出确定结论的样本/计分样本数",
+            ),
+            _metric(
+                f"selective_accuracy[{arm}]",
+                concl_correct,
+                conclusive,
+                "有结论且主因正确/有结论样本数；须与 coverage 同看",
+            ),
         ]
         mf = ev.macro_f1(pmap).to_dict()
         mf["metric"] = f"macro_f1[{arm}]"
@@ -494,27 +541,35 @@ def _compute_metrics(
         metrics.append(mf)
         fp_den_arm = sum(1 for r in raw if r["gt_mechanism"] == "PERSISTENCE")
         fp_arm = sum(
-            1 for r in raw
-            if r["gt_mechanism"] == "PERSISTENCE"
-            and (r["arms"][arm].get("verdict") == "PASSED")
+            1
+            for r in raw
+            if r["gt_mechanism"] == "PERSISTENCE" and (r["arms"][arm].get("verdict") == "PASSED")
         )
-        metrics.append(_metric(
-            f"false_pass_rate[{arm}]", fp_arm, fp_den_arm,
-            "GT持久化故障却输出 verdict=PASSED 的样本/持久化故障样本数；"
-            "INCONCLUSIVE/UNKNOWN 不计 PASSED（仅 A 臂直接产出 verdict）",
-        ))
+        metrics.append(
+            _metric(
+                f"false_pass_rate[{arm}]",
+                fp_arm,
+                fp_den_arm,
+                "GT持久化故障却输出 verdict=PASSED 的样本/持久化故障样本数；"
+                "INCONCLUSIVE/UNKNOWN 不计 PASSED（仅 A 臂直接产出 verdict）",
+            )
+        )
         probes = [r["arms"][arm].get("probes_used") or 0 for r in raw if arm in r["arms"]]
         evidence = [r["arms"][arm].get("evidence_count") or 0 for r in raw if arm in r["arms"]]
         lats = [
-            (r["arms"][arm].get("detail") or {}).get("latency_ms")
-            for r in raw if arm in r["arms"]
+            (r["arms"][arm].get("detail") or {}).get("latency_ms") for r in raw if arm in r["arms"]
         ]
         lats = [float(x) for x in lats if isinstance(x, (int, float))]
         metrics += [
-            _metric(f"probes_per_sample[{arm}]", sum(probes), len(probes),
-                    "真实执行的只读探针数/计分样本数（无回灌臂为 0）"),
-            _metric(f"evidence_per_sample[{arm}]", sum(evidence), len(evidence),
-                    "关联证据数/计分样本数"),
+            _metric(
+                f"probes_per_sample[{arm}]",
+                sum(probes),
+                len(probes),
+                "真实执行的只读探针数/计分样本数（无回灌臂为 0）",
+            ),
+            _metric(
+                f"evidence_per_sample[{arm}]", sum(evidence), len(evidence), "关联证据数/计分样本数"
+            ),
             {
                 "metric": f"latency_ms_mean[{arm}]",
                 "value": round(statistics.mean(lats), 3) if lats else None,
@@ -523,58 +578,98 @@ def _compute_metrics(
                 "n": len(lats),
                 "note": "离线重算臂的引擎计算耗时（毫秒）；A/C/D/E 未单独计时，不含执行时间",
             },
-            _metric(f"llm_calls[{arm}]", 0, len(preds),
-                    "确定性臂 LLM 调用数为 0；LLM 臂未授权运行时不产出数值"),
+            _metric(
+                f"llm_calls[{arm}]",
+                0,
+                len(preds),
+                "确定性臂 LLM 调用数为 0；LLM 臂未授权运行时不产出数值",
+            ),
             _metric(f"llm_tokens[{arm}]", 0, len(preds), "确定性臂 token 为 0"),
-            {"metric": f"llm_cost_usd[{arm}]", "value": 0.0, "numerator": 0,
-             "denominator": len(preds), "n": len(preds),
-             "note": "确定性臂无 LLM 成本；非实测计费值"},
+            {
+                "metric": f"llm_cost_usd[{arm}]",
+                "value": 0.0,
+                "numerator": 0,
+                "denominator": len(preds),
+                "n": len(preds),
+                "note": "确定性臂无 LLM 成本；非实测计费值",
+            },
         ]
 
     # 执行层假通过（来自真实执行 verdict，不依赖任何诊断臂）
     fp_den = sum(1 for r in raw if r["gt_mechanism"] == "PERSISTENCE")
     fp = sum(1 for r in raw if r["gt_mechanism"] == "PERSISTENCE" and r["test_verdict"] == "PASSED")
-    metrics.append(_metric("false_pass_rate[execution]", fp, fp_den,
-                           "GT 为持久化故障却判 PASSED 的样本/持久化故障样本数"))
+    metrics.append(
+        _metric(
+            "false_pass_rate[execution]",
+            fp,
+            fp_den,
+            "GT 为持久化故障却判 PASSED 的样本/持久化故障样本数",
+        )
+    )
 
     # EG / AP 参与程度的直接证据
     applied = [x for r in raw for x in (r["probe_applied_to_diagnosis_v3"] or [])]
-    metrics.append(_metric("probe_applied_to_diagnosis_rate[v3]",
-                           sum(1 for x in applied if x is True), len(applied),
-                           "RUN-008 探针步骤中真正回灌诊断的比例；0 表示 AP 闭环断裂"))
+    metrics.append(
+        _metric(
+            "probe_applied_to_diagnosis_rate[v3]",
+            sum(1 for x in applied if x is True),
+            len(applied),
+            "RUN-008 探针步骤中真正回灌诊断的比例；0 表示 AP 闭环断裂",
+        )
+    )
     cd_changed = sum(
-        1 for r in raw
-        if r["arms"]["C_rule"]["mechanism"] != r["arms"]["D_graph"]["mechanism"]
+        1 for r in raw if r["arms"]["C_rule"]["mechanism"] != r["arms"]["D_graph"]["mechanism"]
     )
     ce_changed = sum(
-        1 for r in raw
-        if r["arms"]["C_rule"]["mechanism"] != r["arms"]["E_probe_v3"]["mechanism"]
+        1 for r in raw if r["arms"]["C_rule"]["mechanism"] != r["arms"]["E_probe_v3"]["mechanism"]
     )
     metrics += [
-        _metric("graph_changed_prediction_count", cd_changed, n,
-                "D 臂相对 C 臂主因类别发生变化的样本数；0 表示 EG 未参与主因裁决"),
-        _metric("probe_changed_prediction_count[v3]", ce_changed, n,
-                "RUN-008 原 E 臂相对 C 臂主因类别变化的样本数；0 表示 AP 未产生增益"),
+        _metric(
+            "graph_changed_prediction_count",
+            cd_changed,
+            n,
+            "D 臂相对 C 臂主因类别发生变化的样本数；0 表示 EG 未参与主因裁决",
+        ),
+        _metric(
+            "probe_changed_prediction_count[v3]",
+            ce_changed,
+            n,
+            "RUN-008 原 E 臂相对 C 臂主因类别变化的样本数；0 表示 AP 未产生增益",
+        ),
     ]
     metrics.extend(repair_metrics)
     return metrics
 
 
 _REASON_BY_PAIR: dict[tuple[str, str], str] = {
-    ("TIMING", "PERSISTENCE"):
-        "时序症状被误判为未持久化：规则把断言窗口内旧值当成权威状态，缺少延迟读取/耗时证据",
-    ("NETWORK", "UNKNOWN"):
-        "网络假设缺少 TRUSTED directly_confirming 证据；且探针结果未回灌，无法升级",
-    ("LOCATOR", "UNKNOWN"):
-        "NOT_EVALUATED 执行中断使 diagnose 接口拒绝，样本没有任何诊断结论；缺少 DOM/定位器证据",
-    ("AUTHORIZATION", "UNKNOWN"):
-        "规则只有 5xx 模式，不识别 403；缺少 HTTP 状态码证据，无法生成 AUTHORIZATION 假设",
-    ("AUTHORIZATION", "UI_RENDERING"):
-        "403 触发 UI 断言失败，规则把表层 UI 失败当成主因（症状冒充根因）",
-    ("API", "UI_RENDERING"):
-        "Flaky 样本该次执行未观测到 5xx，单次证据不足以识别接口故障；需多次执行差异证据",
-    ("UI_RENDERING", "UNKNOWN"):
-        "规则未生成任何假设（提交被静默忽略/无失败断言）；探针只能在已有假设上作用，不能新建假设",
+    (
+        "TIMING",
+        "PERSISTENCE",
+    ): "时序症状被误判为未持久化：规则把断言窗口内旧值当成权威状态，缺少延迟读取/耗时证据",
+    (
+        "NETWORK",
+        "UNKNOWN",
+    ): "网络假设缺少 TRUSTED directly_confirming 证据；且探针结果未回灌，无法升级",
+    (
+        "LOCATOR",
+        "UNKNOWN",
+    ): "NOT_EVALUATED 执行中断使 diagnose 接口拒绝，样本没有任何诊断结论；缺少 DOM/定位器证据",
+    (
+        "AUTHORIZATION",
+        "UNKNOWN",
+    ): "规则只有 5xx 模式，不识别 403；缺少 HTTP 状态码证据，无法生成 AUTHORIZATION 假设",
+    (
+        "AUTHORIZATION",
+        "UI_RENDERING",
+    ): "403 触发 UI 断言失败，规则把表层 UI 失败当成主因（症状冒充根因）",
+    (
+        "API",
+        "UI_RENDERING",
+    ): "Flaky 样本该次执行未观测到 5xx，单次证据不足以识别接口故障；需多次执行差异证据",
+    (
+        "UI_RENDERING",
+        "UNKNOWN",
+    ): "规则未生成任何假设（提交被静默忽略/无失败断言）；探针只能在已有假设上作用，不能新建假设",
 }
 _REASON_NO_DIAG = "样本无诊断结论（执行在断言前中断），不能归因于诊断臂本身"
 
@@ -599,29 +694,28 @@ def _error_library(raw: list[dict[str, Any]]) -> dict[str, Any]:
                 (gt, pred), "规则证据模式未覆盖该故障类型，缺少可确认的权威证据"
             )
         h = r["arms"]["H_probe_feedback_b3"]["detail"]
-        changed = (
-            bool(r["diagnosis_available"])
-            and (h.get("outcome") != c["outcome"] or h.get("mechanism") != c["mechanism"])
+        changed = bool(r["diagnosis_available"]) and (
+            h.get("outcome") != c["outcome"] or h.get("mechanism") != c["mechanism"]
         )
-        cases.append({
-            "scenario": s,
-            "gt": gt,
-            "pred_c": pred,
-            "pred_correct": c["correct"],
-            "conclusive_c": c["conclusive"],
-            "diagnosis_available": r["diagnosis_available"],
-            "probe_state_v3": r["probe_state_v3"],
-            "probe_applied_v3": r["probe_applied_to_diagnosis_v3"],
-            "graph_prediction_changed": (
-                r["arms"]["D_graph"]["mechanism"] != c["mechanism"]
-            ),
-            "probe_prediction_changed_v3": (
-                r["arms"]["E_probe_v3"]["mechanism"] != c["mechanism"]
-            ),
-            "probe_feedback_b3_changed_hypothesis": changed,
-            "probe_feedback_b3_outcome": h.get("outcome"),
-            "reason": reason,
-        })
+        cases.append(
+            {
+                "scenario": s,
+                "gt": gt,
+                "pred_c": pred,
+                "pred_correct": c["correct"],
+                "conclusive_c": c["conclusive"],
+                "diagnosis_available": r["diagnosis_available"],
+                "probe_state_v3": r["probe_state_v3"],
+                "probe_applied_v3": r["probe_applied_to_diagnosis_v3"],
+                "graph_prediction_changed": (r["arms"]["D_graph"]["mechanism"] != c["mechanism"]),
+                "probe_prediction_changed_v3": (
+                    r["arms"]["E_probe_v3"]["mechanism"] != c["mechanism"]
+                ),
+                "probe_feedback_b3_changed_hypothesis": changed,
+                "probe_feedback_b3_outcome": h.get("outcome"),
+                "reason": reason,
+            }
+        )
     return {
         "scoring_samples": len(seen),
         "error_count": len(cases),
@@ -647,42 +741,44 @@ def _wp6_assets(raw: list[dict[str, Any]]) -> tuple[dict[str, Any], dict[str, An
     for s in sorted(by_scenario):
         r = by_scenario[s]
         c = r["arms"]["C_rule"]
-        per_case.append({
-            "scenario": s,
-            "gt": r["gt_mechanism"],
-            "evidence_source_file": r["evidence_source_file"],
-            "run_id": r["run_id"],
-            "execution_status": r["execution_status"],
-            "test_verdict": r["test_verdict"],
-            "a_pred": r["arms"]["A_raw_report"]["mechanism"],
-            "c_pred": c["mechanism"],
-            "d_pred": r["arms"]["D_graph"]["mechanism"],
-            "e_pred": r["arms"]["E_probe_v3"]["mechanism"],
-            "h_probe_feedback_b3_pred": r["arms"]["H_probe_feedback_b3"]["mechanism"],
-            "c_correct": c["correct"],
-            "a_correct": r["arms"]["A_raw_report"]["correct"],
-            "c_abstain": not c["conclusive"],
-            "probe_state_v3": r["probe_state_v3"],
-            "probe_count_v3": r["probe_count_v3"],
-            "probe_applied_v3": r["probe_applied_to_diagnosis_v3"],
-            "probe_stop_reason_v3": r["probe_stop_reason_v3"],
-            "probe_feedback_b3_outcome": r["arms"]["H_probe_feedback_b3"]["detail"].get("outcome"),
-            "probe_feedback_b3_changed_hypothesis": bool(
-                r["diagnosis_available"]
-                and (
-                    r["arms"]["H_probe_feedback_b3"]["detail"].get("outcome") != c["outcome"]
-                    or r["arms"]["H_probe_feedback_b3"]["mechanism"] != c["mechanism"]
-                )
-            ),
-            "graph_audit": r["graph_audit"],
-        })
-    cm = _confusion([{
-        "gt": x["gt"], "pred": x["c_pred"] or "UNKNOWN"
-    } for x in per_case])
+        per_case.append(
+            {
+                "scenario": s,
+                "gt": r["gt_mechanism"],
+                "evidence_source_file": r["evidence_source_file"],
+                "run_id": r["run_id"],
+                "execution_status": r["execution_status"],
+                "test_verdict": r["test_verdict"],
+                "a_pred": r["arms"]["A_raw_report"]["mechanism"],
+                "c_pred": c["mechanism"],
+                "d_pred": r["arms"]["D_graph"]["mechanism"],
+                "e_pred": r["arms"]["E_probe_v3"]["mechanism"],
+                "h_probe_feedback_b3_pred": r["arms"]["H_probe_feedback_b3"]["mechanism"],
+                "c_correct": c["correct"],
+                "a_correct": r["arms"]["A_raw_report"]["correct"],
+                "c_abstain": not c["conclusive"],
+                "probe_state_v3": r["probe_state_v3"],
+                "probe_count_v3": r["probe_count_v3"],
+                "probe_applied_v3": r["probe_applied_to_diagnosis_v3"],
+                "probe_stop_reason_v3": r["probe_stop_reason_v3"],
+                "probe_feedback_b3_outcome": r["arms"]["H_probe_feedback_b3"]["detail"].get(
+                    "outcome"
+                ),
+                "probe_feedback_b3_changed_hypothesis": bool(
+                    r["diagnosis_available"]
+                    and (
+                        r["arms"]["H_probe_feedback_b3"]["detail"].get("outcome") != c["outcome"]
+                        or r["arms"]["H_probe_feedback_b3"]["mechanism"] != c["mechanism"]
+                    )
+                ),
+                "graph_audit": r["graph_audit"],
+            }
+        )
+    cm = _confusion([{"gt": x["gt"], "pred": x["c_pred"] or "UNKNOWN"} for x in per_case])
     error_analysis = {
         "scoring_samples": len(per_case),
         "note": "19 个 diagnosis_eligible 计分样本；GT 仅评测端读取；"
-                "新证据是否改变假设由真实内核重算 H 臂得出",
+        "新证据是否改变假设由真实内核重算 H 臂得出",
         "per_scenario": per_case,
         "confusion_matrix": cm,
         "error_case_library": _error_library(raw)["cases"],
@@ -743,7 +839,8 @@ def _wp6_assets(raw: list[dict[str, Any]]) -> tuple[dict[str, Any], dict[str, An
             "supports_edges": relations.get("supports", 0),
             "contradicts_edges": relations.get("contradicts", 0),
             "graph_changed_prediction_count": sum(
-                1 for r in raw
+                1
+                for r in raw
                 if r["arms"]["C_rule"]["mechanism"] != r["arms"]["D_graph"]["mechanism"]
             ),
             "verdict": (
@@ -769,8 +866,8 @@ def _wp6_assets(raw: list[dict[str, Any]]) -> tuple[dict[str, Any], dict[str, An
             "four_states": ["CANDIDATE", "SUPPORTED", "CONTRADICTED", "CONFIRMED"],
             "fifth_state": "EXCLUDED（探针确定性排除）",
             "note": "引擎具备五态，但规则生成的假设绝大多数直接 CONFIRMED/CANDIDATE；"
-                    "SUPPORTED/CONTRADICTED/EXCLUDED 在 v3 样本中极少出现，"
-                    "多假设竞争机制事实上未充分运转。",
+            "SUPPORTED/CONTRADICTED/EXCLUDED 在 v3 样本中极少出现，"
+            "多假设竞争机制事实上未充分运转。",
         },
     }
     return error_analysis, audit
@@ -783,9 +880,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--source-report", default="docs/assets/run008/wp7/benchmark-v3.json")
     ap.add_argument("--out", default="docs/assets/run009/benchmark-v4/benchmark-v4.json")
     ap.add_argument("--samples-out", default="docs/assets/run009/benchmark-v4/samples.jsonl")
-    ap.add_argument("--samples-out-repeat1", default="docs/assets/run009/benchmark-v4/samples.repeat1.jsonl")
+    ap.add_argument(
+        "--samples-out-repeat1", default="docs/assets/run009/benchmark-v4/samples.repeat1.jsonl"
+    )
     ap.add_argument("--wp6-dir", default="docs/assets/run009/wp6")
-    ap.add_argument("--gt-token", default="", help="v4 GT 评测令牌（默认使用模块内令牌，仅评测脚本可见）")
+    ap.add_argument(
+        "--gt-token", default="", help="v4 GT 评测令牌（默认使用模块内令牌，仅评测脚本可见）"
+    )
     ap.add_argument("--allow-llm", action="store_true", help="显式授权外网计费 LLM 调用；默认不开")
     args = ap.parse_args(argv)
 
@@ -811,17 +912,19 @@ def main(argv: list[str] | None = None) -> int:
         all_raw.extend(raw)
         for arm, values in preds.items():
             all_preds.setdefault(arm, []).extend(values)
-        passes.append({
-            "repeat_pass": i,
-            "source_samples": rel,
-            "output_samples": str(out_path.relative_to(ROOT)),
-            "scoring_samples": len(raw),
-            "probe_states": {
-                state: sum(1 for r in raw if r["probe_state_v3"] == state)
-                for state in {"OK", "INCONCLUSIVE", "NOT_RUN"}
-            },
-            "confusion": {arm: _confusion(v) for arm, v in preds.items()},
-        })
+        passes.append(
+            {
+                "repeat_pass": i,
+                "source_samples": rel,
+                "output_samples": str(out_path.relative_to(ROOT)),
+                "scoring_samples": len(raw),
+                "probe_states": {
+                    state: sum(1 for r in raw if r["probe_state_v3"] == state)
+                    for state in {"OK", "INCONCLUSIVE", "NOT_RUN"}
+                },
+                "confusion": {arm: _confusion(v) for arm, v in preds.items()},
+            }
+        )
 
     metrics = _compute_metrics(all_preds, all_raw, repair_metrics=repair_metrics)
     gt_check = GT_MANAGER.isolation_check(token)
@@ -899,9 +1002,7 @@ def main(argv: list[str] | None = None) -> int:
             "latency 只覆盖离线引擎重算，不含浏览器执行与 LLM 网络往返",
         ],
     }
-    report["v3_dataset"]["scoring_samples_per_pass"] = (
-        passes[0]["scoring_samples"] if passes else 0
-    )
+    report["v3_dataset"]["scoring_samples_per_pass"] = passes[0]["scoring_samples"] if passes else 0
     out = ROOT / args.out
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
@@ -915,11 +1016,20 @@ def main(argv: list[str] | None = None) -> int:
     (wp6_dir / "eg-ap-audit.json").write_text(
         json.dumps(eg_ap_audit, ensure_ascii=False, indent=2, default=str), encoding="utf-8"
     )
-    print(f"RUN-009 benchmark v4: {len(passes)} passes x "
-          f"{report['v3_dataset']['scoring_samples_per_pass']} samples")
+    print(
+        f"RUN-009 benchmark v4: {len(passes)} passes x "
+        f"{report['v3_dataset']['scoring_samples_per_pass']} samples"
+    )
     for m in metrics:
-        if m["metric"].startswith(("primary_cause_accuracy", "diagnosis_coverage",
-                                   "probe_applied", "graph_changed", "probe_changed")):
+        if m["metric"].startswith(
+            (
+                "primary_cause_accuracy",
+                "diagnosis_coverage",
+                "probe_applied",
+                "graph_changed",
+                "probe_changed",
+            )
+        ):
             print(f"  {m['metric']:<48} {m['value']} ({m['numerator']}/{m['denominator']})")
     print(f"证据：{out}")
     return 0
