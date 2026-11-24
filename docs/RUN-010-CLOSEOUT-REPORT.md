@@ -88,6 +88,24 @@
   增加 `actions/setup-node@v4` + `npm ci` + `npm run build` + `test -f dist/index.html`（fail-closed）。
 - 未放宽任何断言、未跳过任何用例。
 
+**CL-03：PostgreSQL 并发建表在系统表唯一索引上撞车（收尾复验中新发现）**
+
+- 现象：在 `da2fbc6`（仅文档提交）上重跑 Nightly，`postgres` 任务
+  `PostgreSQL platform tests` 失败：4 线程并发 `create_schema()` 中 3 个抛
+  `IntegrityError: duplicate key value violates unique constraint "pg_type_typname_nsp_index"`
+  （`Key (typname, typnamespace)=(tg_schema_migration, 2200) already exists`）。
+  同一任务在 10 分钟前的 `d4d59ba` 上是通过的 → **间歇性**，且与本次文档提交无关。
+- 根因：PostgreSQL 的 `CREATE TABLE IF NOT EXISTS` **不是原子操作**：并发会话可能同时通过
+  "不存在"检查，随后在 `pg_type` 唯一索引上冲突。`create_schema()` 对 `create_all` 有重试，
+  但 `_apply_migrations()` 里第一条 `CREATE TABLE IF NOT EXISTS tg_schema_migration`
+  没有被 SAVEPOINT + 重复错误容忍包住，异常直接抛给调用方。
+- 影响：多 Worker 同时启动指向同一 PG 库时，启动期可能随机崩溃（生产风险，虽非数据损坏）。
+- 修复：`_apply_migrations()` 在 PostgreSQL 下先取事务级 advisory lock
+  （`pg_advisory_xact_lock`，commit 自动释放）串行化建表/迁移；首个建表语句包 SAVEPOINT
+  并容忍重复 DDL 错误（SQLite/兜底路径）。
+- 局限性（如实）：本机无 PG，**只做了 SQLite 侧回归（644 passed / 13 skipped）**，
+  PG 并发路径由 CI Service Container 复验；advisory lock 的跨版本行为未在 PG 15/17 上验证。
+
 ### 3.3 PR #2 更新（WP2）
 
 - 标题：`RUN-007/008: 质量加固、长稳验证与 Benchmark v3 集成（RUN-009 审查）`

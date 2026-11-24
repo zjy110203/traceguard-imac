@@ -153,19 +153,38 @@ def _is_transient_lock_error(exc: BaseException) -> bool:
     )
 
 
+#: PostgreSQL 事务级 advisory lock 键：串行化并发启动时的建表/迁移（CL-03）
+_MIGRATION_LOCK_KEY = 918_273_645
+
+
 def _apply_migrations(db: Database) -> None:
     """按序应用迁移。当前 v1 由 metadata.create_all 完成；v2 起为增量 DDL。
 
     迁移必须是幂等的：多进程同时启动时使用 IF NOT EXISTS / 捕获重复错误。
+
+    RUN-010 收尾缺陷 CL-03：PostgreSQL 的 `CREATE TABLE IF NOT EXISTS` **不是原子的**——
+    多个进程同时启动时，两个会话都可能通过"不存在"检查，随后在系统表
+    `pg_type` 的唯一索引上撞车（`duplicate key value violates unique constraint
+    "pg_type_typname_nsp_index"`）。CI 实测 4 并发建表时 3 个线程因此抛
+    `IntegrityError`（多 Worker 同时启动即会随机失败）。
+    处置：①PG 下先取事务级 advisory lock 串行化建表/迁移（commit 自动释放）；
+    ②首个建表语句与其余 DDL 一样包在 SAVEPOINT 中并容忍重复错误（SQLite/兜底）。
     """
     with db.engine.begin() as conn:
-        conn.execute(
-            text(
-                "CREATE TABLE IF NOT EXISTS tg_schema_migration ("
-                "version INTEGER PRIMARY KEY, name VARCHAR(120) NOT NULL, "
-                "applied_at VARCHAR(40) NOT NULL)"
-            )
-        )
+        if conn.dialect.name == "postgresql":
+            conn.execute(text("SELECT pg_advisory_xact_lock(:k)"), {"k": _MIGRATION_LOCK_KEY})
+        try:
+            with conn.begin_nested():
+                conn.execute(
+                    text(
+                        "CREATE TABLE IF NOT EXISTS tg_schema_migration ("
+                        "version INTEGER PRIMARY KEY, name VARCHAR(120) NOT NULL, "
+                        "applied_at VARCHAR(40) NOT NULL)"
+                    )
+                )
+        except Exception as exc:  # noqa: BLE001 - 并发启动下的重复 DDL
+            if not _is_duplicate_ddl_error(exc):
+                raise
         applied = {
             int(r[0])
             for r in conn.execute(text("SELECT version FROM tg_schema_migration")).fetchall()
