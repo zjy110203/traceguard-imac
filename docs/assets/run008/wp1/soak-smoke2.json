@@ -1,0 +1,100 @@
+{
+  "round": "RUN-008-SMOKE2",
+  "started_at": "2026-11-24T05:06:00Z",
+  "finished_at": "2026-11-24T05:06:31Z",
+  "duration_minutes": 0.51,
+  "architecture": {
+    "api_port": 8032,
+    "api_inline_worker": false,
+    "db": ".traceguard/run008/smoke2/api.db",
+    "artifact_dir": ".traceguard/run008/smoke2/artifacts",
+    "workers": 4,
+    "worker_pids": {
+      "soak-w1": 73642,
+      "soak-w2": 73643,
+      "soak-w3": 73644,
+      "soak-w4": 73645
+    },
+    "teamflow": "http://127.0.0.1:8021"
+  },
+  "interval_s": 20.0,
+  "case": "tcase_tf_create_normal",
+  "resumed_from": {
+    "samples": 0,
+    "cycle_offset": 0,
+    "elapsed_s": 0.0
+  },
+  "cycles": 2,
+  "api_health_failures": 0,
+  "inline_worker_seen": 0,
+  "counts": {
+    "ok": 2,
+    "failed": 0,
+    "not_evaluated": 0,
+    "api_error": 0,
+    "timeout": 0
+  },
+  "sse": {
+    "cycles_with_events": 2,
+    "cycles_without_events": 0,
+    "resume_ok": 1,
+    "resume_no_new": 1,
+    "heartbeats": 6,
+    "duplicate_ids": 0
+  },
+  "worker_deaths": [],
+  "errors": [],
+  "integrity": {
+    "run_verdicts": {
+      "PASSED": 2
+    },
+    "run_status": {
+      "COMPLETED": 2
+    },
+    "runs_without_report": 0,
+    "duplicate_event_keys": 0,
+    "orphan_steps": 0,
+    "runs_without_evidence": 0,
+    "unrecovered_leases": 0,
+    "quick_check": "ok",
+    "db_path": "/Users/dlp--test/Desktop/traceguard/.traceguard/run008/smoke2/api.db",
+    "final_counts": {
+      "db_path": "/Users/dlp--test/Desktop/traceguard/.traceguard/run008/smoke2/api.db",
+      "runs": 2,
+      "tasks": 2,
+      "events": 26,
+      "evidence": 56,
+      "steps": 16,
+      "repairs": 0,
+      "size_mb": 0.5,
+      "wal_mb": 3.94
+    }
+  },
+  "checks": {
+    "duration_reached": true,
+    "cycles_reached": true,
+    "api_inline_worker_off": true,
+    "api_health_ok_all_cycles": true,
+    "no_api_errors": true,
+    "no_unexpected_failed": true,
+    "no_not_evaluated": true,
+    "all_runs_passed": true,
+    "no_run_timeouts": true,
+    "teamflow_healthy_all_cycles": true,
+    "no_worker_death": true,
+    "no_runs_without_report": true,
+    "no_duplicate_events": true,
+    "no_orphan_steps": true,
+    "no_runs_without_evidence": true,
+    "no_unrecovered_leases": true,
+    "db_integrity_ok": true,
+    "db_counts_from_current_instance": true,
+    "db_counts_readable": true,
+    "process_metrics_source_recorded": true,
+    "sse_received_events": true,
+    "sse_resume_verified": true,
+    "api_survived": true
+  },
+  "passed": true,
+  "samples_file": "docs/assets/run008/wp1/soak-smoke2.jsonl"
+}

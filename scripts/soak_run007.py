@@ -67,6 +67,114 @@ def _post(url: str, body: dict, timeout: float = 120) -> Any:
         return {"__error__": f"{type(exc).__name__}: {exc}"}
 
 
+def _is_transport_error(data: Any) -> bool:
+    """`_get`/`_post` 吞掉异常后返回的错误包，不得被当作健康响应当成成功。"""
+    return isinstance(data, dict) and "__error__" in data
+
+
+def _teamflow_health(state: Any) -> dict[str, Any]:
+    """TeamFlow 健康判定：真实 2xx 响应 + `ok is True` + 必要字段 `count`。"""
+    if isinstance(state, dict) and not _is_transport_error(state):
+        if state.get("ok") is True and "count" in state:
+            return {"ok": True, "count": state["count"], "error": None}
+    return {"ok": False, "count": None, "error": str(state)[:200]}
+
+
+def _api_health(data: Any) -> dict[str, Any]:
+    """API 健康判定：区分传输错误、状态异常和内嵌 Worker 未关闭。"""
+    if not isinstance(data, dict) or _is_transport_error(data):
+        return {
+            "ok": False,
+            "status": None,
+            "database": None,
+            "inline_running": None,
+            "error": str(data)[:200],
+        }
+    worker = data.get("worker") or {}
+    inline = bool(worker.get("inline_running")) if isinstance(worker, dict) else None
+    status = data.get("status")
+    ok = status == "ok" and inline is False
+    return {
+        "ok": ok,
+        "status": status,
+        "database": data.get("database"),
+        "inline_running": inline,
+        "error": None if ok else f"status={status!r}, inline_running={inline!r}",
+    }
+
+
+def _has_db_errors(snap: dict[str, Any]) -> bool:
+    """只读连接失败时绝不能把 `ERR:*` 当作有效计数。"""
+    return bool(snap.get("error")) or any(
+        isinstance(v, str) and v.startswith("ERR:") for v in snap.values()
+    )
+
+
+def read_samples_tail(path: Path) -> tuple[int, float, int]:
+    """从已有 JSONL 采样文件读取续跑起点；返回 (next_cycle, elapsed_s, line_count)。
+
+    文件不存在返回 (0, 0.0, 0)。任一行损坏则拒绝续跑，避免把证据写坏。
+    """
+    if not path.exists():
+        return 0, 0.0, 0
+    cycle = 0
+    elapsed = 0.0
+    count = 0
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        rec = json.loads(line)
+        cycle = max(cycle, int(rec["cycle"]) + 1)
+        elapsed = max(elapsed, float(rec["since_start_s"]))
+        count += 1
+    return cycle, elapsed, count
+
+
+def build_checks(
+    *,
+    duration_s: float,
+    minutes: float,
+    cycle: int,
+    target_cycles: int,
+    counts: dict[str, int],
+    errors: list[str],
+    worker_deaths: list[str],
+    integrity: dict[str, Any],
+    sse_stats: dict[str, int],
+    api_alive: bool,
+    api_health_failures: int,
+    inline_worker_seen: int,
+    metric_sources: set[str],
+    db_path: Path,
+) -> dict[str, Any]:
+    """把验收条件集中到纯函数，避免恒真条件、便于自动回归测试。"""
+    return {
+        "duration_reached": duration_s >= minutes * 60 - 5,
+        "cycles_reached": cycle >= target_cycles - 1,
+        "api_inline_worker_off": inline_worker_seen == 0,
+        "api_health_ok_all_cycles": api_health_failures == 0,
+        "no_api_errors": counts["api_error"] == 0,
+        "no_unexpected_failed": counts["failed"] == 0,
+        "no_not_evaluated": counts["not_evaluated"] == 0,
+        "all_runs_passed": counts["ok"] > 0 and counts["ok"] == cycle - counts["api_error"],
+        "no_run_timeouts": counts["timeout"] == 0,
+        "teamflow_healthy_all_cycles": not any("TeamFlow" in e for e in errors),
+        "no_worker_death": not worker_deaths,
+        "no_runs_without_report": integrity.get("runs_without_report") == 0,
+        "no_duplicate_events": integrity.get("duplicate_event_keys") == 0,
+        "no_orphan_steps": integrity.get("orphan_steps") == 0,
+        "no_runs_without_evidence": integrity.get("runs_without_evidence") == 0,
+        "no_unrecovered_leases": integrity.get("unrecovered_leases") == 0,
+        "db_integrity_ok": str(integrity.get("quick_check", "")).lower() in {"ok", "true"},
+        "db_counts_from_current_instance": integrity.get("db_path") == str(db_path),
+        "db_counts_readable": not _has_db_errors(integrity.get("final_counts", {})),
+        "process_metrics_source_recorded": bool(metric_sources) and "unknown" not in metric_sources,
+        "sse_received_events": sse_stats["cycles_with_events"] > 0,
+        "sse_resume_verified": (sse_stats["resume_no_new"] + sse_stats["resume_ok"]) > 0,
+        "api_survived": api_alive,
+    }
+
+
 # --------------------------------------------------------------------- sse
 class SseReader(threading.Thread):
     """真实 SSE 客户端：统计事件帧与心跳，保留游标用于续传测试。"""
@@ -202,7 +310,7 @@ def _db_query(db: Path, sql: str) -> list[tuple]:
 
 
 def _db_snapshot(db: Path) -> dict[str, Any]:
-    snap: dict[str, Any] = {}
+    snap: dict[str, Any] = {"db_path": str(db)}
     try:
         for name, table in (
             ("runs", "tg_run"),
@@ -238,13 +346,19 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--root", default=".traceguard/run007soak")
     ap.add_argument("--out", default="docs/assets/run007/soak-60min.json")
     ap.add_argument("--samples", default="docs/assets/run007/soak-samples.jsonl")
+    ap.add_argument("--round", default="RUN-008")
+    ap.add_argument(
+        "--resume-samples",
+        action="store_true",
+        help="已有采样文件时从最后一行续写（不覆盖原始证据）",
+    )
     args = ap.parse_args(argv)
 
     api = f"http://127.0.0.1:{args.port}"
     base = ROOT / args.root
     db_path = base / "api.db"
     artifacts = base / "artifacts"
-    if base.exists():
+    if base.exists() and not args.resume_samples:
         shutil.rmtree(base)  # 独立测试库：每次长稳都是干净环境（不碰正式库）
     artifacts.mkdir(parents=True, exist_ok=True)
 
@@ -252,6 +366,12 @@ def main(argv: list[str] | None = None) -> int:
     samples_path.parent.mkdir(parents=True, exist_ok=True)
     report_path = ROOT / args.out
     report_path.parent.mkdir(parents=True, exist_ok=True)
+    if report_path.exists() and not args.resume_samples:
+        print(f"汇总证据已存在，拒绝覆盖：{report_path}（续跑请加 --resume-samples 或更换 --out）")
+        return 2
+    if samples_path.exists() and not args.resume_samples:
+        print(f"采样文件已存在，拒绝覆盖：{samples_path}（续跑请加 --resume-samples）")
+        return 2
 
     env = {
         **os.environ,
@@ -288,9 +408,13 @@ def main(argv: list[str] | None = None) -> int:
         api_proc.kill()
         return 2
 
-    health0 = _get(f"{api}/api/v1/system/health")
-    if (health0.get("worker") or {}).get("inline_running"):
+    health0 = _api_health(_get(f"{api}/api/v1/system/health"))
+    if health0["inline_running"] is True:
         print("API 启用了内嵌 Worker：长稳必须由独立 Worker 执行，终止")
+        api_proc.kill()
+        return 2
+    if not health0["ok"]:
+        print(f"API 健康响应不完整，终止：{health0}")
         api_proc.kill()
         return 2
 
@@ -319,10 +443,14 @@ def main(argv: list[str] | None = None) -> int:
     except Exception:  # noqa: BLE001
         tf_pid = 0
 
-    started = time.time()
+    prior_cycle, prior_elapsed, prior_lines = (
+        read_samples_tail(samples_path) if args.resume_samples else (0, 0.0, 0)
+    )
+    started = time.time() - prior_elapsed
     deadline = started + args.minutes * 60
     target_cycles = max(1, int(args.minutes * 60 / args.interval))
-    cycle = 0
+    cycle = prior_cycle
+    print(f"采样续跑：已有 {prior_lines} 行，从 cycle {cycle} 继续（已运行 {prior_elapsed:.1f}s）")
     counts = {"ok": 0, "failed": 0, "not_evaluated": 0, "api_error": 0, "timeout": 0}
     errors: list[str] = []
     sse_stats = {
@@ -334,8 +462,11 @@ def main(argv: list[str] | None = None) -> int:
         "duplicate_ids": 0,
     }
     worker_deaths: list[str] = []
+    api_health_failures = 0
+    inline_worker_seen = 0
+    metric_sources: set[str] = set()
 
-    with samples_path.open("w", encoding="utf-8") as sink:
+    with samples_path.open("a" if args.resume_samples else "w", encoding="utf-8") as sink:
         while time.time() < deadline:
             c0 = time.time()
             rec: dict[str, Any] = {
@@ -345,18 +476,23 @@ def main(argv: list[str] | None = None) -> int:
             }
 
             # 1) 真实健康检查（API / TeamFlow / Worker）
-            api_health = _get(f"{api}/api/v1/system/health", timeout=15)
+            api_raw = _get(f"{api}/api/v1/system/health", timeout=15)
+            api_health = _api_health(api_raw)
             rec["api_health"] = {
-                k: api_health.get(k) for k in ("status", "database") if isinstance(api_health, dict)
+                k: api_health[k] for k in ("ok", "status", "database", "inline_running", "error")
             }
+            if not api_health["ok"]:
+                api_health_failures += 1
+                errors.append(f"cycle {cycle}: API 健康检查失败 {api_health}")
+            if api_health["inline_running"]:
+                inline_worker_seen += 1
+                errors.append(f"cycle {cycle}: API 内嵌 Worker 被启用")
             tf_state = _get(f"{args.teamflow}/api/state/projects", timeout=10)
-            tf_ok = (
-                isinstance(tf_state, dict) and tf_state.get("ok") is True and "count" in tf_state
-            )
-            rec["teamflow_ok"] = bool(tf_ok)
-            rec["teamflow_count"] = tf_state.get("count") if tf_ok else None
-            rec["teamflow_error"] = None if tf_ok else str(tf_state)[:200]
-            if not tf_ok:
+            tf_health = _teamflow_health(tf_state)
+            rec["teamflow_ok"] = tf_health["ok"]
+            rec["teamflow_count"] = tf_health["count"]
+            rec["teamflow_error"] = tf_health["error"]
+            if not tf_health["ok"]:
                 errors.append(f"cycle {cycle}: TeamFlow 状态接口异常 {tf_state}")
             alive = {wid: _ping(p.pid) for wid, p in workers.items()}
             rec["workers_alive"] = alive
@@ -366,6 +502,8 @@ def main(argv: list[str] | None = None) -> int:
             rec["api_proc"] = _proc_stats(api_proc.pid)
             rec["teamflow_proc"] = _proc_stats(tf_pid)
             rec["worker_procs"] = {wid: _proc_stats(p.pid) for wid, p in workers.items()}
+            for stat in (rec["api_proc"], rec["teamflow_proc"], *rec["worker_procs"].values()):
+                metric_sources.add(str(stat.get("source", "unknown")))
             q0 = _get(f"{api}/api/v1/queue/stats", timeout=15)
             rec["queue_before"] = {
                 "by_status": (q0 or {}).get("by_status") if isinstance(q0, dict) else None,
@@ -547,33 +685,29 @@ def main(argv: list[str] | None = None) -> int:
             "SELECT COUNT(*) FROM tg_run WHERE execution_status IN ('PREPARING','RUNNING')",
         )[0][0]
         integrity["quick_check"] = _db_query(db_path, "PRAGMA quick_check")[0][0]
+        integrity["db_path"] = str(db_path)
         integrity["final_counts"] = _db_snapshot(db_path)
     except Exception as exc:  # noqa: BLE001
         integrity["error"] = str(exc)[:300]
 
-    checks = {
-        "duration_reached": duration_s >= args.minutes * 60 - 5,
-        "cycles_reached": cycle >= target_cycles - 1,
-        "api_inline_worker_off": True,
-        "no_api_errors": counts["api_error"] == 0,
-        "no_unexpected_failed": counts["failed"] == 0,
-        "no_not_evaluated": counts["not_evaluated"] == 0,
-        "all_runs_passed": counts["ok"] > 0 and counts["ok"] == cycle - counts["api_error"],
-        "no_run_timeouts": counts["timeout"] == 0,
-        "teamflow_healthy_all_cycles": not any("TeamFlow" in e for e in errors),
-        "no_worker_death": not worker_deaths,
-        "no_runs_without_report": integrity.get("runs_without_report") == 0,
-        "no_duplicate_events": integrity.get("duplicate_event_keys") == 0,
-        "no_orphan_steps": integrity.get("orphan_steps") == 0,
-        "no_runs_without_evidence": integrity.get("runs_without_evidence") == 0,
-        "no_unrecovered_leases": integrity.get("unrecovered_leases") == 0,
-        "db_integrity_ok": str(integrity.get("quick_check", "")).lower() in {"ok", "true"},
-        "sse_received_events": sse_stats["cycles_with_events"] > 0,
-        "sse_resume_verified": (sse_stats["resume_no_new"] + sse_stats["resume_ok"]) > 0,
-        "api_survived": api_alive,
-    }
+    checks = build_checks(
+        duration_s=duration_s,
+        minutes=args.minutes,
+        cycle=cycle,
+        target_cycles=target_cycles,
+        counts=counts,
+        errors=errors,
+        worker_deaths=worker_deaths,
+        integrity=integrity,
+        sse_stats=sse_stats,
+        api_alive=api_alive,
+        api_health_failures=api_health_failures,
+        inline_worker_seen=inline_worker_seen,
+        metric_sources=metric_sources,
+        db_path=db_path,
+    )
     report = {
-        "round": "RUN-007-RESUME",
+        "round": args.round,
         "started_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(started)),
         "finished_at": finished_at,
         "duration_minutes": round(duration_s / 60, 2),
@@ -588,7 +722,14 @@ def main(argv: list[str] | None = None) -> int:
         },
         "interval_s": args.interval,
         "case": args.case,
+        "resumed_from": {
+            "samples": prior_lines,
+            "cycle_offset": prior_cycle,
+            "elapsed_s": round(prior_elapsed, 1),
+        },
         "cycles": cycle,
+        "api_health_failures": api_health_failures,
+        "inline_worker_seen": inline_worker_seen,
         "counts": counts,
         "sse": sse_stats,
         "worker_deaths": worker_deaths,

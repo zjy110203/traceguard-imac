@@ -141,3 +141,27 @@ curl -X POST "http://127.0.0.1:8010/api/v1/runs/<run_id>/probe-plan?diagnosis_id
 - **门禁要真实跑过才算数**：本地 523 passed 掩盖了 8 个问题，CI 首跑全暴露。
 - 网络：`api.github.com` 稳定；`github.com`（git 传输）经代理间歇性 `Empty reply` / `CONNECT 502`，
   push 需要重试循环。
+
+## RUN-008 恢复点（2026-11-24，本轮最新，优先于上文旧快照）
+
+> **中断恢复第一步**：读本节 → `docs/RUN-008-BASELINE.md` → 各 WP 实施报告 →
+> `docs/assets/run008/` 原始证据 → `.workbuddy-run/progress.md`（WP8 更新后）。
+> 上文「RUN-006 结束点」「无 Git 凭据」「不要声称 P03/P06/P08 已决策」等条目均为历史快照，
+> 已被本项目负责人新授权覆盖：允许自主实施待决策事项，但必须完整记录方案与证据。
+
+- 起点 HEAD：`ce1acea5d3778e9518c84f8c4e95496984a4dcdc`（`origin/main` 仍为指令基线 `ac2876e`，落后 19 提交）
+- 当前分支：`workbuddy/run008-quality-hardening`（从起点 HEAD 创建；起点工作区干净）
+- WP0 状态：**完成**；基线文档 `docs/RUN-008-BASELINE.md` 已写入。
+- 新增数据目录：`.traceguard/run008/`；正式证据目录：`docs/assets/run008/`（旧证据一律保留，不覆盖）。
+- 当前任务与进度：见 `.workbuddy-run/current-task.md` 与 `.workbuddy-run/progress.md` 的 RUN-008 段（WP8 收尾时更新）。
+
+### RUN-008 必守要点
+
+- 两个任务书 P0 缺陷在起点 HEAD 的代码中**已经修复**：`probe_budget_multiprocess.py` 在模块顶层扫描
+  `packages/`/`apps/` 注入 `sys.path`（spawn 子进程同样执行）；`soak_run007.py` 的 `teamflow_ok`
+  已改为真实 `GET /api/state/projects` 且要求 `ok is True` + 有 `count`。必须以真实执行验证，不重复改坏。
+- 任何「通过」必须有本轮真实执行证据；skip、BLOCKED、历史证据、CI 文件存在都不等于通过。
+- 长稳实验先检查 `docs/assets/run008/soak-60min.json` 是否已存在有效本轮报告，避免重复启动；
+  任何中断保留原始采样，重跑必须完整 60 分钟。
+- 不覆盖 `docs/assets/run007/` 下任何证据；不删除保护目录；不 reset/clean/强推/改写历史。
+- 不输出 `.env`、Token、密码；不访问未授权外部站点；不创建正式 Release tag。
