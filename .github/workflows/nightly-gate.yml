@@ -28,7 +28,9 @@ jobs:
       - name: Install
         run: |
           python -m venv .venv
-          .venv/bin/pip install -r requirements-dev.txt
+          # RUN-010 WP7：优先按 lock 安装（可复现），失败才回退范围声明
+          .venv/bin/pip install -r requirements.lock.txt || \
+            .venv/bin/pip install -r requirements-dev.txt
       - name: Install Playwright chromium (must succeed)
         # 不得使用 `|| true`：浏览器装不上时，后续真实浏览器用例会以假跳过/假通过掩盖问题。
         run: |

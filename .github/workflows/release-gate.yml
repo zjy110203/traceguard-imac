@@ -42,7 +42,9 @@ jobs:
       - name: Install
         run: |
           python -m venv .venv
-          .venv/bin/pip install -r requirements-dev.txt
+          # RUN-010 WP7：优先按 lock 安装（可复现），失败才回退范围声明
+          .venv/bin/pip install -r requirements.lock.txt || \
+            .venv/bin/pip install -r requirements-dev.txt
       # RUN-010 WP0 修复：全量测试套件含真实浏览器 E2E，必须先装 Chromium，
       # 否则 Playwright 用例全部 error（RUN-010 首次触发的真实缺陷，fail-closed 是正确行为）。
       - name: Install Playwright chromium (must succeed)
