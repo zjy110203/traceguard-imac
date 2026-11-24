@@ -397,7 +397,13 @@ class TaskService:
             r.ended_at = time.time()
             r.lease_expires_at = 0.0
             task = s.get(TaskRow, r.task_id)
-            if task and task.status in {"RUNNING", "WAITING"}:
+            # RUN-009 WP4：FINALIZING 是中间态，不得提前把 Task 判为 FAILED；
+            # 只有 Run 进入终态时才同步 Task 状态，后续终态提交仍可修正。
+            if (
+                task
+                and execution_status in FINAL_RUN_STATES
+                and task.status in {"RUNNING", "WAITING"}
+            ):
                 task.status = "COMPLETED" if execution_status == "COMPLETED" else "FAILED"
                 task.updated_at = time.time()
 
