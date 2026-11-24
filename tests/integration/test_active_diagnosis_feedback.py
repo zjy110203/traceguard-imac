@@ -171,9 +171,7 @@ def test_post_hoc_probe_does_not_refute_run_scope_hypothesis(rt: Runtime) -> Non
 
     with rt.db.session() as s:
         s.execute(
-            _update(RunRow)
-            .where(RunRow.run_id == "run_diag2")
-            .values(ended_at=_time.time() - 30)
+            _update(RunRow).where(RunRow.run_id == "run_diag2").values(ended_at=_time.time() - 30)
         )
     diag = _diagnose(rt, "run_diag2")
 
