@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -134,7 +134,7 @@ class TestCaseReq(BaseModel):
     assertions: list[AssertionReq] = Field(min_length=1)
     cleanup_policy: str = "NONE"
     run_config: dict[str, Any] = {}
-    compile_source: str = "human"
+    compile_source: Literal["human", "compiler", "healed"] = "human"
     preconditions: list[str] = []
     test_data_refs: list[str] = []
 

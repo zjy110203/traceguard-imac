@@ -1,3 +1,16 @@
+# 当前任务（RUN-011 交付，2026-11-25 02:25 CST）
+
+> **RUN-011 已完成（PARTIAL 明确标注）**：在独立 API + 3 独立 Worker + PG16.16 + 真实 Chromium +
+> 强制出站代理 + 认证开启的拓扑下，两轮完整业务闭环各 **62/62** 通过，数据库级复核各 **8/8**。
+> 分支 `workbuddy/run011-full-loop`（从 RUN-010 `b470518` 创建）。
+> 权威报告：`docs/RUN-011-FINAL-REPORT.md`；基线：`docs/RUN-011-BASELINE.md`。
+> 未完成/阻塞：Benchmark v5（NOT RUN，v4 测量无效）、B-17（BLOCKED）、宿主级隔离（BLOCKED）、
+> UI 全链路（NOT RUN）、多 API/DB 断连（NOT RUN）、CI（BLOCKED，无 gh/凭据）。
+> OPEN-RISK：授权目标 https 偶发 PORT_NOT_ALLOWED、时序错误确认、LLM 候选未去重。
+> 待负责人决策：PR（基于 RUN-010 分支的增量 PR）创建与合并、LICENSE、B-17 安全批准。
+
+---
+
 
 # 当前任务（RUN-010 交付，2026-11-24）
 

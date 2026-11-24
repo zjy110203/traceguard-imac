@@ -551,6 +551,10 @@ class EgressProxy:
             (
                 f"HTTP/1.1 {status} Blocked\r\n"
                 "Content-Type: text/plain; charset=utf-8\r\n"
+                # RUN-011 WP7：明确标记"这是代理阻断，不是目标应用返回的 403"。
+                # 浏览器执行层据此把"导航看似成功"纠正为步骤失败，避免
+                # 未授权目标被阻断却记录成 navigate PASSED。
+                "X-TraceGuard-Egress: BLOCK\r\n"
                 f"Content-Length: {len(body)}\r\n"
                 "Connection: close\r\n\r\n"
             ).encode("ascii")

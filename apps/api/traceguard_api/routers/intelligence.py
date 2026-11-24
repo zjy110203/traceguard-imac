@@ -258,13 +258,16 @@ class ProbeExecReq(BaseModel):
 
 @router.post("/probes/execute", status_code=201)
 async def execute_probe(req: ProbeExecReq) -> dict[str, Any]:
-    return get_services().probe.execute(
-        req.probe_id,
-        req.params,
-        req.workspace_id,
-        run_id=req.run_id,
-        diagnosis_id=req.diagnosis_id,
-    )
+    try:
+        return get_services().probe.execute(
+            req.probe_id,
+            req.params,
+            req.workspace_id,
+            run_id=req.run_id,
+            diagnosis_id=req.diagnosis_id,
+        )
+    except AppError as exc:
+        raise _http(exc) from exc
 
 
 @router.get("/probes/budgets")

@@ -204,3 +204,48 @@ def test_suggest_exposes_gaps_and_budget_scope(rt: Runtime) -> None:
     assert suggestions
     assert all("gap_id" in s and "budget_scope" in s for s in suggestions)
     assert {s["probe_id"] for s in suggestions} >= {"network_trace"}
+
+
+# ---------------------------------------------------------------------------
+# RUN-011 WP2：探针标识校验与证据时间溯源
+# ---------------------------------------------------------------------------
+def test_unknown_probe_rejected_before_budget_and_creates_no_record(rt: Runtime) -> None:
+    """未知探针必须在预算占位前被拒绝（404），且不产生执行记录。
+
+    旧行为：engine 返回 BLOCKED + service 仍写入 probe_execution 并返回 201，
+    调用方无法区分"探针不存在"与"被策略拒绝"，执行历史也被污染。
+    """
+    from traceguard_core.errors import AppError, ErrorCode
+
+    svc = ProbeService(rt)
+    before = len(rt.docs.list(kind="probe_execution", limit=500))
+    with pytest.raises(AppError) as exc:
+        svc.execute("not_a_registered_probe", {}, "default", run_id="run_probe")
+    assert exc.value.code == ErrorCode.NOT_FOUND
+    assert "UNKNOWN_PROBE" in exc.value.message
+    assert len(rt.docs.list(kind="probe_execution", limit=500)) == before
+
+
+def test_probe_evidence_carries_scope_and_time_semantics(rt: Runtime) -> None:
+    """探针证据必须绑定 run/diagnosis，并保留 observed/collected/ingested 三个时刻。"""
+    svc = ProbeService(rt)
+    doc = svc.execute(
+        "network_trace",
+        {"template": "run_network", "run_id": "run_probe"},
+        "default",
+        run_id="run_probe",
+        diagnosis_id="diag_wp2",
+    )
+    assert doc["status"] == "SUCCEEDED", doc.get("reason")
+    assert doc["evidence_refs"], "成功探针必须落库证据"
+    evd = rt.evidence.get(doc["evidence_refs"][0])
+    content = evd.content
+    assert content["run_id"] == "run_probe"
+    assert content["diagnosis_id"] == "diag_wp2"
+    assert content["probe_id"] == "network_trace"
+    assert content["observed_at"] > 0
+    assert content["collected_at"] >= content["observed_at"] - 1
+    assert str(content["ingested_at"]).endswith("Z")
+    assert content["observed_at_iso"].endswith("Z")
+    assert doc["observed_at"] <= doc["collected_at"]
+    assert doc["ingested_at"] == content["ingested_at"]

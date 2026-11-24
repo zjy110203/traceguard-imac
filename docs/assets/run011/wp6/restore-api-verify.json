@@ -1,0 +1,33 @@
+{
+  "evidence": [
+    {
+      "evidence_id": "evd_1795541805440d896da4a5af8",
+      "integrity": "PASS",
+      "storage": "PASS"
+    },
+    {
+      "evidence_id": "evd_1795541805296337a4664cdcd",
+      "integrity": "PASS",
+      "storage": "PASS"
+    },
+    {
+      "evidence_id": "evd_17955418052954ed673a3b9e2",
+      "integrity": "PASS",
+      "storage": "PASS"
+    },
+    {
+      "evidence_id": "evd_1795541805294e1f9221b91f2",
+      "integrity": "PASS",
+      "storage": "PASS"
+    },
+    {
+      "evidence_id": "evd_17955418052526c6131da5a40",
+      "integrity": "PASS",
+      "storage": "PASS"
+    }
+  ],
+  "audit_intact": true,
+  "repair_status": "ROLLED_BACK",
+  "promoted": 2,
+  "has_rollback": true
+}

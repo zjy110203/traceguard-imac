@@ -1,0 +1,122 @@
+{
+  "deny_target": "http://127.0.0.1:9555",
+  "api": "http://127.0.0.1:8120",
+  "review": {
+    "status": "APPROVED",
+    "reviewer": "user:qa-lead"
+  },
+  "run_id": "run_17955443449538d2dddf58fe2",
+  "execution_status": "FAILED",
+  "verdict": "NOT_EVALUATED",
+  "worker": "run011-v1",
+  "independent_worker": true,
+  "egress": {
+    "total": 0,
+    "allowed": 0,
+    "blocked": 0,
+    "blocked_targets": [],
+    "blocked_reasons": [],
+    "url": "http://127.0.0.1:50046",
+    "run_id": "run_17955443449538d2dddf58fe2",
+    "worker_id": "run011-v1",
+    "enforced": true
+  },
+  "failed_steps": [
+    {
+      "step_id": "d1",
+      "status": "FAILED",
+      "error": "TargetAccessDenied: TARGET_NOT_ALLOWED: EGRESS_BLOCKED_BY_PROXY"
+    }
+  ],
+  "observed_unrelated_blocks": [],
+  "control": {
+    "run_id": "run_1795544346822f4c583b3d3c9",
+    "verdict": "PASSED",
+    "egress": {
+      "total": 7,
+      "allowed": 7,
+      "blocked": 0,
+      "blocked_targets": [],
+      "blocked_reasons": [],
+      "url": "http://127.0.0.1:50063",
+      "run_id": "run_1795544346822f4c583b3d3c9",
+      "worker_id": "run011-v3",
+      "enforced": true
+    }
+  },
+  "summary": {
+    "total": 4,
+    "passed": 4,
+    "failed": [],
+    "checks": [
+      {
+        "name": "N1 未授权目标执行由独立 Worker 完成且不判定为通过",
+        "phase": "",
+        "ok": true,
+        "detail": {
+          "worker": "run011-v1",
+          "verdict": "NOT_EVALUATED",
+          "status": "FAILED"
+        },
+        "at": "2026-11-25T02:19:06+0800"
+      },
+      {
+        "name": "N2 未授权目标零成功响应（策略前置拒绝或代理阻断）",
+        "phase": "",
+        "ok": true,
+        "detail": {
+          "want": "127.0.0.1:9555",
+          "blocked": [],
+          "unauthorized_success": [],
+          "unrelated_blocks": [],
+          "egress": {
+            "total": 0,
+            "allowed": 0,
+            "blocked": 0,
+            "blocked_targets": [],
+            "blocked_reasons": [],
+            "url": "http://127.0.0.1:50046",
+            "run_id": "run_17955443449538d2dddf58fe2",
+            "worker_id": "run011-v1",
+            "enforced": true
+          }
+        },
+        "at": "2026-11-25T02:19:06+0800"
+      },
+      {
+        "name": "N3 失败原因明确指向目标访问被拒绝",
+        "phase": "",
+        "ok": true,
+        "detail": [
+          {
+            "step_id": "d1",
+            "status": "FAILED",
+            "error": "TargetAccessDenied: TARGET_NOT_ALLOWED: EGRESS_BLOCKED_BY_PROXY"
+          }
+        ],
+        "at": "2026-11-25T02:19:06+0800"
+      },
+      {
+        "name": "N4 对照：授权目标正常执行（阻断不是全局断网）",
+        "phase": "",
+        "ok": true,
+        "detail": {
+          "run_id": "run_1795544346822f4c583b3d3c9",
+          "verdict": "PASSED",
+          "egress": {
+            "total": 7,
+            "allowed": 7,
+            "blocked": 0,
+            "blocked_targets": [],
+            "blocked_reasons": [],
+            "url": "http://127.0.0.1:50063",
+            "run_id": "run_1795544346822f4c583b3d3c9",
+            "worker_id": "run011-v3",
+            "enforced": true
+          }
+        },
+        "at": "2026-11-25T02:19:11+0800"
+      }
+    ]
+  }
+}

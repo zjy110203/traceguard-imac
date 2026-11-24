@@ -133,6 +133,7 @@ class PlaywrightObserver(Observer):
                 if not target.allowed:
                     raise TargetAccessDenied(target.reason, target.url)
                 resp = session.page.goto(target.url, wait_until="domcontentloaded")
+                self._raise_if_egress_blocked(resp)
                 try:
                     session.page.wait_for_load_state("networkidle", timeout=4000)
                 except Exception:  # noqa: BLE001 - 长轮询页面允许非 idle
@@ -255,6 +256,23 @@ class PlaywrightObserver(Observer):
         )
 
     # ---------------------------------------------------------------- helpers
+    @staticmethod
+    def _raise_if_egress_blocked(resp: Any) -> None:
+        """代理阻断（403 + X-TraceGuard-Egress: BLOCK）必须判为步骤失败。
+
+        RUN-011 WP7 真实缺陷：未授权目标被出站代理阻断后，浏览器收到的是代理的
+        403 页面，`page.goto()` 正常返回 → 步骤被记成 PASSED，只在 egress 报告里
+        留下 blocked=1。验收要求"阻断必须可见地失败"，而不是"看起来导航成功"。
+        """
+        if resp is None:
+            return
+        try:
+            marker = str(resp.headers.get("x-traceguard-egress") or "").upper()
+        except Exception:  # noqa: BLE001
+            return
+        if marker == "BLOCK":
+            raise TargetAccessDenied("EGRESS_BLOCKED_BY_PROXY", str(getattr(resp, "url", "")))
+
     @staticmethod
     def _raise_if_redirect_blocked(session: Any, blocked_off: int) -> None:
         """3xx 的 Location 被策略拒绝时，把"导航看似成功"纠正为步骤失败。"""

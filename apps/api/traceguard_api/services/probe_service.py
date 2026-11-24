@@ -56,6 +56,11 @@ DEFAULT_PROBE_BUDGET = {
 }
 
 
+def _iso(epoch: float) -> str:
+    """epoch 秒 → UTC ISO8601（证据时间语义统一为 UTC，展示层再本地化）。"""
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(float(epoch or 0)))
+
+
 class ProbeService:
     def __init__(self, rt: Runtime, *, clock: Any | None = None) -> None:
         self.rt = rt
@@ -204,6 +209,11 @@ class ProbeService:
         params.setdefault("workspace", workspace_id)
         run_id = run_id or params.get("run_id") or None
         diagnosis_id = diagnosis_id or params.get("diagnosis_id") or None
+        # RUN-011 WP2：未知/未注册探针在预算占位前就拒绝。
+        # 旧行为会生成一条 BLOCKED 执行记录并返回 201，调用方无法区分
+        # "探针不存在"与"探针被策略拒绝"，也会污染执行历史。
+        if probe_id not in self.engine.definitions:
+            raise AppError(ErrorCode.NOT_FOUND, f"UNKNOWN_PROBE: {probe_id}")
         b = budget or self.budget_for(
             run_id=run_id or "", diagnosis_id=diagnosis_id or "", workspace_id=workspace_id
         )
@@ -213,6 +223,8 @@ class ProbeService:
         )
 
         execution_id = new_id("probeexec")
+        collected_at = time.time()
+        ingested_at = utc_now_iso()
         evidence_ids: list[str] = []
         if result.status == "SUCCEEDED":
             evd_id = new_id("evd")
@@ -228,8 +240,22 @@ class ProbeService:
                         "data": result.data,
                         "source": result.source,
                         "execution_id": execution_id,
-                        "budget_scope": b.scope_key,
+                        # RUN-011 WP2 证据溯源与时间语义：
+                        # - run_id / diagnosis_id：探针必须绑定到具体 Run 与诊断版本；
+                        # - observed_at：真实观测时刻（epoch 秒）；
+                        # - collected_at：结果装配为证据的时刻（epoch 秒）；
+                        # - ingested_at：写入证据库的时刻（ISO8601）。
+                        # 事后探针（observed_at > run.ended_at）只能提出 TIMING 假设，
+                        # 不能反驳 Run 当时的事实。
+                        "run_id": run_id,
                         "diagnosis_id": diagnosis_id,
+                        "workspace_id": workspace_id,
+                        "observed_at": result.observed_at or collected_at,
+                        "observed_at_iso": _iso(result.observed_at or collected_at),
+                        "collected_at": collected_at,
+                        "collected_at_iso": _iso(collected_at),
+                        "ingested_at": ingested_at,
+                        "budget_scope": b.scope_key,
                     },
                     source_trust="TRUSTED",
                     do_redact=True,
@@ -256,7 +282,10 @@ class ProbeService:
             "duration_ms": result.duration_ms,
             "budget_scope": b.scope_key,
             "budget": b.snapshot(),
-            "executed_at": utc_now_iso(),
+            "observed_at": result.observed_at or collected_at,
+            "collected_at": collected_at,
+            "ingested_at": ingested_at,
+            "executed_at": ingested_at,
         }
         self.rt.docs.put(
             doc_id=execution_id,
@@ -669,6 +698,15 @@ class ProbeService:
             or "timeout" in str(s.get("error", "")).lower()
         ]
         has_network_obs = any((s.get("observation") or {}).get("network") for s in steps)
+        # RUN-011 WP2：业务状态是否已有"有效判定"（PASSED/FAILED）。
+        # 定位器在步骤阶段失败时，business_state 断言只会是 NOT_EVALUATED，
+        # 此时"是否真正落库"完全未知 —— 这是区分 LOCATOR / PERSISTENCE 的关键信息，
+        # 必须补一次独立状态查询，而不是直接跳过。
+        has_business_verdict = any(
+            o.get("kind") in {"business_state", "api"}
+            and o.get("status") in {"PASSED", "FAILED"}
+            for o in outcomes
+        )
 
         gaps: list[dict[str, Any]] = []
 
@@ -685,13 +723,13 @@ class ProbeService:
                 }
             )
 
-        if outcome in {None, "INCONCLUSIVE"} or failed_biz:
+        if outcome in {None, "INCONCLUSIVE"} or failed_biz or not has_business_verdict:
             add(
                 "business_state_unknown",
                 "http_state",
                 {"template": "get_state_projects", "run_id": run["run_id"]},
                 "业务状态证据缺失或不足，需要独立状态查询确认是否真正持久化",
-                0.8 if failed_biz else 0.75,
+                0.8 if failed_biz else 0.7,
             )
         if has_network_obs or failed_steps:
             add(

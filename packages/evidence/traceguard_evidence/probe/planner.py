@@ -63,6 +63,9 @@ class ProbeResult:
     redacted: bool = False
     budget_scope: str = ""
     duration_ms: int = 0
+    #: RUN-011 WP2：实际观测发生时刻（epoch 秒）。探针在 Run 结束后执行时，
+    #: 该时刻 > run_ended_at，属于"事后观测"，不能冒充 Run 当时的历史状态。
+    observed_at: float = 0.0
 
 
 def _fake_clock() -> float:  # pragma: no cover - 仅作为 dataclass 默认占位
@@ -641,6 +644,7 @@ class ProbeEngine:
                     "at": time.time(),
                 }
             )
+            observed = time.time()
             return ProbeResult(
                 probe_id,
                 "SUCCEEDED",
@@ -655,6 +659,7 @@ class ProbeEngine:
                 },
                 budget_scope=b.scope_key,
                 duration_ms=int((time.time() - started) * 1000),
+                observed_at=observed,
             )
         except TimeoutError as e:
             self._audit.append(

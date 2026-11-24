@@ -153,9 +153,24 @@ class ExplorationService:
                     "url": page.url,
                     "title": page.title(),
                     "text": page.locator("body").inner_text()[:1000],
+                    # RUN-011 WP1：结构化可定位元素清单。
+                    # 只给页面文本时，LLM 会凭"表单应该存在"直接 fill 一个尚未渲染的输入框
+                    # （真实失败：waiting for get_by_test_id("project-name") 超时），
+                    # 导致探索轨迹不可编译为可执行用例。这里只暴露 data-testid 与可见性，
+                    # 不暴露任何业务数据，也不作为指令来源（仍属不可信页面数据）。
+                    "affordances": page.evaluate(
+                        """() => Array.from(document.querySelectorAll('[data-testid]'))
+                            .slice(0, 40)
+                            .map(el => ({
+                                test_id: el.getAttribute('data-testid'),
+                                tag: (el.tagName || '').toLowerCase(),
+                                visible: !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length),
+                                label: ((el.innerText || el.value || el.getAttribute('aria-label') || '').trim()).slice(0, 40),
+                            }))"""
+                    ),
                 }
             except Exception:  # noqa: BLE001
-                return {"url": "about:blank", "title": "", "text": ""}
+                return {"url": "about:blank", "title": "", "text": "", "affordances": []}
 
         status = "COMPLETED"
         error = ""

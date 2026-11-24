@@ -444,6 +444,7 @@ class RunPipeline:
         )
         ended = time.time()
         summary = _summarize(outcomes)
+        step_specs = {s.step_id: s for s in tc.steps}
         report = {
             "run_id": run["run_id"],
             "task_id": run["task_id"],
@@ -464,6 +465,15 @@ class RunPipeline:
                     "status": "FAILED" if r.error else "PASSED",
                     "error": r.error,
                     "duration_ms": r.duration_ms,
+                    # RUN-011 WP2：报告必须自包含"这一步想操作什么"。
+                    # 旧报告不含 target/value，导致 DOM 探针无法判断"失败步骤的目标是否在 DOM 中"，
+                    # 只能靠 catalog 里最新版本的断言猜测，历史 Run 的证据链因此断裂。
+                    "target": (
+                        step_specs[r.step_id].target.model_dump()
+                        if r.step_id in step_specs and step_specs[r.step_id].target is not None
+                        else None
+                    ),
+                    "value": step_specs[r.step_id].value if r.step_id in step_specs else None,
                     "observation": _compact_observation(r.observation),
                     "artifacts": r.artifacts,
                     "evidence_ids": r.evidence_refs,
@@ -477,6 +487,17 @@ class RunPipeline:
                     "required": o.required,
                     "kind": next(
                         (a.kind for a in tc.assertions if a.assertion_id == o.assertion_id), "ui"
+                    ),
+                    "description": next(
+                        (a.description for a in tc.assertions if a.assertion_id == o.assertion_id), ""
+                    ),
+                    "expected": next(
+                        (
+                            dict(a.expected)
+                            for a in tc.assertions
+                            if a.assertion_id == o.assertion_id
+                        ),
+                        {},
                     ),
                     "oracle_available": o.oracle_available,
                     "reason": o.reason,

@@ -337,6 +337,12 @@ class CatalogService:
                 return None
             out = dict(r.doc or {})
             out["review_status"] = r.review_status
+            # RUN-011 WP1：workspace 归属是行属性，不在 doc JSON 里。
+            # 不回填会导致下游（稳定性回放的 Oracle 完整性、审核门禁、Repair）
+            # 用默认 workspace 比较，非 default workspace 的用例永远 ORACLE_WORKSPACE_MISMATCH。
+            out["workspace_id"] = r.workspace_id or DEFAULT_WORKSPACE
+            out.setdefault("testcase_id", testcase_id)
+            out.setdefault("version", version)
             return out
 
     def review_testcase(

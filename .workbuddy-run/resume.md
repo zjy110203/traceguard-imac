@@ -243,3 +243,12 @@ curl -X POST "http://127.0.0.1:8010/api/v1/runs/<run_id>/probe-plan?diagnosis_id
 - 仍未解除：B-17（需安全批准）、宿主级网络隔离（需 pf/容器权限）、Benchmark LLM 臂/人工基线、
   LICENSE（NEEDS_DECISION）、Benchmark 5 个场景缺口。
 - 未做且不得冒充：生产环境部署验证、PG 生产参数验证、无障碍键盘/读屏/动效覆盖。
+
+> **RUN-011 恢复摘要（2026-11-25 02:25 CST）**：分支 `workbuddy/run011-full-loop`（从
+> `b470518` 创建）。两轮独立部署闭环证据：`docs/assets/run011/full-loop/loop{1,2}.json`
+> + `loop{1,2}-db.json`（各 62/62、8/8）。探针：`docs/assets/run011/wp2/probe-lab.json`（10/10）。
+> 网络负向：`docs/assets/run011/wp7/network-negative*.json`。PG 备份恢复：`docs/assets/run011/wp6/`。
+> 恢复时先读 `docs/RUN-011-FINAL-REPORT.md` → `RUN-011-BASELINE.md` → 各 WP 报告。
+> 不要重跑已完成的闭环（会覆盖同路径证据）；如需重跑，先把旧 JSON 改名归档。
+> 未完成：Benchmark v5（NOT RUN）、B-17（BLOCKED）、UI 全链路（NOT RUN）、CI（BLOCKED）。
+> 复现命令见 `docs/RUN-011-FINAL-REPORT.md` §7 与 `docs/RUN-011-WP9-OPERATIONS.md` §1。

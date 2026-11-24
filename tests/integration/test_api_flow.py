@@ -285,10 +285,13 @@ def test_probe_permission_and_whitelist(client) -> None:  # type: ignore[no-unty
     assert r.json()["status"] == "BLOCKED"
     assert r.json()["permission_decision"] == "DENY"
 
+    # RUN-011 WP2：未注册的探针在预算占位前直接 404，不生成执行记录。
+    # （旧行为返回 201 + BLOCKED，调用方无法区分"不存在"与"被策略拒绝"）
     unknown = client.post(
         "/api/v1/probes/execute", json={"probe_id": "nope", "params": {"template": "x"}}
     )
-    assert unknown.json()["status"] == "BLOCKED"
+    assert unknown.status_code == 404
+    assert unknown.json()["detail"]["code"] == "NOT_FOUND"
 
 
 def test_benchmark_dataset_does_not_leak_ground_truth(client) -> None:  # type: ignore[no-untyped-def]

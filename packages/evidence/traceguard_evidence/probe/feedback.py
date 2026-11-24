@@ -153,6 +153,40 @@ def _expected_test_ids(run_report: dict[str, Any]) -> set[str]:
     return ids
 
 
+def _targets_by_origin(run_report: dict[str, Any]) -> tuple[set[str], set[str]]:
+    """把期望元素按"来源"拆开：失败步骤的目标 vs 断言目标。
+
+    RUN-011 WP2/WP3 修复（真实缺陷）：
+    定位器失效场景里失败发生在 click/fill 步骤，断言步骤根本没执行，
+    因此 `_expected_test_ids()`（只看 assert 步骤）返回空集 → DOM 探针
+    直接 skipped，无法给出任何机制特异性证据，LOCATOR 与 NETWORK 继续混淆。
+    这里把失败步骤的 target test_id 单独提取出来：它不在 DOM 中，
+    直接说明"定位器无法解析目标元素"，是 LOCATOR 的支持证据，
+    而不能反推成"页面没渲染"。
+    """
+    failed_steps: set[str] = set()
+    for s in run_report.get("steps") or []:
+        if s.get("status") != "FAILED" or s.get("action") == "assert":
+            continue
+        target = s.get("target") or {}
+        if str(target.get("strategy") or "") == "test_id" and target.get("value"):
+            failed_steps.add(str(target["value"]))
+    assertion_ids: set[str] = set()
+    for s in run_report.get("steps") or []:
+        if s.get("action") != "assert":
+            continue
+        target = s.get("target") or {}
+        if str(target.get("strategy") or "") == "test_id" and target.get("value"):
+            assertion_ids.add(str(target["value"]))
+        if s.get("value"):
+            assertion_ids.add(str(s["value"]))
+    for o in run_report.get("assertion_outcomes") or []:
+        expected = o.get("expected") or {}
+        if expected.get("test_id"):
+            assertion_ids.add(str(expected["test_id"]))
+    return failed_steps - assertion_ids, assertion_ids
+
+
 def _network_entries(signal: ProbeSignal) -> list[dict[str, Any]]:
     data = signal.data or {}
     entries = data.get("entries")
@@ -361,20 +395,41 @@ def assess(
 
     if signal.probe_id == "dom_snapshot":
         excerpt = str((signal.data or {}).get("excerpt") or "")
-        expected = _expected_test_ids(run_report)
-        present = {tid for tid in expected if f'"{tid}"' in excerpt or f"'{tid}'" in excerpt}
+        failed_targets, expected = _targets_by_origin(run_report)
+        present = {tid for tid in expected | failed_targets if f'"{tid}"' in excerpt or f"'{tid}'" in excerpt}
         missing = expected - present
+        missing_failed = failed_targets - present
         result.notes.update(
             {
                 "expected_test_ids": sorted(expected),
+                "failed_step_targets": sorted(failed_targets),
                 "present": sorted(present),
                 "missing": sorted(missing),
+                "missing_failed_step_targets": sorted(missing_failed),
             }
         )
-        if not expected:
+        if not expected and not failed_targets:
             result.skipped_reason = "NO_EXPECTED_ELEMENT_TO_CHECK"
             return result
+        # 失败步骤的目标元素不在 DOM 中：这是"定位器无法解析"的直接证据，
+        # 支持 LOCATOR；此时不能把"缺失"解释成渲染缺陷（会造成 LOCATOR/NETWORK 混淆）。
+        if missing_failed:
+            for h in _hypotheses_by_mechanism(hypotheses, "LOCATOR"):
+                result.updates.append(
+                    upd(
+                        str(h["hypothesis_id"]),
+                        SUPPORT,
+                        False,
+                        False,
+                        f"失败步骤的目标元素 {sorted(missing_failed)} 不在 DOM 中：定位器无法解析，"
+                        "属于用例资产/定位策略问题",
+                    )
+                )
         for h in _hypotheses_by_mechanism(hypotheses, "LOCATOR"):
+            # 失败步骤目标缺失时，已经给出 LOCATOR 的直接支持；
+            # 不能再同时用"断言元素都存在"得出相反结论（会自相矛盾）。
+            if not expected or missing_failed:
+                break
             hid = str(h["hypothesis_id"])
             if missing:
                 result.updates.append(
@@ -397,6 +452,8 @@ def assess(
                     )
                 )
         for h in _hypotheses_by_mechanism(hypotheses, "UI_RENDERING"):
+            if not expected:
+                break
             hid = str(h["hypothesis_id"])
             if missing:
                 result.updates.append(

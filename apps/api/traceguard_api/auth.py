@@ -30,6 +30,16 @@ def action_for_request(method: str, path: str) -> str | None:
         return None
     if method in SAFE_METHODS:
         return "read"
+    # RUN-011 WP1：语义修正（不是放宽权限）——
+    # 1) 探索轨迹编译产出的是**候选用例**，属于 testcase.create，而不是系统配置；
+    #    旧映射落到 system.configure，导致 qa-engineer 无法把自己的探索编译成候选
+    #    （真实闭环中会被 403 挡住，属 RBAC 映射错误而非安全策略）。
+    # 2) 证据校验是只读完整性重算（服务端读库 + 重算摘要），属于 read；
+    #    旧映射落到 system.configure，工程角色无法自证证据未被篡改。
+    if "/explorations/" in path and path.endswith("/compile"):
+        return "testcase.create"
+    if path.endswith("/verify") and "/evidence/" in path:
+        return "read"
     if path.endswith("/review") and "/testcases/" in path:
         return "testcase.review"
     if path.endswith("/oracle-bindings"):
@@ -38,7 +48,7 @@ def action_for_request(method: str, path: str) -> str | None:
         return "oracle.create"
     if path.endswith("/execute") or "/tasks" in path:
         return "run.execute"
-    if "/repairs/" in path:
+    if "/repairs" in path and (path == "/api/v1/repairs" or path.startswith("/api/v1/repairs/")):
         if path.endswith("/promote"):
             return "repair.promote"
         if path.endswith("/rollback"):

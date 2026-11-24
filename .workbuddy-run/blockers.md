@@ -1,5 +1,20 @@
 # 阻塞项（RUN-002）
 
+> **RUN-011 阻塞状态（2026-11-25 02:25 CST）**：
+> - B-01 B-17（Worker 四真实故障场景）：**仍 BLOCKED**（安全拦截未解除，未绕过/未换工具/未拆写入）。
+> - B-02 宿主级网络隔离：**BLOCKED**（无 pf/容器权限）；已验证的仅是应用层三层防护。
+> - B-03 Benchmark LLM 臂：**BLOCKED**（无计费授权）。
+> - B-04 人工基线：**BLOCKED**（无真人）。
+> - B-05 LICENSE：**NEEDS_DECISION**。
+> - **新增 NOT RUN**：Benchmark v5（v4 探针臂测量无效，需先修测量口径）、UI 全链路点击验收、
+>   多 API 实例/DB 断连/长事务、生产部署验收。
+> - **新增 BLOCKED**：CI 触发（本机无 `gh`，且不读取/导出凭据）。
+> - **新增 OPEN RISK**：OPEN-RISK-01 授权目标 https 偶发 PORT_NOT_ALLOWED（7 次中 2 次）；
+>   OPEN-RISK-02 时序故障错误 CONFIRMED；OPEN-RISK-03 LLM 候选未去重导致结论漂移；
+>   OPEN-RISK-04 全量并行测试偶发 PG 资源竞争（串行稳定）。
+> - 已解除（本轮）：无（未新增安全/权限阻塞解除）。
+> 以下历史记录保留不覆盖。
+
 > **RUN-010-FINAL-CLOSEOUT 阻塞状态（2026-11-25 00:30 CST）**：
 > - B-01 B-17（Worker 四真实故障场景）：**仍 BLOCKED**（安全拦截未解除，未绕过、未换工具、未改参数重试）。
 > - B-02 宿主级网络隔离：**BLOCKED**（本机无 pf/防火墙权限）；已验证的仅是应用层三层防护。

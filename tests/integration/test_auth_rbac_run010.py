@@ -426,3 +426,73 @@ def test_policy_development_off_allowed_with_warning(monkeypatch):  # type: igno
     assert d.ok is True
     assert d.auth_effective is False
     assert any("AUTH_DISABLED" in w for w in d.warnings_or_empty)
+
+
+# ---------------------------------------------------------------------------
+# RUN-011 WP1：RBAC 动作映射的语义修正
+# ---------------------------------------------------------------------------
+def test_action_mapping_for_compile_and_evidence_verify() -> None:
+    """探索编译 = 创建候选测试用例；证据校验 = 只读完整性重算。
+
+    旧映射把两者落到 system.configure，导致 qa-engineer 在真实独立部署闭环里
+    无法编译自己的探索、也无法自证证据未被篡改（真实被 403 挡住）。
+    修正的是语义映射，不是放宽权限：
+    - 编译仍要求 testcase.create（viewer 依然被拒）；
+    - 证据校验要求 read（所有登录角色都有，且它不写任何业务状态）。
+    """
+    from traceguard_api.auth import action_for_request
+
+    assert action_for_request("POST", "/api/v1/explorations/exp_1/compile") == "testcase.create"
+    assert action_for_request("POST", "/api/v1/evidence/evd_1/verify") == "read"
+    # 未被修正的高风险映射必须保持 fail-closed
+    assert action_for_request("POST", "/api/v1/repairs/rp_1/promote") == "repair.promote"
+    # 集合端点（无尾斜杠）也必须映射到 repair.submit，而不是 fail-closed 到系统配置
+    assert action_for_request("POST", "/api/v1/repairs") == "repair.submit"
+    assert action_for_request("POST", "/api/v1/repairs/rp_1/validate") == "repair.submit"
+    assert action_for_request("POST", "/api/v1/unknown/write/action") == "system.configure"
+    assert action_for_request("GET", "/api/v1/runs") == "read"
+
+
+def test_audit_verify_normalizes_json_columns_for_postgres(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """PostgreSQL 的 JSON 列读回是 dict，SQLite 是字符串；两者必须得到同一摘要。
+
+    真实缺陷（RUN-011 WP1）：多进程 PostgreSQL 拓扑下 `audit/verify` 把所有带
+    before/after 的条目判为 broken —— 不是数据被篡改，而是校验时没有把 JSON 列
+    还原成写入时的规范化字符串。
+    """
+    import json as _json
+
+    from traceguard_persistence import Database, set_database
+    from traceguard_persistence import auth as auth_store
+
+    db = Database(f"sqlite:///{tmp_path / 'audit-norm.db'}")
+    set_database(db)
+    db.create_schema()
+    auth_store.record_audit(
+        db,
+        actor_id="user:qa-lead",
+        role="qa-lead",
+        action="repair.approve",
+        resource_type="repair",
+        resource_id="rp_1",
+        result="SUCCESS",
+        before={"status": "PENDING"},
+        after={"status": "APPROVED", "nested": {"b": 2, "a": 1}},
+    )
+    with db.session() as session:
+        row = dict(session.execute(text("SELECT * FROM tg_audit_log")).mappings().first())
+
+    def digest(entry: dict) -> str:
+        cleaned = {k: v for k, v in entry.items() if k not in {"seq", "entry_hash"}}
+        return auth_store._audit_hash(cleaned)
+
+    sqlite_like = auth_store._normalize_json_columns(dict(row))
+    pg_like = dict(row)
+    pg_like["before_json"] = _json.loads(row["before_json"])
+    pg_like["after_json"] = _json.loads(row["after_json"])
+    pg_like = auth_store._normalize_json_columns(pg_like)
+
+    assert digest(sqlite_like) == digest(pg_like)
+    assert digest(pg_like) == auth_store._audit_hash(
+        {k: v for k, v in row.items() if k not in {"seq", "entry_hash"}}
+    )

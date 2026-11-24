@@ -212,3 +212,22 @@
   为 `CREATE TABLE IF NOT EXISTS` 非原子所致；已加 PG advisory lock 串行化 + SAVEPOINT 容忍，
   `271ee42` 复验通过。
 - PR #2 标题与描述已更新为 RUN-007~RUN-010 集成状态；未合并、未改写历史、未强推。
+
+---
+
+## RUN-011（2026-11-25，Full-Stack Closed-Loop Verification）
+
+- WP0：基线核对（HEAD `b470518`、PR 统计 65/696/+76771-919 本地重算一致）；分支
+  `workbuddy/run011-full-loop`；发现 RUN-010 CLOSEOUT 的 probes_per_sample 统计错误。
+- WP1：**两轮独立部署闭环各 62/62**（API `:8110`/`:8120`、Worker w1-w3 / v1-v3、PG16.16 两库、
+  TeamFlow 两实例、真实 Chromium、强制代理、认证四角色）；DB 复核各 8/8。
+- WP2：探针实验室 **10/10**；3 探针真实执行、3 条新证据、2 条假设更新、signature 变化；
+  修复证据时间语义/未知探针 404/DOM 机制判定/报告自包含/业务状态缺口。
+- WP3：PARTIAL（DOM 机制修复；时序错误确认、LLM 候选重复未修）。
+- WP4：NOT RUN（v4 探针臂测量无效，先修测量）。
+- WP5：PARTIAL（正常路径 + API 重启会话保持；B-17 仍 BLOCKED）。
+- WP6：PG16.16 真实运行；迁移/并发/审计链/回执/备份恢复（8/8 + 5 evidence PASS）；
+  13 个 PG 用例真实通过；全量 663 passed。
+- WP7：负向验证 5 次 4/4（2 次对照受 OPEN-RISK-01 影响）；修复阻断不可见/原因不可见/跨 Run 串账。
+- WP8：PARTIAL（仅前端产物 + 登录 E2E）；WP9：PARTIAL（部署流程/探针/备份）。
+- 全量测试 663 passed / 0 skipped（含真实 PG），ruff 全绿。

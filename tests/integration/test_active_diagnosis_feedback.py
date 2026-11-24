@@ -390,3 +390,63 @@ def test_llm_advice_declares_params_not_applied(rt: Runtime) -> None:
     assert notes["effect"] == "ranking_only"
     assert notes["params_used_in_execution"] is False
     assert notes["applied_to_execution"] is False
+
+
+def test_dom_probe_uses_failed_step_target_when_assert_never_ran() -> None:
+    """RUN-011 WP2/WP3：定位器失效时断言步骤未执行，DOM 探针仍必须能判定机制。
+
+    真实缺陷：`_expected_test_ids()` 只看 assert 步骤；定位器在 click 步骤就失败，
+    断言步骤不存在 → 期望集合为空 → DOM 探针直接 skipped，
+    导致 LOCATOR 与 NETWORK 长期混淆（RUN-010 v4 的 V4-SIMILAR-002 即为此）。
+    """
+    from traceguard_evidence.probe.feedback import SUPPORT, assess
+
+    report = {
+        "steps": [
+            {
+                "step_id": "s4",
+                "action": "click",
+                "status": "FAILED",
+                "error": "Locator.click: Timeout 8000ms exceeded",
+                "target": {"strategy": "test_id", "value": "create-submit"},
+            }
+        ],
+        "assertion_outcomes": [
+            {
+                "assertion_id": "a_ui",
+                "kind": "ui",
+                "status": "NOT_EVALUATED",
+                "expected": {"test_id": "banner-success"},
+            }
+        ],
+    }
+    hypotheses = [
+        {
+            "hypothesis_id": "h_loc",
+            "failure_mechanism": "LOCATOR",
+            "status": "SUPPORTED",
+            "supporting": [],
+            "contradicting": [],
+        },
+        {
+            "hypothesis_id": "h_ui",
+            "failure_mechanism": "UI_RENDERING",
+            "status": "CANDIDATE",
+            "supporting": [],
+            "contradicting": [],
+        },
+    ]
+    signal = ProbeSignal(
+        probe_id="dom_snapshot",
+        execution_id="exec_dom",
+        status="SUCCEEDED",
+        evidence_ids=["evd_dom_wp2"],
+        data={"excerpt": '<button data-testid="nav-new">新建</button><div data-testid="banner-success">ok</div>'},
+    )
+    fb = assess(signal, hypotheses, report, run_ended_at=None)
+    updates = {u.hypothesis_id: u for u in fb.updates}
+    assert "h_loc" in updates and updates["h_loc"].relation == SUPPORT, fb.to_dict()
+    assert "create-submit" in updates["h_loc"].reason
+    # 断言元素存在 → 不得把"渲染缺失"当作支持
+    assert "h_ui" not in updates or updates["h_ui"].relation != SUPPORT, fb.to_dict()
+    assert fb.notes["missing_failed_step_targets"] == ["create-submit"]

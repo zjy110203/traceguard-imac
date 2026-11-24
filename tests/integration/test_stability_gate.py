@@ -184,3 +184,61 @@ def test_healed_candidate_also_requires_replay(rt: Runtime) -> None:
     with pytest.raises(AppError) as exc:
         _approve(rt, testcase_id, version)
     assert "STABILITY_REPLAY_REQUIRED" in exc.value.message
+
+
+# ---------------------------------------------------------------------------
+# RUN-011 WP1 回归：非 default Workspace 的用例必须能通过 Oracle 完整性检查
+# ---------------------------------------------------------------------------
+def test_replay_oracle_integrity_uses_testcase_workspace(rt: Runtime) -> None:
+    """workspace 归属是行属性，不在版本 doc JSON 里。
+
+    旧实现 `base.get("workspace_id", "default")` 把非 default Workspace 的用例
+    当成 default，导致 Oracle 完整性恒为 ORACLE_WORKSPACE_MISMATCH → promotable
+    永远 false（真实闭环中表现为"回放 STABLE_PASS 但不可晋升"）。
+    """
+    tc_id = new_id("tcase")
+    oracle_id = new_id("oracle")
+    workspace = "ws-gate-non-default"
+    rt.catalog.create_oracle(
+        {
+            "oracle_id": oracle_id,
+            "assertion_id": "a1",
+            "expected_behavior": "成功提示必须出现",
+            "requirement_ref": "REQ-GATE-WS",
+            "version": 1,
+            "workspace_id": workspace,
+        },
+        approved=True,
+        approved_by="role:qa-lead",
+    )
+    rt.catalog.create_testcase(
+        {
+            "testcase_id": tc_id,
+            "version": 1,
+            "intent_ref": "intent_gate",
+            "compile_source": "human",
+            "steps": [{"step_id": "s1", "action": "navigate", "value": "/projects"}],
+            "assertions": [
+                {
+                    "assertion_id": "a1",
+                    "description": "成功提示",
+                    "kind": "ui",
+                    "required": True,
+                    "expected": {"test_id": "banner-success"},
+                    "oracle_id": oracle_id,
+                    "oracle_version": 1,
+                }
+            ],
+            "review_status": "PENDING",
+            "created_at": "2026-01-01T00:00:00Z",
+        },
+        title="非默认 workspace 用例",
+        workspace_id=workspace,
+        review_status="PENDING",
+    )
+    version_doc = rt.catalog.get_version(tc_id, 1)
+    assert version_doc["workspace_id"] == workspace
+    assert version_doc["testcase_id"] == tc_id
+    doc = StabilityReplayService(rt).start(tc_id, 1, repeats=1, requested_by="role:qa-lead")
+    assert doc["workspace_id"] == workspace
+    assert doc["oracle_complete"] is True, doc.get("oracle_problems")

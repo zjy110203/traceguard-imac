@@ -1,0 +1,216 @@
+{
+  "dsn_scheme": "postgresql+psycopg",
+  "workspace": "ws-run011-l1",
+  "checks": [
+    {
+      "name": "所有 Run 的 lease_owner 均非 API 进程",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "终态 Run 均有 Evidence（无孤儿 Run）",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "Event (producer_instance_id, sequence) 全局唯一",
+      "ok": true,
+      "detail": 0
+    },
+    {
+      "name": "Event 均可追溯到 Run",
+      "ok": true,
+      "detail": 0
+    },
+    {
+      "name": "审计 seq 唯一且连续（1..N）",
+      "ok": true,
+      "detail": {
+        "entries": 16,
+        "min_seq": 1,
+        "max_seq": 16,
+        "distinct_seq": 16
+      }
+    },
+    {
+      "name": "定位器用例存在多个版本（晋升 + 回滚留痕）",
+      "ok": true,
+      "detail": [
+        {
+          "testcase_id": "tcase_bench_loc001",
+          "version": 1,
+          "review_status": "APPROVED",
+          "compile_source": "human"
+        },
+        {
+          "testcase_id": "tcase_bench_loc001",
+          "version": 2,
+          "review_status": "APPROVED",
+          "compile_source": "healed"
+        },
+        {
+          "testcase_id": "tcase_bench_loc001",
+          "version": 3,
+          "review_status": "APPROVED",
+          "compile_source": "human"
+        }
+      ]
+    },
+    {
+      "name": "CAS 晋升回执与回滚回执均已落库",
+      "ok": true,
+      "detail": [
+        {
+          "idempotency_key": "run011-repair_17955440367266686639fd04f",
+          "kind": "PROMOTE",
+          "proposal_id": "repair_17955440367266686639fd04f",
+          "testcase_id": "tcase_bench_loc001",
+          "base_version": 1,
+          "target_version": 2,
+          "created_at": "2026-11-24T18:14:01.407247Z"
+        },
+        {
+          "idempotency_key": "rollback:repair_17955440367266686639fd04f:v2",
+          "kind": "ROLLBACK",
+          "proposal_id": "repair_17955440367266686639fd04f",
+          "testcase_id": "tcase_bench_loc001",
+          "base_version": 2,
+          "target_version": 3,
+          "created_at": "2026-11-24T18:14:06.325807Z"
+        }
+      ]
+    },
+    {
+      "name": "每条回执都绑定 base_version 与 target_version",
+      "ok": true,
+      "detail": [
+        {
+          "idempotency_key": "run011-repair_17955440367266686639fd04f",
+          "kind": "PROMOTE",
+          "proposal_id": "repair_17955440367266686639fd04f",
+          "testcase_id": "tcase_bench_loc001",
+          "base_version": 1,
+          "target_version": 2,
+          "created_at": "2026-11-24T18:14:01.407247Z"
+        },
+        {
+          "idempotency_key": "rollback:repair_17955440367266686639fd04f:v2",
+          "kind": "ROLLBACK",
+          "proposal_id": "repair_17955440367266686639fd04f",
+          "testcase_id": "tcase_bench_loc001",
+          "base_version": 2,
+          "target_version": 3,
+          "created_at": "2026-11-24T18:14:06.325807Z"
+        }
+      ]
+    }
+  ],
+  "facts": {
+    "server_version": "16.16 (Postgres.app)",
+    "migration_versions": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ],
+    "migration_count": 12,
+    "row_counts": {
+      "tg_intent": 6,
+      "tg_testcase": 32,
+      "tg_testcase_version": 34,
+      "tg_oracle": 9,
+      "tg_task": 9,
+      "tg_run": 9,
+      "tg_event": 87,
+      "tg_evidence": 219,
+      "tg_audit_log": 16,
+      "tg_doc": 8
+    },
+    "workspace_counts": {
+      "intents": 1,
+      "testcases": 1,
+      "runs": 3
+    },
+    "verdicts": {
+      "PASSED": 3
+    },
+    "run_lease_owners": [
+      {
+        "lease_owner": "run011-w1",
+        "n": 1
+      },
+      {
+        "lease_owner": "run011-w2",
+        "n": 1
+      },
+      {
+        "lease_owner": "run011-w3",
+        "n": 1
+      }
+    ],
+    "event_seq_duplicates": 0,
+    "events_without_run_ref": 0,
+    "audit": {
+      "entries": 16,
+      "min_seq": 1,
+      "max_seq": 16,
+      "distinct_seq": 16
+    },
+    "loc001_versions": [
+      {
+        "testcase_id": "tcase_bench_loc001",
+        "version": 1,
+        "review_status": "APPROVED",
+        "compile_source": "human"
+      },
+      {
+        "testcase_id": "tcase_bench_loc001",
+        "version": 2,
+        "review_status": "APPROVED",
+        "compile_source": "healed"
+      },
+      {
+        "testcase_id": "tcase_bench_loc001",
+        "version": 3,
+        "review_status": "APPROVED",
+        "compile_source": "human"
+      }
+    ],
+    "promotion_receipts": [
+      {
+        "idempotency_key": "run011-repair_17955440367266686639fd04f",
+        "kind": "PROMOTE",
+        "proposal_id": "repair_17955440367266686639fd04f",
+        "testcase_id": "tcase_bench_loc001",
+        "base_version": 1,
+        "target_version": 2,
+        "created_at": "2026-11-24T18:14:01.407247Z"
+      },
+      {
+        "idempotency_key": "rollback:repair_17955440367266686639fd04f:v2",
+        "kind": "ROLLBACK",
+        "proposal_id": "repair_17955440367266686639fd04f",
+        "testcase_id": "tcase_bench_loc001",
+        "base_version": 2,
+        "target_version": 3,
+        "created_at": "2026-11-24T18:14:06.325807Z"
+      }
+    ],
+    "probe_plans": 1,
+    "diagnoses": 1,
+    "replay_docs": 1
+  },
+  "summary": {
+    "total": 8,
+    "passed": 8,
+    "failed": []
+  }
+}

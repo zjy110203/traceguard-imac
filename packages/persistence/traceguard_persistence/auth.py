@@ -452,6 +452,20 @@ def _is_seq_conflict(exc: Exception) -> bool:
     )
 
 
+def _normalize_json_columns(entry: dict[str, Any]) -> dict[str, Any]:
+    """把 JSON 列还原成写入时的规范化字符串（供审计链校验/复算使用）。
+
+    PostgreSQL 的 JSON 列读回是 dict/list；SQLite 读回是原字符串。
+    写入哈希时用的是 `_dump()` 产生的字符串，因此校验前必须统一成同一形态，
+    否则同一份未被篡改的数据在 PostgreSQL 上会被误判为链断裂。
+    """
+    for key in ("before_json", "after_json"):
+        value = entry.get(key)
+        if value is not None and not isinstance(value, str):
+            entry[key] = json.dumps(value, ensure_ascii=False, sort_keys=True)
+    return entry
+
+
 def verify_audit_chain(db: Database) -> dict[str, Any]:
     with db.session() as s:
         rows = [dict(r) for r in s.execute(text("SELECT * FROM tg_audit_log")).mappings().all()]
@@ -465,6 +479,11 @@ def verify_audit_chain(db: Database) -> dict[str, Any]:
         entry = dict(row)
         entry.pop("seq", None)
         expected = entry.pop("entry_hash", "")
+        # RUN-011 WP1：写入时 before_json/after_json 是 JSON 字符串（hash 基于该字符串）。
+        # PostgreSQL 的 JSON 列读回是 dict，直接参与规范化会得到不同摘要 →
+        # 所有带 before/after 的条目都被误判为链断裂（真实闭环里 audit verify 报 broken）。
+        # 校验前把 JSON 列还原成写入时的规范化字符串，其余字段保持原值。
+        _normalize_json_columns(entry)
         if entry.get("prev_hash") != prev or _audit_hash(entry) != expected:
             broken.append(str(row.get("audit_id")))
         prev = str(expected)

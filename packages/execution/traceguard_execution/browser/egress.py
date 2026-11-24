@@ -208,6 +208,12 @@ class EgressProxyController:
 
     def audit_summary(self) -> dict[str, Any]:
         entries = self.audit_entries()
+        # RUN-011 WP7：代理按 Worker 线程复用，审计列表会跨 Run 累积。
+        # 报告里的 egress 必须只统计"本 Run"的请求，否则会出现
+        # "对照 Run 的 blocked 数来自上一个负向 Run"这种串账。
+        current_run = self._run_context.get("run_id", "")
+        if current_run:
+            entries = [e for e in entries if e.get("run_id") == current_run]
         allowed = [e for e in entries if e["decision"] == "ALLOW"]
         blocked = [e for e in entries if e["decision"] == "BLOCK"]
         return {
@@ -217,6 +223,11 @@ class EgressProxyController:
             "blocked_targets": sorted(
                 {f"{e['scheme']}://{e['host']}:{e['port']}" for e in blocked}
             ),
+            # RUN-011 WP7：只给目标名不够排查——必须能回答"为什么被拦"。
+            # 只保留 reason 与目标，不含 path/query/headers，避免把请求内容写进报告。
+            "blocked_reasons": sorted(
+                {f"{e['host']}:{e['port']} {e['scheme']} {e['reason']}" for e in blocked}
+            )[:20],
             "url": self.url if self._proxy is not None else "",
             "run_id": self._run_context.get("run_id", ""),
             "worker_id": self._run_context.get("worker_id", self.worker_id),
