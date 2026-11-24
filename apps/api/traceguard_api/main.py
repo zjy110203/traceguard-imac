@@ -22,6 +22,8 @@ from traceguard_core.config import get_settings
 from traceguard_core.errors import AppError, ErrorCode, app_error_handler, error_response
 from traceguard_core.logging import configure_logging, get_logger
 
+from .auth import auth_middleware
+
 logger = get_logger("traceguard.api")
 
 DIST_DIR = Path(__file__).resolve().parents[2] / "web" / "dist"
@@ -62,6 +64,12 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
     app.add_exception_handler(AppError, app_error_handler)
+    # RUN-009 WP2：认证开关显式化。未开启时必须明确记录，不得静默回退匿名管理员。
+    if not settings.auth_enabled:
+        logger.warning("auth_disabled_explicitly", environment=settings.environment)
+    else:
+        logger.info("auth_enabled", session_ttl_s=settings.auth_session_ttl_s)
+    app.middleware("http")(auth_middleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_origins,
@@ -177,9 +185,11 @@ def create_app() -> FastAPI:
             },
         )
 
+    from .routers import auth as auth_router
     from .routers import catalog, evidence, execution, intelligence, system
 
     app.include_router(system.router)
+    app.include_router(auth_router.router)
     app.include_router(catalog.router)
     app.include_router(execution.router)
     app.include_router(evidence.router)

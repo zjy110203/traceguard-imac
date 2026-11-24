@@ -282,6 +282,43 @@ MIGRATIONS: list[tuple[int, str, list[str]]] = [
         "widen_testcase_intent_ref",
         ["__CALLABLE__:_migrate_widen_intent_ref"],
     ),
+    (
+        11,
+        "auth_rbac_audit",
+        [
+            "CREATE TABLE IF NOT EXISTS tg_user ("
+            "user_id VARCHAR(64) PRIMARY KEY, "
+            "username VARCHAR(120) NOT NULL UNIQUE, "
+            "password_hash VARCHAR(255) NOT NULL, "
+            "roles VARCHAR(500) NOT NULL, "
+            "active INTEGER NOT NULL DEFAULT 1, "
+            "created_at VARCHAR(40) NOT NULL DEFAULT '', "
+            "updated_at VARCHAR(40) NOT NULL DEFAULT '')",
+            "CREATE TABLE IF NOT EXISTS tg_session ("
+            "token_hash VARCHAR(64) PRIMARY KEY, "
+            "user_id VARCHAR(64) NOT NULL, "
+            "csrf_token VARCHAR(64) NOT NULL, "
+            "expires_at FLOAT NOT NULL DEFAULT 0, "
+            "revoked INTEGER NOT NULL DEFAULT 0, "
+            "created_at VARCHAR(40) NOT NULL DEFAULT '')",
+            "CREATE INDEX IF NOT EXISTS ix_tg_session_user ON tg_session (user_id)",
+            "CREATE TABLE IF NOT EXISTS tg_audit_log ("
+            "audit_id VARCHAR(64) PRIMARY KEY, "
+            "actor_id VARCHAR(120) NOT NULL, "
+            "role VARCHAR(120) NOT NULL DEFAULT '', "
+            "action VARCHAR(120) NOT NULL, "
+            "resource_type VARCHAR(120) NOT NULL DEFAULT '', "
+            "resource_id VARCHAR(160) NOT NULL DEFAULT '', "
+            "timestamp VARCHAR(40) NOT NULL DEFAULT '', "
+            "result VARCHAR(40) NOT NULL DEFAULT '', "
+            "request_id VARCHAR(120) NOT NULL DEFAULT '', "
+            "before_json JSON, after_json JSON, "
+            "prev_hash VARCHAR(64) NOT NULL DEFAULT '', "
+            "entry_hash VARCHAR(64) NOT NULL DEFAULT '')",
+            "CREATE INDEX IF NOT EXISTS ix_tg_audit_actor ON tg_audit_log (actor_id)",
+            "CREATE INDEX IF NOT EXISTS ix_tg_audit_action ON tg_audit_log (action)",
+        ],
+    ),
 ]
 
 

@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
 from traceguard_core.errors import AppError
 from traceguard_core.ids import utc_now_iso
 from traceguard_persistence.catalog import require_human_actor
 
+from ..auth import trusted_actor
 from ..services import get_services
 
 router = APIRouter(prefix="/api/v1", tags=["intelligence"])
@@ -171,7 +172,9 @@ class DispositionReviewReq(BaseModel):
 
 
 @router.post("/dispositions/{disposition_id}/review")
-async def review_disposition(disposition_id: str, req: DispositionReviewReq) -> dict[str, Any]:
+async def review_disposition(
+    disposition_id: str, req: DispositionReviewReq, request: Request
+) -> dict[str, Any]:
     """处置结论的人工复核。
 
     RUN-007 WP1-03：主体校验统一走 `require_human_actor()`（按命名空间首段判断），
@@ -181,7 +184,16 @@ async def review_disposition(disposition_id: str, req: DispositionReviewReq) -> 
     if req.review_status not in {"APPROVED", "REJECTED", "PENDING"}:
         raise HTTPException(422, detail={"code": "VALIDATION_ERROR", "message": "invalid status"})
     try:
-        actor = require_human_actor(req.reviewer, field="reviewer")
+        actor = require_human_actor(
+            trusted_actor(
+                request,
+                req.reviewer,
+                "diagnosis.operate",
+                resource_type="disposition",
+                resource_id=disposition_id,
+            ),
+            field="reviewer",
+        )
     except AppError as exc:
         raise _http(exc) from exc
     rt = get_services().rt
@@ -427,17 +439,23 @@ async def submit_repair(proposal_id: str) -> dict[str, Any]:
 
 
 @router.post("/repairs/{proposal_id}/approve")
-async def approve_repair(proposal_id: str, req: ApproveReq) -> dict[str, Any]:
+async def approve_repair(proposal_id: str, req: ApproveReq, request: Request) -> dict[str, Any]:
+    reviewer = trusted_actor(
+        request, req.reviewer, "repair.approve", resource_type="repair", resource_id=proposal_id
+    )
     try:
-        return get_services().repair.approve(proposal_id, req.reviewer, req.note)
+        return get_services().repair.approve(proposal_id, reviewer, req.note)
     except AppError as exc:
         raise _http(exc) from exc
 
 
 @router.post("/repairs/{proposal_id}/reject")
-async def reject_repair(proposal_id: str, req: ApproveReq) -> dict[str, Any]:
+async def reject_repair(proposal_id: str, req: ApproveReq, request: Request) -> dict[str, Any]:
+    rejector = trusted_actor(
+        request, req.reviewer, "repair.approve", resource_type="repair", resource_id=proposal_id
+    )
     try:
-        return get_services().repair.reject(proposal_id, req.reviewer, req.note)
+        return get_services().repair.reject(proposal_id, rejector, req.note)
     except AppError as exc:
         raise _http(exc) from exc
 
@@ -447,7 +465,14 @@ class PromoteReq(BaseModel):
 
 
 @router.post("/repairs/{proposal_id}/promote")
-async def promote_repair(proposal_id: str, req: PromoteReq) -> dict[str, Any]:
+async def promote_repair(proposal_id: str, req: PromoteReq, request: Request) -> dict[str, Any]:
+    trusted_actor(
+        request,
+        "user:dev-operator",
+        "repair.promote",
+        resource_type="repair",
+        resource_id=proposal_id,
+    )
     try:
         return get_services().repair.promote(proposal_id, idempotency_key=req.idempotency_key)
     except AppError as exc:
@@ -462,10 +487,13 @@ class RollbackReq(BaseModel):
 
 
 @router.post("/repairs/{proposal_id}/rollback")
-async def rollback_repair(proposal_id: str, req: RollbackReq) -> dict[str, Any]:
+async def rollback_repair(proposal_id: str, req: RollbackReq, request: Request) -> dict[str, Any]:
+    operator = trusted_actor(
+        request, req.operator, "repair.rollback", resource_type="repair", resource_id=proposal_id
+    )
     try:
         return get_services().repair.rollback(
-            proposal_id, req.operator, req.reason, idempotency_key=req.idempotency_key
+            proposal_id, operator, req.reason, idempotency_key=req.idempotency_key
         )
     except AppError as exc:
         raise _http(exc) from exc
