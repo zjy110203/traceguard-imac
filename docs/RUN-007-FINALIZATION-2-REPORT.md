@@ -34,7 +34,7 @@
 | WP5 PostgreSQL | **已在本机真实 PG 16.16 验证**：13 个 PG 用例全过、6 分钟持续 78 Run / 4 Worker 并发、PG 上 E2E 56/56；并发现并修复 1 个 PG-only 缺陷 | §7.2 |
 | WP6 前端关键交互 | 75/75 检查通过（15 视图 × 4 断点 + 明暗主题），0 console 错误 | `docs/assets/run007/ui-f2/ui-review.json` |
 | WP7 最终回归 | 连真实 PG：**562 passed / 0 skipped**；无 PG 环境：549 passed / 13 skipped；ruff 全绿 | §7.4 |
-| WP8 CI / PR | **PR Gate 在代码/证据提交 `7e7528f` 上真实成功**（push #15 53s / PR #16 52s）；Nightly/Release 未 dispatch | §7.5 |
+| WP8 CI / PR | **PR Gate 在最终提交 `e8c05a7` 上真实成功**（push / pull_request 两组 check suite 均 success，backend + frontend 全绿）；Nightly/Release 未 dispatch | §7.5 |
 
 ---
 
@@ -355,17 +355,18 @@ SQLite 不校验 `VARCHAR` 长度所以本地全绿，PostgreSQL 直接
 
 ### 7.5 CI / PR
 
-push 到 `workbuddy/run007-resume-20261123` 自动触发 PR Gate，**代码/测试/证据的最终提交 `7e7528f` 真实通过**：
+push 到 `workbuddy/run007-resume-20261123` 自动触发 PR Gate，**最终 HEAD `e8c05a7`（含 PG-only 修复与全部证据归档）真实通过**：
 
 | 门禁 | 事件 | 运行 | 结论 | 明细 |
 |---|---|---|---|---|
-| PR Gate #15 | push（`7e7528f`） | [45226091595](https://github.com/zjy110203/traceguard-imac/actions/runs/45226091595) | **success（53s）** | backend（ruff check/format/单测/契约/关键集成）、frontend（typecheck+build） |
-| PR Gate #16 | pull_request #1（synchronize） | [45226105637](https://github.com/zjy110203/traceguard-imac/actions/runs/45226105637) | **success（52s）** | 同上 |
+| PR Gate | push（`e8c05a7`） | [45325432966](https://github.com/zjy110203/traceguard-imac/actions/runs/45325432966) | **success**（backend 42s / frontend 20s） | backend（ruff check/format/单测/契约/关键集成）、frontend（typecheck+build） |
+| PR Gate | pull_request #1（`e8c05a7`） | [45325441049](https://github.com/zjy110203/traceguard-imac/actions/runs/45325441049) | **success**（backend 43s / frontend 23s） | 同上 |
 
-本轮 7 个提交的 PR Gate 均成功（#11/#12 → 023f688，#13/#14 → b5cb00b，#15/#16 → 7e7528f）。
-本文件归档后若再追加纯文档提交，代码等价于 `7e7528f`，其 PR Gate 结果以 Actions 列表为准。
+两组 check suite 下 backend/frontend 共 4 个 check run **全部 success**，且 head_sha 严格等于 `e8c05a754ccdb40c6a769385deeea1645f5e136c`。
+此前已核验的门禁：`023f688`（#11/#12）、`b5cb00b`（#13/#14）、`7e7528f`（#15/#16，[45226091595](https://github.com/zjy110203/traceguard-imac/actions/runs/45226091595) / [45226105637](https://github.com/zjy110203/traceguard-imac/actions/runs/45226105637)）均 success；
+后续追加的 `aed0827`（文档）、`874b642`（PG-only 代码修复）、`e8c05a7`（PG 证据归档）也由最终 HEAD 的门禁完整覆盖。
 
-仅有的 2 条 annotation 是 Node.js 20 deprecated（actions 版本被强升 Node24），非阻断。
+仅有的 annotation 是 Node.js 20 deprecated（actions 版本被强升 Node24），非阻断。
 
 - **Nightly Gate / Release Gate 未在本轮 commit 上 dispatch**（只有 `schedule` / `workflow_dispatch` / tag 触发）。
   因此本报告**不声称**"三级门禁在本轮 commit 全绿"；上一轮 `fdbe0f5` 的
@@ -385,7 +386,13 @@ push 到 `workbuddy/run007-resume-20261123` 自动触发 PR Gate，**代码/测�
 | `3b99625` | Repair 实验闭环可信化 + 评测口径（Macro-F1 / 口径分离 / E 臂 / 重复实验） |
 | `30c306e` | LOC/COMP 三场景口径补齐 + 样本 null 字段 + fail-closed 负向用例 |
 | `259d9c6` | 文档同步（Evidence 语义 / API / 迁移 v9） |
-| 本轮收尾 | 报告、证据归档、Benchmark/UI 原始数据 |
+| `cdd70bc` | 补充第四轮验收报告，并在既有报告中追加结果 |
+| `023f688` | 归档本轮原始证据（Benchmark / E2E / UI） |
+| `b5cb00b` | 补入 `023f688` 的 PR Gate 真实通过结果 |
+| `7e7528f` | Evidence 缺摘要由 FAIL 改为 NOT_RUN（区分"无法证明"与"已篡改"）|
+| `aed0827` | 引用 `7e7528f` 的 PR Gate 结果（#15/#16） |
+| `874b642` | 修复 PG-only 缺陷：`intent_ref` 只存引用、正文入 `intent_text`、长度护栏、迁移 v10 |
+| `e8c05a7` | 归档本机 PG 16.16 实测证据，解除 PG BLOCKED 标记 |
 
 ---
 
@@ -394,7 +401,8 @@ push 到 `workbuddy/run007-resume-20261123` 自动触发 PR Gate，**代码/测�
 1. **PostgreSQL**：本机已用 Postgres.app 16.16 实测（§7.2）。仍存的边界：
    ① 只有 6 分钟持续运行，不是小时级生产压测；② 未验证 PgBouncer/主从/连接池耗尽；
    ③ 实例由 DMG 内二进制临时启动（`/tmp`，端口 55432），不是系统服务。
-2. **Nightly / Release Gate 未在本轮 commit 上运行**：PR Gate 已在代码提交 `7e7528f` 上真实通过（§7.5），
+2. **Nightly / Release Gate 未在本轮 commit 上运行**：PR Gate 已在最终 HEAD `e8c05a7` 上真实通过（§7.5，
+   push + pull_request 两组 check suite 的 backend/frontend 共 4 个 check run 全绿），
    但 Nightly（含 `postgres:16`、真实浏览器 E2E、Benchmark）与 Release（attestation）
    需要 `workflow_dispatch` 且需要带 Actions 权限的凭据，本轮未执行。
    上一轮 `cc3339d`/`fdbe0f5` 的 Nightly/Release 绿灯**不能**作为本轮验收证据。

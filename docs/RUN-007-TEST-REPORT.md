@@ -18,7 +18,8 @@
 | `tests/teamflow` | 9 | 被测应用与故障注入 |
 | **合计** | **534** | 本轮新增 19 个用例（见 §2） |
 
-全量运行结果见 §7：**523 passed / 11 skipped**；11 个 skip 全部是 PostgreSQL 相关（本机无 PG），逐条打印了跳过原因。
+首轮全量运行结果见 §7：**523 passed / 11 skipped**；11 个 skip 全部是 PostgreSQL 相关（当时本机无 PG），逐条打印了跳过原因。
+本机 PG 实测后的最新结果见 §12：**562 passed / 0 skipped**。
 
 ## 2. 本轮新增测试
 
@@ -145,7 +146,7 @@
 
 | 项 | 状态 | 原因 |
 |---|---|---|
-| PostgreSQL 16 运行时（本机） | BLOCKED（本机） | 无 Docker / psql。**CI 已真实验证**：Nightly 的 `postgres:16`（16.16）上 6 个平台用例全过 |
+| PostgreSQL 16 运行时（本机） | ~~BLOCKED~~ → **已解除**（见 §12） | 首轮无 Docker / psql；已下载 Postgres.app 16.16 起本地实例实测：13/13 PG 用例、6 分钟 78 Run / 4 Worker、PG 上 E2E 56/56 |
 | ~~PR / Nightly / Release Gate 真实运行~~ | **VERIFIED** | 同 commit `cc3339d` 三级全绿，见 §9.1 |
 | 人工诊断基线（Benchmark） | BLOCKED | 无人力投入，不用 Mock 补齐 |
 | 多浏览器（Firefox/WebKit） | NOT_IMPLEMENTED | 只有 Chromium |
@@ -230,6 +231,8 @@ Nightly 的 `head_sha` 与 Release 的 `github.sha` 严格相等。
   仍存边界：只有 6 分钟持续，不是小时级压测；未验证连接池/主从；实例是 `/tmp` 临时进程。
 - 本机 PG 暴露并已修复 1 个 **PG-only 缺陷**：编译把需求正文写进 `intent_ref`（varchar(64)），
   SQLite 静默接受、PG 直接 500。修复为 `intent_ref=intent_id` + `intent_text` 正文 + 长度护栏 + 迁移 v10。
-- 本轮代码/证据提交 `7e7528f` 的 **PR Gate 已真实通过**（push #15 `45226091595` 53s；
-  PR #16 `45226105637` 52s，backend/frontend 全绿）；
+- 最终 HEAD `e8c05a7` 的 **PR Gate 已真实通过**：push [45325432966](https://github.com/zjy110203/traceguard-imac/actions/runs/45325432966)
+  与 pull_request [45325441049](https://github.com/zjy110203/traceguard-imac/actions/runs/45325441049)
+  两组 check suite 的 backend/frontend 共 4 个 check run 全绿，head_sha 严格等于 `e8c05a754...`。
+  此前 `7e7528f` 的 gate 也已通过（push #15 `45226091595`、PR #16 `45226105637`）。
   Nightly / Release Gate **未手动 dispatch**，故不宣称三级门禁在本 commit 全绿。
