@@ -326,8 +326,8 @@ onMounted(load)
                     <dt>原因</dt><dd class="small">{{ disposition.reason }}</dd>
                   </div>
                   <div class="hr" />
-                  <label>审核人</label>
-                  <input v-model="reviewer" />
+                  <label for="disp-reviewer">审核人</label>
+                  <input id="disp-reviewer" v-model="reviewer" />
                   <div class="flex" style="margin-top: 8px">
                     <button class="sm primary" :disabled="busy === 'review'" @click="reviewDisposition('APPROVED')">批准分流</button>
                     <button class="sm danger" :disabled="busy === 'review'" @click="reviewDisposition('REJECTED')">驳回</button>

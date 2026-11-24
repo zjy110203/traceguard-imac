@@ -48,9 +48,9 @@ onMounted(load)
       subtitle="确定性规则 + 可信证据裁决。没有足够证据就是 INCONCLUSIVE，不会被包装成 PASSED；LLM 候选不会被确认。">
       <template #actions>
         <label class="flex small" style="gap: 5px; margin: 0">
-          <input v-model="includeBench" type="checkbox" style="width: auto" @change="load" /> 包含 Benchmark
+          <input id="diag-include-bench" v-model="includeBench" type="checkbox" style="width: auto" aria-label="包含 Benchmark 诊断" @change="load" /> 包含 Benchmark
         </label>
-        <select v-model="outcome" style="width: 150px">
+        <select id="diag-outcome" v-model="outcome" aria-label="按诊断结论筛选" style="width: 150px">
           <option value="">全部结论</option>
           <option value="CONFIRMED">CONFIRMED</option>
           <option value="PROBABLE">PROBABLE</option>

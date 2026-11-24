@@ -13,7 +13,7 @@
   --border-strong: #cbd2dc;
   --text: #101828;
   --text-2: #475467;
-  --text-3: #7c8798;
+  --text-3: #657183;
   --brand: #3457d5;
   --brand-hover: #2846b8;
   --brand-weak: #eef2ff;
@@ -32,7 +32,7 @@
   --neutral-weak: #f1f3f6;
   --sidebar-bg: #111827;
   --sidebar-text: #c6d0e0;
-  --sidebar-muted: #7d8aa1;
+  --sidebar-muted: #9aa6bd;
   --sidebar-active: rgba(91, 124, 244, 0.2);
   --sidebar-w: 232px;
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
@@ -73,7 +73,7 @@
   --neutral-weak: #202a38;
   --sidebar-bg: #0b1018;
   --sidebar-text: #c6d0e0;
-  --sidebar-muted: #7d8aa1;
+  --sidebar-muted: #9aa6bd;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
 }

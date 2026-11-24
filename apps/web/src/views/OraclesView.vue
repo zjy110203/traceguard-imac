@@ -106,7 +106,7 @@ onMounted(load)
     </div>
 
     <div class="toolbar" style="margin-bottom: 12px">
-      <input v-model="keyword" placeholder="搜索 Oracle / 预期行为" style="max-width: 280px" />
+      <input id="oracle-search" v-model="keyword" aria-label="搜索 Oracle 或预期行为" placeholder="搜索 Oracle / 预期行为" style="max-width: 280px" />
       <span class="small muted">{{ filtered.length }} 条</span>
     </div>
 
@@ -136,35 +136,35 @@ onMounted(load)
     <ModalShell v-if="showCreate" title="新建 Oracle（版本化）" width="680px" @close="showCreate = false">
       <div class="grid c2">
         <div>
-          <label>Oracle ID（留空自动生成）</label>
-          <input v-model="form.oracle_id" placeholder="oracle_xxx" />
+          <label for="oracle-id">Oracle ID（留空自动生成）</label>
+          <input id="oracle-id" v-model="form.oracle_id" placeholder="oracle_xxx" />
         </div>
         <div>
-          <label>关联断言 ID</label>
-          <input v-model="form.assertion_id" placeholder="a_ui_banner" />
+          <label for="oracle-assertion">关联断言 ID</label>
+          <input id="oracle-assertion" v-model="form.assertion_id" placeholder="a_ui_banner" />
         </div>
       </div>
       <div>
-        <label>预期行为（人类可读，必须可追溯到需求）</label>
-        <input v-model="form.expected_behavior" placeholder="创建成功后必须出现成功提示" />
+        <label for="oracle-expected">预期行为（人类可读，必须可追溯到需求）</label>
+        <input id="oracle-expected" v-model="form.expected_behavior" placeholder="创建成功后必须出现成功提示" />
       </div>
       <div>
-        <label>需求引用</label>
-        <input v-model="form.requirement_ref" placeholder="REQ-PROJECT-CREATE#UI-1" />
+        <label for="oracle-reqref">需求引用</label>
+        <input id="oracle-reqref" v-model="form.requirement_ref" placeholder="REQ-PROJECT-CREATE#UI-1" />
       </div>
       <div>
-        <label>判定规则（确定性规则，JSON）</label>
-        <textarea v-model="form.rule" rows="4" class="mono" style="font-size: 12px" />
+        <label for="oracle-rule">判定规则（确定性规则，JSON）</label>
+        <textarea id="oracle-rule" v-model="form.rule" rows="4" class="mono" style="font-size: 12px" />
       </div>
       <div class="grid c2">
         <div>
-          <label>审批人（必须具名人类角色）</label>
-          <input v-model="form.approved_by" />
+          <label for="oracle-approver">审批人（必须具名人类角色）</label>
+          <input id="oracle-approver" v-model="form.approved_by" />
         </div>
         <div>
           <label>创建时审批</label>
           <label class="flex small" style="gap: 6px; margin: 6px 0 0">
-            <input v-model="form.approve" type="checkbox" style="width: auto" />
+            <input id="oracle-approve-now" v-model="form.approve" type="checkbox" style="width: auto" />
             同步标记为已审批
           </label>
         </div>

@@ -141,7 +141,7 @@ onMounted(load)
     </PageHeader>
 
     <div class="toolbar" style="margin-bottom: 12px">
-      <input v-model="keyword" placeholder="搜索需求" style="max-width: 260px" />
+      <input id="intents-search" v-model="keyword" aria-label="搜索需求" placeholder="搜索需求" style="max-width: 260px" />
       <span class="small muted">{{ filtered.length }} 条需求</span>
     </div>
 
@@ -187,20 +187,20 @@ onMounted(load)
 
     <ModalShell v-if="showCreate" title="新建测试需求" @close="showCreate = false">
       <div>
-        <label>标题</label>
-        <input v-model="form.title" placeholder="例如：创建项目后数据必须真实持久化" />
+        <label for="intent-title">标题</label>
+        <input id="intent-title" v-model="form.title" placeholder="例如：创建项目后数据必须真实持久化" />
       </div>
       <div>
-        <label>描述</label>
-        <textarea v-model="form.description" rows="4" placeholder="业务背景、用户操作路径、预期结果" />
+        <label for="intent-desc">描述</label>
+        <textarea id="intent-desc" v-model="form.description" rows="4" placeholder="业务背景、用户操作路径、预期结果" />
       </div>
       <div>
-        <label>Owner</label>
-        <input v-model="form.owner" />
+        <label for="intent-owner">Owner</label>
+        <input id="intent-owner" v-model="form.owner" />
       </div>
       <div>
-        <label>候选断言（每行一条，可留空）</label>
-        <textarea v-model="form.candidate_assertions" rows="3" />
+        <label for="intent-assertions">候选断言（每行一条，可留空）</label>
+        <textarea id="intent-assertions" v-model="form.candidate_assertions" rows="3" />
       </div>
       <template #footer>
         <button @click="showCreate = false">取消</button>
