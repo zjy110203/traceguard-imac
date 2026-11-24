@@ -429,6 +429,8 @@ class ProbeService:
             }
 
             if result_doc["status"] == "SUCCEEDED" and diagnosis_id and diagnosis_service:
+                import time as _time
+
                 signal = ProbeSignal(
                     probe_id=probe.probe_id,
                     execution_id=result_doc["execution_id"],
@@ -437,6 +439,9 @@ class ProbeService:
                     data=result_doc.get("result") or {},
                     params=params,
                     gap_id=gap["gap_id"],
+                    # RUN-010 WP4 时间对齐：探针在 Run 结束后执行 → 事后观测
+                    observed_at=result_doc.get("observed_at") or _time.time(),
+                    run_scope=False,
                 )
                 assessment = diagnosis_service.reassess(
                     diagnosis_id, [signal], run_report=run.get("report") or {}

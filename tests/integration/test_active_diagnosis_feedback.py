@@ -155,9 +155,26 @@ def test_probe_confirms_persistence_and_stops(rt: Runtime) -> None:
     assert any(e["relation"] == "evaluates" for e in graph["edges"])
 
 
-# ------------------------------------------------------------------ 反驳/排除
-def test_probe_contradicts_and_excludes_persistence(rt: Runtime) -> None:
+# ------------------------------------------------- 事后观测不得冒充历史状态
+def test_post_hoc_probe_does_not_refute_run_scope_hypothesis(rt: Runtime) -> None:
+    """RUN-010 WP4：事后探针与 Run 时"未落库"假设冲突 → 生成 TIMING 新假设，
+    而不是错误反驳/排除 Run 作用域假设（RUN-009 误差分析的主根因修复）。
+
+    本测试的 Run 有 ended_at：探针 observed_at(现在) > ended_at → POST_HOC，
+    裁决权降级（不确认、不排除），并生成"状态查询滞后"新假设。
+    """
     _insert_run(rt, "run_diag2", _report())
+    # 补充 ended_at（真实 COMPLETED Run 都有）：让探针成为可判定的事后观测
+    import time as _time
+
+    from sqlalchemy import update as _update
+
+    with rt.db.session() as s:
+        s.execute(
+            _update(RunRow)
+            .where(RunRow.run_id == "run_diag2")
+            .values(ended_at=_time.time() - 30)
+        )
     diag = _diagnose(rt, "run_diag2")
 
     svc = ProbeService(rt)
@@ -174,9 +191,23 @@ def test_probe_contradicts_and_excludes_persistence(rt: Runtime) -> None:
     assert plan["diagnosis_after"]["outcome"] != "CONFIRMED"
     updated = rt.docs.get(diag["diagnosis_id"]).doc
     persistence = [h for h in updated["hypotheses"] if h["failure_mechanism"] == "PERSISTENCE"][0]
-    assert persistence["status"] in {"CONTRADICTED", "EXCLUDED"}
-    assert persistence["contradicting"]
-    assert persistence["excluded_by"]  # 明确记录"被谁排除、依据是什么"
+    # POST_HOC 反驳：附着证据但不排除、不确权
+    assert persistence["contradicting"], "反驳证据应附着（可追溯）"
+    assert all(
+        ref.get("trust") == "POST_HOC" or ref.get("time_alignment") == "POST_HOC"
+        for ref in persistence["contradicting"]
+    )
+    assert persistence["excluded_by"] == []  # 事后观测不得排除 Run 时假设
+    # 生成"状态查询滞后（TIMING）"新假设
+    timing = [
+        h
+        for h in updated["hypotheses"]
+        if h["failure_mechanism"] == "TIMING" and "滞后" in h["description"]
+    ]
+    assert timing, updated["hypotheses"]
+    # 回灌留痕：time_alignment 全部记录
+    assert updated["probe_feedback"]
+    assert all(fb.get("time_alignment") == "POST_HOC" for fb in updated["probe_feedback"])
     assert updated["root_causes"] == []
 
 

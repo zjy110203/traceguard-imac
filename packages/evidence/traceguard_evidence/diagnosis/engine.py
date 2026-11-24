@@ -123,6 +123,8 @@ class Diagnosis:
     disposition: Disposition = Disposition.NEEDS_MORE_EVIDENCE
     unresolved_conflicts: list[str] = field(default_factory=list)
     created_at: str = field(default_factory=utc_now_iso)
+    #: RUN-010 WP4：Graph 裁决层结论（dict 形式，None = 未启用）
+    graph_adjudication: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -133,6 +135,7 @@ class Diagnosis:
             "outcome": self.outcome.value,
             "disposition": self.disposition.value,
             "unresolved_conflicts": list(self.unresolved_conflicts),
+            "graph_adjudication": self.graph_adjudication,
             "created_at": self.created_at,
         }
 
@@ -156,7 +159,23 @@ class DiagnosisEngine:
     def __init__(self, rule: ConfirmationRule | None = None) -> None:
         self.rule = rule or ConfirmationRule()
 
-    def diagnose(self, symptom: str, hypotheses: list[Hypothesis]) -> Diagnosis:
+    def diagnose(
+        self,
+        symptom: str,
+        hypotheses: list[Hypothesis],
+        *,
+        adjudication: Any | None = None,
+    ) -> Diagnosis:
+        """裁决诊断。
+
+        RUN-010 WP4：adjudication（Graph 裁决层报告，可选）参与主因裁决——
+        图不再是只读可视化：
+        - 裁决层判定"权威确认不成立"（时间不匹配/完整性失败/证据重复后无独立支持）
+          → CONFIRMED 降级为 SUPPORTED；
+        - 裁决层判定"权威反驳成立" → CONTRADICTED；
+        - 裁决层判定"权威支持与权威反驳同时成立" → 记入未解决冲突（人工复核），
+          不强制选择唯一根因。
+        """
         d = Diagnosis(diagnosis_id=new_id("diagnosis"), symptom=symptom, hypotheses=hypotheses)
 
         for h in hypotheses:
@@ -184,6 +203,42 @@ class DiagnosisEngine:
                     "LLM 假设不得作为 CONFIRMED 根因，已降级为 SUPPORTED 供人工复核"
                 )
 
+        # ---- Graph 裁决层参与裁决（RUN-010 WP4）
+        unresolved_from_graph: list[str] = []
+        if adjudication is not None:
+            verdicts = getattr(adjudication, "verdicts", None) or []
+            for v in verdicts:
+                h_obj = next((x for x in hypotheses if x.hypothesis_id == v.hypothesis_id), None)
+                if h_obj is None:
+                    continue
+                if v.duplicate_evidence:
+                    h_obj.contributing_factors.append(
+                        f"[graph] 重复证据已消重：{sorted(set(v.duplicate_evidence))}"
+                    )
+                if v.time_mismatched:
+                    h_obj.contributing_factors.append(
+                        f"[graph] 时间不匹配证据（不作为权威）：{sorted(set(v.time_mismatched))}"
+                    )
+                if v.has_conflict and v.authority_confirmed and v.authority_refuted:
+                    unresolved_from_graph.append(v.hypothesis_id)
+                    if h_obj.status == HypothesisStatus.CONFIRMED:
+                        h_obj.status = HypothesisStatus.SUPPORTED
+                        h_obj.contributing_factors.append(
+                            "[graph] 权威支持与权威反驳冲突 → 降级为 SUPPORTED 待人工复核"
+                        )
+                    continue
+                if h_obj.status == HypothesisStatus.CONFIRMED and not v.authority_confirmed:
+                    h_obj.status = HypothesisStatus.SUPPORTED
+                    h_obj.contributing_factors.append(
+                        "[graph] 裁决层判定权威确认不成立（时间/完整性/来源独立）→ 降级 SUPPORTED"
+                    )
+                if (
+                    h_obj.status in (HypothesisStatus.CANDIDATE, HypothesisStatus.SUPPORTED)
+                    and v.authority_refuted
+                ):
+                    h_obj.status = HypothesisStatus.CONTRADICTED
+                    h_obj.contributing_factors.append("[graph] 裁决层判定权威反驳成立")
+
         # 根因：仅 CONFIRMED，可多个，不强制压缩
         d.root_causes = [
             h.hypothesis_id for h in hypotheses if h.status == HypothesisStatus.CONFIRMED
@@ -196,6 +251,9 @@ class DiagnosisEngine:
             if any(e.source_trust == "TRUSTED" for e in h.supporting)
             and any(e.source_trust == "TRUSTED" for e in h.contradicting)
         ]
+        for hid in unresolved_from_graph:
+            if hid not in d.unresolved_conflicts:
+                d.unresolved_conflicts.append(hid)
 
         # Diagnosis Outcome
         if d.root_causes:
@@ -207,6 +265,7 @@ class DiagnosisEngine:
 
         # Disposition 分流（独立于 Diagnosis，不把所有失败送 Repair）
         d.disposition = self._route(hypotheses, d)
+        d.graph_adjudication = adjudication.to_dict() if adjudication is not None else None
         return d
 
     def _route(self, hypotheses: list[Hypothesis], d: Diagnosis) -> Disposition:
