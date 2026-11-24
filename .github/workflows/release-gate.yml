@@ -43,6 +43,20 @@ jobs:
         run: |
           python -m venv .venv
           .venv/bin/pip install -r requirements-dev.txt
+      # RUN-010 WP0 修复：全量测试套件含真实浏览器 E2E，必须先装 Chromium，
+      # 否则 Playwright 用例全部 error（RUN-010 首次触发的真实缺陷，fail-closed 是正确行为）。
+      - name: Install Playwright chromium (must succeed)
+        run: |
+          .venv/bin/python -m playwright install --with-deps chromium
+          .venv/bin/python - <<'PY'
+          import pathlib, sys
+          roots = [pathlib.Path.home() / ".cache" / "ms-playwright"]
+          found = [p.name for r in roots if r.exists() for p in r.iterdir() if "chromium" in p.name]
+          if not found:
+              print("BLOCKED: playwright chromium 未安装成功（目录为空）", file=sys.stderr)
+              sys.exit(1)
+          print("playwright chromium installed:", found)
+          PY
       - name: Lint + format
         run: |
           .venv/bin/ruff check packages apps tests benchmark scripts
