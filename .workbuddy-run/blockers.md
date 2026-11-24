@@ -91,3 +91,14 @@
 - 不修改 AgentDR 策略、不绕过 BuddySentinel；被拦截即记录并跳过。
 - 不再使用 `pgrep -fl` 等会回显含凭据命令行的检查方式，改用端口健康探测与文件状态判断。
 - 不执行 `git reset` / `git clean` / 强制覆盖；保留 21 个领先提交与全部未提交修改。
+
+## RUN-008 收尾状态（2026-11-24 14:10 CST）
+
+| 编号 | 项 | 最终状态 |
+|---|---|---|
+| B-17 | WP3 补充故障矩阵 4 场景 | **BLOCKED（保持）**：AgentDR 两次拦截，不重试不绕过 |
+| B-18 | 60 分钟长稳 | **已解除**：60.14 分钟 / 66 周期 / 23 checks 全真 |
+| — | LLM smoke | **BLOCKED**：CI 缺 Secret，明确不得用于 Release 放行 |
+| — | Benchmark LLM/人工基线臂 | **BLOCKED**：无 Secret / 无真实人类工程师，未伪造 |
+| — | 真实身份认证 / RBAC | **NOT_IMPLEMENTED**：主体类型门禁 ≠ 认证 |
+| — | dev-only moderate ×3 | **已登记**：high=0/critical=0，semver-major 未实施 |

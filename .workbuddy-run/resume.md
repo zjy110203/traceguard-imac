@@ -195,3 +195,16 @@ curl -X POST "http://127.0.0.1:8010/api/v1/runs/<run_id>/probe-plan?diagnosis_id
 - **恢复第一步**：检查 `BZ1Hp8` 与 `3TCEEN` 是否结束 → 读取各自最终 JSON → 完成
   `docs/RUN-008-FINAL-REPORT.md` 中 WP4/WP7 章节 → git add/commit/push → 收尾服务。
   全程不需要也不得读取真实凭据。
+
+### RUN-008 完成状态（2026-11-24 14:10 CST，终稿）
+
+- 最终 HEAD：`804fc5d`，已推送远程；工作区干净；相对 `origin/main` 领先 31 提交。
+- WP0/WP1/WP2/WP4/WP5/WP6/WP7/WP8 完成；WP3 核心完成、补充矩阵 BLOCKED（B-17）。
+- 长稳：60.14 分钟 / 66 周期 / 23 checks 全真，`docs/assets/run008/soak-60min.json`。
+- Benchmark：本轮 2 轮 × 30 场景真实执行（608.5s），报告 `docs/RUN-008-BENCHMARK-REPORT.md`；
+  LLM/人工基线 BLOCKED，未伪造。
+- CI（代码提交 `40efee6`）：PR `45335765297` / Nightly `45335777381` /
+  Release `45336007166` 全 success；LLM smoke 缺 Secret BLOCKED。
+- 已停止本轮新增的隔离服务：5173/8000/8050（WP5）、8060/8061 + Worker（WP7）、8043（WP3）。
+  保留 8041/8042（长稳启动前既存，可能共享）。后续会话不要假定这些端口可用，需重新检查。
+- 最终报告：`docs/RUN-008-FINAL-REPORT.md`；决策：`docs/RUN-008-DECISIONS.md`。
