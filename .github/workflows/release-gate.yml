@@ -59,6 +59,18 @@ jobs:
               sys.exit(1)
           print("playwright chromium installed:", found)
           PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Build frontend (E2E 依赖真实 SPA 产物)
+        # RUN-010 收尾缺陷 CL-02：登录 E2E 依赖单端口 SPA 产物（apps/web/dist），
+        # 仓库不含 dist。不构建 → create_app() 不挂载前端路由 → 2 个登录 E2E 必失败。
+        working-directory: apps/web
+        run: |
+          npm ci
+          npm run build
+          test -f dist/index.html || { echo "BLOCKED: 前端 dist 未产出"; exit 1; }
+          echo "frontend dist ready: $(ls dist | tr '\n' ' ')"
       - name: Lint + format
         run: |
           .venv/bin/ruff check packages apps tests benchmark scripts

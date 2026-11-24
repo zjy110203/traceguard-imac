@@ -97,6 +97,19 @@ class EgressProxyController:
             return self.url
 
     def _run(self) -> None:  # pragma: no cover - 线程体由 start 断言覆盖
+        async def _wait_stop() -> None:
+            """等待停止信号：轮询协程，不占用线程池线程。
+
+            RUN-010 收尾缺陷（CL-01）：原实现用 `asyncio.to_thread(self._stop_evt.wait)`
+            阻塞默认线程池中的一个工作线程；当代理先因 serve 结束而退出、`stop()`
+            没被调用时，该线程永久阻塞在 `Event.wait()`，解释器退出阶段
+            `concurrent.futures.thread._python_exit` 会 join 这个非 daemon 线程 →
+            整个 pytest 进程挂死（CI 上表现为 job 45 分钟超时后被取消）。
+            改为短间隔轮询：无额外线程，事件被 set 或 loop 关闭都会自然结束。
+            """
+            while not self._stop_evt.is_set():
+                await asyncio.sleep(0.05)
+
         async def main() -> None:
             assert self._proxy is not None
             try:
@@ -107,7 +120,7 @@ class EgressProxyController:
                 return
             self._ready.set()
             serve_task = asyncio.ensure_future(self._proxy.serve())
-            stop_wait = asyncio.ensure_future(asyncio.to_thread(self._stop_evt.wait))
+            stop_wait = asyncio.ensure_future(_wait_stop())
             done, _pending = await asyncio.wait(
                 {serve_task, stop_wait}, return_when=asyncio.FIRST_COMPLETED
             )
@@ -130,8 +143,15 @@ class EgressProxyController:
         try:
             self._loop.run_until_complete(main())
         finally:
+            # 保证停止事件终态：即使 serve 自行结束也要置位，避免任何等待者悬挂
+            self._stop_evt.set()
             try:
                 self._loop.run_until_complete(self._loop.shutdown_asyncgens())
+            except Exception:  # noqa: BLE001
+                pass
+            # 关闭线程池执行器：loop.close() 不会 join 其工作线程
+            try:
+                self._loop.run_until_complete(self._loop.shutdown_default_executor())
             except Exception:  # noqa: BLE001
                 pass
             self._loop.close()
