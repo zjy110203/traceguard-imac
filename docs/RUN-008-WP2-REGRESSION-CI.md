@@ -34,7 +34,7 @@
 | Release Gate（错误输入 `benchmark_report=false`） | `45331793408`（commit `1f8df24`） | **failure（正确行为）** | `release-evidence` job 执行 fail-closed：仓库存在 Benchmark 报告却声明 false → 拒绝放行 |
 | PR Gate（最终代码） | `45335765297`（commit `40efee6`） | **success** | backend 288 passed + 49 passed；frontend build 3.81s |
 | Nightly Gate（最终代码） | `45335777381`（commit `40efee6`） | **success** | backend-full 567 passed / 13 skipped + 35 passed；postgres 16.16：5+8 passed；security high=0/critical=0/moderate=3；LLM smoke BLOCKED（缺 Secret） |
-| Release Gate（正确输入 `benchmark_report=true`） | `45336007166`（commit `40efee6`） | 进行中 | nightly-attestation / frontend 已 success；full-verification 运行中 |
+| Release Gate（正确输入 `benchmark_report=true`） | `45336007166`（commit `40efee6`） | **success** | nightly-attestation 严格校验 head_sha 一致；frontend / full-verification / release-evidence 全 success |
 
 原始 Job 日志：`logs/run008/actions-<run-id>-<job>.log`（从 GitHub Actions API 下载，
 下载过程未把任何凭据写入日志或仓库）。一次错误输入的 Release Gate run `45335952987`
@@ -50,5 +50,5 @@
 
 ## 4. 未解决
 
-- Release Gate 正确输入的那次 run 结果待核验；错误输入的那次失败是 fail-closed 正确行为，不是产品缺陷。
 - LLM smoke BLOCKED、3 moderate 依赖漏洞：保持 BLOCKED / 已知风险，不伪造通过。
+- 错误输入的 Release Gate 那次失败是 fail-closed 正确行为，不是产品缺陷；已取消重复的误触发 run。
