@@ -157,7 +157,22 @@ TG_RUN011_PASSWORD='***' .venv/bin/python scripts/full_loop_run011.py \
 .venv/bin/python scripts/network_negative_run011.py --api … --teamflow … --workers …
 ```
 
-## 8. 结论
+## 8. 交付与远程状态
+
+| 项 | 状态 |
+|---|---|
+| 分支 | `workbuddy/run011-full-loop`（仅包含 RUN-010 HEAD + 本轮 1 个提交） |
+| 本地提交 | `f604e5d`（51 文件，+9,667 / −25） |
+| 远程推送 | ✅ `origin/workbuddy/run011-full-loop`（新分支） |
+| 增量 PR（目标 = RUN-010 分支） | **未创建（BLOCKED）**：本机无 `gh`，且不读取/导出凭据；GitHub 返回的创建入口：`https://github.com/zjy110203/traceguard-imac/pull/new/workbuddy/run011-full-loop` |
+| PR #2（RUN-010） | 未修改、未合并（指令要求保持不动） |
+| main | 未变（`ac2876e`） |
+| CI | **未触发**（无 Actions 触发手段；推送本身不触发 PR Gate 的 pull_request 事件） |
+
+> 说明：推送使用的是本机既有 git 凭据（由 git credential helper 在内部使用），
+> 本轮**没有**读取、打印或导出任何 token；因此无法调用 GitHub REST API 创建 PR。
+
+## 9. 结论
 
 本轮完成了指令的**第一目标**（最新架构下的真实独立部署完整闭环，两轮）与**第二目标的一部分**
 （Active Probe 真正执行、真正回灌、时间语义可验证），并修复了 7 个在真实链路中暴露的缺陷。

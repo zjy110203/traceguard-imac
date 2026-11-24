@@ -7,7 +7,9 @@
 > 未完成/阻塞：Benchmark v5（NOT RUN，v4 测量无效）、B-17（BLOCKED）、宿主级隔离（BLOCKED）、
 > UI 全链路（NOT RUN）、多 API/DB 断连（NOT RUN）、CI（BLOCKED，无 gh/凭据）。
 > OPEN-RISK：授权目标 https 偶发 PORT_NOT_ALLOWED、时序错误确认、LLM 候选未去重。
-> 待负责人决策：PR（基于 RUN-010 分支的增量 PR）创建与合并、LICENSE、B-17 安全批准。
+> 已推送：`origin/workbuddy/run011-full-loop`（提交 `f604e5d`）。
+> 增量 PR 未创建（无 gh、不读取凭据）；创建入口：https://github.com/zjy110203/traceguard-imac/pull/new/workbuddy/run011-full-loop
+> 待负责人决策：PR 创建与合并、LICENSE、B-17 安全批准。
 
 ---
 
