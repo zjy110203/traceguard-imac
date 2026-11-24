@@ -1,5 +1,9 @@
 # TraceGuard
 
+> **RUN-010（2026-11-24）**：核心整合与智能成熟——认证产品化、Egress 正式内核集成、
+> 幂等冻结、诊断 v2（时间对齐/图裁决）、Benchmark v4 真实执行、无障碍 0 违规、供应链治理。
+> 状态与风险见 `docs/RUN-010-FINAL-REPORT.md`。以下历史内容保留。
+
 Agentic Web UI Testing & Quality Intelligence Platform（智能 Web UI 自动化测试与质量情报平台）
 
 > 真实浏览器执行 · 业务事实校验 · 证据可追溯 · 诊断与修复闭环

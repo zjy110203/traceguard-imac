@@ -1,5 +1,10 @@
 # 安全测试报告（RUN-002 实测）
 
+> **RUN-010 更新（2026-11-24）**：认证生产候选达成（环境分级 fail-closed、DB 限速、
+> 对象级授权、审计链并发安全）；用户态三层网络防护实测（未授权 0 请求）；
+> 宿主级隔离 BLOCKED（无 pf 权限）；B-20 AgentDR 事件已按安全边界处置（见 blockers.md）。
+> 详见 `docs/RUN-010-WP1-AUTH-PRODUCT.md` / `RUN-010-WP2-EGRESS-INTEGRATION.md` / `RUN-010-FINAL-REPORT.md`。
+
 > **RUN-009 更新（2026-11-24）**：本文件下方为 RUN-002 历史实测口径。RUN-009 新增：
 > 1) 真实认证/RBAC/CSRF/审计（`docs/RUN-009-WP2-AUTH-RBAC.md`）——`TG_AUTH_ENABLED=true` 时未认证请求
 >    fail-closed（401），审批主体只来自服务端 Principal，请求体声明的审批人被忽略；

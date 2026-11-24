@@ -1,5 +1,9 @@
 # TraceGuard 自主开发进度
 
+> **RUN-010 进度（2026-11-24 22:45 CST）**：WP0~WP9 全部完成并推送（HEAD 与 origin 同步）。
+> 验收矩阵、测试汇总（601 passed / E2E 35 / axe 0 违规）、BLOCKED 项见
+> `docs/RUN-010-FINAL-REPORT.md`。以下历史进度保留。
+
 > **RUN-009 WP0 权威状态摘要（2026-11-24 16:05 CST）**：下方 RUN-001 段是历史起点快照，不再代表当前状态。
 > RUN-009 已完成：WP0/1/2/5/6/7 通过，WP3/WP4 PARTIAL（宿主级网络封锁与 B-17 四场景如实 BLOCKED），
 > WP8 PARTIAL（vue-tsc 升级 NEEDS_DECISION）。最终状态见 `docs/RUN-009-FINAL-REPORT.md`；

@@ -1,5 +1,10 @@
 # TraceGuard 持续开发任务台账
 
+> **RUN-010 台账（2026-11-24）**：10 个工作包全部完成（15 提交、66 文件、+7,736 行）。
+> 真实新增：认证产品闭环、Egress 内核集成、提交回执幂等、诊断 v2、Benchmark v4 执行框架、
+> axe 审查、依赖一致性测试。真实缺陷修复 10 项（见 FINAL-REPORT §3）。
+> BLOCKED 项与生产风险如实记录；PR #2 保持 HOLD 待负责人决策。以下历史台账保留。
+
 > **RUN-009 WP0 状态更正（2026-11-24 16:05 CST）**：下方 RUN-002~RUN-008 条目为历史台账。
 > 当前 HEAD `cb80591`；RUN-008 实际结论：WP4/WP7 VERIFIED、WP8 完成，R8-08/R8-11/R8-12 原标「进行中」已过时；
 > WP3/WP6 仍是 PARTIAL，B-17/LLM/Benchmark LLM 与人工基线 BLOCKED，认证/RBAC NOT_IMPLEMENTED。

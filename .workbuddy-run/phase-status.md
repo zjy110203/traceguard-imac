@@ -1,5 +1,9 @@
 # TraceGuard 阶段与里程碑验收状态（RUN-002 复核）
 
+> **RUN-010（2026-11-24）**：M0~M5 全部 ACCEPTED 的基础上，RUN-010 补齐
+> 认证产品化/内核集成/智能成熟；M5 的外部泛化与 B-17 仍 BLOCKED（如实）。
+> 权威状态见 `docs/RUN-010-FINAL-REPORT.md`。以下历史表格保留。
+
 > **RUN-009 WP0 权威状态摘要（2026-11-24 16:05 CST）**：下方 RUN-002~RUN-007 表格为历史快照。
 > 当前起点 HEAD `cb80591`，RUN-008 已完成：WP0/1/2/4/5/7/8 VERIFIED 或完成，WP3/WP6 PARTIAL；
 > B-17、LLM smoke、Benchmark LLM/人工基线 BLOCKED；真实认证/RBAC NOT_IMPLEMENTED。

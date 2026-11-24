@@ -1,5 +1,10 @@
 # UI-FaultBench 实验报告（真实运行，2026-11-22）
 
+> **RUN-010 更新（2026-11-24，Benchmark v4 真实执行）**：14 场景×2 轮真实注入执行
+> （`docs/RUN-010-WP5-BENCHMARK.md` + `docs/assets/run010/benchmark/` 原始 JSONL）。
+> 主因准确率：A 臂 7.1% → C 臂（规则 v2+图裁决）**64.3%**（selective 88.9%）；
+> graph_changed 2/14（图首次参与裁决）；5 个缺口如实记录（时序延迟复测待做）。
+
 > **RUN-009 更新（2026-11-24，Benchmark v4）**：新增消融实验（`docs/RUN-009-WP7-BENCHMARK.md`）。
 > 关键负结果：v3 的 D/E=C 不是偶然——D 臂仅升置信度不改主因（38 样本主因改变 0/38），
 > E 臂探针证据 0 回灌；v4 真实回灌臂因探针读取「当前状态而非 Run 当时状态」出现**负增益**
