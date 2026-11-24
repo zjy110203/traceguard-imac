@@ -1,0 +1,600 @@
+{
+  "dataset": "teamflow-faultbench-v4",
+  "rounds": 2,
+  "gt_isolation": {
+    "gt_count": 14,
+    "visible_ref_count": 14,
+    "no_token_read_count": 0,
+    "token_granted_read_count": 14,
+    "isolated": true,
+    "note": "无令牌读取返回 0 条；有令牌读取返回全部；不通过 API 暴露 GT 正文"
+  },
+  "per_round": [
+    {
+      "round": 0,
+      "metrics": [
+        {
+          "metric": "n_scored_samples",
+          "value": 14,
+          "numerator": 14,
+          "denominator": 14,
+          "n": 14,
+          "note": "有臂预测的计分样本数（v4 全集 14）"
+        },
+        {
+          "metric": "primary_cause_accuracy[A_raw_report]",
+          "value": 0.0714,
+          "numerator": 1,
+          "denominator": 14,
+          "n": 14,
+          "note": "主因类别与 GT 一致的样本 / 计分样本（GT 评测端令牌判定）"
+        },
+        {
+          "metric": "diagnosis_coverage[A_raw_report]",
+          "value": 0.0,
+          "numerator": 0,
+          "denominator": 14,
+          "n": 14,
+          "note": "给出可结论（CONFIRMED）预测的样本占比"
+        },
+        {
+          "metric": "selective_accuracy[A_raw_report]",
+          "value": null,
+          "numerator": 0,
+          "denominator": 0,
+          "n": 0,
+          "note": "结论样本中的主因正确率"
+        },
+        {
+          "metric": "probes_per_sample[A_raw_report]",
+          "value": 0.0,
+          "numerator": 0,
+          "denominator": 14,
+          "n": 14,
+          "note": "真实探针执行数/样本"
+        },
+        {
+          "metric": "probe_feedback_rate[A_raw_report]",
+          "value": null,
+          "numerator": 0,
+          "denominator": 0,
+          "n": 0,
+          "note": "探针证据真实进入假设更新的比例（回灌率）"
+        },
+        {
+          "metric": "primary_cause_accuracy[C_rule]",
+          "value": 0.6429,
+          "numerator": 9,
+          "denominator": 14,
+          "n": 14,
+          "note": "主因类别与 GT 一致的样本 / 计分样本（GT 评测端令牌判定）"
+        },
+        {
+          "metric": "diagnosis_coverage[C_rule]",
+          "value": 0.6429,
+          "numerator": 9,
+          "denominator": 14,
+          "n": 14,
+          "note": "给出可结论（CONFIRMED）预测的样本占比"
+        },
+        {
+          "metric": "selective_accuracy[C_rule]",
+          "value": 0.8889,
+          "numerator": 8,
+          "denominator": 9,
+          "n": 9,
+          "note": "结论样本中的主因正确率"
+        },
+        {
+          "metric": "probes_per_sample[C_rule]",
+          "value": 0.0,
+          "numerator": 0,
+          "denominator": 14,
+          "n": 14,
+          "note": "真实探针执行数/样本"
+        },
+        {
+          "metric": "probe_feedback_rate[C_rule]",
+          "value": null,
+          "numerator": 0,
+          "denominator": 0,
+          "n": 0,
+          "note": "探针证据真实进入假设更新的比例（回灌率）"
+        },
+        {
+          "metric": "primary_cause_accuracy[D_graph_ablation]",
+          "value": 0.6429,
+          "numerator": 9,
+          "denominator": 14,
+          "n": 14,
+          "note": "主因类别与 GT 一致的样本 / 计分样本（GT 评测端令牌判定）"
+        },
+        {
+          "metric": "diagnosis_coverage[D_graph_ablation]",
+          "value": 0.6429,
+          "numerator": 9,
+          "denominator": 14,
+          "n": 14,
+          "note": "给出可结论（CONFIRMED）预测的样本占比"
+        },
+        {
+          "metric": "selective_accuracy[D_graph_ablation]",
+          "value": 0.8889,
+          "numerator": 8,
+          "denominator": 9,
+          "n": 9,
+          "note": "结论样本中的主因正确率"
+        },
+        {
+          "metric": "probes_per_sample[D_graph_ablation]",
+          "value": 0.0,
+          "numerator": 0,
+          "denominator": 14,
+          "n": 14,
+          "note": "真实探针执行数/样本"
+        },
+        {
+          "metric": "probe_feedback_rate[D_graph_ablation]",
+          "value": null,
+          "numerator": 0,
+          "denominator": 0,
+          "n": 0,
+          "note": "探针证据真实进入假设更新的比例（回灌率）"
+        },
+        {
+          "metric": "primary_cause_accuracy[E_probe_no_feedback]",
+          "value": 0.6429,
+          "numerator": 9,
+          "denominator": 14,
+          "n": 14,
+          "note": "主因类别与 GT 一致的样本 / 计分样本（GT 评测端令牌判定）"
+        },
+        {
+          "metric": "diagnosis_coverage[E_probe_no_feedback]",
+          "value": 0.6429,
+          "numerator": 9,
+          "denominator": 14,
+          "n": 14,
+          "note": "给出可结论（CONFIRMED）预测的样本占比"
+        },
+        {
+          "metric": "selective_accuracy[E_probe_no_feedback]",
+          "value": 0.8889,
+          "numerator": 8,
+          "denominator": 9,
+          "n": 9,
+          "note": "结论样本中的主因正确率"
+        },
+        {
+          "metric": "probes_per_sample[E_probe_no_feedback]",
+          "value": 0.9286,
+          "numerator": 13,
+          "denominator": 14,
+          "n": 14,
+          "note": "真实探针执行数/样本"
+        },
+        {
+          "metric": "probe_feedback_rate[E_probe_no_feedback]",
+          "value": null,
+          "numerator": 0,
+          "denominator": 0,
+          "n": 0,
+          "note": "探针证据真实进入假设更新的比例（回灌率）"
+        },
+        {
+          "metric": "primary_cause_accuracy[F_probe_feedback]",
+          "value": 0.6429,
+          "numerator": 9,
+          "denominator": 14,
+          "n": 14,
+          "note": "主因类别与 GT 一致的样本 / 计分样本（GT 评测端令牌判定）"
+        },
+        {
+          "metric": "diagnosis_coverage[F_probe_feedback]",
+          "value": 0.6429,
+          "numerator": 9,
+          "denominator": 14,
+          "n": 14,
+          "note": "给出可结论（CONFIRMED）预测的样本占比"
+        },
+        {
+          "metric": "selective_accuracy[F_probe_feedback]",
+          "value": 0.8889,
+          "numerator": 8,
+          "denominator": 9,
+          "n": 9,
+          "note": "结论样本中的主因正确率"
+        },
+        {
+          "metric": "probes_per_sample[F_probe_feedback]",
+          "value": 0.9286,
+          "numerator": 13,
+          "denominator": 14,
+          "n": 14,
+          "note": "真实探针执行数/样本"
+        },
+        {
+          "metric": "probe_feedback_rate[F_probe_feedback]",
+          "value": 0.4615,
+          "numerator": 6.0,
+          "denominator": 13,
+          "n": 13,
+          "note": "探针证据真实进入假设更新的比例（回灌率）"
+        },
+        {
+          "metric": "primary_cause_accuracy[G_probe_no_alignment]",
+          "value": 0.6429,
+          "numerator": 9,
+          "denominator": 14,
+          "n": 14,
+          "note": "主因类别与 GT 一致的样本 / 计分样本（GT 评测端令牌判定）"
+        },
+        {
+          "metric": "diagnosis_coverage[G_probe_no_alignment]",
+          "value": 0.6429,
+          "numerator": 9,
+          "denominator": 14,
+          "n": 14,
+          "note": "给出可结论（CONFIRMED）预测的样本占比"
+        },
+        {
+          "metric": "selective_accuracy[G_probe_no_alignment]",
+          "value": 0.8889,
+          "numerator": 8,
+          "denominator": 9,
+          "n": 9,
+          "note": "结论样本中的主因正确率"
+        },
+        {
+          "metric": "probes_per_sample[G_probe_no_alignment]",
+          "value": 0.9286,
+          "numerator": 13,
+          "denominator": 14,
+          "n": 14,
+          "note": "真实探针执行数/样本"
+        },
+        {
+          "metric": "probe_feedback_rate[G_probe_no_alignment]",
+          "value": 0.4615,
+          "numerator": 6.0,
+          "denominator": 13,
+          "n": 13,
+          "note": "探针证据真实进入假设更新的比例（回灌率）"
+        },
+        {
+          "metric": "graph_changed_prediction_count",
+          "value": 0.1429,
+          "numerator": 2,
+          "denominator": 14,
+          "n": 14,
+          "note": "图裁决层改变 C 臂主因类别的样本数；>0 表示图真实参与主因裁决"
+        },
+        {
+          "metric": "alignment_changed_prediction_count",
+          "value": 0.0,
+          "numerator": 0,
+          "denominator": 14,
+          "n": 14,
+          "note": "时间对齐规则改变主因预测的样本数（F vs G 同探针对照）"
+        },
+        {
+          "metric": "primary_cause_correct[F_minus_G]",
+          "value": 0.0,
+          "numerator": 0,
+          "denominator": 14,
+          "n": 14,
+          "note": "时间对齐带来的主因正确数变化（正=对齐有增益）"
+        },
+        {
+          "metric": "false_pass_rate[execution]",
+          "value": 0.0,
+          "numerator": 0,
+          "denominator": 2,
+          "n": 2,
+          "note": "GT 持久化故障却出现 PASSED 回放的样本/持久化故障样本"
+        },
+        {
+          "metric": "conflict_detection_count",
+          "value": 0.0,
+          "numerator": 0,
+          "denominator": 14,
+          "n": 14,
+          "note": "诊断明确记录未解决冲突的样本数"
+        }
+      ]
+    },
+    {
+      "round": 1,
+      "metrics": [
+        {
+          "metric": "n_scored_samples",
+          "value": 14,
+          "numerator": 14,
+          "denominator": 14,
+          "n": 14,
+          "note": "有臂预测的计分样本数（v4 全集 14）"
+        },
+        {
+          "metric": "primary_cause_accuracy[A_raw_report]",
+          "value": 0.0714,
+          "numerator": 1,
+          "denominator": 14,
+          "n": 14,
+          "note": "主因类别与 GT 一致的样本 / 计分样本（GT 评测端令牌判定）"
+        },
+        {
+          "metric": "diagnosis_coverage[A_raw_report]",
+          "value": 0.0,
+          "numerator": 0,
+          "denominator": 14,
+          "n": 14,
+          "note": "给出可结论（CONFIRMED）预测的样本占比"
+        },
+        {
+          "metric": "selective_accuracy[A_raw_report]",
+          "value": null,
+          "numerator": 0,
+          "denominator": 0,
+          "n": 0,
+          "note": "结论样本中的主因正确率"
+        },
+        {
+          "metric": "probes_per_sample[A_raw_report]",
+          "value": 0.0,
+          "numerator": 0,
+          "denominator": 14,
+          "n": 14,
+          "note": "真实探针执行数/样本"
+        },
+        {
+          "metric": "probe_feedback_rate[A_raw_report]",
+          "value": null,
+          "numerator": 0,
+          "denominator": 0,
+          "n": 0,
+          "note": "探针证据真实进入假设更新的比例（回灌率）"
+        },
+        {
+          "metric": "primary_cause_accuracy[C_rule]",
+          "value": 0.6429,
+          "numerator": 9,
+          "denominator": 14,
+          "n": 14,
+          "note": "主因类别与 GT 一致的样本 / 计分样本（GT 评测端令牌判定）"
+        },
+        {
+          "metric": "diagnosis_coverage[C_rule]",
+          "value": 0.6429,
+          "numerator": 9,
+          "denominator": 14,
+          "n": 14,
+          "note": "给出可结论（CONFIRMED）预测的样本占比"
+        },
+        {
+          "metric": "selective_accuracy[C_rule]",
+          "value": 0.8889,
+          "numerator": 8,
+          "denominator": 9,
+          "n": 9,
+          "note": "结论样本中的主因正确率"
+        },
+        {
+          "metric": "probes_per_sample[C_rule]",
+          "value": 0.0,
+          "numerator": 0,
+          "denominator": 14,
+          "n": 14,
+          "note": "真实探针执行数/样本"
+        },
+        {
+          "metric": "probe_feedback_rate[C_rule]",
+          "value": null,
+          "numerator": 0,
+          "denominator": 0,
+          "n": 0,
+          "note": "探针证据真实进入假设更新的比例（回灌率）"
+        },
+        {
+          "metric": "primary_cause_accuracy[D_graph_ablation]",
+          "value": 0.6429,
+          "numerator": 9,
+          "denominator": 14,
+          "n": 14,
+          "note": "主因类别与 GT 一致的样本 / 计分样本（GT 评测端令牌判定）"
+        },
+        {
+          "metric": "diagnosis_coverage[D_graph_ablation]",
+          "value": 0.6429,
+          "numerator": 9,
+          "denominator": 14,
+          "n": 14,
+          "note": "给出可结论（CONFIRMED）预测的样本占比"
+        },
+        {
+          "metric": "selective_accuracy[D_graph_ablation]",
+          "value": 0.8889,
+          "numerator": 8,
+          "denominator": 9,
+          "n": 9,
+          "note": "结论样本中的主因正确率"
+        },
+        {
+          "metric": "probes_per_sample[D_graph_ablation]",
+          "value": 0.0,
+          "numerator": 0,
+          "denominator": 14,
+          "n": 14,
+          "note": "真实探针执行数/样本"
+        },
+        {
+          "metric": "probe_feedback_rate[D_graph_ablation]",
+          "value": null,
+          "numerator": 0,
+          "denominator": 0,
+          "n": 0,
+          "note": "探针证据真实进入假设更新的比例（回灌率）"
+        },
+        {
+          "metric": "primary_cause_accuracy[E_probe_no_feedback]",
+          "value": 0.6429,
+          "numerator": 9,
+          "denominator": 14,
+          "n": 14,
+          "note": "主因类别与 GT 一致的样本 / 计分样本（GT 评测端令牌判定）"
+        },
+        {
+          "metric": "diagnosis_coverage[E_probe_no_feedback]",
+          "value": 0.6429,
+          "numerator": 9,
+          "denominator": 14,
+          "n": 14,
+          "note": "给出可结论（CONFIRMED）预测的样本占比"
+        },
+        {
+          "metric": "selective_accuracy[E_probe_no_feedback]",
+          "value": 0.8889,
+          "numerator": 8,
+          "denominator": 9,
+          "n": 9,
+          "note": "结论样本中的主因正确率"
+        },
+        {
+          "metric": "probes_per_sample[E_probe_no_feedback]",
+          "value": 0.9286,
+          "numerator": 13,
+          "denominator": 14,
+          "n": 14,
+          "note": "真实探针执行数/样本"
+        },
+        {
+          "metric": "probe_feedback_rate[E_probe_no_feedback]",
+          "value": null,
+          "numerator": 0,
+          "denominator": 0,
+          "n": 0,
+          "note": "探针证据真实进入假设更新的比例（回灌率）"
+        },
+        {
+          "metric": "primary_cause_accuracy[F_probe_feedback]",
+          "value": 0.6429,
+          "numerator": 9,
+          "denominator": 14,
+          "n": 14,
+          "note": "主因类别与 GT 一致的样本 / 计分样本（GT 评测端令牌判定）"
+        },
+        {
+          "metric": "diagnosis_coverage[F_probe_feedback]",
+          "value": 0.6429,
+          "numerator": 9,
+          "denominator": 14,
+          "n": 14,
+          "note": "给出可结论（CONFIRMED）预测的样本占比"
+        },
+        {
+          "metric": "selective_accuracy[F_probe_feedback]",
+          "value": 0.8889,
+          "numerator": 8,
+          "denominator": 9,
+          "n": 9,
+          "note": "结论样本中的主因正确率"
+        },
+        {
+          "metric": "probes_per_sample[F_probe_feedback]",
+          "value": 0.9286,
+          "numerator": 13,
+          "denominator": 14,
+          "n": 14,
+          "note": "真实探针执行数/样本"
+        },
+        {
+          "metric": "probe_feedback_rate[F_probe_feedback]",
+          "value": 0.4615,
+          "numerator": 6.0,
+          "denominator": 13,
+          "n": 13,
+          "note": "探针证据真实进入假设更新的比例（回灌率）"
+        },
+        {
+          "metric": "primary_cause_accuracy[G_probe_no_alignment]",
+          "value": 0.6429,
+          "numerator": 9,
+          "denominator": 14,
+          "n": 14,
+          "note": "主因类别与 GT 一致的样本 / 计分样本（GT 评测端令牌判定）"
+        },
+        {
+          "metric": "diagnosis_coverage[G_probe_no_alignment]",
+          "value": 0.6429,
+          "numerator": 9,
+          "denominator": 14,
+          "n": 14,
+          "note": "给出可结论（CONFIRMED）预测的样本占比"
+        },
+        {
+          "metric": "selective_accuracy[G_probe_no_alignment]",
+          "value": 0.8889,
+          "numerator": 8,
+          "denominator": 9,
+          "n": 9,
+          "note": "结论样本中的主因正确率"
+        },
+        {
+          "metric": "probes_per_sample[G_probe_no_alignment]",
+          "value": 0.9286,
+          "numerator": 13,
+          "denominator": 14,
+          "n": 14,
+          "note": "真实探针执行数/样本"
+        },
+        {
+          "metric": "probe_feedback_rate[G_probe_no_alignment]",
+          "value": 0.4615,
+          "numerator": 6.0,
+          "denominator": 13,
+          "n": 13,
+          "note": "探针证据真实进入假设更新的比例（回灌率）"
+        },
+        {
+          "metric": "graph_changed_prediction_count",
+          "value": 0.1429,
+          "numerator": 2,
+          "denominator": 14,
+          "n": 14,
+          "note": "图裁决层改变 C 臂主因类别的样本数；>0 表示图真实参与主因裁决"
+        },
+        {
+          "metric": "alignment_changed_prediction_count",
+          "value": 0.0,
+          "numerator": 0,
+          "denominator": 14,
+          "n": 14,
+          "note": "时间对齐规则改变主因预测的样本数（F vs G 同探针对照）"
+        },
+        {
+          "metric": "primary_cause_correct[F_minus_G]",
+          "value": 0.0,
+          "numerator": 0,
+          "denominator": 14,
+          "n": 14,
+          "note": "时间对齐带来的主因正确数变化（正=对齐有增益）"
+        },
+        {
+          "metric": "false_pass_rate[execution]",
+          "value": 0.0,
+          "numerator": 0,
+          "denominator": 2,
+          "n": 2,
+          "note": "GT 持久化故障却出现 PASSED 回放的样本/持久化故障样本"
+        },
+        {
+          "metric": "conflict_detection_count",
+          "value": 0.0,
+          "numerator": 0,
+          "denominator": 14,
+          "n": 14,
+          "note": "诊断明确记录未解决冲突的样本数"
+        }
+      ]
+    }
+  ]
+}
