@@ -58,11 +58,11 @@ from traceguard_api.runtime import Runtime  # noqa: E402
 from traceguard_api.seed import seed_teamflow_catalog  # noqa: E402
 from traceguard_api.services.diagnosis_service import DiagnosisService  # noqa: E402
 from traceguard_api.services.probe_service import ProbeService  # noqa: E402
+from traceguard_benchmark.scenarios_v4 import GT_MANAGER, V4_SCENARIOS  # noqa: E402
 from traceguard_core.config import reset_settings_cache  # noqa: E402
 from traceguard_evidence.diagnosis.engine import DiagnosisEngine  # noqa: E402
 from traceguard_evidence.graph.adjudication import GraphAdjudicator  # noqa: E402
 from traceguard_evidence.probe.feedback import ProbeSignal, merge_signals  # noqa: E402
-from traceguard_benchmark.scenarios_v4 import GT_MANAGER, V4_SCENARIOS  # noqa: E402
 from traceguard_persistence import Database  # noqa: E402
 
 # ---------------------------------------------------------------- 场景 → 注入映射
@@ -78,11 +78,19 @@ INJECTION_PLAN: dict[str, dict[str, Any]] = {
     "V4-NETVSAPP-001": {"faults": ["TF-NET-001"], "testcase": "tcase_bench_net002"},
     "V4-NETVSAPP-002": {"faults": ["TF-API-001"], "testcase": "tcase_bench_api002"},
     # LOCFLUX：5 次回放，仅第 3 次激活定位器故障（受控波动，非概率）
-    "V4-LOCFLUX-001": {"faults": [], "testcase": "tcase_bench_loc001", "replays": 5,
-                       "replay_faults": {2: ["TF-LOC-001"]}},
+    "V4-LOCFLUX-001": {
+        "faults": [],
+        "testcase": "tcase_bench_loc001",
+        "replays": 5,
+        "replay_faults": {2: ["TF-LOC-001"]},
+    },
     # FLAKY：5 次回放，第 2/4 次激活持久化回滚（确定性 2 通过 3 失败）
-    "V4-FLAKY-001": {"faults": [], "testcase": "tcase_bench_flaky001", "replays": 5,
-                     "replay_faults": {1: ["TF-DB-001"], 3: ["TF-DB-001"]}},
+    "V4-FLAKY-001": {
+        "faults": [],
+        "testcase": "tcase_bench_flaky001",
+        "replays": 5,
+        "replay_faults": {1: ["TF-DB-001"], 3: ["TF-DB-001"]},
+    },
     "V4-AUTH-001": {"faults": ["TF-SEC-001"], "testcase": "tcase_bench_sec001"},
     # INCOMPLETE：无 Oracle 用例（专门构造）+ 网络必超时 → 断言前中断
     "V4-INCOMPLETE-001": {"faults": ["TF-NET-002"], "testcase": "tcase_v4_incomplete"},
@@ -115,7 +123,7 @@ class FaultInjector:
         先拉取可用故障清单，再逐一 clear（幂等）。"""
         with urllib.request.urlopen(self.base + "/api/faults", timeout=10) as r:
             data = json.loads(r.read().decode())
-        for fault_id in (data.get("available") or {}):
+        for fault_id in data.get("available") or {}:
             self._post(f"/api/faults/{fault_id}/clear", {})
 
     def active(self) -> list[str]:
@@ -180,15 +188,28 @@ class BenchEnv:
         self.work = Path(tempfile.mkdtemp(prefix="bench-v4-"))
         self.teamflow_port = _free_port()
         env = {k: v for k, v in __import__("os").environ.items()}
-        env["PYTHONPATH"] = str(ROOT / "apps/api") + ":" + str(ROOT / "packages/core") + ":" + str(
-            ROOT / "apps/teamflow"
+        env["PYTHONPATH"] = (
+            str(ROOT / "apps/api")
+            + ":"
+            + str(ROOT / "packages/core")
+            + ":"
+            + str(ROOT / "apps/teamflow")
         )
         self.proc = subprocess.Popen(
             [
-                sys.executable, "-m", "uvicorn", "traceguard_teamflow.main:app",
-                "--host", "127.0.0.1", "--port", str(self.teamflow_port),
+                sys.executable,
+                "-m",
+                "uvicorn",
+                "traceguard_teamflow.main:app",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                str(self.teamflow_port),
             ],
-            env=env, cwd=str(ROOT), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            env=env,
+            cwd=str(ROOT),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
         self.base_url = f"http://127.0.0.1:{self.teamflow_port}"
         assert _wait_health(f"{self.base_url}/health"), "TeamFlow 未启动"
@@ -228,7 +249,9 @@ def _execute_scenario(env: BenchEnv, scenario_id: str, plan: dict[str, Any]) -> 
             injector.activate(f)
         testcase_id = plan["testcase"]
         task = rt.tasks.create_task(
-            testcase_id, f"bench-v4-{scenario_id}-r{replay_idx}", mode="playwright",
+            testcase_id,
+            f"bench-v4-{scenario_id}-r{replay_idx}",
+            mode="playwright",
             testcase_version_id=f"{testcase_id}@1",
         )
         run = rt.tasks.create_run(task["task_id"], f"{testcase_id}@1")
@@ -267,7 +290,9 @@ def _execute_scenario(env: BenchEnv, scenario_id: str, plan: dict[str, Any]) -> 
 
 def _primary_sample(sample: dict[str, Any]) -> dict[str, Any] | None:
     """计分样本：优先有诊断结论的主回放（replay 0），失败时选最后一个 FAILED。"""
-    eligible = [r for r in sample["replays"] if r.get("diagnosis") and not r["diagnosis"].get("error")]
+    eligible = [
+        r for r in sample["replays"] if r.get("diagnosis") and not r["diagnosis"].get("error")
+    ]
     if eligible:
         return eligible[0]
     failed = [r for r in sample["replays"] if r.get("test_verdict") in {"FAILED", "NOT_EVALUATED"}]
@@ -370,8 +395,9 @@ def _arm_D_ablation(diag: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _probe_signals_from_replays(env: BenchEnv, sample: dict[str, Any], primary: dict[str, Any],
-                                *, time_aligned: bool) -> list[ProbeSignal]:
+def _probe_signals_from_replays(
+    env: BenchEnv, sample: dict[str, Any], primary: dict[str, Any], *, time_aligned: bool
+) -> list[ProbeSignal]:
     """从真实落盘证据构造探针信号；time_aligned=False 时把事后观测当作权威（对照组）。"""
     run_id = primary["run_id"]
     evidence = {e.evidence_id: e for e in env.rt.evidence.list(run_id=run_id, limit=500)}
@@ -390,7 +416,10 @@ def _probe_signals_from_replays(env: BenchEnv, sample: dict[str, Any], primary: 
                     execution_id=f"probe-{run_id}",
                     status="SUCCEEDED",
                     evidence_ids=[e.evidence_id],
-                    data={"template": "get_state_projects", "response": {"ok": True, "count": count or 0, "keys": []}},
+                    data={
+                        "template": "get_state_projects",
+                        "response": {"ok": True, "count": count or 0, "keys": []},
+                    },
                     observed_at=_time.time(),
                     run_scope=False if time_aligned else True,
                 )
@@ -413,8 +442,9 @@ def _probe_signals_from_replays(env: BenchEnv, sample: dict[str, Any], primary: 
     return signals
 
 
-def _arm_F(diag: dict[str, Any], signals: list[ProbeSignal], report: dict[str, Any],
-           run_ended_at: float) -> dict[str, Any]:
+def _arm_F(
+    diag: dict[str, Any], signals: list[ProbeSignal], report: dict[str, Any], run_ended_at: float
+) -> dict[str, Any]:
     """F：真实回灌（时间对齐规则生效）。"""
     if not diag or diag.get("error"):
         return _diag_to_pred(diag)
@@ -457,19 +487,27 @@ def _arm_E_no_feedback(diag: dict[str, Any], signals: list[ProbeSignal]) -> dict
     return pred
 
 
-def evaluate_samples(env: BenchEnv, token: str) -> tuple[list[dict[str, Any]], dict[str, list[dict[str, Any]]]]:
+def evaluate_samples(
+    env: BenchEnv, token: str
+) -> tuple[list[dict[str, Any]], dict[str, list[dict[str, Any]]]]:
     """主流程：执行全部场景 → 计算各臂 → 独立评测。"""
     raw: list[dict[str, Any]] = []
     for scenario in V4_SCENARIOS:
         sid = scenario.scenario_id
-        plan = dict(INJECTION_PLAN.get(sid, {"faults": [], "testcase": scenario.suggested_testcase}))
+        plan = dict(
+            INJECTION_PLAN.get(sid, {"faults": [], "testcase": scenario.suggested_testcase})
+        )
         if sid == "V4-INCOMPLETE-001":
             plan["testcase"] = _make_incomplete_testcase(env.rt)
         try:
             sample = _execute_scenario(env, sid, plan)
             sample["execution_state"] = "EXECUTED"
         except Exception as exc:  # noqa: BLE001 - 执行失败如实记录
-            sample = {"scenario": sid, "execution_state": "EXECUTION_ERROR", "error": str(exc)[:300]}
+            sample = {
+                "scenario": sid,
+                "execution_state": "EXECUTION_ERROR",
+                "error": str(exc)[:300],
+            }
         primary = _primary_sample(sample) if sample.get("replays") else None
         if primary is None:
             raw.append({**sample, "arms": {}})
@@ -551,8 +589,16 @@ def compute_metrics(raw: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """全部指标带 numerator/denominator/n；样本不足不宣称显著。"""
     metrics: list[dict[str, Any]] = []
     n = sum(1 for r in raw if r.get("arms"))
-    metrics.append({"metric": "n_scored_samples", "value": n, "numerator": n, "denominator": n, "n": n,
-                    "note": "有臂预测的计分样本数（v4 全集 14）"})
+    metrics.append(
+        {
+            "metric": "n_scored_samples",
+            "value": n,
+            "numerator": n,
+            "denominator": n,
+            "n": n,
+            "note": "有臂预测的计分样本数（v4 全集 14）",
+        }
+    )
 
     def _ratio(name: str, num: float, den: int, note: str) -> dict[str, Any]:
         return {
@@ -564,90 +610,135 @@ def compute_metrics(raw: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "note": note,
         }
 
-    for arm in ["A_raw_report", "C_rule", "D_graph_ablation", "E_probe_no_feedback",
-                "F_probe_feedback", "G_probe_no_alignment"]:
+    for arm in [
+        "A_raw_report",
+        "C_rule",
+        "D_graph_ablation",
+        "E_probe_no_feedback",
+        "F_probe_feedback",
+        "G_probe_no_alignment",
+    ]:
         preds = [r["arms"][arm] for r in raw if arm in r.get("arms", {})]
         den = len(preds)
         correct = sum(1 for p in preds if p.get("correct") is True)
-        metrics.append(_ratio(
-            f"primary_cause_accuracy[{arm}]", correct, den,
-            "主因类别与 GT 一致的样本 / 计分样本（GT 评测端令牌判定）",
-        ))
+        metrics.append(
+            _ratio(
+                f"primary_cause_accuracy[{arm}]",
+                correct,
+                den,
+                "主因类别与 GT 一致的样本 / 计分样本（GT 评测端令牌判定）",
+            )
+        )
         conclusive = sum(1 for p in preds if p.get("conclusive"))
-        metrics.append(_ratio(
-            f"diagnosis_coverage[{arm}]", conclusive, den, "给出可结论（CONFIRMED）预测的样本占比"
-        ))
+        metrics.append(
+            _ratio(
+                f"diagnosis_coverage[{arm}]",
+                conclusive,
+                den,
+                "给出可结论（CONFIRMED）预测的样本占比",
+            )
+        )
         # Selective accuracy：仅在给出结论的样本上的准确率
         sel_den = conclusive
         sel_num = sum(1 for p in preds if p.get("conclusive") and p.get("correct") is True)
-        metrics.append(_ratio(
-            f"selective_accuracy[{arm}]", sel_num, sel_den, "结论样本中的主因正确率"
-        ))
+        metrics.append(
+            _ratio(f"selective_accuracy[{arm}]", sel_num, sel_den, "结论样本中的主因正确率")
+        )
         probes = [p.get("probes_used") or 0 for p in preds]
-        metrics.append(_ratio(
-            f"probes_per_sample[{arm}]", sum(probes), den, "真实探针执行数/样本"
-        ))
+        metrics.append(_ratio(f"probes_per_sample[{arm}]", sum(probes), den, "真实探针执行数/样本"))
         fbs = [p.get("feedback_rate") for p in preds if isinstance(p.get("feedback_rate"), float)]
-        metrics.append({
-            "metric": f"probe_feedback_rate[{arm}]",
-            "value": round(statistics.mean(fbs), 4) if fbs else None,
-            "numerator": round(sum(fbs), 4) if fbs else 0,
-            "denominator": len(fbs),
-            "n": len(fbs),
-            "note": "探针证据真实进入假设更新的比例（回灌率）",
-        })
+        metrics.append(
+            {
+                "metric": f"probe_feedback_rate[{arm}]",
+                "value": round(statistics.mean(fbs), 4) if fbs else None,
+                "numerator": round(sum(fbs), 4) if fbs else 0,
+                "denominator": len(fbs),
+                "n": len(fbs),
+                "note": "探针证据真实进入假设更新的比例（回灌率）",
+            }
+        )
 
     # 图裁决参与度：C 臂 graph_adjudicated 与原始 diag 主因变化的样本数
     changed = sum(
-        1 for r in raw
-        if (r["arms"].get("C_rule", {}).get("graph_adjudicated") or {}).get("root_causes") is not None
-        and (r["arms"]["C_rule"].get("mechanism")) != next(
+        1
+        for r in raw
+        if (r["arms"].get("C_rule", {}).get("graph_adjudicated") or {}).get("root_causes")
+        is not None
+        and (r["arms"]["C_rule"].get("mechanism"))
+        != next(
             (
                 h["failure_mechanism"]
-                for h in ((r["arms"]["C_rule"].get("graph_adjudicated") or {}).get("hypotheses") or [])
-                if h["hypothesis_id"] in (r["arms"]["C_rule"].get("graph_adjudicated") or {}).get("root_causes", [])
+                for h in (
+                    (r["arms"]["C_rule"].get("graph_adjudicated") or {}).get("hypotheses") or []
+                )
+                if h["hypothesis_id"]
+                in (r["arms"]["C_rule"].get("graph_adjudicated") or {}).get("root_causes", [])
             ),
             None,
         )
     )
-    metrics.append(_ratio(
-        "graph_changed_prediction_count", changed, n,
-        "图裁决层改变 C 臂主因类别的样本数；>0 表示图真实参与主因裁决",
-    ))
+    metrics.append(
+        _ratio(
+            "graph_changed_prediction_count",
+            changed,
+            n,
+            "图裁决层改变 C 臂主因类别的样本数；>0 表示图真实参与主因裁决",
+        )
+    )
     # 对齐增益：F（对齐）相对 G（不对齐）的变化
     f_g_changed = sum(
-        1 for r in raw
-        if "F_probe_feedback" in r.get("arms", {}) and "G_probe_no_alignment" in r.get("arms", {})
-        and r["arms"]["F_probe_feedback"].get("mechanism") != r["arms"]["G_probe_no_alignment"].get("mechanism")
+        1
+        for r in raw
+        if "F_probe_feedback" in r.get("arms", {})
+        and "G_probe_no_alignment" in r.get("arms", {})
+        and r["arms"]["F_probe_feedback"].get("mechanism")
+        != r["arms"]["G_probe_no_alignment"].get("mechanism")
     )
-    metrics.append(_ratio(
-        "alignment_changed_prediction_count", f_g_changed, n,
-        "时间对齐规则改变主因预测的样本数（F vs G 同探针对照）",
-    ))
-    f_correct = sum(1 for r in raw if r.get("arms", {}).get("F_probe_feedback", {}).get("correct") is True)
-    g_correct = sum(1 for r in raw if r.get("arms", {}).get("G_probe_no_alignment", {}).get("correct") is True)
+    metrics.append(
+        _ratio(
+            "alignment_changed_prediction_count",
+            f_g_changed,
+            n,
+            "时间对齐规则改变主因预测的样本数（F vs G 同探针对照）",
+        )
+    )
+    f_correct = sum(
+        1 for r in raw if r.get("arms", {}).get("F_probe_feedback", {}).get("correct") is True
+    )
+    g_correct = sum(
+        1 for r in raw if r.get("arms", {}).get("G_probe_no_alignment", {}).get("correct") is True
+    )
     metrics += [
-        _ratio("primary_cause_correct[F_minus_G]", f_correct - g_correct, n,
-               "时间对齐带来的主因正确数变化（正=对齐有增益）"),
+        _ratio(
+            "primary_cause_correct[F_minus_G]",
+            f_correct - g_correct,
+            n,
+            "时间对齐带来的主因正确数变化（正=对齐有增益）",
+        ),
     ]
     # 执行层假通过
     fp_den = sum(1 for r in raw if r.get("gt_mechanism") == "PERSISTENCE")
     fp = sum(
-        1 for r in raw
+        1
+        for r in raw
         if r.get("gt_mechanism") == "PERSISTENCE"
         and any(rep.get("test_verdict") == "PASSED" for rep in (r.get("replays") or []))
     )
-    metrics.append(_ratio(
-        "false_pass_rate[execution]", fp, fp_den, "GT 持久化故障却出现 PASSED 回放的样本/持久化故障样本"
-    ))
+    metrics.append(
+        _ratio(
+            "false_pass_rate[execution]",
+            fp,
+            fp_den,
+            "GT 持久化故障却出现 PASSED 回放的样本/持久化故障样本",
+        )
+    )
     # 冲突识别
     conflicts = sum(
-        1 for r in raw
-        if (r["arms"].get("C_rule", {}) or {}).get("unresolved_conflicts")
+        1 for r in raw if (r["arms"].get("C_rule", {}) or {}).get("unresolved_conflicts")
     )
-    metrics.append(_ratio(
-        "conflict_detection_count", conflicts, n, "诊断明确记录未解决冲突的样本数"
-    ))
+    metrics.append(
+        _ratio("conflict_detection_count", conflicts, n, "诊断明确记录未解决冲突的样本数")
+    )
     return metrics
 
 
@@ -686,8 +777,13 @@ def main() -> int:
             "teamflow_url": env.base_url,
             "gt_isolation": isolation,
             "arms": [
-                "A_raw_report", "C_rule", "D_graph_ablation", "E_probe_no_feedback",
-                "F_probe_feedback", "G_probe_no_alignment", "CF(counterfactual,见 run009)",
+                "A_raw_report",
+                "C_rule",
+                "D_graph_ablation",
+                "E_probe_no_feedback",
+                "F_probe_feedback",
+                "G_probe_no_alignment",
+                "CF(counterfactual,见 run009)",
                 "LLM_CONSTRAINED(BLOCKED: 未授权)",
             ],
             "injection_plan": INJECTION_PLAN,
@@ -708,7 +804,9 @@ def main() -> int:
     }
     for rnd in range(args.rounds):
         raw_path = out / f"raw.round{rnd}.jsonl"
-        raw = [json.loads(x) for x in raw_path.read_text(encoding="utf-8").splitlines() if x.strip()]
+        raw = [
+            json.loads(x) for x in raw_path.read_text(encoding="utf-8").splitlines() if x.strip()
+        ]
         report["per_round"].append({"round": rnd, "metrics": compute_metrics(raw)})
     (out / "benchmark-v4.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
