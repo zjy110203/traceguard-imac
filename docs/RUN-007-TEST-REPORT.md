@@ -219,13 +219,17 @@ Nightly 的 `head_sha` 与 Release 的 `github.sha` 严格相等。
 | Evidence 逐条服务端校验 | A 15/15、B 28/28 PASS；附件 36/36 字节一致；NOT_RUN 0 | 同上 |
 | 回滚内容级复核 | 指针/步骤/断言/Oracle 绑定全部恢复 | 同上 D17b |
 | Benchmark 两轮 | 76 次执行 / 661.2s / 每轮 19 个失败样本 | `benchmark-v3-f2.json` |
+| PostgreSQL 16.16（本机） | 13/13 PG 用例；6 分钟 78 Run / 4 Worker；PG 上 E2E 56/56 | `pg-soak.json`、`e2e-pg-run007.json` |
 | 自愈闭环 | 2/2（晋升→固定版本回归→回滚复核全通过） | 同上 `repair_records` |
 | 前端 15 视图 × 4 断点 | 75/75，0 溢出 / 0 console 错误 / 79 张截图 | `docs/assets/run007/ui-f2/` |
 
 ### 12.3 仍然受限的项
 
-- 本机 **无 PostgreSQL 运行时**（无 psql/docker），PG 持续/并发验证仍 BLOCKED；
-  迁移 v9 只在 SQLite 上实测，CI `postgres:16` 是唯一 PG 覆盖路径。
+- PostgreSQL 已在本机用 Postgres.app **16.16** 实测（与 CI 同版本）：13 个 PG 用例全过、
+  6 分钟持续 78 Run / 4 Worker 并发不变量全过、PG 上 E2E 56/56；迁移 v9/v10 均在旧表升级场景实测。
+  仍存边界：只有 6 分钟持续，不是小时级压测；未验证连接池/主从；实例是 `/tmp` 临时进程。
+- 本机 PG 暴露并已修复 1 个 **PG-only 缺陷**：编译把需求正文写进 `intent_ref`（varchar(64)），
+  SQLite 静默接受、PG 直接 500。修复为 `intent_ref=intent_id` + `intent_text` 正文 + 长度护栏 + 迁移 v10。
 - 本轮代码/证据提交 `7e7528f` 的 **PR Gate 已真实通过**（push #15 `45226091595` 53s；
   PR #16 `45226105637` 52s，backend/frontend 全绿）；
   Nightly / Release Gate **未手动 dispatch**，故不宣称三级门禁在本 commit 全绿。

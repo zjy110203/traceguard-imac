@@ -10,7 +10,7 @@
 | `tg_schema_migration` | 迁移版本记录 | `version` PK |
 | `tg_workspace` | 工作区 | — |
 | `tg_intent` | TestIntent（C01） | `workspace_id` 索引 |
-| `tg_testcase` | 用例聚合（最新版本指针、审核状态） | `workspace_id`、`intent_ref` 索引 |
+| `tg_testcase` | 用例聚合（最新版本指针、审核状态） | `workspace_id`、`intent_ref` 索引；`intent_ref` 只存 intent_id（正文在版本文档的 `intent_text`） |
 | `tg_testcase_version` | 用例不可变版本（C02） | **UNIQUE(testcase_id, version)** |
 | `tg_oracle` | Oracle 版本（C03） | **UNIQUE(oracle_id, version)** |
 | `tg_task` | 逻辑任务 | `idempotency_key` **UNIQUE** |
@@ -80,6 +80,7 @@ ORDER BY created_at LIMIT 5
 | 7 | testcase_review_revision | 审核修订号 CAS 令牌 |
 | 8 | promotion_receipts | 晋升/回滚幂等回执表 |
 | 9 | evidence_digest_semantics | `tg_evidence` 增加 `stored_content_sha256` / `attachment_sha256` / `integrity_detail`（历史行不回溯填补，校验时如实 NOT_RUN） |
+| 10 | widen_testcase_intent_ref | `tg_testcase.intent_ref` 由 `VARCHAR(64)` 放宽到 `VARCHAR(255)`（PG 实测：旧表 `ALTER COLUMN ... TYPE`，SQLite 长度不强制故跳过）；需求正文改存 `TestCaseVersion.intent_text`，引用字段不再放正文 |
 
 执行：应用/Worker 启动时 `Database.create_schema()`，幂等；并发启动时 DDL 冲突被识别并跳过。
 

@@ -1,0 +1,56 @@
+{
+  "round": "RUN-007-FINALIZATION-2",
+  "database": "PostgreSQL (Postgres.app 16.16, aarch64)",
+  "database_url_host": "127.0.0.1:55432/traceguard",
+  "workers": 3,
+  "minutes": 10.0,
+  "interval_s": 30.0,
+  "started_at": "2026-11-24T03:55:50Z",
+  "duration_s": 611.2,
+  "runs_submitted": 86,
+  "runs_completed": 86,
+  "latency_s": {
+    "min": 6.02,
+    "median": 15.02,
+    "p95": 15.02,
+    "max": 15.03
+  },
+  "verdicts": {
+    "PASSED": 85,
+    "FAILED": 1
+  },
+  "lease_owners": [
+    "204deiMac.local-72427",
+    "204deiMac.local-72428",
+    "204deiMac.local-72429"
+  ],
+  "invariants": {
+    "orphan_steps": 0,
+    "orphan_evidence": 0,
+    "duplicate_event_sequences": 0,
+    "duplicate_migration_rows": 0,
+    "migration_rows": 8,
+    "runs_without_owner": 0,
+    "runs_without_fencing": 0,
+    "distinct_workers": 3,
+    "duplicate_run_steps": 0,
+    "runs_not_terminal": 0,
+    "run_status_counts": {
+      "COMPLETED": 86
+    }
+  },
+  "checks": {
+    "all_runs_terminal": true,
+    "no_orphan_steps": true,
+    "no_orphan_evidence": true,
+    "no_duplicate_event_sequences": true,
+    "no_duplicate_run_steps": true,
+    "migration_rows_unique": true,
+    "every_run_has_owner": true,
+    "every_run_has_fencing": true,
+    "multi_worker_contention": true,
+    "all_runs_passed": false
+  },
+  "all_checks_passed": false,
+  "errors": []
+}

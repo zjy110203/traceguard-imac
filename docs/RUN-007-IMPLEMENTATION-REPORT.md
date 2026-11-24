@@ -284,6 +284,9 @@ Flaky 重复 5 次保留原始、指标带分子/分母、LLM 与人工基线未
 | Evidence 摘要 | `packages/evidence/.../evidence_manager.py`、`persistence/stores.py`、`models.py`、`db.py`（迁移 v9） | 来源/持久化/附件三种摘要；历史行 NOT_RUN |
 | 服务端验证 | `routers/evidence.py` | 读库内容重算 + 附件字节 + 派生来源 + workspace |
 | 执行链 | `packages/execution/.../pipeline.py` | 附件摘要随证据入库 |
+| 迁移 v9 / v10 | `packages/persistence/.../db.py`、`models.py` | 证据摘要列；`intent_ref` 放宽到 255 |
+| PG-only 缺陷 | `packages/contracts/.../models.py`、`agents/.../compiler.py`、`services/exploration_service.py`、`persistence/catalog.py` | `intent_ref` 只存引用，正文进 `intent_text`；超长显式 `VALIDATION_ERROR` |
+| PG 验证脚本 | `scripts/pg_soak_run007.py` | 真实 PG 持续运行 + 4 Worker 并发，DB 级不变量校验 |
 | Benchmark | `scripts/bench_run007.py` | 动态基线、固定版本回归、回滚内容验证、E 臂禁回退、`--repeats` |
 | E2E | `scripts/e2e_run007.py` | 逐条证据验证、回滚内容级复核 |
 | 评测口径 | `benchmark/.../evaluation.py`、`scenarios.py` | Macro-F1 浮点分子；四字段口径 |

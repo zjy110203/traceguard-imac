@@ -31,9 +31,9 @@
 | WP3 E 臂禁止回退 | **已实现**：失败如实记 NOT_RUN/INCONCLUSIVE；单独统计探针成功率 | 探针执行 19/19，探针后有效诊断 15/19 |
 | WP3 重复实验 | **已完成**：2 轮独立实验（各 38 次执行），原始样本分文件保存 | `samples-f2.jsonl` / `samples-f2.repeat1.jsonl` |
 | WP4 安全审查 | 无真实密钥入库、`.env` 未跟踪；npm audit high=0、moderate=3（dev-only） | §7.1 |
-| WP5 PostgreSQL | 本机 **BLOCKED**（无 psql/docker）；CI 的 `postgres:16` job 为唯一真实覆盖 | §7.2、§9 |
+| WP5 PostgreSQL | **已在本机真实 PG 16.16 验证**：13 个 PG 用例全过、6 分钟持续 78 Run / 4 Worker 并发、PG 上 E2E 56/56；并发现并修复 1 个 PG-only 缺陷 | §7.2 |
 | WP6 前端关键交互 | 75/75 检查通过（15 视图 × 4 断点 + 明暗主题），0 console 错误 | `docs/assets/run007/ui-f2/ui-review.json` |
-| WP7 最终回归 | **547 passed / 11 skipped**；ruff check + format 全绿 | §7.4 |
+| WP7 最终回归 | 连真实 PG：**562 passed / 0 skipped**；无 PG 环境：549 passed / 13 skipped；ruff 全绿 | §7.4 |
 | WP8 CI / PR | **PR Gate 在代码/证据提交 `7e7528f` 上真实成功**（push #15 53s / PR #16 52s）；Nightly/Release 未 dispatch | §7.5 |
 
 ---
@@ -279,6 +279,10 @@ E2E 总计 **56 步 / 0 失败**（含场景 D 新增的 D17b 回滚内容级复
 | `scripts/bench_run007.py` | 动态基线、fail-closed、固定版本回归、回滚内容验证、E 臂禁回退、重复实验 |
 | `scripts/e2e_run007.py` | 逐条证据验证、回滚内容级复核 |
 | `benchmark/.../evaluation.py` `scenarios.py` | Macro-F1、口径四字段 |
+| `packages/contracts/.../models.py` | `TestCaseVersion.intent_text`（需求正文），`intent_ref` 语义收窄为引用 |
+| `packages/agents/.../compiler.py`、`services/exploration_service.py` | 编译不再把正文写进引用字段 |
+| `packages/persistence/.../db.py`、`models.py`、`catalog.py` | 迁移 v10 放宽 `intent_ref`；超长显式校验错误 |
+| `scripts/pg_soak_run007.py` | 真实 PG 持续运行 + 多 Worker 并发，DB 级不变量校验 |
 
 ---
 
@@ -292,12 +296,43 @@ E2E 总计 **56 步 / 0 失败**（含场景 D 新增的 D17b 回滚内容级复
   dev-only 链路；修复需 `vue-tsc` 大版本破坏性升级，本轮不做，记录为已知风险）；
 - 无身份认证仍是既有架构限制（只有主体类型门禁），本轮未改变，继续披露。
 
-### 7.2 PostgreSQL
+### 7.2 PostgreSQL（本机真实 16.16 实测，不再是 BLOCKED）
 
-- 本机无 `psql` / `pg_ctl` / `docker` → **无法本地做持续性/并发验证**；
-- 唯一真实覆盖是 CI Nightly 的 `postgres:16` service container（`test_postgres_platform.py` 等 6 项）；
-- 本轮对 schema 的改动（迁移 v9）使用通用 DDL（`ALTER TABLE ADD COLUMN` + 列存在性检查），
-  PG 语法兼容，但**未在 PG 上实测**。这条必须作为限制继承到下一轮。
+**获取方式（不装系统包、不用 brew）**：下载 Postgres.app 官方发布包
+`Postgres-2.9.7-16.dmg`（内含 PostgreSQL **16.16**，与 CI 的 `postgres:16` 同版本），
+`hdiutil attach` 后直接用包内 `initdb` / `pg_ctl` 在 `/tmp` 起隔离实例：
+
+```bash
+BIN=/Volumes/Postgres-2.9.7-16/Postgres.app/Contents/Versions/16/bin
+$BIN/initdb -D /tmp/traceguard-f2/pgdata -U traceguard --auth-local=trust --auth-host=trust
+$BIN/pg_ctl -D /tmp/traceguard-f2/pgdata -o "-p 55432 -k /tmp/traceguard-f2/pgsock" start
+$BIN/createdb -h 127.0.0.1 -p 55432 -U traceguard traceguard
+# 测试：TG_TEST_POSTGRES_URL=postgresql+psycopg://traceguard@127.0.0.1:55432/traceguard
+```
+
+**结果**：
+
+| 项 | 结果 | 证据 |
+|---|---|---|
+| PG 平台/一致性用例 | **13/13 通过**（platform 8 + parity 5） | `pytest tests/integration/test_postgres_platform.py tests/integration/test_postgres_parity.py` |
+| 迁移 v9（旧表升级） | 旧 `tg_evidence` 加列成功、幂等；3 类历史行校验 **NOT_RUN**（不误报 FAIL） | `test_migration_v9_upgrades_existing_pg_evidence_table` |
+| 迁移 v10（新增） | 旧 `tg_testcase.intent_ref` 由 `varchar(64)` 放宽到 `varchar(255)`，200 字符可用、300 字符被校验拒绝 | `test_migration_v10_widens_intent_ref_and_pg_accepts_long_ref` |
+| 持续 + 并发 | 6 分钟 / **78 个 Run** / **4 个 Worker** 真实领取；全部终态，0 孤儿步骤/证据，0 重复事件序号，0 重复步骤，迁移记录唯一 | `docs/assets/run007/pg-soak.json` |
+| PG 上业务闭环 E2E | **56 步 / 0 失败**，A 15/15、B 28/28 证据全 PASS，附件 36/36 | `docs/assets/run007/e2e-pg-run007.json` |
+| 全量测试（含 PG） | **562 passed / 0 skipped** | 本机运行 |
+
+**并发不变量与业务 verdict 分开报告**：78 个并发 Run 中 75 PASSED、3 FAILED，3 个失败全部出现在
+开局并发突发、且只失败在 `a_biz_count count>=1 got=0`（同一次 Run 的 UI banner 与列表行断言均 PASSED）。
+原因是每个 Run 开头的 `RESET_DATA` 会重置兄弟 Run 刚写入的数据 —— 属于**数据隔离限制**，
+不是 PG 或队列缺陷；Benchmark 正式实验仍保持串行。第二轮（脚本 bug 修复后、最终代码）复现同样的
+1~4% 并发假失败，说明归因稳定，不是随机抖动。首轮证据保留在 `pg-soak-pre-intent-fix.json`。
+
+**本机 PG 发现并修复的真实缺陷（PG-only）**：探索编译把"需求正文"写进了 `intent_ref`，
+SQLite 不校验 `VARCHAR` 长度所以本地全绿，PostgreSQL 直接
+`value too long for type character varying(64)` → `POST /explorations/{id}/compile` 500。
+修复：`intent_ref` 只存引用（intent_id），正文存入新的 `TestCaseVersion.intent_text`；
+目录层加长度护栏（超长返回 `VALIDATION_ERROR` 而不是 500）；迁移 v10 放宽列以兼容历史值。
+修复后 PG 上 E2E 全绿。
 
 ### 7.3 前端关键交互
 
@@ -309,7 +344,8 @@ E2E 总计 **56 步 / 0 失败**（含场景 D 新增的 D17b 回滚内容级复
 
 | 项 | 结果 |
 |---|---|
-| `pytest` 全量 | **547 passed / 11 skipped**（跳过全部为未配置 PG 的 parity/platform 用例） |
+| `pytest` 全量（无 PG 环境变量） | **549 passed / 13 skipped**（跳过全部为 PG parity/platform） |
+| `pytest` 全量（连真实 PG） | **562 passed / 0 skipped** |
 | `ruff check` | 全绿 |
 | `ruff format --check` | 全绿 |
 | 前端 `typecheck` | 通过 |
@@ -355,8 +391,9 @@ push 到 `workbuddy/run007-resume-20261123` 自动触发 PR Gate，**代码/测�
 
 ## 9. 未完成 / 受限（如实列出，不美化）
 
-1. **PostgreSQL 本地持续运行与并发验证 BLOCKED**：本机无 PG 运行时，只能依赖 CI `postgres:16`；
-   迁移 v9 未在 PG 上实测。
+1. **PostgreSQL**：本机已用 Postgres.app 16.16 实测（§7.2）。仍存的边界：
+   ① 只有 6 分钟持续运行，不是小时级生产压测；② 未验证 PgBouncer/主从/连接池耗尽；
+   ③ 实例由 DMG 内二进制临时启动（`/tmp`，端口 55432），不是系统服务。
 2. **Nightly / Release Gate 未在本轮 commit 上运行**：PR Gate 已在代码提交 `7e7528f` 上真实通过（§7.5），
    但 Nightly（含 `postgres:16`、真实浏览器 E2E、Benchmark）与 Release（attestation）
    需要 `workflow_dispatch` 且需要带 Actions 权限的凭据，本轮未执行。
@@ -385,3 +422,7 @@ push 到 `workbuddy/run007-resume-20261123` 自动触发 PR Gate，**代码/测�
 | 回执身份测试 | `tests/integration/test_repair_receipt_identity.py` |
 | Evidence 完整性测试 | `tests/integration/test_evidence_storage_integrity.py` |
 | Macro-F1 / 口径单测 | `tests/unit/test_benchmark.py` |
+| PG 持续/并发（本机 16.16） | `docs/assets/run007/pg-soak.json`、`pg-soak-samples.jsonl` |
+| PG 上 E2E（A/B/C/D） | `docs/assets/run007/e2e-pg-run007.json` |
+| PG 首轮（修复前代码，保留原始数据） | `docs/assets/run007/pg-soak-pre-intent-fix.json` |
+| PG 迁移 v9/v10 用例 | `tests/integration/test_postgres_platform.py` |
