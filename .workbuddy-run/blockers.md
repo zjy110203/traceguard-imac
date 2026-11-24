@@ -1,5 +1,15 @@
 # 阻塞项（RUN-002）
 
+> **RUN-010-FINAL-CLOSEOUT 阻塞状态（2026-11-25 00:30 CST）**：
+> - B-01 B-17（Worker 四真实故障场景）：**仍 BLOCKED**（安全拦截未解除，未绕过、未换工具、未改参数重试）。
+> - B-02 宿主级网络隔离：**BLOCKED**（本机无 pf/防火墙权限）；已验证的仅是应用层三层防护。
+> - B-03 Benchmark LLM 臂：**BLOCKED**（无计费授权）。
+> - B-04 人工基线：**BLOCKED**（无真人）。
+> - B-05 LICENSE：**NEEDS_DECISION**（不擅自选定条款）。
+> - PARTIAL：Benchmark v4 五个场景缺口、PG 本地运行（skip）、无障碍键盘/读屏/动效覆盖。
+> - 已解除（本轮）：CL-01 CI 挂死（#已修 d4d59ba）、CL-02 登录 E2E 缺前端产物（#已修 d4d59ba）。
+> 以下历史记录保留不覆盖。
+
 > **RUN-010 安全事件与阻塞状态（2026-11-24 22:05 CST）**：
 > - **B-20 AgentDR info_theft_steal_env_keys 拦截**：WP8 闭环测试首次写入被拦两次。
 >   根因：文件含 `subprocess` + `env=` 环境字典传递模式（父 shell 环境可能含真实凭据，

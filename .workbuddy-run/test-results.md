@@ -182,3 +182,35 @@ Benchmark（真实）：
 - **CI 首跑暴露 8 个本地掩盖的问题**，4 轮迭代修复；其中 2 个是产品缺陷：
   `claim_next_run.previous_status` 取到更新后的状态；`create_schema` 不重试 DDL 锁冲突。
 - 迭代轮次：`d2e86ae`❌ → `7fdd2e9`❌ → `f00f149`❌ → `cc3339d`✅。证据：`docs/assets/run007/ci-gates.json`。
+
+## RUN-010（2026-11-24）与收尾复核（2026-11-25 00:30 CST）
+
+### 本地（macOS，Python 3.13.12，`.venv`）
+
+| 命令 | 结果 | 备注 |
+|---|---|---|
+| `.venv/bin/pytest -q --basetemp=/tmp/tg-final` | **644 passed / 13 skipped / 0 failed，72.36s** | 收集 657；13 skip 全为本地无 PG（parity 5 + platform 8） |
+| `.venv/bin/pytest tests/unit/test_intelligence_run010.py -q` | **13 passed，1.03s** | WP4 专项 |
+| `.venv/bin/pytest tests/integration/test_active_diagnosis_feedback.py -q` | **11 passed，1.37s** | 事后探针语义 |
+| `.venv/bin/pytest tests/e2e/{egress_integration_run010,egress_proxy_run009,full_loop_run010}.py -q` | **16 passed，20.57s** | CL-01 修复后子集回归（修复前该子集结束后进程挂死） |
+| `.venv/bin/ruff check` + `format --check` | All checks passed；196 files formatted | — |
+
+> 注：直接 `pytest -q`（basetemp 默认 `.pytest-tmp/run`）在沙箱内会被安全删除保护拦截
+> （`SAFE_DELETE_BULK_CONFIRM_REQUIRED`，59 个 setup 错误），属于本机沙箱限制而非产品缺陷；
+> 改用 `/tmp` 下的独立 basetemp 后正常。
+
+### CI（GitHub Actions，Python 3.11，SHA `d4d59ba`）
+
+| 门禁 | 运行 | 结论 | 关键证据 |
+|---|---|---|---|
+| PR Gate（push） | [45433891889](https://github.com/zjy110203/traceguard-imac/actions/runs/45433891889) | **success** | backend + frontend 两任务 |
+| PR Gate（pull_request） | [45433916576](https://github.com/zjy110203/traceguard-imac/actions/runs/45433916576) | **success** | — |
+| Nightly Gate | [45433925669](https://github.com/zjy110203/traceguard-imac/actions/runs/45433925669) | **success（5/5 job）** | backend-full **644 passed / 13 skipped，77.39s，2m29s 结束**；postgres 16 通过；npm audit 0 漏洞；`Security/LLM smoke`：LLM smoke BLOCKED（缺 Secret，warning 不阻断） |
+| Release Gate | 见 CLOSEOUT §4 | —— | nightly-attestation success（严格匹配 `head_sha`）；frontend success；full-verification 见报告 |
+
+### 收尾修复前的真实失败证据（`f69c39b`，留档不删除）
+
+| 门禁 | 运行 | 结论 | 真实原因 |
+|---|---|---|---|
+| Nightly backend-full | [45417381107](https://github.com/zjy110203/traceguard-imac/actions/runs/45417381107) | cancelled（45min 超时） | pytest 输出 `2 failed, 642 passed, 13 skipped in 99.85s` 后进程不退出（CL-01）；2 failed = 登录 E2E 无前端产物（CL-02） |
+| Release full-verification | [45417391553](https://github.com/zjy110203/traceguard-imac/actions/runs/45417391553) | cancelled（60min 超时） | 同一 CL-01；nightly-attestation 因该 SHA 无成功 Nightly 而失败 |

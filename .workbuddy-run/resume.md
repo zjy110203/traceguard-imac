@@ -224,3 +224,22 @@ curl -X POST "http://127.0.0.1:8010/api/v1/runs/<run_id>/probe-plan?diagnosis_id
 - 已停止本轮新增的隔离服务：5173/8000/8050（WP5）、8060/8061 + Worker（WP7）、8043（WP3）。
   保留 8041/8042（长稳启动前既存，可能共享）。后续会话不要假定这些端口可用，需重新检查。
 - 最终报告：`docs/RUN-008-FINAL-REPORT.md`；决策：`docs/RUN-008-DECISIONS.md`。
+
+## RUN-010-FINAL-CLOSEOUT 断点续跑（2026-11-25 00:30 CST）
+
+- 分支 `workbuddy/run008-quality-hardening`；代码 HEAD 基线 `d4d59ba`（CL-01/CL-02 修复），
+  文档提交后 HEAD 前进一个 docs-only 提交；远程同步 `origin/workbuddy/run008-quality-hardening`。
+- 已完成的验收（可直接引用，不必重跑）：
+  - PR Gate `45433891889`(push) / `45433916576`(PR) success；
+  - Nightly `45433925669` success 5/5（backend-full 644 passed / 13 skipped，2m29s）；
+  - Release `45434549738` success 4/4（full-verification 644 passed / 13 skipped，`NIGHTLY_OK` 匹配 `d4d59ba`）。
+- 本机复现/定位要点（后续若要再查同类挂死）：
+  - `pytest -q` 默认 basetemp `.pytest-tmp/run` 会被沙箱安全删除保护拦截 → 用 `--basetemp=/tmp/xxx`；
+  - 抓解释器退出期线程栈：写 pytest 插件在 `pytest_unconfigure` 里
+    `faulthandler.dump_traceback_later(6, repeat=True, file=<真实文件对象>)`（必须传有 fileno 的文件）；
+  - macOS 上 `py-spy` 需要 root，`sample` 只能看到 C 栈。
+- 若重跑 CI：推送后等 PR Gate 自动跑；Nightly 需 `workflow_dispatch`；
+  **Release 依赖同 SHA 的成功 Nightly（attestation 严格匹配）**，顺序不能颠倒。
+- 仍未解除：B-17（需安全批准）、宿主级网络隔离（需 pf/容器权限）、Benchmark LLM 臂/人工基线、
+  LICENSE（NEEDS_DECISION）、Benchmark 5 个场景缺口。
+- 未做且不得冒充：生产环境部署验证、PG 生产参数验证、无障碍键盘/读屏/动效覆盖。

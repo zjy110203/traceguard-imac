@@ -1,10 +1,15 @@
 # RUN-010 最终交付报告：Core Integration & Intelligence Maturation
 
-> 生成时间：2026-11-24 22:40 CST。状态枚举：IMPLEMENTED / VERIFIED / PARTIAL / BLOCKED / NEEDS_DECISION / NOT_IMPLEMENTED。
+> 生成时间：2026-11-24 22:40 CST；**收尾复核更新：2026-11-25 00:30 CST（RUN-010-FINAL-CLOSEOUT）**。
+> 状态枚举：IMPLEMENTED / VERIFIED / PARTIAL / BLOCKED / NEEDS_DECISION / NOT_IMPLEMENTED。
 > 提交链：`8220479`（起点）→ `e43e0ca`(WP1) → `0e71267`(WP0/CI) → `651d1e6`(WP2) → `97d7901`(WP3)
 > → `132c09c`/`3ac6725`(WP4) → `45898cc`/`94585fa`(WP5) → `48ae497`(WP6) → `e38ccac`/`1479982`(WP7)
-> → `1500ad7`(WP8) → 本报告（WP9）。
+> → `1500ad7`(WP8) → `f69c39b`(WP9) → `d4d59ba`(CLOSEOUT: CL-01/CL-02 修复 + WP4/WP6 报告)。
 > 仓库分支 `workbuddy/run008-quality-hardening`，PR #2 自动更新（open/HOLD，见 §7）。
+>
+> **本轮收尾对旧统计的更正（以最新 HEAD 真实证据为准）**：
+> RUN-010 提交数 15 → **16**；改动文件 66 → **77**；测试总数 601 → **657**（收集）；
+> E2E 用例 35 → **30**；PR #2 差异 691 文件/60 提交 → **693 文件/61 提交**。
 
 ## 1. 验收矩阵
 
@@ -14,12 +19,13 @@
 | WP1 认证产品化 | **VERIFIED** | 环境分级强制（production fail-closed）、登录/用户管理前端、DB 级限速、审计链跨进程安全、workspace 对象级授权；集成 21+9 用例 + 登录 E2E 2/2；**生产候选达成** |
 | WP2 Egress 接入内核 | **VERIFIED / BLOCKED（宿主级）** | 代理与浏览器 1:1 生命周期绑定、fail-closed、Run 关联审计、策略单一事实源；未授权目标 0 请求（服务端收数）；宿主级隔离如实 BLOCKED（无 pf 权限） |
 | WP3 幂等与状态机 | **VERIFIED / BLOCKED（B-17）** | 提交回执+冻结语义（幂等键重放不覆盖 verdict）、Repair 重复操作拒绝；B-17 保持 BLOCKED 未绕过 |
-| WP4 诊断内核增强 | **VERIFIED** | POST_HOC 时间对齐（事后观测不确认/不排除、TIMING 新假设生成）、Graph 裁决层进入主因裁决（CONFIRMED 降级/冲突弃权）、403→AUTHORIZATION 规则补齐；13 个新用例 |
-| WP5 Benchmark v4 真实实验 | **VERIFIED** | 14 场景×2 轮真实注入执行（此前仅定义）；C 臂主因准确率 **64.3%（selective 88.9%）** vs A 臂 7.1%；graph_changed 2/14；5 个缺口如实记录 |
-| WP6 前端无障碍 | **VERIFIED** | 6 视图表单标签修复、axe-core 引入并真实审查 **13 路由 0 violations / 0 无标签输入**、对比度修复（4.95:1 / 6.01:1）、权限交互与 WP1 联动 |
+| WP4 诊断内核增强 | **VERIFIED（准确率无增益，如实记录）** | POST_HOC 时间对齐、Graph 裁决层进入主因裁决、403→AUTHORIZATION、Flaky 打标；13 个新用例全过；Benchmark v4：C/D 臂准确率同为 64.3%（9/14），graph_changed 2/14 → **参与裁决 ≠ 提升准确率**（见 `docs/RUN-010-WP4-INTELLIGENCE.md`） |
+| WP5 Benchmark v4 真实实验 | **VERIFIED** | 14 场景×2 轮真实注入执行（此前仅定义）；C 臂主因准确率 **64.3%（selective 88.9%）** vs A 臂 7.1%；5 个缺口如实记录；各臂 `probes_per_sample=0`（探针未参与评测） |
+| WP6 前端无障碍 | **VERIFIED** | 6 视图 **24 处**表单标签修复、axe-core 真实审查 **13 路由 0 violations / 0 无标签输入**、对比度修复（4.95:1 / 6.01:1）；未覆盖范围见 `docs/RUN-010-WP6-FRONTEND.md` §7 |
 | WP7 供应链治理 | **VERIFIED / NEEDS_DECISION（LICENSE）** | lock 完整性修复（44 项）、pytest-cov/mypy 约束冲突修复、CI 锁定安装、vue-tsc 3.x 升级（audit 3→0）；LICENSE 建议待负责人决策 |
-| WP8 完整集成验收 | **VERIFIED** | 进程内完整闭环 3/3（Intent→诊断全流程真实执行、四角色 RBAC、egress 强制、审计链）；全量回归 601 passed |
+| WP8 完整集成验收 | **VERIFIED（附 CL-01 缺陷）** | 进程内完整闭环 3/3（Intent→诊断全流程真实执行、四角色 RBAC、egress 强制、审计链）；全量回归 **644 passed / 13 skipped**；该模块暴露 CL-01 进程退出挂死缺陷（已修） |
 | WP9 最终交付 | **VERIFIED** | 本报告 + 全部文档 + 状态文件更新 |
+| CLOSEOUT 交付治理 | **VERIFIED** | CL-01/CL-02 真实缺陷修复、WP4/WP6 报告补齐、PR #2 标题与描述更新、三处统计更正、CI 复验（§6） |
 
 ## 2. 本阶段真正新增的功能
 
@@ -50,14 +56,21 @@
 | 事后探针错误反驳/排除 Run 时假设 | WP4 误差分析 | 正确假设被误杀 → POST_HOC 降级+TIMING 生成 |
 | `ended_at` 在非终态提交被覆盖 | WP3 | 时间线数据失真 |
 | business_state 断言 INCONCLUSIVE（rule 格式）/Oracle 未绑定 → NOT_EVALUATED | WP8 测试 | 闭环验证暴露，已固化在测试 |
+| **CL-01**：`EgressProxyController` 用 `asyncio.to_thread(stop_evt.wait)` 占用线程池工作线程；代理先于 `stop()` 退出时该线程永久阻塞 → 解释器退出时 `concurrent.futures._python_exit` join 挂死 | 收尾复核（CI Nightly 45min 超时 + 本地 faulthandler 线程栈复现） | **P1**：Nightly backend-full 与 Release full-verification 在 pytest 打印结果后挂死至超时；修复后进程正常退出（14s） |
+| **CL-02**：登录 E2E 依赖 `apps/web/dist`，但 Nightly/Release 不构建前端 | 收尾复核（CI 日志 2 failed：`/runs` 未跳转 `/login`、`#login-username` 超时） | 2 个真实 E2E 在 CI 必失败（本地因已有 dist 通过）；两处 workflow 补构建步骤 |
 
 ## 4. 测试与验证汇总
 
-- 全量（单元+契约+集成）：**601 passed / 13 skipped**（skip 全部本地无 PG）；
-- E2E：**35 个真实 Chromium 用例**（登录 2、egress 集成 5、WP8 闭环 3、执行/目标策略/代理场景/执行链 25）分批全过；
-- axe：13 路由 **0 violations**；TypeScript + build 全绿；
+- 全量（单元+契约+集成+E2E）：收集 **657**，本地 **644 passed / 13 skipped / 0 failed，72.4s**
+  （Python 3.13；skip 全部为本地无 PG 的 parity/platform 用例）；
+  收尾修复前同一套件在 CI（Python 3.11）为 642 passed / 2 failed / 13 skipped（2 failed = CL-02）；
+- E2E：**30 个真实 Chromium 用例**（egress 代理 8、egress 集成 5、目标策略 5、执行链 4、
+  WP8 闭环 3、真实浏览器 3、登录 2）；收尾修复后子集回归 16 passed（egress×2 + WP8 闭环）；
+- WP4 专项：`tests/unit/test_intelligence_run010.py` **13 passed**；
+  `tests/integration/test_active_diagnosis_feedback.py` **11 passed**；
+- axe：13 路由 **0 violations**；TypeScript + build 在 CI `PR Gate / frontend` 通过；
 - Benchmark：14 场景 × 2 轮独立原始 JSONL（`docs/assets/run010/benchmark/`）；
-- CI：PR Gate 最新 HEAD 全绿；Nightly（8220479）success；Release Gate 修复后复验见 §6 追记。
+- CI：见 §6（PR Gate / Nightly / Release 的最新真实状态与本轮 CL-01/CL-02 修复后复验）。
 
 ## 5. 性能与安全
 
@@ -78,17 +91,36 @@
 | Benchmark 5 个场景缺口 | PARTIAL | LOCATOR 优先级/时序延迟复测/纯超时证据落盘 | WP5 报告 §4 给出改进方向 |
 | PG 运行时验证 | PARTIAL | 本地无 PG（测试 skip） | CI Service Container 已覆盖 |
 | WP8 首版被 AgentDR 拦截 | 已处置 | subprocess+env 字典模式（B-20） | 进程内替代实现已验证；恢复指引见 resume.md |
+| CL-01 代理线程池挂死 | **已修复（d4d59ba）** | 见 §3；CI 由 45/60 分钟超时变为 2m29s 正常结束 | 保留失败运行记录，不删除 |
+| CL-02 登录 E2E 缺前端产物 | **已修复（d4d59ba）** | 两处 workflow 补 `npm ci && npm run build` + dist fail-closed 校验 | 本地不依赖隐式产物 |
 
 生产风险：认证默认关闭的开发模式若误用于生产——已由 `auth_policy.py` 启动期
 fail-closed 兜底（production 环境未开认证直接启动失败）。
 
+## 6.1 最新 CI 结果（SHA `d4d59ba`）
+
+| 门禁 | 运行 | 结论 | 证据 |
+|---|---|---|---|
+| PR Gate（push） | [#45433891889](https://github.com/zjy110203/traceguard-imac/actions/runs/45433891889) | **success** | backend + frontend |
+| PR Gate（pull_request） | [#45433916576](https://github.com/zjy110203/traceguard-imac/actions/runs/45433916576) | **success** | — |
+| Nightly Gate | [#45433925669](https://github.com/zjy110203/traceguard-imac/actions/runs/45433925669) | **success（5/5 job，2m29s）** | backend-full **644 passed / 13 skipped，77.39s**；PG 16；npm audit 0；LLM smoke BLOCKED（缺 Secret，warning） |
+| Release Gate | [#45434549738](https://github.com/zjy110203/traceguard-imac/actions/runs/45434549738) | **success（4/4 job，2m27s）** | full-verification **644 passed / 13 skipped，67.71s**；`NIGHTLY_OK id=45433925669 head_sha=d4d59ba…` |
+
+对照（修复前，`f69c39b`，留档）：Nightly `45417381107` cancelled（45min 超时，2 failed + 挂死）、
+Release `45417391553` cancelled（60min 超时）。**所有最终 CI 结论对应 `d4d59ba`。**
+
 ## 7. GitHub 交付与 PR 状态
 
 - PR #2（`workbuddy/run008-quality-hardening` → `main`）自动包含 RUN-007~010 全部提交，保持 **open/HOLD**；
+- **PR #2 标题与描述已于 2026-11-25 00:16 CST 更新**为 `TraceGuard: RUN-007~RUN-010 Quality,
+  Security & Intelligence Integration`，覆盖交付范围、WP 成果、CI 结果、Benchmark 指标、
+  BLOCKED 项、LICENSE、PG/宿主级边界与暂不合并原因；
 - PR #1 保持 open 未动（其祖先已含于 PR #2）；未 reset/clean/强推/改写历史；
 - 合并决策：RUN-009 报告的 HOLD 条件中「认证未产品化」「用户态出口未接正式路径」
   已在 RUN-010 解决；B-17 与宿主级隔离仍未解除 → 维持 HOLD，待负责人决策；
-- 完整差异审查见 `docs/RUN-010-PR-REVIEW.md`。
+- 完整差异审查见 `docs/RUN-010-PR-REVIEW.md`，收尾与独立验收见 `docs/RUN-010-CLOSEOUT-REPORT.md`。
+
+> **CI 全绿 ≠ 达到生产标准。** 代码可合并条件与生产使用条件在两份报告中分列，不得混用。
 
 ## 8. 下一阶段建议
 

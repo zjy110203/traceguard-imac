@@ -1,7 +1,7 @@
 # TraceGuard 自主开发进度
 
 > **RUN-010 进度（2026-11-24 22:45 CST）**：WP0~WP9 全部完成并推送（HEAD 与 origin 同步）。
-> 验收矩阵、测试汇总（601 passed / E2E 35 / axe 0 违规）、BLOCKED 项见
+> 验收矩阵、测试汇总（**657 收集 / 644 passed / 13 skipped**、E2E **30**、axe 13 路由 0 违规）、BLOCKED 项见
 > `docs/RUN-010-FINAL-REPORT.md`。以下历史进度保留。
 
 > **RUN-009 WP0 权威状态摘要（2026-11-24 16:05 CST）**：下方 RUN-001 段是历史起点快照，不再代表当前状态。
@@ -190,3 +190,22 @@
 | WP5 CI 三级门禁 | ⚠️（未运行）→ ✅ **PASS**（同 commit 三级全绿） |
 | 分支推送 + PR | ❌ BLOCKED → ✅ **PASS**（PR #1） |
 | CI 首跑暴露缺陷 | 8 个（2 个产品缺陷 + 6 个测试/CI 缺陷），4 轮修完 |
+
+## RUN-010-FINAL-CLOSEOUT（2026-11-25 00:30 CST）
+
+- 基线复核：分支 `workbuddy/run008-quality-hardening`，HEAD `f69c39b` 与 origin 一致，工作区干净，
+  PR #2 head = 该 SHA；origin/main `ac2876e` 为 merge-base（ahead 61，无落后）。
+- **统计更正（以真实证据为准）**：RUN-010 提交 15→16、文件 66→77；测试 601→**657 收集 /
+  644 passed / 13 skipped**；E2E 35→**30**；PR #2 差异 691→**693 文件 / 61 提交**。
+- **CL-01（P1）**：`EgressProxyController` 用 `asyncio.to_thread(stop_evt.wait)` 占用线程池线程；
+  代理先于 `stop()` 退出时该线程永久阻塞，解释器退出阶段 `concurrent.futures._python_exit`
+  join 挂死 → CI Nightly backend-full 打印 "2 failed, 642 passed" 后静默 43 分钟被 45min 超时取消；
+  Release full-verification 同样挂死 60min。本地 faulthandler 线程栈复现并确认；改用轮询协程 +
+  退出时置位事件 + `shutdown_default_executor()`。修复后全量 72s 正常退出。
+- **CL-02**：登录 E2E 依赖 `apps/web/dist`，Nightly/Release 未构建前端 → `/runs` 无 SPA 路由
+  → 2 个真实 E2E 必失败。两处 workflow 补 `npm ci && npm run build` + `dist/index.html` fail-closed 校验。
+- 文档补齐：`docs/RUN-010-WP4-INTELLIGENCE.md`、`docs/RUN-010-WP6-FRONTEND.md`、
+  `docs/RUN-010-CLOSEOUT-REPORT.md`；FINAL-REPORT / PR-REVIEW / 台账 / 状态文件同步更新。
+- CI（SHA `d4d59ba`）：PR Gate push+PR 双 success；Nightly Gate 5/5 success（backend-full 2m29s，
+  644 passed / 13 skipped）；Release Gate 结果见 CLOSEOUT 报告 §4。
+- PR #2 标题与描述已更新为 RUN-007~RUN-010 集成状态；未合并、未改写历史、未强推。

@@ -53,10 +53,10 @@ B-17（Worker 四真实故障场景）保持 **BLOCKED**（未获安全批准，
 
 | 测试集 | 结果 |
 |---|---|
-| 单元 + 契约 + 集成 | **601 passed / 13 skipped**（skip 全部为本地无 PG） |
-| E2E（分批，内存约束） | 27 个既有 + WP8 新增 3 个：登录 2、egress 集成 5、执行 3、目标策略 4、RUN-009 代理场景 8、执行闭环 5、**WP8 完整闭环 3** 全部通过 |
+| 单元 + 契约 + 集成 + E2E | **657 收集 → 644 passed / 13 skipped / 0 failed**（skip 全部为本地无 PG）<br>*收尾更正（2026-11-25）：原文写 "601 passed"，为 WP8 时点的过期快照；同一套件在 `d4d59ba` 上实测 644 passed，CI（Python 3.11）亦为 644 passed / 13 skipped。* |
+| E2E（分批，内存约束） | 共 **30** 个真实浏览器用例：登录 2、egress 代理 8、egress 集成 5、目标策略 5、执行链 4、真实浏览器 3、**WP8 完整闭环 3**，全部通过（原文写"27 + 3"为重复计数） |
 | Ruff check + format | 全绿（196 files formatted） |
-| TypeScript + vite build | 全绿（vue-tsc 3.3.14） |
+| TypeScript + vite build | 全绿（vue-tsc 3.3.14；CI `PR Gate / frontend` 复验） |
 | axe 无障碍 | 13 路由 0 violations（WP6） |
 | CI（PR Gate） | 最新 HEAD 全绿（Nightly/Release 复验见 FINAL-REPORT） |
 

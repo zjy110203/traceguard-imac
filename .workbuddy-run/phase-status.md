@@ -125,3 +125,17 @@
 | 5 | 13 全链路集成与交付 | READY_FOR_REVIEW → **ACCEPTED**（PR #1 + 三级门禁同 commit 全绿） |
 | — | CI 三级门禁 | BLOCKED → **ACCEPTED**（VERIFIED，含 attestation `head_sha` 严格匹配） |
 | 4 | 10 Oracle-Protected Self-Healing | 仍 **PARTIAL**（自愈未闭环，0/1 回归） |
+
+## RUN-010-FINAL-CLOSEOUT 状态（2026-11-25 00:30 CST）
+
+| 项 | 状态 | 依据 |
+|---|---|---|
+| RUN-010 WP0~WP9 | **ACCEPTED（收尾复核后）** | 全部交付物与测试证据核对一致；统计数字已按最新 HEAD 更正 |
+| WP4 诊断 v2 | **ACCEPTED（准确率无增益，如实记录）** | 13 专项用例通过；Benchmark C/D 臂均 9/14，graph_changed 2/14 |
+| WP6 前端无障碍 | **ACCEPTED（范围受限）** | 13 路由 axe 0 violations；键盘/读屏/动效/缩放未覆盖（报告 §7） |
+| CI 三级门禁（`d4d59ba`） | **PR Gate / Nightly Gate PASS；Release Gate 见 CLOSEOUT §4** | CL-01 修复后 Nightly backend-full 2m29s 正常结束（此前 45min 超时） |
+| B-17 Worker 真实故障矩阵 | **BLOCKED** | 安全批准未解除，未绕过 |
+| 宿主级网络隔离 | **BLOCKED** | 无 pf/防火墙权限 |
+| Benchmark LLM 臂 / 人工基线 | **BLOCKED** | 无计费授权 / 无真人 |
+| LICENSE | **NEEDS_DECISION** | 待负责人决策 |
+| 生产就绪 | **NOT READY** | 见 FINAL-REPORT §6 与 CLOSEOUT §5 |

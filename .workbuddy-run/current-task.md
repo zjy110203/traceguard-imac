@@ -1,6 +1,16 @@
 
 # 当前任务（RUN-010 交付，2026-11-24）
 
+> **2026-11-25 00:30 CST 收尾完成（RUN-010-FINAL-CLOSEOUT）**：统计更正、CL-01/CL-02 缺陷修复、
+> WP4/WP6 报告补齐、PR #2 标题与描述更新；三级 CI 门禁在 `d4d59ba` 上全部 success。
+> 待负责人决策：PR #2 合并时机、LICENSE 选择、B-17 安全批准。
+> 权威报告：`docs/RUN-010-CLOSEOUT-REPORT.md`、`docs/RUN-010-FINAL-REPORT.md`。
+> 历史内容保留在下方。
+
+---
+
+# 当前任务（RUN-010 交付，2026-11-24 22:45 CST）
+
 > RUN-010 已完成：全部 10 个工作包交付，见 `docs/RUN-010-FINAL-REPORT.md`。
 > 待负责人决策：PR #2 合并时机、LICENSE 选择、B-17 安全批准。
 > 历史内容保留在下方。
