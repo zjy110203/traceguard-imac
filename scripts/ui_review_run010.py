@@ -187,8 +187,9 @@ def main() -> int:
                 page.wait_for_timeout(700)
                 page.add_script_tag(path=str(axe_path))
                 axe_result = page.evaluate(
-                    "async () => await axe.run(document, { runOnly: { type: 'rule', values: %s } })"
-                    % json.dumps(AUTH_RULES)
+                    "async () => await axe.run(document, { runOnly: { type: 'rule', values: "
+                    + json.dumps(AUTH_RULES)
+                    + " } })"
                 )
                 violations = [
                     {

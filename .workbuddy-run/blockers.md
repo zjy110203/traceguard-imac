@@ -1,5 +1,19 @@
 # 阻塞项（RUN-002）
 
+> **RUN-010 安全事件与阻塞状态（2026-11-24 22:05 CST）**：
+> - **B-20 AgentDR info_theft_steal_env_keys 拦截**：WP8 闭环测试首次写入被拦两次。
+>   根因：文件含 `subprocess` + `env=` 环境字典传递模式（父 shell 环境可能含真实凭据，
+>   向子进程传递被识别为凭据外传）。**未绕过、未改参数重试被拦内容、未触碰 AgentDR 策略**。
+>   处置：改用进程内实现（monkeypatch.setenv + TestClient + 直接服务调用，零子进程/零环境字典），
+>   与已过审的 test_auth_rbac_run010.py 同构——该写入获放行，WP8 闭环已恢复推进。
+>   全程只用虚拟测试口令，未读取/打印/传递任何真实凭据。
+> - B-17（Worker 四真实故障场景）：仍 BLOCKED（AgentDR 拦截未解除，未绕过），契约测试 4/4 保留。
+> - 宿主级网络隔离：BLOCKED（macOS 无 pf 权限；用户态代理三层防护已验证，不外推）。
+> - Benchmark LLM 臂 / 人工基线：BLOCKED（无计费授权 / 无真人），不冒充。
+> - LICENSE：NEEDS_DECISION（建议已出，待负责人选定，不擅自选定条款）。
+> - Benchmark v4 两轮已真实执行（C 臂 64.3%）；5 个场景缺口如实记录于 WP5 报告。
+> 以下历史记录保留不覆盖。
+
 > **RUN-009 最终状态（2026-11-24）**：B-17 四个 Worker 故障场景仍 **BLOCKED**（AgentDR 拦截未解除，本轮未绕过、未重试）。
 > 宿主级出站封锁 BLOCKED（无防火墙权限）；axe 自动化无障碍审查 BLOCKED（无 axe-core）；
 > Benchmark LLM 臂 BLOCKED（未获计费授权）；人工基线 BLOCKED（无真人）；vue-tsc@3 升级 NEEDS_DECISION。

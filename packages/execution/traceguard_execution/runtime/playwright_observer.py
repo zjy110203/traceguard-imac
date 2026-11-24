@@ -75,6 +75,9 @@ class PlaywrightObserver(Observer):
                 "channel": self._manager.launch_channel,
                 "version": self._manager._browser.version if self._manager._browser else "",
                 **self._manager.config.to_dict(),
+                # RUN-010 WP2/WP8：运行报告携带受控出站代理审计（含 run 关联），
+                # 使"正式 Run 强制经代理"成为报告内可核验证据（指令 §2.5）。
+                "egress": self._manager.egress_audit(),
             }
         except Exception:  # noqa: BLE001
             self.browser_info = {"channel": self._manager.launch_channel}
@@ -337,6 +340,12 @@ class PlaywrightObserver(Observer):
             self._trace_data = self.session.stop_trace()
             self.session.close()
             self.session = None
+        # RUN-010：报告构建前刷新代理审计终值（setup 时的快照不含执行期流量）
+        try:
+            if self._manager is not None:
+                self.browser_info["egress"] = self._manager.egress_audit()
+        except Exception:  # noqa: BLE001
+            pass
 
     def drain_trace(self) -> dict[str, Any] | None:
         """Run 结束后取 trace zip，通常由 Pipeline 上传为证据。"""

@@ -1,5 +1,15 @@
 # 中断恢复指引（RUN-006 结束点）
 
+> **RUN-010 恢复摘要（2026-11-24 22:05 CST）**：RUN-010 WP0~WP7 已完成并推送
+> （分支 `workbuddy/run008-quality-hardening`，HEAD=1479982 与 origin 同步）。
+> WP8 闭环测试曾触发 AgentDR info_theft_steal_env_keys（subprocess+env 字典模式），
+> **已按安全边界处置**：不绕过、不重试被拦内容，改进程内实现（零子进程/零环境字典/
+> 虚拟测试口令）后获放行，见 `tests/e2e/test_full_loop_run010.py` 与 blockers.md B-20。
+> 恢复路径：WP8 测试验证 → WP9 文档（RUN-010-FINAL-REPORT.md 等）→ CI 门禁复验 → 收口。
+> 恢复时必读：`docs/RUN-010-BASELINE.md` → 各 WP 报告 → `.workbuddy-run/blockers.md`（B-20）。
+> 不要重试被 AgentDR 拦截的子进程+环境字典写入；不要绕过 BuddySentinel。
+> 以下历史记录保留不覆盖。
+
 > **RUN-009 恢复摘要（2026-11-24 更新）**：RUN-009 已完成并交付，最终状态见 `docs/RUN-009-FINAL-REPORT.md`。
 > 权威起点链：`ac2876e`（origin/main）→ `ce1acea`（RUN-007）→ `cb80591`（RUN-008）→ RUN-009 新提交（见 git log）。
 > `40efee6` 仍是 RUN-008 代码/CI 基线；PR #2 保持 open/HOLD，合并需按最终报告重新评估。
