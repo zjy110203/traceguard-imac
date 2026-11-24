@@ -1,5 +1,10 @@
 # TraceGuard 阶段与里程碑验收状态（RUN-002 复核）
 
+> **RUN-009 WP0 权威状态摘要（2026-11-24 16:05 CST）**：下方 RUN-002~RUN-007 表格为历史快照。
+> 当前起点 HEAD `cb80591`，RUN-008 已完成：WP0/1/2/4/5/7/8 VERIFIED 或完成，WP3/WP6 PARTIAL；
+> B-17、LLM smoke、Benchmark LLM/人工基线 BLOCKED；真实认证/RBAC NOT_IMPLEMENTED。
+> RUN-009 各 WP 状态以 `docs/RUN-009-FINAL-REPORT.md`（待生成）为准；权威基线见 `docs/RUN-009-BASELINE.md`。历史记录保留不覆盖。
+
 状态枚举：NOT_STARTED / IN_PROGRESS / BLOCKED / READY_FOR_REVIEW / ACCEPTED
 规则：只有具备真实验收证据（测试日志、运行结果）才可 ACCEPTED；代码写完 ≠ 完成。
 最后更新：2026-11-22 13:40

@@ -1,5 +1,16 @@
 # 阻塞项（RUN-002）
 
+> **RUN-009 最终状态（2026-11-24）**：B-17 四个 Worker 故障场景仍 **BLOCKED**（AgentDR 拦截未解除，本轮未绕过、未重试）。
+> 宿主级出站封锁 BLOCKED（无防火墙权限）；axe 自动化无障碍审查 BLOCKED（无 axe-core）；
+> Benchmark LLM 臂 BLOCKED（未获计费授权）；人工基线 BLOCKED（无真人）；vue-tsc@3 升级 NEEDS_DECISION。
+> 其余 RUN-009 目标已完成，见 `docs/RUN-009-FINAL-REPORT.md`。以下历史记录保留不覆盖。
+
+> **RUN-009 WP0 权威状态摘要（2026-11-24 16:05 CST）**：下方表格为历史记录。
+> 当前权威起点 HEAD `cb80591`；B-17（四个 Worker 补充故障场景，AgentDR 两次拦截）保持 **BLOCKED**，不得换工具/拆写入/改参数规避；
+> B-18（60 分钟长稳）已于 RUN-008 解除，下方「仍在运行、JSON 未生成」为陈旧中间态；
+> LLM smoke、Benchmark LLM/人工基线 BLOCKED；真实认证/RBAC 为 NOT_IMPLEMENTED；dev-only moderate×3 已登记待 WP8 处置。
+> 详见 `docs/RUN-009-BASELINE.md`。以下历史记录保留不覆盖。
+
 | 编号 | 阻塞 | 影响 | 处理 |
 |---|---|---|---|
 | B-01 | 无 LLM API Key / 本地模型 | Benchmark B/D 组的 LLM 基线、LLM 生成用例无法执行 | 代码留 ModelGateway 接口；实验标记 BLOCKED，不产数值 |

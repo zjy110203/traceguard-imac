@@ -1,5 +1,11 @@
 # TraceGuard 自主开发进度
 
+> **RUN-009 WP0 权威状态摘要（2026-11-24 16:05 CST）**：下方 RUN-001 段是历史起点快照，不再代表当前状态。
+> RUN-009 已完成：WP0/1/2/5/6/7 通过，WP3/WP4 PARTIAL（宿主级网络封锁与 B-17 四场景如实 BLOCKED），
+> WP8 PARTIAL（vue-tsc 升级 NEEDS_DECISION）。最终状态见 `docs/RUN-009-FINAL-REPORT.md`；
+> 当前分支 `workbuddy/run008-quality-hardening`，`origin/main` = `ac2876e`，领先 32+ 提交。
+> 不得把 `40efee6` 的三段 CI 结果外推到后续提交。以下历史记录保留不覆盖。
+
 > 本目录为长期自主运行的持久化记录。每次中断后先读 `resume.md`，再读本文件与 `phase-status.md`。
 > 严禁在此保存密钥、Token、密码或真实凭据。
 

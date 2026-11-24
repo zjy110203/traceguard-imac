@@ -1,5 +1,11 @@
 # 中断恢复指引（RUN-006 结束点）
 
+> **RUN-009 恢复摘要（2026-11-24 更新）**：RUN-009 已完成并交付，最终状态见 `docs/RUN-009-FINAL-REPORT.md`。
+> 权威起点链：`ac2876e`（origin/main）→ `ce1acea`（RUN-007）→ `cb80591`（RUN-008）→ RUN-009 新提交（见 git log）。
+> `40efee6` 仍是 RUN-008 代码/CI 基线；PR #2 保持 open/HOLD，合并需按最终报告重新评估。
+> 下一步先读 `docs/RUN-009-FINAL-REPORT.md` → `docs/RUN-009-BASELINE.md` → `docs/RUN-009-REVIEW-REPORT.md`。
+> 以下历史记录保留不覆盖。
+
 > 下一次运行的第一步：读本文件 → `docs/RUN-006-BASELINE.md` → `docs/RUN-006-IMPLEMENTATION-REPORT.md`
 > → `docs/RUN-006-TEST-REPORT.md` → `docs/RUN-006-SECURITY-RELIABILITY.md` → `docs/RUN-006-DECISION-REQUESTS.md`
 > → `docs/FEATURE-STATUS.md`（RUN-006 段）→ `.workbuddy-run/progress.md`。
