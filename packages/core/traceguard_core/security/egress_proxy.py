@@ -170,8 +170,15 @@ class EgressProxy:
         self._server = None
 
     async def serve(self) -> None:
-        """便捷入口：启动后永久服务（用于子进程模式）。"""
-        await self.start()
+        """便捷入口：启动后永久服务（用于子进程模式）。
+
+        RUN-010 WP2 真实缺陷修复：本方法原先无条件再调一次 start()。当调用方
+        已经手动 start()（EgressProxyController 场景）时，会再绑一个新临时端口
+        并覆盖 _server —— 先前的监听 socket 泄漏，浏览器拿到的是第二个端口，
+        而审计/存活检查仍指向第一个。现在幂等：已启动则直接服务现有 server。
+        """
+        if self._server is None:
+            await self.start()
         if self._server is None:  # pragma: no cover
             return
         async with self._server:

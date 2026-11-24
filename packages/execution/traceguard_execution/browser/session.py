@@ -73,6 +73,14 @@ class BrowserSession:
             self.policy.pin_dns()
         except Exception:  # noqa: BLE001 - 钉不住不影响 URL 层白名单
             pass
+        # RUN-010 WP2：与受控出站代理共享同一目标策略（单一授权事实源），
+        # 并把 Run 关联写入代理审计。Explorer 与正式 Runner 自动一致。
+        try:
+            manager.set_egress_policy(self.policy)
+            if run_id:
+                manager.set_run_context(run_id=run_id)
+        except Exception:  # noqa: BLE001 - 策略同步失败不阻断会话层既有防护
+            pass
         self.blocked_requests: list[dict[str, Any]] = []
         self.redirect_checks: list[dict[str, Any]] = []
         self.context = manager.new_context()
@@ -266,7 +274,15 @@ class BrowserSession:
             self.websocket_guard = "REGISTER_FAILED"
 
     def check_target(self, url: str, *, landed: bool = False) -> TargetCheck:
-        """导航/跳转前后复核目标地址；不通过则抛 TargetAccessDenied。"""
+        """导航/跳转前后复核目标地址；不通过则抛 TargetAccessDenied。
+
+        RUN-010 WP2：导航前断言受控出站代理存活——代理死亡时执行必须失败关闭，
+        不允许浏览器在无保护状态下继续（双保险：代理死了浏览器也连不出去）。
+        """
+        try:
+            self.manager.require_egress_alive()
+        except Exception as exc:  # noqa: BLE001 - 统一转为会话层拒绝错误
+            raise TargetAccessDenied(str(exc), url) from exc
         decision = self.policy.check_landed_url(url) if landed else self.policy.check(url)
         if not decision.allowed:
             raise TargetAccessDenied(decision.reason, url)
