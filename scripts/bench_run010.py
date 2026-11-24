@@ -61,7 +61,10 @@ from traceguard_api.services.probe_service import ProbeService  # noqa: E402
 from traceguard_benchmark.scenarios_v4 import GT_MANAGER, V4_SCENARIOS  # noqa: E402
 from traceguard_core.config import reset_settings_cache  # noqa: E402
 from traceguard_evidence.diagnosis.engine import DiagnosisEngine  # noqa: E402
-from traceguard_evidence.graph.adjudication import GraphAdjudicator  # noqa: E402
+from traceguard_evidence.graph.adjudication import (  # noqa: E402
+    GraphAdjudicator,
+    evidence_meta_from_rows,
+)
 from traceguard_evidence.probe.feedback import ProbeSignal, merge_signals  # noqa: E402
 from traceguard_persistence import Database  # noqa: E402
 
@@ -401,7 +404,6 @@ def _probe_signals_from_replays(
     """从真实落盘证据构造探针信号；time_aligned=False 时把事后观测当作权威（对照组）。"""
     run_id = primary["run_id"]
     evidence = {e.evidence_id: e for e in env.rt.evidence.list(run_id=run_id, limit=500)}
-    run = env.rt.tasks.get_run(run_id) or {}
     signals: list[ProbeSignal] = []
     # http_state：独立状态查询（真实 TeamFlow API）
     for e in evidence.values():
@@ -420,7 +422,7 @@ def _probe_signals_from_replays(
                         "template": "get_state_projects",
                         "response": {"ok": True, "count": count or 0, "keys": []},
                     },
-                    observed_at=_time.time(),
+                    observed_at=time.time(),
                     run_scope=False if time_aligned else True,
                 )
             )
