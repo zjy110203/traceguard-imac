@@ -1,0 +1,52 @@
+=== PyPI JSON metadata: httpx2 ===
+{
+  "name": "httpx2",
+  "version": "2.16.2",
+  "summary": "The next generation HTTP client.",
+  "author": null,
+  "author_email": "Tom Christie <tom@tomchristie.com>",
+  "maintainer": null,
+  "home_page": null,
+  "project_urls": {
+    "Changelog": "https://github.com/pydantic/httpx2/blob/main/src/httpx2/CHANGELOG.md",
+    "Homepage": "https://github.com/pydantic/httpx2",
+    "Source": "https://github.com/pydantic/httpx2"
+  },
+  "requires_python": ">=3.11",
+  "classifiers": [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Web Environment",
+    "Framework :: AnyIO",
+    "Framework :: AsyncIO",
+    "Framework :: Trio",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+    "Topic :: Internet :: WWW/HTTP"
+  ]
+}
+=== PyPI JSON metadata: httpx (对照) ===
+{
+  "name": "httpx",
+  "version": "0.28.1",
+  "summary": "The next generation HTTP client.",
+  "author": null,
+  "author_email": "Tom Christie <tom@tomchristie.com>",
+  "maintainer": null,
+  "home_page": null,
+  "project_urls": {
+    "Changelog": "https://github.com/encode/httpx/blob/master/CHANGELOG.md",
+    "Documentation": "https://www.python-httpx.org",
+    "Homepage": "https://github.com/encode/httpx",
+    "Source": "https://github.com/encode/httpx"
+  }
+}
+=== lock 与 installed 版本一致性 ===
+lock条目数= 32  不一致数= 0

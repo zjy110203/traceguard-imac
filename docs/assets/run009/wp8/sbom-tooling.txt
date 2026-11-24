@@ -1,0 +1,15 @@
+=== SBOM 工具可用性 ===
+(syft: 未安装)
+(cyclonedx-py: 未安装)
+npm sbom: Generate a Software Bill of Materials (SBOM)  
+pip-audit: 临时目录 /tmp/traceguard-wp8-pip-audit 中 2.10.1（未写入项目 .venv）
+
+=== 实际执行命令与产物 ===
+(cd apps/web && npm sbom --sbom-format spdx > sbom-npm-spdx.json)  -> exit=0, 56 packages
+(cd apps/web && npm sbom --sbom-format cyclonedx > sbom-npm-cyclonedx.json) -> exit=0, 55 components, CycloneDX 1.5
+PYTHONPATH=/tmp/traceguard-wp8-pip-audit .venv/bin/python -m pip_audit -r requirements.lock.txt --disable-pip --no-deps --format cyclonedx-json -o sbom-python-cyclonedx.json -> exit=0, 32 components, 0 vulnerabilities
+
+=== 备注 ===
+- pip-audit 的 cyclonedx-json 是「审计结果 BOM」（含 vulnerabilities 字段），非纯组件 SBOM；如需纯 SBOM 可用 cyclonedx-py（当前未安装，可后续引入）。
+- Python SBOM 仅覆盖 requirements.lock.txt 的 32 个固定包；lock 不完整（缺 5 个声明依赖 + 8 个已安装传递/工具包），覆盖率 PARTIAL。
+- npm SBOM 覆盖 apps/web 依赖树（SPDX 56 packages / CycloneDX 55 components），已确认含 dev-only 的 vue-tsc、@vue/language-core、minimatch；与 npm audit 的 105 条记录口径不同（sbom 去重/不含全部可选平台包），属统计口径差异。

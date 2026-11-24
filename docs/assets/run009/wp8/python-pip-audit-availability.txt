@@ -1,0 +1,27 @@
+=== pip-audit 命令探测 ===
+(command not found)
+/Users/dlp--test/Desktop/traceguard/.venv/bin/python: No module named pip_audit
+=== pip install --dry-run pip-audit (仅探测，不安装) ===
+  Downloading defusedxml-0.7.1-py2.py3-none-any.whl.metadata (32 kB)
+Collecting msgpack<2.0.0,>=0.5.2 (from CacheControl>=0.13.0->CacheControl[filecache]>=0.13.0->pip-audit)
+  Downloading msgpack-1.2.4-cp313-cp313-macosx_11_0_arm64.whl.metadata (8.3 kB)
+Collecting filelock>=3.8.0 (from CacheControl[filecache]>=0.13.0->pip-audit)
+  Downloading filelock-4.3.1-py3-none-any.whl.metadata (2.3 kB)
+Requirement already satisfied: pip in ./.venv/lib/python3.13/site-packages (from pip-api>=0.0.28->pip-audit) (26.3)
+Collecting pyparsing (from pip-requirements-parser>=32.0.0->pip-audit)
+  Downloading pyparsing-3.3.3-py3-none-any.whl.metadata (5.9 kB)
+Collecting charset_normalizer<4,>=2 (from requests>=2.31.0->pip-audit)
+  Downloading charset_normalizer-3.5.3-cp313-cp313-macosx_10_13_universal2.whl.metadata (43 kB)
+Requirement already satisfied: idna<4,>=2.5 in ./.venv/lib/python3.13/site-packages (from requests>=2.31.0->pip-audit) (3.20)
+Collecting urllib3<3,>=1.26 (from requests>=2.31.0->pip-audit)
+  Downloading urllib3-2.8.0-py3-none-any.whl.metadata (7.4 kB)
+Requirement already satisfied: certifi>=2023.5.7 in ./.venv/lib/python3.13/site-packages (from requests>=2.31.0->pip-audit) (2026.11.20)
+Collecting markdown-it-py>=2.2.0 (from rich>=12.4->pip-audit)
+  Downloading markdown_it_py-4.3.0-py3-none-any.whl.metadata (7.9 kB)
+Requirement already satisfied: pygments<3.0.0,>=2.13.0 in ./.venv/lib/python3.13/site-packages (from rich>=12.4->pip-audit) (2.21.0)
+Collecting mdurl~=0.1 (from markdown-it-py>=2.2.0->rich>=12.4->pip-audit)
+  Downloading mdurl-0.1.2-py3-none-any.whl.metadata (1.6 kB)
+Would install CacheControl-0.15.0 boolean.py-5.0 charset-normalizer-3.5.3 cyclonedx-python-lib-11.12.0 defusedxml-0.7.1 filelock-4.3.1 license-expression-30.4.4 markdown-it-py-4.3.0 mdurl-0.1.2 msgpack-1.2.4 packageurl-python-0.17.6 pip-requirements-parser-32.0.1 pip_api-0.0.35 pip_audit-2.10.1 platformdirs-4.14.8 py-serializable-2.2.0 pyparsing-3.3.3 requests-2.34.2 rich-15.0.0 sortedcontainers-2.4.0 tomli-2.5.0 tomli_w-1.2.0 urllib3-2.8.0
+=== PyPI 查询 httpx2 / mypy (只读元数据) ===
+httpx2 (2.16.2)
+Available versions: 2.16.2, 2.16.1, 2.16.0, 2.15.1, 2.15.0, 2.14.0, 2.13.1, 2.13.0, 2.12.0, 2.11.0, 2.10.0, 2.9.1, 2.9.0, 2.8.0, 2.7.0, 2.6.0, 2.5.0, 2.4.0, 2.3.0, 2.2.0, 2.1.0, 2.0.0
