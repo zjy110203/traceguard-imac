@@ -1,5 +1,24 @@
 # 功能状态矩阵（更新至 2026-11-23 RUN-004-FE）
 
+> **RUN-009 WP0 状态更正（2026-11-24 16:05 CST）**：下方条目为历史快照。
+> 当前 HEAD `cb80591`。RUN-008 三段 CI 在 `40efee6` 上全绿（PR `45335765297` / Nightly `45335777381` / Release `45336007166`），
+> 下方将 Release `45336007166` 标为「进行中」的条目已过时；`cb80591` 只改恢复文件，不得外推 CI 结论。
+> 前端旧验收仅覆盖 12 视图（原始 JSON 中 run_id/diagnosis_id 为空），RUN-009 WP1 正在补齐 14/14；认证/RBAC NOT_IMPLEMENTED。
+> 权威基线见 `docs/RUN-009-BASELINE.md`。历史条目保留不覆盖。
+
+## RUN-009 功能状态（2026-11-24，权威）
+
+| 能力 | 状态 | 证据 / 说明 |
+|---|---|---|
+| 真实身份认证 / RBAC / CSRF / 审计 | 已运行验证 | `docs/RUN-009-WP2-AUTH-RBAC.md`；9 个安全用例 + 全量回归；前端登录页未接入 |
+| 受控出站代理（用户态） | 已运行验证（部分） | `docs/RUN-009-WP3-NETWORK-SECURITY.md`；未授权命中 0；宿主级封锁 BLOCKED |
+| 14/14 前端业务路由验收 | 已运行验证 | `docs/RUN-009-WP1-FRONTEND-REPORT.md`；154 截图；axe 自动化 BLOCKED |
+| 资源监控 / 多 Worker 性能基线 | 已运行验证 | `docs/RUN-009-WP5-PERFORMANCE.md`；吞吐 12.37→32.74 runs/min |
+| 诊断增益（EG/AP）研究 | 已运行验证（含负结果） | `docs/RUN-009-WP6-AGENT-DIAGNOSIS.md` |
+| Benchmark v4 | 已运行验证（LLM/人工臂 BLOCKED） | `docs/RUN-009-WP7-BENCHMARK.md` |
+| Worker 四场景故障注入 | 阻塞 | B-17 未解除，契约级测试已补 |
+| 依赖升级（vue-tsc 3.x） | 待决策 | `docs/RUN-009-WP8-SUPPLY-CHAIN.md` |
+
 > 历史口径：RUN-002 基线状态保留在本文件原有条目中；RUN-003-G 真实 LLM 接入与 RUN-004-FE 前端产品化升级按下列条目更新。历史 RUN-002/RUN-003 报告不改写。
 
 状态口径：

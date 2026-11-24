@@ -1,3 +1,15 @@
+# 当前任务（RUN-009 交付，2026-11-24）
+
+> 历史标题「RUN-002 结束点」保留在下方。RUN-009 已完成，最终状态见 `docs/RUN-009-FINAL-REPORT.md`。
+
+## RUN-009 收尾
+
+- WP0/1/2/5/6/7 通过；WP3/WP4/WP8 PARTIAL（宿主级网络封锁、B-17 四场景、vue-tsc 升级如实 BLOCKED/NEEDS_DECISION）。
+- 新增认证/RBAC、受控出站代理、14/14 路由验收、资源监控、Benchmark v4、供应链审计与完整交付报告。
+- PR #2 保持 open/HOLD，合并决策记录在 `docs/RUN-009-REVIEW-REPORT.md` 与最终报告。
+
+## 历史快照（RUN-002 结束点）
+
 # 当前任务（RUN-002 结束点）
 
 ## 已完成

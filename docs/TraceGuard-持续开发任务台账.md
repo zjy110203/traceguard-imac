@@ -1,5 +1,25 @@
 # TraceGuard 持续开发任务台账
 
+> **RUN-009 WP0 状态更正（2026-11-24 16:05 CST）**：下方 RUN-002~RUN-008 条目为历史台账。
+> 当前 HEAD `cb80591`；RUN-008 实际结论：WP4/WP7 VERIFIED、WP8 完成，R8-08/R8-11/R8-12 原标「进行中」已过时；
+> WP3/WP6 仍是 PARTIAL，B-17/LLM/Benchmark LLM 与人工基线 BLOCKED，认证/RBAC NOT_IMPLEMENTED。
+> 权威基线见 `docs/RUN-009-BASELINE.md`，复核见 `docs/RUN-009-REVIEW-REPORT.md`。历史条目保留不覆盖。
+
+## RUN-009 任务台账（2026-11-24，权威）
+
+| 编号 | 任务 | 状态 | 证据 |
+|---|---|---|---|
+| R9-01 | WP0 状态复核 + PR 集成 | PASS | `docs/RUN-009-BASELINE.md`、`docs/RUN-009-REVIEW-REPORT.md`、PR #2（open/HOLD） |
+| R9-02 | WP1 14/14 路由验收 | PASS（功能）/ PARTIAL（axe 缺失） | `docs/RUN-009-WP1-FRONTEND-REPORT.md`、154 张截图、`route-coverage.json` |
+| R9-03 | WP2 认证/RBAC/CSRF/审计 | PASS | `docs/RUN-009-WP2-AUTH-RBAC.md`、9 个安全用例 + 全量回归 |
+| R9-04 | WP3 受控出站代理 | PARTIAL（宿主级封锁 BLOCKED） | `docs/RUN-009-WP3-NETWORK-SECURITY.md`、17/17 检查、未授权命中 0 |
+| R9-05 | WP4 Worker 故障矩阵 | PARTIAL（4 场景 BLOCKED/B-17） | `docs/RUN-009-WP4-WORKER-FAULT-MATRIX.md`、契约测试 4/4 |
+| R9-06 | WP5 资源监控与性能基线 | PASS | `docs/RUN-009-WP5-PERFORMANCE.md`、33 帧真实采样 |
+| R9-07 | WP6 诊断增益研究 | PASS（含明确负结果） | `docs/RUN-009-WP6-AGENT-DIAGNOSIS.md` |
+| R9-08 | WP7 Benchmark v4 | PASS（LLM/人工臂 BLOCKED） | `docs/RUN-009-WP7-BENCHMARK.md`、2 轮原始样本 |
+| R9-09 | WP8 供应链治理 | PARTIAL（升级 NEEDS_DECISION） | `docs/RUN-009-WP8-SUPPLY-CHAIN.md`、SBOM 三份 |
+| R9-10 | WP9 最终集成与交付 | 见 `docs/RUN-009-FINAL-REPORT.md` | — |
+
 > 生成时间：2026-11-22（RUN-002）
 > 依据：工作区真实代码 + `资料/` 设计资料 + `.workbuddy-run/` 历史记录。
 > 状态枚举：TODO / IN_PROGRESS / PASS / FAIL / BLOCKED / NEEDS_REVIEW

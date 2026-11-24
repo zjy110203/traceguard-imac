@@ -4,6 +4,24 @@ Agentic Web UI Testing & Quality Intelligence Platform（智能 Web UI 自动化
 
 > 真实浏览器执行 · 业务事实校验 · 证据可追溯 · 诊断与修复闭环
 
+## RUN-009 新增能力（2026-11-24）
+
+- **真实身份认证与 RBAC**：本地认证（PBKDF2 密码、HttpOnly 会话、CSRF、登录限速）、四角色权限矩阵、
+  服务端 Principal 注入审批主体（请求体 `reviewer`/`approved_by` 不再可信）、审计日志哈希链；
+  `TG_AUTH_ENABLED=true` 时全站 fail-closed，未认证请求一律 401，不再回退匿名管理员。
+- **受控出站代理**（用户态）：HTTP/HTTPS/CONNECT 在请求发出前按 `TargetPolicy` 校验，逐跳重定向复核、
+  DNS pinning、WebSocket 守卫、私网/链路本地拒绝；真实验证中未授权服务器收到请求数为 0。
+  宿主级网络封锁仍 BLOCKED（无防火墙权限），不把用户态代理写成生产级隔离。
+- **14/14 前端业务路由验收**：从 `router.ts` 自动解析路由，154 张真实截图覆盖 15 视图 × 4 断点 × 双主题、
+  四态、刷新/直达 URL/前进后退/真实交互；发现 6 个视图的表单控件缺可访问标签（已记录，未在本轮改 UI）。
+- **资源监控与性能基线**：基于 `libproc.dylib` 的真实 CPU/RSS 采样（不使用 ps/proc）；
+  1/2/4 Worker 并行入队实测吞吐 12.37 → 23.67 → 32.74 runs/min，队列等待 12.4s → 2.2s，内存随 Worker 线性增长。
+- **诊断增益研究（WP6/WP7）**：19 场景逐场景误差分析证明 RUN-008 中 D/E=C 的根因是探针证据未回灌、
+  图只升置信度不改主因；v4 消融臂实测「真实回灌探针」在当前时序错位下产生**负增益**（覆盖率 24/38→16/38），
+  并给出三条明确的增益前提，而非编造提升。
+- **Worker 故障契约**：FINALIZING 提前判 Task FAILED 的真实缺陷已修复；四个真实进程故障场景
+  仍因 B-17（AgentDR 拦截）保持 BLOCKED，未伪造通过。
+
 ## 现在能做什么
 
 - 用 **真实 Chromium** 执行 Web UI 用例，逐步采集截图 / DOM / ARIA / 网络 / 控制台证据；

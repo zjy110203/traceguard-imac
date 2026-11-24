@@ -1,5 +1,15 @@
 # 安全测试报告（RUN-002 实测）
 
+> **RUN-009 更新（2026-11-24）**：本文件下方为 RUN-002 历史实测口径。RUN-009 新增：
+> 1) 真实认证/RBAC/CSRF/审计（`docs/RUN-009-WP2-AUTH-RBAC.md`）——`TG_AUTH_ENABLED=true` 时未认证请求
+>    fail-closed（401），审批主体只来自服务端 Principal，请求体声明的审批人被忽略；
+> 2) 受控出站代理（`docs/RUN-009-WP3-NETWORK-SECURITY.md`）——HTTP/HTTPS/CONNECT 在出站前校验，
+>    真实验证中未授权服务器收到请求数为 0；宿主级出口封锁、浏览器内核 DNS、TLS 内容检查仍 BLOCKED/PARTIAL；
+> 3) 供应链审计（`docs/RUN-009-WP8-SUPPLY-CHAIN.md`）——npm 3 个 moderate 均为 dev-only 链
+>    （vue-tsc→@vue/language-core→minimatch，生产制品零影响），Python pip-audit 无已知漏洞；
+>    唯一修复路径 `vue-tsc@3` 为 semver-major，标 NEEDS_DECISION，未用 `--force`。
+> 两套 URL 安全规则并存的现状未变：`policy.py`（旧）与 `target_policy.py`（现行）不得混用。
+
 ## 1. 威胁模型（本地受控环境）
 
 | 威胁 | 攻击面 | 本版本对策 | 验证 |

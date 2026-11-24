@@ -1,5 +1,11 @@
 # 性能与可靠性报告（本机实测）
 
+> **RUN-009 更新（2026-11-24）**：新增多 Worker 资源监控与吞吐基线（`docs/RUN-009-WP5-PERFORMANCE.md`）。
+> 方法：`libproc.dylib` 真实采样（不使用 ps/proc），6 个 Run 一次性入队，隔离库 + 隔离端口。
+> 1/2/4 Worker：吞吐 **12.37 / 23.67 / 32.74 runs/min**，队列等待 12.43/5.35/2.19s，
+> Worker+Chromium RSS 合计约 354/685/1176 MB，完成率 6/6；4W 边际收益递减。
+> 下方 RUN-002 历史数据保留，不与本轮混用。
+
 环境：macOS / Apple Silicon，Python 3.13.12，SQLite（本地文件），Chromium 159，单机模式（API + 内嵌 Worker）。
 测量时间：2026-11-22。数值为本机实测，不代表生产容量规划。
 
