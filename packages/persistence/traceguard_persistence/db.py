@@ -336,6 +336,23 @@ MIGRATIONS: list[tuple[int, str, list[str]]] = [
             "ALTER TABLE tg_user ADD COLUMN workspaces VARCHAR(500) NOT NULL DEFAULT '[\"*\"]'",
         ],
     ),
+    (
+        13,
+        "run_submission_receipts",
+        [
+            "CREATE TABLE IF NOT EXISTS tg_run_submission ("
+            "idempotency_key VARCHAR(160) PRIMARY KEY, "
+            "run_id VARCHAR(64) NOT NULL, "
+            "fencing_token INTEGER NOT NULL DEFAULT 0, "
+            "worker_id VARCHAR(120) NOT NULL DEFAULT '', "
+            "execution_status VARCHAR(24) NOT NULL DEFAULT '', "
+            "test_verdict VARCHAR(24) NOT NULL DEFAULT 'NOT_EVALUATED', "
+            "report_json JSON, error TEXT, "
+            "observer_mode VARCHAR(24) NOT NULL DEFAULT '', "
+            "submitted_at FLOAT NOT NULL DEFAULT 0)",
+            "CREATE INDEX IF NOT EXISTS ix_tg_run_submission_run ON tg_run_submission (run_id)",
+        ],
+    ),
 ]
 
 

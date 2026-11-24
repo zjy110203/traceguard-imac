@@ -133,6 +133,26 @@ class RunRow(Base):
     ended_at: Mapped[float | None] = mapped_column(Float, nullable=True)
 
 
+class RunSubmissionRow(Base):
+    """RUN-010 WP3：终态/中间态提交回执（幂等键 → 原回执重放）。
+
+    与 Run 状态变更在同一事务内写入；同一幂等键重复提交返回原回执，
+    不改写 verdict / report（冻结语义）。
+    """
+
+    __tablename__ = "tg_run_submission"
+    idempotency_key: Mapped[str] = mapped_column(String(160), primary_key=True)
+    run_id: Mapped[str] = mapped_column(String(64), index=True)
+    fencing_token: Mapped[int] = mapped_column(Integer, default=0)
+    worker_id: Mapped[str] = mapped_column(String(120), default="")
+    execution_status: Mapped[str] = mapped_column(String(24), default="")
+    test_verdict: Mapped[str] = mapped_column(String(24), default="NOT_EVALUATED")
+    report_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    observer_mode: Mapped[str] = mapped_column(String(24), default="")
+    submitted_at: Mapped[float] = mapped_column(Float, default=_ts)
+
+
 class StepRow(Base):
     __tablename__ = "tg_step"
     # step_id 在同一用例的每次 Run 中会重复，因此主键必须是 run 范围的

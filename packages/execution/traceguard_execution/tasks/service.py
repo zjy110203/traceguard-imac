@@ -17,7 +17,7 @@ from sqlalchemy import func, select, update
 from traceguard_core.errors import AppError, ErrorCode
 from traceguard_core.ids import new_id
 from traceguard_persistence.db import Database, get_database
-from traceguard_persistence.models import RunRow, StepRow, TaskRow
+from traceguard_persistence.models import RunRow, RunSubmissionRow, StepRow, TaskRow
 
 TASK_TRANSITIONS: dict[str, set[str]] = {
     "CREATED": {"QUEUED", "CANCELLED"},
@@ -370,16 +370,51 @@ class TaskService:
         report: dict[str, Any] | None = None,
         observer_mode: str | None = None,
         error: str | None = None,
-    ) -> None:
-        """提交结果必须校验执行代次；旧代次被拒绝。execution_status 与 verdict 独立写入。"""
+        idempotency_key: str = "",
+    ) -> dict[str, Any]:
+        """提交结果：fencing 校验 + 幂等回执（RUN-010 WP3）。
+
+        契约：
+        - 回执与终态记录原子提交（同一事务）；
+        - 同一幂等键重复提交 → 返回原回执（verdict/report 不被改写）；
+        - 未显式提供幂等键时使用确定性键
+          ``{run_id}:{fencing_token}:{worker_id}:{execution_status}``，
+          使「同代次同状态的合法重试」天然幂等；
+        - 终态 Run 的不同键（或无键重算）重复终态提交 → 冻结语义拒绝
+          （FINAL_STATE_FROZEN），verdict/report 不发生静默变化；
+        - 旧 fencing token / 旧 owner → STALE_FENCING_TOKEN 拒绝（既有语义）。
+        """
+        key = (idempotency_key or "").strip()[:160] or self._auto_idempotency_key(
+            run_id, worker_id, fencing_token, execution_status
+        )
         with self.db.session() as s:
             r = s.get(RunRow, run_id)
             if not r:
                 raise AppError(ErrorCode.NOT_FOUND, f"run {run_id} not found")
+            # 1) 幂等键重放：返回原回执，不改变任何状态
+            existing = s.get(RunSubmissionRow, key)
+            if existing is not None:
+                if existing.run_id != run_id:
+                    raise AppError(
+                        ErrorCode.CONFLICT,
+                        "IDEMPOTENCY_KEY_REUSED: key belongs to another run",
+                    )
+                return self._submission_receipt(existing, replayed=True)
+            # 2) fencing 校验（旧 token / 旧 owner 拒绝）
             if r.fencing_token != fencing_token or r.lease_owner != worker_id:
                 raise AppError(
                     ErrorCode.CONFLICT, "STALE_FENCING_TOKEN: old worker submit rejected"
                 )
+            # 3) 终态冻结语义：终态 Run 只允许同键重放（上面已处理），
+            #    任何新的终态/其他状态提交都拒绝，不允许覆盖 verdict/report
+            if r.execution_status in FINAL_RUN_STATES:
+                raise AppError(
+                    ErrorCode.CONFLICT,
+                    f"FINAL_STATE_FROZEN: run {run_id} already "
+                    f"{r.execution_status}; duplicate final submissions are rejected "
+                    "(replay the original idempotency key to obtain the receipt)",
+                )
+            # 4) 状态转换检查
             if (
                 execution_status != r.execution_status
                 and execution_status not in RUN_TRANSITIONS.get(r.execution_status, set())
@@ -389,16 +424,31 @@ class TaskService:
                     ErrorCode.CONFLICT,
                     f"illegal run transition {r.execution_status}->{execution_status}",
                 )
+            # 5) 状态变更 + 回执原子写入（同一事务）
+            previous_status = r.execution_status
             r.execution_status = execution_status
             r.test_verdict = test_verdict
             r.report_json = report
             r.observer_mode = observer_mode or r.observer_mode
             r.error = error
-            r.ended_at = time.time()
+            r.ended_at = time.time() if execution_status in FINAL_RUN_STATES else r.ended_at
             r.lease_expires_at = 0.0
+            receipt = RunSubmissionRow(
+                idempotency_key=key,
+                run_id=run_id,
+                fencing_token=fencing_token,
+                worker_id=worker_id,
+                execution_status=execution_status,
+                test_verdict=test_verdict,
+                report_json=report,
+                error=error,
+                observer_mode=observer_mode or r.observer_mode,
+                submitted_at=time.time(),
+            )
+            s.add(receipt)
             task = s.get(TaskRow, r.task_id)
             # RUN-009 WP4：FINALIZING 是中间态，不得提前把 Task 判为 FAILED；
-            # 只有 Run 进入终态时才同步 Task 状态，后续终态提交仍可修正。
+            # 只有 Run 进入终态时才同步 Task 状态。
             if (
                 task
                 and execution_status in FINAL_RUN_STATES
@@ -406,6 +456,34 @@ class TaskService:
             ):
                 task.status = "COMPLETED" if execution_status == "COMPLETED" else "FAILED"
                 task.updated_at = time.time()
+            return self._submission_receipt(
+                receipt, replayed=False, previous_status=previous_status
+            )
+
+    @staticmethod
+    def _auto_idempotency_key(
+        run_id: str, worker_id: str, fencing_token: int, execution_status: str
+    ) -> str:
+        return f"{run_id}:{int(fencing_token)}:{worker_id}:{execution_status}"[:160]
+
+    @staticmethod
+    def _submission_receipt(
+        row: RunSubmissionRow, *, replayed: bool, previous_status: str = ""
+    ) -> dict[str, Any]:
+        return {
+            "idempotency_key": row.idempotency_key,
+            "run_id": row.run_id,
+            "fencing_token": row.fencing_token,
+            "worker_id": row.worker_id,
+            "execution_status": row.execution_status,
+            "test_verdict": row.test_verdict,
+            "report": row.report_json,
+            "error": row.error,
+            "observer_mode": row.observer_mode,
+            "submitted_at": row.submitted_at,
+            "replayed": replayed,
+            **({"previous_status": previous_status} if previous_status else {}),
+        }
 
     def mark_running(
         self, run_id: str, worker_id: str, fencing_token: int, observer_mode: str
