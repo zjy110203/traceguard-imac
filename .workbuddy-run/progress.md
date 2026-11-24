@@ -206,6 +206,9 @@
   → 2 个真实 E2E 必失败。两处 workflow 补 `npm ci && npm run build` + `dist/index.html` fail-closed 校验。
 - 文档补齐：`docs/RUN-010-WP4-INTELLIGENCE.md`、`docs/RUN-010-WP6-FRONTEND.md`、
   `docs/RUN-010-CLOSEOUT-REPORT.md`；FINAL-REPORT / PR-REVIEW / 台账 / 状态文件同步更新。
-- CI（SHA `d4d59ba`）：PR Gate push+PR 双 success；Nightly Gate 5/5 success（backend-full 2m29s，
-  644 passed / 13 skipped）；Release Gate 结果见 CLOSEOUT 报告 §4。
+- CI（最终代码 HEAD `271ee42`）：PR Gate push+PR 双 success；Nightly Gate 5/5 success（backend-full 70.42s，
+  644 passed / 13 skipped，postgres 16.16）；Release Gate 4/4 success（`NIGHTLY_OK head_sha=271ee423…`）。
+- **CL-03**：复验 `da2fbc6` 时 PG 并发建表撞 `pg_type` 唯一索引（4 线程 3 失败），
+  为 `CREATE TABLE IF NOT EXISTS` 非原子所致；已加 PG advisory lock 串行化 + SAVEPOINT 容忍，
+  `271ee42` 复验通过。
 - PR #2 标题与描述已更新为 RUN-007~RUN-010 集成状态；未合并、未改写历史、未强推。

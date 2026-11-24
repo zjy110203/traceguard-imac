@@ -146,14 +146,18 @@
 
 ## 5. 最新 CI 结果（C）
 
-**SHA `d4d59ba874550dc8b961eb13269d7f56811d8a75`（含 CL-01/CL-02 修复）**
+**SHA `271ee423bc5d44e9df893cb1ac0315ecdc104fd4`（最终代码 HEAD，含 CL-01/CL-02/CL-03 修复）**
 
 | 门禁 | Workflow Run ID | 链接 | 结论 | 关键行 |
 |---|---|---|---|---|
-| PR Gate（push） | 45433891889 | https://github.com/zjy110203/traceguard-imac/actions/runs/45433891889 | **success** | backend + frontend |
-| PR Gate（pull_request） | 45433916576 | https://github.com/zjy110203/traceguard-imac/actions/runs/45433916576 | **success** | — |
-| Nightly Gate | 45433925669 | https://github.com/zjy110203/traceguard-imac/actions/runs/45433925669 | **success（5/5 job）** | `644 passed, 13 skipped in 77.39s`；backend-full 2m29s |
-| Release Gate | 45434549738 | https://github.com/zjy110203/traceguard-imac/actions/runs/45434549738 | **success（4/4 job）** | `644 passed, 13 skipped in 67.71s`；`NIGHTLY_OK id=45433925669 head_sha=d4d59ba…` |
+| PR Gate（push） | 45437828070 | https://github.com/zjy110203/traceguard-imac/actions/runs/45437828070 | **success** | backend + frontend |
+| PR Gate（pull_request） | 45437848652 | https://github.com/zjy110203/traceguard-imac/actions/runs/45437848652 | **success** | — |
+| Nightly Gate | 45437859966 | https://github.com/zjy110203/traceguard-imac/actions/runs/45437859966 | **success（5/5 job）** | backend-full `644 passed, 13 skipped in 70.42s`；postgres `server_version = 16.16` 且并发建表用例通过（CL-03 生效）；总时长 2m45s |
+| Release Gate | 45438576538 | https://github.com/zjy110203/traceguard-imac/actions/runs/45438576538 | **success（4/4 job）** | full-verification `644 passed, 13 skipped in 79.04s`；`NIGHTLY_OK id=45437859966 head_sha=271ee423…` |
+
+上一轮同内容验证（`d4d59ba`，CL-03 修复前）同样三绿：PR Gate `45433934958`/`45433959228`、
+Nightly `45433925669`、Release `45434549738`。第二次重跑 `da2fbc6` 时 `postgres` 任务暴露出
+CL-03（PG 并发建表唯一索引冲突），已修复并在 `271ee42` 上复验通过。
 
 附注（如实）：
 
@@ -239,11 +243,14 @@ FAILED tests/e2e/test_login_ui_run010.py::test_viewer_role_sees_no_admin_menu
 | 提交 | 内容 | 推送 |
 |---|---|---|
 | `d4d59ba` | CL-01/CL-02 修复 + WP4/WP6 报告 | ✅ `f69c39b..d4d59ba` |
-| 文档收尾提交 | 本报告 + FINAL-REPORT/PR-REVIEW/台账更新 | ✅（见 §11 头部） |
+| `da2fbc6` | 收尾报告 + 统计更正 + 台账同步（文档） | ✅ `d4d59ba..da2fbc6` |
+| `271ee42` | CL-03 PostgreSQL 并发建表修复（代码 HEAD，三绿验证对象） | ✅ `da2fbc6..271ee42` |
+| 文档终稿提交 | 本报告终稿 + FINAL-REPORT/PR-REVIEW/台账 CI 结果同步（仅文档） | ✅ 见 PR #2 head |
 
 - 分支：`workbuddy/run008-quality-hardening`；远程 `origin/workbuddy/run008-quality-hardening` 同步；
 - PR #2 保持 **open**，head 自动跟随；PR #1 未动；
-- 无 `reset --hard` / `clean` / 强推 / 历史改写 / PR 合并。
+- 无 `reset --hard` / `clean` / 强推 / 历史改写 / PR 合并；
+- CI 验证对象为 `271ee42`（含全部代码修复）；其后的文档提交只改 Markdown，由 PR Gate 复验。
 
 ## 11. 交付校验表
 
@@ -260,23 +267,24 @@ FAILED tests/e2e/test_login_ui_run010.py::test_viewer_role_sees_no_admin_menu
 
 ## 12. 变更文件清单与 SHA-256
 
-计算方式：`shasum -a 256 <path>`（工作区最终内容，提交前计算）。本报告自身的哈希不列在表内
-（自引用不可能自洽），其完整性由 git blob 哈希保证（见 `git show <sha>:docs/RUN-010-CLOSEOUT-REPORT.md | git hash-object --stdin`）。
+计算方式：`shasum -a 256 <path>`（工作区最终内容，提交前计算）。本报告自身不列表
+（自引用无法自洽），其完整性由 git blob 保证（`git show <sha>:docs/RUN-010-CLOSEOUT-REPORT.md | git hash-object --stdin`）。
 
 | 文件 | 类别 | SHA-256 |
 |---|---|---|
+| `packages/persistence/traceguard_persistence/db.py` | 代码修复（CL-03） | `5c41982fcff4e29b42f5f369cb284a5a78f74a680ad6e4cfce5b48fccbbd3d2f` |
 | `packages/execution/traceguard_execution/browser/egress.py` | 代码修复（CL-01） | `d8c89ca249887110a1a5c714ca7a4b0715fb49f038d59a0342426db79b1b2ee1` |
 | `.github/workflows/nightly-gate.yml` | CI 修复（CL-02） | `60d3539bb739d10d4e9c90f4a56af65502f5d52ef47fb323e1b2a28d1074ca04` |
 | `.github/workflows/release-gate.yml` | CI 修复（CL-02） | `61a5928a626cabdaac35134ae7164168bb81b66acd09f07a8c302083bdb4e08e` |
 | `docs/RUN-010-WP4-INTELLIGENCE.md` | 新增（WP4） | `73fc0fc1f04becac5a22bb935ac25bfad72d335dc3c43c8718b7a81c1bcd2938` |
 | `docs/RUN-010-WP6-FRONTEND.md` | 新增（WP6） | `9997190aaec70aa3e00970325a66e2a852ae92ef9c2108042d3cc4896914c566` |
-| `docs/RUN-010-FINAL-REPORT.md` | 更新 | `f1e2ae61d4e744acfaf6543e7657d8c56bb3135f1a94b77e9eba9b2faba08ca7` |
-| `docs/RUN-010-PR-REVIEW.md` | 更新 | `0d5e2615aec8ce349a0ab03bb13672becf7300e2312e48638c50c0f009ddc4c6` |
+| `docs/RUN-010-FINAL-REPORT.md` | 更新 | `92d307982f2afe22a45033c25b21605180196d7abef9a2e8ef2940f7a1beada4` |
+| `docs/RUN-010-PR-REVIEW.md` | 更新 | `35816e4bfebd2b784307ba8abef50d5ffec3c768e87e98f10f2d5bac40167b52` |
 | `docs/RUN-010-WP8-INTEGRATION-ACCEPTANCE.md` | 更新（统计更正） | `1571473b443e7601ddaad3b7584640f9984418639329e8cb68c10ef7639daccd` |
 | `docs/TraceGuard-持续开发任务台账.md` | 更新（统计更正） | `26b803863a1f011fda57aee640c928c54c5bfe117d085feafbe85b91c0c041a1` |
-| `.workbuddy-run/progress.md` | 台账 | `2ebfd07adbdb1a57999b58ad06aed7f9c91986fa4a6b2085cd38b9b3d7005c19` |
+| `.workbuddy-run/progress.md` | 台账 | `86c4bbd021e6eb74c55406743ae0b52a6654d9d4592e3a002a6ecafab38f2118` |
 | `.workbuddy-run/phase-status.md` | 台账 | `d610300fd57525237458e307eaafdf33fe807721223126fbdd742361965a0c1e` |
-| `.workbuddy-run/test-results.md` | 台账 | `c1950771261971f5e6cd8066d5642c9149de5685535b0c3dfb036f7d62a63906` |
+| `.workbuddy-run/test-results.md` | 台账 | `24c1f81f74e55b8b5c1d9fbebd76055473d8d5180f5132ae5fef346cc6081311` |
 | `.workbuddy-run/resume.md` | 台账 | `f465969b3efc6731ed513afbef123512a7ae8bd3bdf77713d8195a07090dae34` |
 | `.workbuddy-run/blockers.md` | 台账 | `73f461a8aafaddc5188a7d7cee3eab6509201b852b4a8f0bf0a96a3c4f1ba96f` |
 | `.workbuddy-run/current-task.md` | 台账 | `cb863ca359aa6469553279ef810cb314f520af97379270bfe202791dda566d3a` |

@@ -6,7 +6,7 @@
 
 ## 1. PR 结构
 
-| 项 | 值（截至 `d4d59ba`） |
+| 项 | 值（截至 `271ee42`，代码 HEAD） |
 |---|---|
 | PR #2 | open / HOLD，head 与 origin 同步 |
 | 相对 main 的完整差异 | **695 文件 / +76,295 / −912，62 个提交**（RUN-007 + 008 + 009 + 010 全部集成） |
@@ -33,6 +33,7 @@
 | 1500ad7 | WP8 完整闭环验收 + egress 审计入报告 |
 | f69c39b | WP9 最终交付（报告、PR 审查、状态文件） |
 | **d4d59ba** | **CLOSEOUT：CL-01（CI 挂死）与 CL-02（登录 E2E 缺前端产物）修复 + WP4/WP6 独立报告** |
+| **271ee42** | **CL-03：PostgreSQL 并发建表唯一索引冲突修复（advisory lock 串行化 + SAVEPOINT）** |
 
 ## 3. 差异审查结论
 
@@ -50,8 +51,8 @@
    全量 657 收集 / 644 passed / 13 skipped（本地）；E2E 30 个真实浏览器用例。
 5. **文档齐全**：RUN-010-BASELINE / WP1~WP8 / WP4 / WP6 / FINAL-REPORT / PR-REVIEW /
    CLOSEOUT-REPORT 共 **13 份**，证据目录 `docs/assets/run010/{benchmark,wp6}`（原始 JSONL 保留失败样本）。
-6. **CI**：PR Gate 在 `d4d59ba` 上 push 与 pull_request 均 success；Nightly / Release 复验结果见
-   `docs/RUN-010-CLOSEOUT-REPORT.md` §4。
+6. **CI**：PR Gate / Nightly / Release 在 `271ee42` 上**全部 success**（Nightly 5/5、Release 4/4，
+   `NIGHTLY_OK head_sha=271ee423…`）；证据见 `docs/RUN-010-CLOSEOUT-REPORT.md` §5。
 
 ## 4. 合并建议（HOLD 维持）
 

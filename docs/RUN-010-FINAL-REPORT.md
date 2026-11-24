@@ -4,7 +4,7 @@
 > 状态枚举：IMPLEMENTED / VERIFIED / PARTIAL / BLOCKED / NEEDS_DECISION / NOT_IMPLEMENTED。
 > 提交链：`8220479`（起点）→ `e43e0ca`(WP1) → `0e71267`(WP0/CI) → `651d1e6`(WP2) → `97d7901`(WP3)
 > → `132c09c`/`3ac6725`(WP4) → `45898cc`/`94585fa`(WP5) → `48ae497`(WP6) → `e38ccac`/`1479982`(WP7)
-> → `1500ad7`(WP8) → `f69c39b`(WP9) → `d4d59ba`(CLOSEOUT: CL-01/CL-02 修复 + WP4/WP6 报告)。
+> → `1500ad7`(WP8) → `f69c39b`(WP9) → `d4d59ba`(CLOSEOUT: CL-01/CL-02 修复 + WP4/WP6 报告) → `271ee42`(CL-03 PG 并发建表修复)。
 > 仓库分支 `workbuddy/run008-quality-hardening`，PR #2 自动更新（open/HOLD，见 §7）。
 >
 > **本轮收尾对旧统计的更正（以最新 HEAD 真实证据为准）**：
@@ -58,6 +58,7 @@
 | business_state 断言 INCONCLUSIVE（rule 格式）/Oracle 未绑定 → NOT_EVALUATED | WP8 测试 | 闭环验证暴露，已固化在测试 |
 | **CL-01**：`EgressProxyController` 用 `asyncio.to_thread(stop_evt.wait)` 占用线程池工作线程；代理先于 `stop()` 退出时该线程永久阻塞 → 解释器退出时 `concurrent.futures._python_exit` join 挂死 | 收尾复核（CI Nightly 45min 超时 + 本地 faulthandler 线程栈复现） | **P1**：Nightly backend-full 与 Release full-verification 在 pytest 打印结果后挂死至超时；修复后进程正常退出（14s） |
 | **CL-02**：登录 E2E 依赖 `apps/web/dist`，但 Nightly/Release 不构建前端 | 收尾复核（CI 日志 2 failed：`/runs` 未跳转 `/login`、`#login-username` 超时） | 2 个真实 E2E 在 CI 必失败（本地因已有 dist 通过）；两处 workflow 补构建步骤 |
+| **CL-03**：`_apply_migrations()` 首条 `CREATE TABLE IF NOT EXISTS` 无 SAVEPOINT/重试保护；PG 并发启动时在 `pg_type` 唯一索引冲突 | 收尾复验（`da2fbc6` Nightly postgres 任务：4 线程并发建表 3 个 `IntegrityError`） | **P1**：多 Worker 同时启动指向同一 PG 库时随机崩溃；改为 PG 事务级 advisory lock 串行化 + SAVEPOINT 容忍重复 DDL |
 
 ## 4. 测试与验证汇总
 
@@ -93,21 +94,24 @@
 | WP8 首版被 AgentDR 拦截 | 已处置 | subprocess+env 字典模式（B-20） | 进程内替代实现已验证；恢复指引见 resume.md |
 | CL-01 代理线程池挂死 | **已修复（d4d59ba）** | 见 §3；CI 由 45/60 分钟超时变为 2m29s 正常结束 | 保留失败运行记录，不删除 |
 | CL-02 登录 E2E 缺前端产物 | **已修复（d4d59ba）** | 两处 workflow 补 `npm ci && npm run build` + dist fail-closed 校验 | 本地不依赖隐式产物 |
+| CL-03 PG 并发建表冲突 | **已修复（271ee42）** | PG advisory lock 串行化 + SAVEPOINT；CI postgres 任务复验通过 | 本机无 PG，仅 SQLite 侧回归 |
 
 生产风险：认证默认关闭的开发模式若误用于生产——已由 `auth_policy.py` 启动期
 fail-closed 兜底（production 环境未开认证直接启动失败）。
 
-## 6.1 最新 CI 结果（SHA `d4d59ba`）
+## 6.1 最新 CI 结果（最终代码 HEAD `271ee42`）
 
 | 门禁 | 运行 | 结论 | 证据 |
 |---|---|---|---|
-| PR Gate（push） | [#45433891889](https://github.com/zjy110203/traceguard-imac/actions/runs/45433891889) | **success** | backend + frontend |
-| PR Gate（pull_request） | [#45433916576](https://github.com/zjy110203/traceguard-imac/actions/runs/45433916576) | **success** | — |
-| Nightly Gate | [#45433925669](https://github.com/zjy110203/traceguard-imac/actions/runs/45433925669) | **success（5/5 job，2m29s）** | backend-full **644 passed / 13 skipped，77.39s**；PG 16；npm audit 0；LLM smoke BLOCKED（缺 Secret，warning） |
-| Release Gate | [#45434549738](https://github.com/zjy110203/traceguard-imac/actions/runs/45434549738) | **success（4/4 job，2m27s）** | full-verification **644 passed / 13 skipped，67.71s**；`NIGHTLY_OK id=45433925669 head_sha=d4d59ba…` |
+| PR Gate（push） | [#45437828070](https://github.com/zjy110203/traceguard-imac/actions/runs/45437828070) | **success** | backend + frontend |
+| PR Gate（pull_request） | [#45437848652](https://github.com/zjy110203/traceguard-imac/actions/runs/45437848652) | **success** | — |
+| Nightly Gate | [#45437859966](https://github.com/zjy110203/traceguard-imac/actions/runs/45437859966) | **success（5/5 job，2m45s）** | backend-full **644 passed / 13 skipped，70.42s**；postgres 16.16；npm audit 0；LLM smoke BLOCKED（缺 Secret，warning 不阻断） |
+| Release Gate | [#45438576538](https://github.com/zjy110203/traceguard-imac/actions/runs/45438576538) | **success（4/4 job）** | full-verification **644 passed / 13 skipped，79.04s**；`NIGHTLY_OK id=45437859966 head_sha=271ee423…` |
 
-对照（修复前，`f69c39b`，留档）：Nightly `45417381107` cancelled（45min 超时，2 failed + 挂死）、
-Release `45417391553` cancelled（60min 超时）。**所有最终 CI 结论对应 `d4d59ba`。**
+对照（修复前，留档不删除）：`f69c39b` 上 Nightly `45417381107` cancelled（45min 超时）、
+Release `45417391553` cancelled（60min 超时）；`da2fbc6` 上 Nightly `45436579639` 因
+CL-03（PG 并发建表唯一索引冲突）失败，已修复并在 `271ee42` 复验通过。
+**所有最终 CI 结论对应 `271ee42`。**
 
 ## 7. GitHub 交付与 PR 状态
 

@@ -199,7 +199,7 @@ Benchmark（真实）：
 > （`SAFE_DELETE_BULK_CONFIRM_REQUIRED`，59 个 setup 错误），属于本机沙箱限制而非产品缺陷；
 > 改用 `/tmp` 下的独立 basetemp 后正常。
 
-### CI（GitHub Actions，Python 3.11，SHA `d4d59ba`）
+### CI（GitHub Actions，Python 3.11，最终代码 HEAD `271ee42`）
 
 | 门禁 | 运行 | 结论 | 关键证据 |
 |---|---|---|---|
