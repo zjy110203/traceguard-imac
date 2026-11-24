@@ -1,0 +1,96 @@
+{
+  "evidence_graph": {
+    "audited_samples": 38,
+    "nodes_total": 1880,
+    "edges_total": 2298,
+    "edges_with_basis": 2298,
+    "node_types": {
+      "Run": 38,
+      "Step": 314,
+      "Event": 416,
+      "Evidence": 998,
+      "Assertion": 58,
+      "Source": 30,
+      "Hypothesis": 26
+    },
+    "relations": {
+      "parent_child": 398,
+      "same_execution_context": 172,
+      "emitted_by": 282,
+      "evaluates": 1298,
+      "supports": 148
+    },
+    "node_types_present": [
+      "Assertion",
+      "Event",
+      "Evidence",
+      "Hypothesis",
+      "Run",
+      "Source",
+      "Step"
+    ],
+    "source_sets_examples": [
+      [
+        "api",
+        "browser",
+        "network"
+      ],
+      [
+        "api",
+        "browser",
+        "network"
+      ],
+      [
+        "api",
+        "browser",
+        "network"
+      ],
+      [
+        "api",
+        "browser",
+        "network"
+      ],
+      [
+        "api",
+        "browser",
+        "network"
+      ]
+    ],
+    "direct_causal_edges": 0,
+    "temporal_edges": 0,
+    "derived_from_edges": 0,
+    "supports_edges": 148,
+    "contradicts_edges": 0,
+    "graph_changed_prediction_count": 0,
+    "verdict": "图结构具备 节点/边/时间/来源/可信度/派生/冲突 信息，但 benchmark 的 graph_enhanced 臂只读取 source_type 集合且仅把 PROBABLE 提升为 CONFIRMED；主因类别变化 0 样本 → 当前 EG 未真正参与主因推理，只做置信度装饰。"
+  },
+  "active_probe": {
+    "steps_total": 100,
+    "steps_applied_to_diagnosis": 0,
+    "application_rate": 0.0,
+    "stop_reasons": {
+      "STOP_NO_HIGH_VALUE_PROBE": 14,
+      "STOP_ITERATION_LIMIT": 24
+    },
+    "probe_id_distribution": {
+      "http_state": 38,
+      "network_trace": 38,
+      "dom_snapshot": 24
+    },
+    "verdict": "RUN-008 中 E 臂的探针证据全部落库但未回灌诊断（applied=False，assessments 为空），AP 闭环断裂；本轮用真实内核重算后，主因准确率仍为 18/38，覆盖在 b2+ 反降至 16/38。"
+  },
+  "multi_hypothesis_states": {
+    "observed_status_counts_before_probe": {
+      "CONFIRMED": 24,
+      "SUPPORTED": 2
+    },
+    "four_states": [
+      "CANDIDATE",
+      "SUPPORTED",
+      "CONTRADICTED",
+      "CONFIRMED"
+    ],
+    "fifth_state": "EXCLUDED（探针确定性排除）",
+    "note": "引擎具备五态，但规则生成的假设绝大多数直接 CONFIRMED/CANDIDATE；SUPPORTED/CONTRADICTED/EXCLUDED 在 v3 样本中极少出现，多假设竞争机制事实上未充分运转。"
+  }
+}
