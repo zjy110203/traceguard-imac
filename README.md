@@ -180,3 +180,17 @@ docs                  架构 / API / 数据库 / Agent / Playwright / 安全 / �
 - 分支：`workbuddy/traceguard-autonomous`（本地开发，不推送远程）
 - 提交：阶段性本地提交；禁止密钥入库；禁止强制推送/改写历史
 - 测试：验收数字必须来自真实测试日志；禁止 Mock 冒充真实运行
+
+## RUN-008 更新（2026-11-24）
+
+- 开发分支：`workbuddy/run008-quality-hardening`（已推送远程）；基线 HEAD `ce1acea`。
+- 本轮交付索引：`docs/RUN-008-FINAL-REPORT.md`（完成后）、`docs/RUN-008-BASELINE.md`、
+  `docs/RUN-008-WP1-IMPLEMENTATION.md`、`docs/RUN-008-WP2-REGRESSION-CI.md`、
+  `docs/RUN-008-WP3-WORKER.md`、`docs/RUN-008-WP5-FRONTEND-AUDIT.md`、
+  `docs/RUN-008-SECURITY-AUDIT.md`、`docs/RUN-008-DECISIONS.md`。
+- 回归基线：567 passed / 13 skipped；E2E 12/12；Ruff 全绿；前端 typecheck/build 通过。
+- CI（commit `40efee6`）：PR Gate `45335765297` 与 Nightly `45335777381` 真实全绿；
+  LLM smoke 因缺 Secret 真实标记 BLOCKED，不冒充通过。
+- 安全边界：两次 AgentDR `info_theft_steal_env_keys` 拦截均按策略保留 BLOCKED，
+  未绕过、未读取或传递真实凭据；详见 `.workbuddy-run/blockers.md` B-17。
+- 功能状态以 `docs/FEATURE-STATUS.md` 的 RUN-008 段为准；旧段落是历史快照。

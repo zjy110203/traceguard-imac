@@ -212,3 +212,30 @@
 | LLM 对照臂（受预算子集） | **见 Benchmark 报告** | `llm-arm-*.json`，模型由服务端路由决定，按实际模型记录 |
 | 身份认证 / RBAC | **NOT_IMPLEMENTED（NEEDS_DECISION）** | D-01 未批准；主体类型门禁 ≠ 身份认证 |
 | 外部站点泛化 | **BLOCKED** | P03 未批准授权清单，本轮未访问未授权站点 |
+
+---
+
+# RUN-008 功能状态（2026-11-24，追加；不改写上面历史条目）
+
+> 口径：VERIFIED = 本轮真实执行证据；IMPLEMENTED = 代码实现但缺本轮运行证据；
+> PARTIAL = 部分证据；BLOCKED = 外部条件或安全策略阻塞；NOT_IMPLEMENTED = 本轮未做。
+
+| 能力 | 状态 | 证据 / 说明 |
+|---|---|---|
+| P0 缺陷复核（多进程预算 + 长稳真实健康检查） | **VERIFIED** | 16/16 集成回归；`docs/assets/run008/wp1/` 3 组真实 SIGKILL/正常证据 |
+| 长稳脚本恒真判断修复 + 守卫回归 | **VERIFIED** | `test_soak_run007_guards.py`；冒烟 22 checks |
+| 本机全量回归 | **VERIFIED** | 567 passed / 13 skipped（WP5/WP6 后）；E2E 12/12 |
+| 三级 CI 门禁（最终 commit `40efee6`） | **VERIFIED（PR/Nightly）** | PR Gate `45335765297` success；Nightly `45335777381` success（含 PG16 5+8 passed）；Release `45336007166` 进行中 |
+| LLM smoke | **BLOCKED（缺 Secret）** | CI 明确标注不得用于 Release 放行，不写为通过 |
+| 4 Worker 并发 | **VERIFIED** | `worker-concurrency.json`：峰值 4、单 Run 单 owner、14/14 |
+| 执行中途 SIGKILL 故障恢复 | **VERIFIED** | `worker-fault-recovery.json`：真实 kill、17/17、fencing 递增 |
+| 补充故障矩阵 4 场景 | **BLOCKED** | AgentDR 两次拦截（含白名单重写），见 `blockers.md` B-17 |
+| 前端 14 视图审查 | **VERIFIED** | 60 checks 全过（48 light + 12 dark）、64 截图；修复 5 个真实缺陷 |
+| 前端全局搜索意图死链 | **VERIFIED（已修）** | `fix-verification.json` 4/4 |
+| 深色验收假证据 | **VERIFIED（已修）** | 旧脚本改为真主题 + 亮度断言，30/0 |
+| Repair 主体门禁一致性 | **VERIFIED（已修）** | `test_healing.py` 17/17；`system:*`/`llm:*`/`bot:*`/`worker:*` 全拒 |
+| 日志字符串脱敏词表 | **VERIFIED（已修）** | `test_core.py` 36/36 合计 |
+| 身份认证 / RBAC | **NOT_IMPLEMENTED** | 仍只有主体类型门禁，不是真实认证（B-09） |
+| 依赖 moderate 漏洞（dev-only） | **PARTIAL（已登记）** | high=0 / critical=0 / moderate=3；semver-major 升级未实施 |
+| 60 分钟长稳 | **进行中** | `BZ1Hp8`，每周期 real PASSED；报告未生成前不标通过 |
+| Benchmark v3 本轮实验 | **进行中** | 隔离 API/Worker/TeamFlow，2 次重复；完成前不引用历史数字冒充本轮 |
