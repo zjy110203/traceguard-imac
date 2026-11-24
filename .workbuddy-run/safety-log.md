@@ -33,3 +33,30 @@
 | 15:10 | 凭据 | 未读取/输出 `.env` 内容；LLM 调用沿用已有配置，日志无密钥 ✅ |
 | 15:12 | 危险命令 | 未使用 `git reset --hard` / `git clean` / 强制推送；未对项目外目录递归删除 ✅ |
 | 15:15 | 证据归档 | `docs/assets/run006/` 只含运行结果 JSON 与 SHA-256，无凭据/Token ✅ |
+
+## RUN-007-RESUME（2026-11-23）
+
+| 时间 | 检查 | 结论 |
+|---|---|---|
+| 12:20 | 分支操作 | 从 `origin/main`(`ac2876e`) 创建 `workbuddy/run007-resume-20261123`；未 `reset --hard` / 未 `clean -fd` / 未强推 ✅ |
+| 12:20 | 数据库隔离 | 新增 `.traceguard/run007resume/`、`.traceguard/run007soak/`、`.traceguard/run007resume/wfr/`；未触碰既有 `traceguard.db` / `teamflow.db` ✅ |
+| 12:20 | 进程边界 | 仅启动本轮 API(8020/8030)、TeamFlow(8021)、Worker(4+4)；未杀其它进程；`ps` 被沙箱禁止时改用存活探测 ✅ |
+| 12:25 | 网络访问 | 仅 127.0.0.1 本地服务与本地 Chromium；GitHub 仅 `ls-remote`/`fetch`（读）；未访问未授权外部站点 ✅ |
+| 12:30 | 凭据 | 未读取/输出 `.env`；LLM 调用沿用既有配置；日志与证据无密钥 ✅ |
+| 13:00 | 证据保留 | 旧 `e2e-run007.json` / `worker-fault-recovery.json` / `probe-budget-*.json` 原样保留，新证据另起文件名 ✅ |
+| 13:40 | 推送尝试 | `git push --dry-run` 因无凭据失败（`could not read Username`）；未使用任何绕过手段 ✅ |
+
+## RUN-007-RESUME GI 凭据使用记录（2026-11-23 22:24 起）
+
+| 时间 | 事项 | 处理 |
+|---|---|---|
+| 22:24 | 用户提供 fine-grained PAT（`traceguard-imac` 单仓库） | 写入 `~/.workbuddy/gh_token`（`chmod 600`），**未在任何命令或输出中回显** |
+| 22:24 | 权限核验 | `GET /user` → `zjy110203`；`GET /repos/...` → `admin/push`；记录到会话，不写 token 值 |
+| 22:29 | 首次推送 | 通过 `~/.workbuddy/git-cred.sh`（`chmod 700`，从文件读）注入，`d2e86ae` 推送成功 |
+| 22:44 | PR 创建 | PR #1（`d2e86ae → main@ac2876e`）；误建的 "probe" 标题已 PATCH 为正式标题/正文 |
+| 22:52 | Nightly dispatch | 首次真实运行 `45197639359` 失败，暴露 3 个真实缺陷（非凭据问题） |
+| 23:05 | 修复后重推 | `7fdd2e9`，PR 自动跟随 |
+| 待办 | **凭据回收** | 本轮收尾后 `rm ~/.workbuddy/gh_token ~/.workbuddy/git-cred.sh`，并提醒用户在 GitHub 撤销该 token（已出现在会话记录中） |
+
+约束确认：token 仅用于 `traceguard-imac` 的 push / PR / Actions 查询与 dispatch；
+未访问其它仓库，未改仓库设置，未删除分支，未创建 Release Tag。

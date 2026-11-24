@@ -128,9 +128,13 @@ async def get_stability_replay(replay_id: str, refresh: bool = False) -> dict[st
 
 # ------------------------------------------------------------------ diagnosis
 @router.post("/runs/{run_id}/diagnose", status_code=201)
-async def diagnose(run_id: str) -> dict[str, Any]:
+async def diagnose(run_id: str, use_llm: bool | None = None) -> dict[str, Any]:
+    """诊断。`use_llm` 显式指定是否使用 LLM 顾问（None=按全局配置）。
+
+    Benchmark 分组必须显式传 `use_llm=false` 才能保证"规则组"口径纯净。
+    """
     try:
-        return get_services().diagnosis.diagnose(run_id)
+        return get_services().diagnosis.diagnose(run_id, use_llm_advisor=use_llm)
     except AppError as exc:
         raise _http(exc) from exc
 

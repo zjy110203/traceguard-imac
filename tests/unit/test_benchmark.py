@@ -75,6 +75,56 @@ def test_macro_f1_has_numerator_denominator() -> None:
     assert d["note"]
 
 
+def test_macro_f1_numerator_is_real_f1_sum_not_fake_int() -> None:
+    """回归：旧实现 `int(value * len(f1s))` 会伪造分子（1.3333 → 1）。"""
+    ev = DiagnosisEvaluator({"a": "X", "b": "X", "c": "Y"})
+    d = ev.macro_f1({"a": "X", "b": "Y", "c": "Y"}).to_dict()
+    assert d["denominator"] == 2  # 类别数 C=2
+    assert d["numerator"] == pytest.approx(4 / 3, abs=1e-3)  # 各类别 F1 之和
+    assert d["value"] == pytest.approx(2 / 3, abs=1e-3)
+    assert d["class_count"] == 2
+    assert d["formula"].startswith("macro_f1")
+    # 每个类别可独立复核：X: TP=1 FP=0 FN=1 → F1=2/3；Y: TP=1 FP=1 FN=0 → F1=2/3
+    assert d["per_class_f1"]["X"]["tp"] == 1 and d["per_class_f1"]["X"]["fn"] == 1
+    assert d["per_class_f1"]["Y"]["tp"] == 1 and d["per_class_f1"]["Y"]["fp"] == 1
+    assert d["per_class_f1"]["X"]["f1"] == pytest.approx(2 / 3, rel=1e-4)
+
+
+def test_macro_f1_missing_prediction_counts_as_fn() -> None:
+    ev = DiagnosisEvaluator({"a": "X", "b": "Y"})
+    d = ev.macro_f1({"a": "X"}).to_dict()  # b 缺失
+    assert d["per_class_f1"]["Y"]["fn"] == 1
+    assert d["class_count"] == 2
+
+
+def test_dataset_statistics_separates_execution_and_verdict() -> None:
+    from traceguard_benchmark.scenarios import (
+        SCENARIOS,
+        Scenario,
+        dataset_statistics,
+        normalize_scenario,
+    )
+
+    stats = dataset_statistics()
+    assert stats["scenarios"] == len(SCENARIOS) == 30
+    assert stats["diagnosis_eligible_count"] + stats["diagnosis_ineligible_count"] == 30
+    # 11 个 PASSED 回归/性能感知场景不参与失败诊断计分
+    assert stats["expected_test_verdict"].get("PASSED") == 11
+    assert stats["diagnosis_eligible_count"] == 19
+    # 4 个"执行中断"场景：LOC-001/LOC-002/COMP-003/TIME-003 → FAILED + NOT_EVALUATED
+    assert stats["expected_test_verdict"]["NOT_EVALUATED"] == 4
+    assert stats["expected_execution_status"]["FAILED"] == 4
+    assert stats["expected_execution_status"]["COMPLETED"] == 26
+
+    # 旧特殊值 EXEC_FAILED 必须被归一为"执行失败 + 测试未评估"
+    legacy = Scenario("LEGACY", "tc", "F", "TIMING", True, "d", "EXEC_FAILED")
+    fixed = normalize_scenario(legacy)
+    assert fixed.expected_execution_status == "FAILED"
+    assert fixed.expected_test_verdict == "NOT_EVALUATED"
+    assert fixed.diagnosis_eligible is True
+    assert fixed.expected_failure_mechanism == "TIMING"
+
+
 def test_primary_cause_accuracy() -> None:
     m = _eval().primary_cause_accuracy({"c1": "PRODUCT_DEFECT", "c2": "wrong", "c3": "ENVIRONMENT"})
     assert m.numerator == 2 and m.denominator == 3

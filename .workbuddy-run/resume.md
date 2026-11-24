@@ -101,3 +101,43 @@ curl -X POST "http://127.0.0.1:8010/api/v1/runs/<run_id>/probe-plan?diagnosis_id
 - 不要声称 P03/P06/P08 已决策、路线图已冻结。
 - 不要把 skip 当 passed，不要把 PARTIAL/BLOCKED 写成成功，不要为过测试削弱断言。
 - 不要把顶层 302 说成"请求已被阻断"——它只是"落地被拒绝"。
+
+## RUN-007-RESUME 关键记忆（2026-11-23）
+
+- 执行归属：E2E/沙箱/回归一律 `{"sync": false}` 入队 + 轮询 `GET /runs/{id}`；
+  校验点是 `lease_owner` 非空且不等于 API Worker ID、`fencing_token >= 1`。
+- 证据来源：`report.evidence_ids` 可能为空，**必须**用 `GET /runs/{id}/evidence`，
+  再校验证据图里有对应 `Evidence` 节点与来源关系。
+- 缓存生存期：`RunPipeline._state_cache` 只允许活一个 Run（`execute()` 开头清空），否则常驻 Worker 会漏检假通过。
+- 沙箱：`RepairService` 不再 `execute_run`，改 `wait_for_run`；无 Worker → `PRECONDITION_FAILED`，Run 保持 QUEUED。
+- 建表并发：`create_schema` 必须容忍 "already exists"；迁移每条语句用 `conn.begin_nested()`（PG aborted 事务）。
+- 长稳：`teamflow_ok` 必须是真实 `ok is True` + 有 `count`；SSE 要统计事件/心跳/retry 帧并做 `Last-Event-ID` 续传。
+- 故障恢复：接管验证必须"同 Run + `fencing_token` 严格递增 + `attempt` 不变"；`killed_after_s` 必须来自真实计时。
+- UI 暗色：前端主题由 `localStorage['tg-theme']` 决定，**不是** `prefers-color-scheme`；
+  必须 `add_init_script` 写入后再截图，并用亮度断言验证（否则会交付"假深色"证据）。
+- 沙箱限制：`ps` 被禁止、无 `/proc`；`_proc_stats` 已回退为存活探测并标 `source=liveness_only`，资源字段为 `null`。
+- 无 Git 凭据：https 无 keychain、无 SSH key、无 `gh`/token → push/PR/CI 触发全部 BLOCKED。
+
+## 不要做的事（RUN-007 追加）
+
+- 不要覆盖 `docs/assets/run007/e2e-run007.json`（第五轮旧证据）。
+- 不要用 `use_llm=false` 的结果冒充 LLM 能力；LLM 候选状态是 CANDIDATE，不能当根因。
+- 不要把 PG 用例的 skip 写成 pass；不要声称 CI 门禁"已通过"。
+- 不要在长稳运行期间跑故障注入（会污染 TeamFlow 状态与周期判定）。
+
+## RUN-007-RESUME CI 调试经验（2026-11-23）
+
+- **`str(SQLAlchemy URL)` 会把密码渲染成 `***`**（`hide_password` 默认 True）。凡是要拼 URL 字符串给
+  另一个 `create_engine` 用的地方，必须 `render_as_string(hide_password=False)`。本轮在此踩了两次
+  （测试 fixture + workflow 内联脚本）。
+- **pytest 的 `pythonpath`（pyproject）只对 pytest 生效**：内联 `python - <<'PY'` 与 spawn 子进程
+  都拿不到。CI 里一律给 job 级 `PYTHONPATH`，脚本内部再自行 `sys.path` 注入作双保险。
+- **ORM 实体在 `session.execute(update(...))` 后会被 expire**：紧接着读它的字段会重新 SELECT，
+  拿到的是新值。要记录"更新前的状态"，必须在 UPDATE 前快照。
+- **SQLite 的 `busy_timeout` 不覆盖 DDL 排他锁竞争**：并发 `CREATE TABLE` 仍会直接抛
+  `database is locked`；必须把这类错误纳入重试（并兼容 PG 的 `deadlock detected`）。
+- **状态机是 `QUEUED→PREPARING→RUNNING→FINALIZING→COMPLETED`**：测试不能假设"领取即可提交完成"，
+  真实流程见 `pipeline.py:130` 的 `mark_running`。
+- **门禁要真实跑过才算数**：本地 523 passed 掩盖了 8 个问题，CI 首跑全暴露。
+- 网络：`api.github.com` 稳定；`github.com`（git 传输）经代理间歇性 `Empty reply` / `CONNECT 502`，
+  push 需要重试循环。

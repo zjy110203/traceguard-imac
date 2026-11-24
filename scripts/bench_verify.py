@@ -86,7 +86,9 @@ def main() -> int:
                 verdict=verdict,
                 duration_s=round(time.monotonic() - t0, 1),
             )
-            exec_status = out.get("execution", {}).get("execution_status") or out.get("execution_status")
+            exec_status = out.get("execution", {}).get("execution_status") or out.get(
+                "execution_status"
+            )
             if expect == "EXEC_FAILED":
                 # 定位器失效场景：确定性执行失败 → exec FAILED + verdict NOT_EVALUATED（架构语义）
                 ok = exec_status == "FAILED"
@@ -96,10 +98,16 @@ def main() -> int:
                 ok = verdict == expect
             rec["match"] = ok
         except Exception as exc:  # noqa: BLE001
-            rec.update(error=f"{type(exc).__name__}: {exc}", match=False, duration_s=round(time.monotonic() - t0, 1))
+            rec.update(
+                error=f"{type(exc).__name__}: {exc}",
+                match=False,
+                duration_s=round(time.monotonic() - t0, 1),
+            )
         results.append(rec)
         mark = "OK " if rec.get("match") else "BAD"
-        print(f"{mark} {sid:<16} verdict={rec.get('verdict')} expect={expect} ({rec.get('duration_s')}s)")
+        print(
+            f"{mark} {sid:<16} verdict={rec.get('verdict')} expect={expect} ({rec.get('duration_s')}s)"
+        )
         # 每个场景后清理故障，保证可重复
         try:
             urllib.request.urlopen(
@@ -114,7 +122,9 @@ def main() -> int:
     Path(".workbuddy-run/bench-v2-verify.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=2)
     )
-    print(f"\n{matched}/{len(results)} 场景 verdict 与 GT 预期一致 → .workbuddy-run/bench-v2-verify.json")
+    print(
+        f"\n{matched}/{len(results)} 场景 verdict 与 GT 预期一致 → .workbuddy-run/bench-v2-verify.json"
+    )
     return 0 if matched == len(results) else 1
 
 

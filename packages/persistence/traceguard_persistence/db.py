@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import threading
+import time
 from collections.abc import Callable, Generator, Iterator
 from contextlib import contextmanager
 from typing import Any
@@ -89,18 +90,67 @@ class Database:
             s.close()
 
     def create_schema(self) -> None:
-        """建表 + 应用迁移（幂等）。"""
+        """建表 + 应用迁移（幂等，且**并发启动安全**）。
+
+        多进程同时启动（API + 多个 Worker 指向同一个库）时，`create_all` 内部的
+        "先检查再建" 不是原子的，可能抛出 `table ... already exists`；迁移记录的
+        `INSERT` 也可能撞主键。这里显式重试 + 容忍重复，避免启动期随机崩溃。
+        """
         from . import models  # noqa: F401  确保模型注册到 metadata
 
         with self._schema_lock:
             if self._schema_ready:
                 return
-            Base.metadata.create_all(self.engine)
+            last_error: Exception | None = None
+            # 并发启动（API + N 个 Worker）时会同时建表：既可能撞"已存在"，
+            # 也可能撞 SQLite 的 DDL 排他锁（database is locked）。两类都重试，
+            # 退避采用指数形式，避免 CI 慢盘上 6 次×50ms 不够用。
+            for attempt in range(8):
+                try:
+                    Base.metadata.create_all(self.engine)
+                    last_error = None
+                    break
+                except Exception as exc:  # noqa: BLE001 - 并发建表的重复 DDL/锁竞争
+                    retryable = _is_duplicate_ddl_error(exc) or _is_transient_lock_error(exc)
+                    if not retryable or attempt == 7:
+                        raise
+                    last_error = exc
+                    time.sleep(min(0.1 * (2**attempt), 2.0))
+            if last_error is not None:  # pragma: no cover - 重试耗尽才会到这里
+                raise last_error
             _apply_migrations(self)
             self._schema_ready = True
 
     def dispose(self) -> None:
         self.engine.dispose()
+
+
+def _is_duplicate_ddl_error(exc: BaseException) -> bool:
+    """并发建表/建索引时的"已存在"错误：可以容忍并重试。"""
+    msg = str(exc).lower()
+    return (
+        "already exists" in msg
+        or "duplicate table" in msg
+        or "duplicate key" in msg
+        or "unique constraint" in msg
+        or "duplicate column" in msg
+    )
+
+
+def _is_transient_lock_error(exc: BaseException) -> bool:
+    """并发 DDL 的暂时性锁冲突：不是"已存在"，但等待后重试即可成功。
+
+    SQLite 在多个连接同时执行 `CREATE TABLE` 时会抛 `database is locked`
+    （busy_timeout 只覆盖普通写事务，DDL 的排他锁竞争仍可能直接返回）；
+    PostgreSQL 在并发 DDL 下可能抛 `deadlock detected`。两者都属可重试。
+    """
+    msg = str(exc).lower()
+    return (
+        "database is locked" in msg
+        or "database table is locked" in msg
+        or "deadlock detected" in msg
+        or "could not obtain lock" in msg
+    )
 
 
 def _apply_migrations(db: Database) -> None:
@@ -127,24 +177,31 @@ def _apply_migrations(db: Database) -> None:
                 statement = statement.strip()
                 if not statement:
                     continue
-                if statement.startswith("__CALLABLE__:"):
-                    _MIGRATION_CALLABLES[statement.split(":", 1)[1]](conn)
-                    continue
+                # 每个 DDL 包在 SAVEPOINT 里：PostgreSQL 下普通语句报错会让整个事务
+                # 进入 aborted 状态，必须回滚到保存点才能继续执行后续迁移。
                 try:
-                    conn.execute(text(statement))
+                    with conn.begin_nested():
+                        if statement.startswith("__CALLABLE__:"):
+                            _MIGRATION_CALLABLES[statement.split(":", 1)[1]](conn)
+                        else:
+                            conn.execute(text(statement))
                 except Exception as exc:  # noqa: BLE001 - 并发启动下的重复 DDL
-                    if (
-                        "already exists" not in str(exc).lower()
-                        and "duplicate" not in str(exc).lower()
-                    ):
+                    if not _is_duplicate_ddl_error(exc):
                         raise
-            conn.execute(
-                text(
-                    "INSERT INTO tg_schema_migration (version, name, applied_at) "
-                    "VALUES (:v, :n, :a)"
-                ),
-                {"v": version, "n": name, "a": _now()},
-            )
+            # 记录迁移版本：并发启动时可能已被另一进程写入同一 version（主键冲突），
+            # 属于正常竞争，吞掉即可（绝不能因此启动失败）。
+            try:
+                with conn.begin_nested():
+                    conn.execute(
+                        text(
+                            "INSERT INTO tg_schema_migration (version, name, applied_at) "
+                            "VALUES (:v, :n, :a)"
+                        ),
+                        {"v": version, "n": name, "a": _now()},
+                    )
+            except Exception as exc:  # noqa: BLE001
+                if not _is_duplicate_ddl_error(exc):
+                    raise
 
 
 def _now() -> str:
@@ -215,7 +272,65 @@ MIGRATIONS: list[tuple[int, str, list[str]]] = [
             "ON tg_promotion_receipt (testcase_id)",
         ],
     ),
+    (
+        9,
+        "evidence_digest_semantics",
+        ["__CALLABLE__:_migrate_evidence_digest_semantics"],
+    ),
+    (
+        10,
+        "widen_testcase_intent_ref",
+        ["__CALLABLE__:_migrate_widen_intent_ref"],
+    ),
 ]
+
+
+def _migrate_evidence_digest_semantics(conn) -> None:  # type: ignore[no-untyped-def]
+    """区分"原始来源摘要"与"持久化内容摘要"（RUN-007-FINALIZATION-2 / WP2）。
+
+    历史行的 `sha256` 是脱敏前原始内容的摘要，而库里存的是脱敏后内容：
+    两者混用会使"服务端用持久化内容重算摘要"必然对不上。新增列并存，
+    历史行标记为 `legacy_backfilled`（内容摘要无法回溯证明，校验时如实报 NOT_RUN）。
+    """
+    from sqlalchemy import inspect
+
+    inspector = inspect(conn)
+    if "tg_evidence" not in inspector.get_table_names():
+        return
+    cols = {c["name"] for c in inspector.get_columns("tg_evidence")}
+    additions = [
+        ("stored_content_sha256", "VARCHAR(64) DEFAULT ''"),
+        ("attachment_sha256", "VARCHAR(64) DEFAULT ''"),
+        ("integrity_detail", "JSON"),
+    ]
+    for name, ddl in additions:
+        if name in cols:
+            continue
+        conn.execute(text(f"ALTER TABLE tg_evidence ADD COLUMN {name} {ddl}"))
+
+
+def _migrate_widen_intent_ref(conn) -> None:  # type: ignore[no-untyped-def]
+    """把 tg_testcase.intent_ref 从 VARCHAR(64) 放宽到 VARCHAR(255)（RUN-007-FINALIZATION-2）。
+
+    真实缺陷：探索编译曾把"需求正文"写进 intent_ref，SQLite 不校验 VARCHAR 长度所以
+    一直正常，PostgreSQL 抛 `value too long for type character varying(64)` → 500。
+    语义修复见 compiler/exploration_service；这里同时放宽列以兼容历史长引用。
+    """
+    from sqlalchemy import inspect
+
+    inspector = inspect(conn)
+    if "tg_testcase" not in inspector.get_table_names():
+        return
+    cols = {c["name"]: c for c in inspector.get_columns("tg_testcase")}
+    col = cols.get("intent_ref")
+    if col is None:
+        return
+    length = getattr(col.get("type"), "length", None)
+    if length is not None and int(length) >= 255:
+        return
+    if conn.dialect.name == "sqlite":
+        return  # SQLite 不强制 VARCHAR 长度，无需重建表
+    conn.execute(text("ALTER TABLE tg_testcase ALTER COLUMN intent_ref TYPE VARCHAR(255)"))
 
 
 def _migrate_step_primary_key(conn) -> None:  # type: ignore[no-untyped-def]
@@ -306,6 +421,8 @@ _MIGRATION_CALLABLES = {
     "_migrate_step_primary_key": _migrate_step_primary_key,
     "_migrate_inbox_states": _migrate_inbox_states,
     "_migrate_review_revision": _migrate_review_revision,
+    "_migrate_evidence_digest_semantics": _migrate_evidence_digest_semantics,
+    "_migrate_widen_intent_ref": _migrate_widen_intent_ref,
 }
 
 _lock = threading.RLock()

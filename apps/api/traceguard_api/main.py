@@ -161,9 +161,7 @@ def create_app() -> FastAPI:
                             return
                     now = _time.monotonic()
                     if now - last_beat >= max(0.2, heartbeat_seconds):
-                        yield sse_util.format_heartbeat(
-                            cursor=f"at={at};eid={eid}" if at else None
-                        )
+                        yield sse_util.format_heartbeat(cursor=f"at={at};eid={eid}" if at else None)
                         last_beat = now
                     await asyncio.sleep(max(0.05, poll_interval))
             except asyncio.CancelledError:  # 客户端断开

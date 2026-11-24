@@ -75,7 +75,7 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/testcases/tcase_tf_create_normal/ex
 | GET | `/evidence` | 过滤：workspace / run_id / kind / source_type |
 | GET | `/evidence/{id}` | 证据内容（已脱敏）+ 元数据 |
 | GET | `/evidence/{id}/download` | 下载附件（返回 `X-TraceGuard-SHA256`） |
-| POST | `/evidence/{id}/verify` | 用原始内容重算哈希，写回 `integrity_check` |
+| POST | `/evidence/{id}/verify` | 服务端存储完整性验证（读持久化内容重算摘要 + 附件字节 + 派生来源）；旧请求的 `content` 只作为 `legacy_source_check` 单独返回 |
 | GET | `/artifacts` \| `/artifacts/{id}/download` | 产物列表 / 下载（读取时校验完整性） |
 
 ## 5. 诊断 · 图 · 探针

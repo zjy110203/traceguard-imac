@@ -76,10 +76,11 @@ function verdictCount(v: string) {
             <option value="INCONCLUSIVE">INCONCLUSIVE</option>
             <option value="NOT_EVALUATED">NOT_EVALUATED</option>
           </select>
-          <label class="flex small" style="gap: 5px; margin: 0">
-          <input v-model="includeBench" type="checkbox" style="width: auto" @change="load" /> 包含 Benchmark 运行
-        </label>
-        <select v-model="status">
+          <label class="filter-check">
+            <input v-model="includeBench" type="checkbox" style="width: auto" @change="load" />
+            包含 Benchmark 运行
+          </label>
+          <select v-model="status">
             <option value="">全部执行状态</option>
             <option value="QUEUED">QUEUED</option>
             <option value="RUNNING">RUNNING</option>

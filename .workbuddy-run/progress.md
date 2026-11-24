@@ -155,3 +155,28 @@
 - 交付：`docs/RUN-006-BASELINE.md`、`RUN-006-IMPLEMENTATION-REPORT.md`、`RUN-006-TEST-REPORT.md`、
   `RUN-006-SECURITY-RELIABILITY.md`、`RUN-006-DECISION-REQUESTS.md`；证据 `docs/assets/run006/`。
 - WP1 五项均落地并有可复核证据；WP2–WP6 按实际状态标 PARTIAL/BLOCKED/NOT_IMPLEMENTED，未虚报。
+
+## RUN-007-RESUME 进度（2026-11-23）
+
+| WP | 内容 | 状态 |
+|---|---|---|
+| WP0 | 基线审计 + 分支创建 + `docs/RUN-007-BASELINE.md` | ✅ 完成（origin/main 校验一致） |
+| WP1 | 五项修复复核 + 迁移 v8 幂等/旧库升级 | ✅ 完成（163 passed；4 迁移用例；修 3 个真实缺陷） |
+| WP2 | E2E 改独立 Worker 消费队列 | ✅ 完成（55 步 0 失败，证据重取） |
+| WP3 | 前端 15 视图 × 4 断点 + 深色 + 四态 | ✅ 完成（75/75，人工复核 + 修 3 处缺陷） |
+| WP4-01 | PG16 Service Container 扩展验证 | ⚠️ 用例与 CI 就绪；本机无 PG → BLOCKED |
+| WP4-02 | Worker 故障恢复 | ✅ 完成（17/17 checks） |
+| WP4-03 | 60 分钟长稳 | ✅ 完成（65 周期全 PASSED） |
+| WP5 | CI 三级门禁修复 | ⚠️ 逻辑已修 + YAML 校验；无凭据 → 未真实触发（IMPLEMENTED） |
+| WP6 | UI-FaultBench v3 四臂 + LLM 臂 | ✅ 完成（含 D/E 无增益的负结论） |
+| WP7 | 七份报告 + README/FEATURE-STATUS/台账 + 状态文件 | ✅ 完成 |
+| — | 分支推送 + PR | ❌ BLOCKED（无 Git 凭据） |
+
+## RUN-007-RESUME 收尾（2026-11-23 深夜）
+
+| WP | 变更后状态 |
+|---|---|
+| WP4-01 PostgreSQL 16 | ⚠️ → ✅ **PASS（CI 真跑 16.16，6 用例）**；本机仍无 PG |
+| WP5 CI 三级门禁 | ⚠️（未运行）→ ✅ **PASS**（同 commit 三级全绿） |
+| 分支推送 + PR | ❌ BLOCKED → ✅ **PASS**（PR #1） |
+| CI 首跑暴露缺陷 | 8 个（2 个产品缺陷 + 6 个测试/CI 缺陷），4 轮修完 |

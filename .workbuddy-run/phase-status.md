@@ -92,3 +92,27 @@
 | WP4 PostgreSQL / Worker / 长稳 | **BLOCKED** | 环境与时间窗 |
 | WP5 CI 三级门禁真实运行 | **BLOCKED** | 未触发真实 Actions |
 | WP6 UI-FaultBench 深化 | **NOT_IMPLEMENTED（本轮）** | 未追加实验 |
+
+## RUN-007-RESUME 更新（2026-11-23）
+
+状态枚举沿用：NOT_STARTED / IN_PROGRESS / BLOCKED / READY_FOR_REVIEW / ACCEPTED。
+
+| 层 | 阶段 | 名称 | 状态 | 本轮证据 |
+|---|---|---|---|---|
+| 2 | 3 | 任务调度与工作台 | **ACCEPTED（强化）** | 独立 Worker 队列 E2E 55 步 0 失败；执行归属（Worker/fencing/租约）可见 |
+| 3 | 4 | Event 与 Evidence 基础设施 | **ACCEPTED（强化）** | 证据改 `/runs/{id}/evidence` + 图绑定校验；长稳 845 事件无重复键 |
+| 4 | 8 | Evidence Graph | **ACCEPTED（强化）** | 图 54/58 节点、70/76 边；前端自适应渲染修复裁切 |
+| 4 | 10 | Oracle-Protected Self-Healing | **PARTIAL** | E2E 场景 D 全链通过；Benchmark 定位器场景晋升未闭环（0/1 回归），已如实记录 |
+| 5 | 11 | UI-FaultBench | **READY_FOR_REVIEW（四臂已跑）** | A/C/D/E 30 场景 + LLM 两臂；D/E 无增益为负结论；人工基线 BLOCKED |
+| 5 | 12 | 外部泛化、安全与可靠性 | **READY_FOR_REVIEW** | 60 分钟长稳 19/19、故障恢复 17/17；外部泛化仍 BLOCKED(P03) |
+| 5 | 13 | 全链路集成与交付 | **READY_FOR_REVIEW** | 七份报告 + 证据索引；推送/PR 与 CI 触发 BLOCKED（无凭据） |
+| — | — | 前端产品化（15 视图） | **ACCEPTED（视觉人工复核）** | 75/75 检查 + 79 张截图 + 四态；深色真实生效 |
+
+## RUN-007-RESUME 阶段状态最终更新（2026-11-23）
+
+| 层 | 阶段 | 状态变更 |
+|---|---|---|
+| 5 | 12 外部泛化、安全与可靠性 | READY_FOR_REVIEW → **ACCEPTED**（长稳 19/19、故障恢复 17/17、CI security/llm-smoke 真跑） |
+| 5 | 13 全链路集成与交付 | READY_FOR_REVIEW → **ACCEPTED**（PR #1 + 三级门禁同 commit 全绿） |
+| — | CI 三级门禁 | BLOCKED → **ACCEPTED**（VERIFIED，含 attestation `head_sha` 严格匹配） |
+| 4 | 10 Oracle-Protected Self-Healing | 仍 **PARTIAL**（自愈未闭环，0/1 回归） |

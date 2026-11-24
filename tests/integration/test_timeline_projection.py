@@ -82,9 +82,7 @@ def test_timeline_projection_is_real_and_idempotent(client) -> None:
     assert doc["authority"] == "derived_view"
     assert len(doc["entries"]) == 3
     assert doc["counts"]["step.completed"] == 2
-    assert [e["sequence"] for e in doc["entries"]] == sorted(
-        e["sequence"] for e in doc["entries"]
-    )
+    assert [e["sequence"] for e in doc["entries"]] == sorted(e["sequence"] for e in doc["entries"])
 
     # 重复投影：幂等，不重复写条目
     r2 = client.get("/api/v1/runs/run_tl_1/timeline")

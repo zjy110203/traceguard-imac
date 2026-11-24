@@ -51,3 +51,17 @@
 - 真实环境：正常/故障 Run、诊断、probe-plan、真实 http_state 回灌、图节点均已实测（`docs/assets/run006/`）。
 - 未完成：WP2 全链 E2E（PARTIAL）、WP3 前端（NOT_IMPLEMENTED 本轮）、WP4 PG/Worker/长稳（BLOCKED）、
   WP5 CI 真实运行（BLOCKED）、WP6 Benchmark v3（NOT_IMPLEMENTED 本轮）。
+
+---
+
+## RUN-007-RESUME 更新（2026-11-23，追加）
+
+- 分支：`workbuddy/run007-resume-20261123`（基于 `origin/main` `ac2876e`）
+- 已完成（VERIFIED）：WP1 复核（163 passed）、迁移 v8 幂等/旧库升级、E2E 独立 Worker 队列（55 步 0 失败）、
+  证据来源修正与图绑定校验、沙箱走队列（fail-closed）、Run 级状态缓存隔离、前端 15 视图验收（75/75）、
+  Worker 故障恢复（17/17）、60 分钟长稳（65 周期/19 checks）、Benchmark 四臂 30 场景 + LLM 两臂。
+- 已完成（IMPLEMENTED，未运行）：CI 三级门禁修复（PR 分支过滤、Nightly 去掩盖、Release 去 RUN-005 依赖 +
+  Actions API 校验 Nightly `head_sha`）。**无 GitHub 凭据 → 未触发**。
+- 阻塞：分支推送/PR（无 https 凭据、无 SSH key、无 token）；本机 PG16 运行时（无 Docker/psql）；
+  人工诊断基线（无人力）；Routed 臂（未触发 reasoning 升级）。
+- 未完成（如实登记）：Benchmark 中定位器场景的自愈"沙箱通过 → 晋升"断点未定位（回归 0/1）。

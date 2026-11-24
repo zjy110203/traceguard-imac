@@ -188,3 +188,27 @@
 | PostgreSQL / 4 Worker / 60 分钟长稳 | **BLOCKED** | 环境/时间窗限制 |
 | CI 三级门禁真实运行 | **BLOCKED** | 未触发真实 Actions |
 | Benchmark v3 | **NOT_IMPLEMENTED（本轮）** | 不引用历史数字 |
+
+## RUN-007 续跑（2026-11-23，追加；不改写上面历史条目）
+
+> 口径：VERIFIED = 有本轮真实运行证据；IMPLEMENTED = 代码完成但缺本轮运行证据；
+> PARTIAL = 部分完成/证据不完整；BLOCKED = 外部条件阻塞；NEEDS_DECISION = 待批准。
+
+| 能力 | 状态 | 证据 / 说明 |
+|---|---|---|
+| E2E 由独立 Worker 消费队列执行 | **VERIFIED** | `e2e-worker-run007.json`：55 步 0 失败，5 个 Run 均由 w1–w4 领取，`api_inline_worker=false` |
+| 执行归属可见（Worker/attempt/fencing/租约） | **VERIFIED** | Run 详情「执行归属」条 + 质量总览 Worker 面板（截图 `ui/07-run-detail-1440.png`） |
+| Evidence 取真实来源 + 证据图绑定校验 | **VERIFIED** | A 场景 18 条、B 场景 28 条；图 54 节点/70 边含 `Evidence`+来源关系 |
+| 沙箱走队列（无 Worker 时 fail-closed） | **VERIFIED** | `test_sandbox_worker_queue.py`(2) + E2E D 场景 `sandbox_executed_by=run007-w1` |
+| Run 级状态缓存隔离 | **VERIFIED** | `test_pipeline_state_cache.py`(2) + E2E B 场景假成功判 FAILED |
+| 迁移 v8 幂等 / v7 旧库升级 / 并发启动 | **VERIFIED（SQLite）** | `test_migration_v8.py`(4)；修复前并发用例失败 |
+| PostgreSQL 16 平台级契约 | **VERIFIED（CI）** | `test_postgres_platform.py`(6) 在 Nightly 的 `postgres:16`（实测 16.16）上全过；本机无 PG 仍 skip |
+| Worker 被杀 → 同 Run 接管 + 代次隔离 | **VERIFIED** | `worker-fault-recovery-verified.json`（真实 kill、`killed_after_s`>0、`fencing_token` 递增） |
+| 60 分钟长稳（独立 API + 4 Worker） | **VERIFIED** | `soak-60min.json` + `soak-samples.jsonl`，19 项 checks 全真 |
+| 前端 15 视图 × 4 断点 + 深色 + 四态 | **VERIFIED（视觉人工复核）** | `ui/ui-review.json` 75/75；79 张截图 |
+| 证据图完整可见 / 窄屏筛选栏 | **VERIFIED（已修）** | 修复裁切与 390px 错位，见 `RUN-007-UI-REVIEW.md` §3 |
+| CI 门禁去掩盖（PR/Nightly/Release） | **VERIFIED** | 同 commit `cc3339d` 三级全绿：PR Gate [#45201761239](https://github.com/zjy110203/traceguard-imac/actions/runs/45201761239) / Nightly [#45201774473](https://github.com/zjy110203/traceguard-imac/actions/runs/45201774473) / Release [#45202185410](https://github.com/zjy110203/traceguard-imac/actions/runs/45202185410)；首跑暴露 8 个缺陷已修 |
+| UI-FaultBench v3 四臂 30 场景 | **见 Benchmark 报告** | `docs/RUN-007-BENCHMARK-REPORT.md` |
+| LLM 对照臂（受预算子集） | **见 Benchmark 报告** | `llm-arm-*.json`，模型由服务端路由决定，按实际模型记录 |
+| 身份认证 / RBAC | **NOT_IMPLEMENTED（NEEDS_DECISION）** | D-01 未批准；主体类型门禁 ≠ 身份认证 |
+| 外部站点泛化 | **BLOCKED** | P03 未批准授权清单，本轮未访问未授权站点 |

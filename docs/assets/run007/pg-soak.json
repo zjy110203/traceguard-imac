@@ -1,0 +1,98 @@
+{
+  "round": "RUN-007-FINALIZATION-2",
+  "database": "PostgreSQL (Postgres.app 16.16, aarch64)",
+  "database_url_host": "127.0.0.1:55432/traceguard",
+  "workers": 3,
+  "minutes": 6.0,
+  "interval_s": 20.0,
+  "started_at": "2026-11-24T04:10:01Z",
+  "duration_s": 371.6,
+  "runs_submitted": 78,
+  "runs_completed": 78,
+  "latency_s": {
+    "min": 6.03,
+    "median": 10.01,
+    "p95": 10.02,
+    "max": 20.03
+  },
+  "verdicts": {
+    "FAILED": 3,
+    "PASSED": 75
+  },
+  "lease_owners": [
+    "204deiMac.local-89405",
+    "204deiMac.local-92034",
+    "204deiMac.local-92035",
+    "204deiMac.local-92036"
+  ],
+  "invariants": {
+    "orphan_steps": 0,
+    "orphan_evidence": 0,
+    "duplicate_event_sequences": 0,
+    "duplicate_migration_rows": 0,
+    "migration_rows": 9,
+    "runs_without_owner": 0,
+    "runs_without_fencing": 0,
+    "distinct_workers": 4,
+    "duplicate_run_steps": 0,
+    "runs_not_terminal": 0,
+    "run_status_counts": {
+      "COMPLETED": 172,
+      "FAILED": 1
+    }
+  },
+  "checks": {
+    "all_runs_terminal": true,
+    "no_orphan_steps": true,
+    "no_orphan_evidence": true,
+    "no_duplicate_event_sequences": true,
+    "no_duplicate_run_steps": true,
+    "migration_rows_unique": true,
+    "every_run_has_owner": true,
+    "every_run_has_fencing": true,
+    "multi_worker_contention": true
+  },
+  "business": {
+    "passed": 75,
+    "failed": 3,
+    "total": 78,
+    "failed_runs": [
+      {
+        "run_id": "run_179549340603879bd677fe5cf",
+        "test_verdict": "FAILED",
+        "assertions": [
+          {
+            "assertion_id": "a_biz_count",
+            "status": "FAILED",
+            "reason": "countgte1 got=0"
+          }
+        ]
+      },
+      {
+        "run_id": "run_17954934060455e912ba517e3",
+        "test_verdict": "FAILED",
+        "assertions": [
+          {
+            "assertion_id": "a_biz_count",
+            "status": "FAILED",
+            "reason": "countgte1 got=0"
+          }
+        ]
+      },
+      {
+        "run_id": "run_1795493406061004ae6b4a020",
+        "test_verdict": "FAILED",
+        "assertions": [
+          {
+            "assertion_id": "a_biz_count",
+            "status": "FAILED",
+            "reason": "countgte1 got=0"
+          }
+        ]
+      }
+    ],
+    "note": "并发同时执行同一 create 用例时，Run 开头的 RESET_DATA 会互相重置数据，UI 断言已通过而独立 count 断言读到 0 —— 这是数据隔离限制，不是 PG/队列缺陷；Benchmark 正式实验保持串行执行。"
+  },
+  "all_checks_passed": true,
+  "errors": []
+}

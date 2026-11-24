@@ -325,7 +325,9 @@ class PersistentEvidenceManager:
         captured_at: str = "",
         run_id: str | None = None,
         attachment_ref: str | None = None,
+        attachment_sha256: str = "",
     ) -> EvidenceRecord:
+        """采集原始证据：同时记录"原始来源摘要"和"持久化内容摘要"。"""
         raw_hash = _content_hash(content)
         stored_content = redact(content) if do_redact else content
         rec = EvidenceRecord(
@@ -336,6 +338,8 @@ class PersistentEvidenceManager:
             sha256=raw_hash,
             workspace_id=workspace_id,
             content=stored_content,
+            stored_content_sha256=_content_hash(stored_content),
+            attachment_sha256=attachment_sha256,
             source_trust=source_trust,
             redacted=do_redact,
             captured_at=captured_at or utc_now_iso(),
@@ -368,6 +372,7 @@ class PersistentEvidenceManager:
             sha256=_content_hash(content),
             workspace_id=workspace_id,
             content=content,
+            stored_content_sha256=_content_hash(content),
             raw_ref=raw_ref,
             derivation_rule=derivation_rule,
             model_version=model_version,
@@ -388,9 +393,12 @@ class PersistentEvidenceManager:
                     kind=rec.kind,
                     source_type=rec.source_type,
                     sha256=rec.sha256,
+                    stored_content_sha256=rec.stored_content_sha256,
+                    attachment_sha256=rec.attachment_sha256,
                     attachment_ref=rec.attachment_ref,
                     source_trust=rec.source_trust,
                     integrity_check=rec.integrity_check,
+                    integrity_detail=dict(rec.integrity_detail),
                     redacted=rec.redacted,
                     doc=rec.to_dict(),
                     captured_at=rec.captured_at or utc_now_iso(),
@@ -398,6 +406,11 @@ class PersistentEvidenceManager:
             )
 
     def verify_integrity(self, evidence_id: str, original_content: dict[str, Any]) -> bool:
+        """**旧语义**：调用者提交原始内容做来源摘要比对（不是存储完整性校验）。
+
+        结果写入 `integrity_detail["source_payload_match"]`，不再冒用 `integrity_check`，
+        避免把"来源内容可比对"当成"持久化内容未被篡改"。
+        """
         rec = self.get(evidence_id)
         if not rec:
             return False
@@ -405,11 +418,134 @@ class PersistentEvidenceManager:
         with self.db.session() as s:
             row = s.get(EvidenceRow, evidence_id)
             if row:
-                row.integrity_check = "PASS" if ok else "FAIL"
                 doc = dict(row.doc or {})
-                doc["integrity_check"] = row.integrity_check
+                detail = dict(doc.get("integrity_detail") or {})
+                detail["source_payload_match"] = "PASS" if ok else "FAIL"
+                detail["source_payload_checked_with"] = "caller_supplied_content"
+                doc["integrity_detail"] = detail
                 row.doc = doc
         return ok
+
+    def verify_storage_integrity(
+        self,
+        evidence_id: str,
+        *,
+        expected_workspace: str | None = None,
+        artifacts: Any | None = None,
+    ) -> dict[str, Any]:
+        """服务端存储完整性：读持久化记录与内容 → 重算摘要 → 与保存时摘要比较。
+
+        校验项（全部真实执行，不接收调用者提供的原始内容）：
+        1. 记录存在；
+        2. 持久化内容重算摘要 == stored_content_sha256（历史行无此摘要 → NOT_RUN）；
+        3. Workspace 归属（调用方声明时）；
+        4. 附件：ArtifactStore.read() 后对字节重算 SHA-256 == attachment_sha256；
+        5. 派生证据：raw_ref 存在、是 raw、同工作区、记录 derivation_rule。
+        """
+        rec = self.get(evidence_id)
+        if rec is None:
+            return {"status": "FAIL", "reason": "EVIDENCE_NOT_FOUND", "checks": {}}
+        checks: dict[str, Any] = {"record_found": True}
+        reasons: list[str] = []
+        if expected_workspace:
+            checks["workspace_match"] = rec.workspace_id == expected_workspace
+            if not checks["workspace_match"]:
+                reasons.append("WORKSPACE_MISMATCH")
+
+        recomputed = _content_hash(rec.content)
+        recorded = rec.stored_content_sha256
+        if not recorded:
+            checks["stored_content_match"] = None
+            reasons.append("STORED_DIGEST_NOT_RECORDED_AT_CAPTURE")
+        else:
+            checks["stored_content_match"] = recomputed == recorded
+            if not checks["stored_content_match"]:
+                reasons.append("STORED_CONTENT_MISMATCH")
+
+        if rec.attachment_ref:
+            checks["attachment_present"] = True
+            checks["attachment_digest_recorded"] = bool(rec.attachment_sha256)
+            if not rec.attachment_sha256:
+                # 历史行没记附件摘要：既不能证明，也不能判成"已篡改"
+                reasons.append("ATTACHMENT_DIGEST_NOT_RECORDED_AT_CAPTURE")
+            if artifacts is None:
+                checks["attachment_readable"] = None
+                reasons.append("ARTIFACT_STORE_UNAVAILABLE")
+            else:
+                try:
+                    data, meta = artifacts.read(rec.attachment_ref)
+                except Exception as exc:  # noqa: BLE001
+                    checks["attachment_readable"] = False
+                    tampered = "integrity" in str(exc).lower()
+                    reasons.append("ATTACHMENT_TAMPERED" if tampered else "ATTACHMENT_UNREADABLE")
+                else:
+                    actual = hashlib.sha256(data).hexdigest()
+                    checks["attachment_readable"] = True
+                    if rec.attachment_sha256:
+                        checks["attachment_sha256_match"] = actual == rec.attachment_sha256
+                        if not checks["attachment_sha256_match"]:
+                            reasons.append("ATTACHMENT_TAMPERED")
+                        checks["attachment_meta_sha256_match"] = (
+                            meta.get("sha256") == rec.attachment_sha256
+                        )
+                        if not checks["attachment_meta_sha256_match"]:
+                            reasons.append("ATTACHMENT_META_MISMATCH")
+
+        if rec.kind == "derived":
+            raw = self.get(rec.raw_ref or "")
+            checks["derived_source_exists"] = raw is not None
+            checks["derived_source_is_raw"] = bool(raw and raw.kind == "raw")
+            checks["derived_source_same_workspace"] = bool(
+                raw and raw.workspace_id == rec.workspace_id
+            )
+            checks["derivation_rule_recorded"] = bool(rec.derivation_rule)
+            for key in (
+                "derived_source_exists",
+                "derived_source_is_raw",
+                "derived_source_same_workspace",
+                "derivation_rule_recorded",
+            ):
+                if checks[key] is False:
+                    reasons.append(key.upper())
+
+        # FAIL 只表示"发现不一致/被篡改"；"缺少记录、无法证明"一律 NOT_RUN。
+        # attachment_digest_recorded=False 属于"记录缺失"，不是"检测到篡改"。
+        soft_missing = {"attachment_digest_recorded"}
+        hard_false = [k for k, v in checks.items() if v is False and k not in soft_missing]
+        if hard_false:
+            status = "FAIL"
+        elif (
+            any(v is None for v in checks.values())
+            or checks.get("attachment_digest_recorded", True) is False
+        ):
+            status = "NOT_RUN"
+        else:
+            status = "PASS"
+
+        with self.db.session() as s:
+            row = s.get(EvidenceRow, evidence_id)
+            if row:
+                row.integrity_check = status
+                row.integrity_detail = {
+                    "storage_checks": checks,
+                    "reasons": reasons,
+                    "recomputed_sha256": recomputed,
+                    "recorded_stored_content_sha256": recorded,
+                }
+                doc = dict(row.doc or {})
+                doc["integrity_check"] = status
+                doc["integrity_detail"] = row.integrity_detail
+                row.doc = doc
+        return {
+            "evidence_id": evidence_id,
+            "status": status,
+            "reasons": reasons,
+            "checks": checks,
+            "stored_content_sha256": recorded,
+            "recomputed_sha256": recomputed,
+            "attachment_sha256": rec.attachment_sha256,
+            "workspace_id": rec.workspace_id,
+        }
 
     def get(self, evidence_id: str) -> EvidenceRecord | None:
         with self.db.session() as s:
@@ -479,6 +615,9 @@ def _to_evidence(row: EvidenceRow) -> EvidenceRecord:
         raw_ref=doc.get("raw_ref"),
         derivation_rule=doc.get("derivation_rule"),
         model_version=doc.get("model_version"),
+        stored_content_sha256=row.stored_content_sha256 or "",
+        attachment_sha256=row.attachment_sha256 or "",
+        integrity_detail=dict(row.integrity_detail or doc.get("integrity_detail") or {}),
         attachment_ref=row.attachment_ref,
         integrity_check=row.integrity_check,
         source_trust=row.source_trust,

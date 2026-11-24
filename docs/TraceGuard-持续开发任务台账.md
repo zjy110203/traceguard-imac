@@ -137,3 +137,24 @@
 | R6-21 | CI 三级门禁真实运行 | BLOCKED | 未触发真实 Actions |
 | R6-22 | UI-FaultBench 深化（30 场景多臂） | NOT_IMPLEMENTED（本轮） | 不引用历史数字 |
 | R6-23 | 稳定性回放 F08 完善 | PARTIAL（继承 RUN-005） | 未改动 |
+
+## RUN-007-RESUME 任务清单（2026-11-23，追加；历史条目不改写）
+
+| 编号 | 任务 | 状态 | 证据 | 备注 |
+|---|---|---|---|---|
+| R7-01 | 基线审计（origin/main = `ac2876e`） | PASS | `docs/RUN-007-BASELINE.md` | fetch 成功，远程 HEAD 与指令基线一致 |
+| R7-02 | WP1 五项修复复核 | PASS | 163 passed / 0 failed | 见 TEST-REPORT §3 |
+| R7-03 | 迁移 v8 幂等 + 旧库升级 | PASS | `test_migration_v8.py`(4) | 修复前并发用例失败 → 已修 `db.py` |
+| R7-04 | E2E 改独立 Worker 消费队列 | PASS | `e2e-worker-run007.json` 55 步 | 不覆盖旧 `e2e-run007.json` |
+| R7-05 | Evidence 来源修正 + 图绑定校验 | PASS | 18/28 条证据 + 图节点/边 | 不再读空的 `report.evidence_ids` |
+| R7-06 | 沙箱改队列（fail-closed） | PASS | `test_sandbox_worker_queue.py`(2) | 无 Worker → PRECONDITION_FAILED |
+| R7-07 | Run 级状态缓存隔离 | PASS | `test_pipeline_state_cache.py`(2) | 修复真实假通过漏检 |
+| R7-08 | 前端 15 视图 × 4 断点 + 深色 + 四态 | PASS | `ui/ui-review.json` 75/75，79 图 | 修 3 处真实视觉缺陷 |
+| R7-09 | Worker 故障恢复实验（重写脚本） | PASS | `worker-fault-recovery-verified.json` | 真实计时/同 Run 接管/陈旧代次拒绝 |
+| R7-10 | 60 分钟长稳（重写脚本） | PASS | `soak-60min.json` + `soak-samples.jsonl` | 独立 API + 4 Worker + SSE 续传 |
+| R7-11 | PostgreSQL 16 扩展验证 | **PASS（CI）** | `test_postgres_platform.py`(6)，Nightly `postgres:16`（16.16） | 本机无 PG 仍 skip；CI 已真跑 |
+| R7-12 | CI 三级门禁修复 | **PASS** | PR/Nightly/Release 同 commit `cc3339d` 全绿；`ci-gates.json` | 首跑暴露 8 个缺陷，4 轮修完 |
+| R7-13 | UI-FaultBench v3 四臂 | PASS | `docs/RUN-007-BENCHMARK-REPORT.md` | 30 场景 + Flaky×5 |
+| R7-14 | LLM 对照臂（预算内子集） | PASS（子集） | `llm-arm-*.json` | 模型由路由决定，按实际记录；不外推 |
+| R7-15 | 七份 RUN-007 报告 + README/台账 | PASS | `docs/RUN-007-*.md` | 状态枚举统一 |
+| R7-16 | 分支推送 + PR | **PASS** | PR #1 → `main@ac2876e`，head `cc3339d` | token 由用户临时提供；用完即撤销 |

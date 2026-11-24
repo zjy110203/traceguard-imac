@@ -10,7 +10,7 @@
 | `tg_schema_migration` | 迁移版本记录 | `version` PK |
 | `tg_workspace` | 工作区 | — |
 | `tg_intent` | TestIntent（C01） | `workspace_id` 索引 |
-| `tg_testcase` | 用例聚合（最新版本指针、审核状态） | `workspace_id`、`intent_ref` 索引 |
+| `tg_testcase` | 用例聚合（最新版本指针、审核状态） | `workspace_id`、`intent_ref` 索引；`intent_ref` 只存 intent_id（正文在版本文档的 `intent_text`） |
 | `tg_testcase_version` | 用例不可变版本（C02） | **UNIQUE(testcase_id, version)** |
 | `tg_oracle` | Oracle 版本（C03） | **UNIQUE(oracle_id, version)** |
 | `tg_task` | 逻辑任务 | `idempotency_key` **UNIQUE** |
@@ -18,7 +18,7 @@
 | `tg_step` | 步骤轨迹 | PK `id = run_id + ':' + step_id`；**UNIQUE(run_id, step_id)** |
 | `tg_event` | 事件（C05） | **UNIQUE(producer_instance_id, sequence)**、**UNIQUE(producer_id, idempotency_key)** |
 | `tg_event_conflict` | 同键异载荷审计 | 自增 PK |
-| `tg_evidence` | 证据元数据（C06） | `workspace_id`、`run_id`、`kind`、`source_type` 索引 |
+| `tg_evidence` | 证据元数据（C06） | `workspace_id`、`run_id`、`kind`、`source_type` 索引；三种摘要语义（来源/持久化内容/附件） |
 | `tg_consumer_inbox` | 消费幂等（C05） | **UNIQUE(consumer_id, event_id)** |
 | `tg_artifact` | 产物（截图/DOM/trace） | `sha256` 索引；内容寻址路径 |
 | `tg_doc` | 聚合文档（graph/diagnosis/disposition/probe_execution/repair/experiment/exploration） | `(kind, workspace_id)` 索引、`ref_id` 索引、`version` CAS |
@@ -45,6 +45,8 @@ UNIQUE (producer_id, idempotency_key)     -- 跨实例幂等（重启后仍生�
 
 - `tg_testcase_version` 内容写入后不再更新（仅 `review_status` 与审核历史可流转）。
 - `tg_evidence` 不可变：重复 `evidence_id` 写入直接报冲突；完整性校验结果单独更新。
+- 摘要分三列：`sha256`（脱敏前来源）、`stored_content_sha256`（脱敏后持久化内容）、
+  `attachment_sha256`（附件字节）；服务端完整性校验只认后两者，见迁移 v9。
 - 修复晋升生成新版本，回滚也生成新版本 —— 不删除、不原地改。
 
 ### 2.4 队列与租约
@@ -73,6 +75,12 @@ ORDER BY created_at LIMIT 5
 | 2 | event_and_evidence_indexes | 事件/证据复合索引 |
 | 3 | doc_store_index | `tg_doc(kind, workspace_id)` |
 | 4 | step_primary_key_scoped_by_run | 重建 `tg_step`，修正跨 Run 覆盖缺陷 |
+| 5 | consumer_inbox_states | Inbox 状态机列（见 §5） |
+| 6 | producer_sequence_allocator | 事件序号原子分配表（见 §5） |
+| 7 | testcase_review_revision | 审核修订号 CAS 令牌 |
+| 8 | promotion_receipts | 晋升/回滚幂等回执表 |
+| 9 | evidence_digest_semantics | `tg_evidence` 增加 `stored_content_sha256` / `attachment_sha256` / `integrity_detail`（历史行不回溯填补，校验时如实 NOT_RUN） |
+| 10 | widen_testcase_intent_ref | `tg_testcase.intent_ref` 由 `VARCHAR(64)` 放宽到 `VARCHAR(255)`（PG 实测：旧表 `ALTER COLUMN ... TYPE`，SQLite 长度不强制故跳过）；需求正文改存 `TestCaseVersion.intent_text`，引用字段不再放正文 |
 
 执行：应用/Worker 启动时 `Database.create_schema()`，幂等；并发启动时 DDL 冲突被识别并跳过。
 

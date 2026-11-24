@@ -215,6 +215,16 @@ class CatalogService:
         """
         clean = {k: v for k, v in payload.items() if k in TestCaseVersion.model_fields}
         tc = TestCaseVersion(**clean)
+        # 数据库无关的长度护栏：SQLite 不校验 VARCHAR 长度，PG 会直接抛 DataError(500)。
+        # 这里显式返回校验错误，避免"本地过、CI/PG 崩"的差异。
+        if tc.intent_ref and len(tc.intent_ref) > 255:
+            raise AppError(
+                ErrorCode.VALIDATION_ERROR,
+                f"intent_ref 过长（{len(tc.intent_ref)} > 255）：引用字段不得存放需求正文，"
+                "正文请放 intent_text",
+            )
+        if title and len(title) > 300:
+            raise AppError(ErrorCode.VALIDATION_ERROR, f"title 过长（{len(title)} > 300）")
         tc.review_status = review_status  # type: ignore[assignment]
         with self.db.session() as s:
             row = s.get(TestCaseRow, tc.testcase_id)
@@ -714,7 +724,15 @@ class CatalogService:
         不会被误判成 VERSION_CONFLICT。
         """
         with self.db.session() as s:
-            replay = self._receipt_replay(s, idempotency_key, proposal_id, kind="PROMOTE")
+            replay = self._receipt_replay(
+                s,
+                idempotency_key,
+                proposal_id,
+                kind="PROMOTE",
+                testcase_id=testcase_id,
+                workspace_id=workspace_id,
+                base_version=base_version,
+            )
             if replay is not None:
                 return replay
             row = s.get(TestCaseRow, testcase_id)
@@ -791,7 +809,15 @@ class CatalogService:
         与晋升相同：幂等回执与版本指针在同一事务提交，重试可确定性恢复。
         """
         with self.db.session() as s:
-            replay = self._receipt_replay(s, idempotency_key, proposal_id, kind="ROLLBACK")
+            replay = self._receipt_replay(
+                s,
+                idempotency_key,
+                proposal_id,
+                kind="ROLLBACK",
+                testcase_id=testcase_id,
+                workspace_id=workspace_id,
+                base_version=promoted_version,
+            )
             if replay is not None:
                 return replay
             row = s.get(TestCaseRow, testcase_id)
@@ -853,18 +879,94 @@ class CatalogService:
 
     # -------------------------------------------------------- promotion receipts
     @staticmethod
+    def _receipt_identity(row: PromotionReceiptRow) -> dict[str, Any]:
+        return {
+            "idempotency_key": row.idempotency_key,
+            "kind": row.kind,
+            "proposal_id": row.proposal_id,
+            "testcase_id": row.testcase_id,
+            "workspace_id": row.workspace_id,
+            "base_version": int(row.base_version or 0),
+            "target_version": int(row.target_version or 0),
+        }
+
+    @staticmethod
+    def _assert_receipt_identity(
+        row: PromotionReceiptRow,
+        *,
+        kind: str,
+        proposal_id: str,
+        testcase_id: str,
+        workspace_id: str,
+        base_version: int,
+    ) -> None:
+        """回执必须严格绑定同一动作的完整身份。
+
+        RUN-007-FINALIZATION-2（WP1-B）：只按幂等键命中就返回 `row.result` 会让
+        "Proposal B 复用 Proposal A 的 key" 直接拿到 A 的 promoted_version，
+        于是 B 被错误标记为 PROMOTED。这里逐字段比对，任一不一致都显式冲突。
+        """
+        mismatched: list[dict[str, Any]] = []
+        expected = {
+            "kind": kind,
+            "proposal_id": proposal_id,
+            "testcase_id": testcase_id,
+            "workspace_id": workspace_id,
+        }
+        actual = CatalogService._receipt_identity(row)
+        for field, want in expected.items():
+            got = actual.get(field)
+            if str(got or "") != str(want or ""):
+                mismatched.append({"field": field, "receipt": got, "request": want})
+        if int(actual.get("base_version") or 0) != int(base_version or 0):
+            mismatched.append(
+                {
+                    "field": "base_version",
+                    "receipt": int(actual.get("base_version") or 0),
+                    "request": int(base_version or 0),
+                }
+            )
+        if mismatched:
+            raise AppError(
+                ErrorCode.CONFLICT,
+                "IDEMPOTENCY_KEY_REUSED: 该幂等键已绑定到另一个动作/提案/用例/基线版本，"
+                "禁止跨 Proposal 或跨操作类型复用",
+                details={
+                    "idempotency_key": row.idempotency_key,
+                    "mismatched": mismatched,
+                    "receipt": actual,
+                },
+            )
+
+    @staticmethod
     def _receipt_replay(
-        s: Any, idempotency_key: str, proposal_id: str, *, kind: str
+        s: Any,
+        idempotency_key: str,
+        proposal_id: str,
+        *,
+        kind: str,
+        testcase_id: str = "",
+        workspace_id: str = "",
+        base_version: int = 0,
     ) -> dict[str, Any] | None:
         """命中已提交的回执 → 返回原结果（幂等重放），不再动版本指针。
 
         两个来源：
-        1. 同一幂等键（正常重试）；
-        2. 同一 proposal 的同类回执（不同幂等键重试同一动作）——避免重复创建版本。
+        1. 同一幂等键（正常重试）——必须身份完全一致，否则显式 CONFLICT；
+        2. 同一 proposal 的同类回执（不同幂等键重试同一动作）——同样校验身份，
+           避免另一个用例/工作区/基线版本的同名 proposal 复用结果。
         """
         if idempotency_key:
             row = s.get(PromotionReceiptRow, idempotency_key)
             if row is not None:
+                CatalogService._assert_receipt_identity(
+                    row,
+                    kind=kind,
+                    proposal_id=proposal_id,
+                    testcase_id=testcase_id,
+                    workspace_id=workspace_id,
+                    base_version=base_version,
+                )
                 return {**dict(row.result or {}), "idempotent_hit": True, "matched_by": "key"}
         if proposal_id:
             row = s.scalar(
@@ -877,6 +979,14 @@ class CatalogService:
                 .limit(1)
             )
             if row is not None:
+                CatalogService._assert_receipt_identity(
+                    row,
+                    kind=kind,
+                    proposal_id=proposal_id,
+                    testcase_id=testcase_id,
+                    workspace_id=workspace_id,
+                    base_version=base_version,
+                )
                 return {**dict(row.result or {}), "idempotent_hit": True, "matched_by": "proposal"}
         return None
 
@@ -897,7 +1007,17 @@ class CatalogService:
             return
         existing = s.get(PromotionReceiptRow, idempotency_key)
         if existing is not None:
-            return  # 同一事务内重复写回执：保持第一次的结果
+            # 同一事务内重复写回执：只有身份一致才保持第一次结果；否则必须冲突，
+            # 绝不能把已属于别的提案的回执悄悄覆盖或复用。
+            CatalogService._assert_receipt_identity(
+                existing,
+                kind=kind,
+                proposal_id=proposal_id,
+                testcase_id=testcase_id,
+                workspace_id=workspace_id,
+                base_version=base_version,
+            )
+            return
         s.add(
             PromotionReceiptRow(
                 idempotency_key=idempotency_key,
@@ -911,6 +1031,41 @@ class CatalogService:
                 created_at=_now(),
             )
         )
+
+    def record_receipt(
+        self,
+        *,
+        idempotency_key: str,
+        kind: str,
+        proposal_id: str,
+        testcase_id: str,
+        workspace_id: str,
+        base_version: int,
+        target_version: int,
+        result: dict[str, Any],
+    ) -> dict[str, Any]:
+        """为历史 PROMOTED 提案补写**持久化**回执（不是内存临时字典）。
+
+        旧数据里存在"已晋升但没有回执"的提案；补回执必须真正落库，
+        否则下一次重试仍然拿不到回执，幂等语义是假的。
+        """
+        if not idempotency_key:
+            raise AppError(ErrorCode.VALIDATION_ERROR, "idempotency_key 不能为空")
+        with self.db.session() as s:
+            self._write_receipt(
+                s,
+                idempotency_key=idempotency_key,
+                kind=kind,
+                proposal_id=proposal_id,
+                testcase_id=testcase_id,
+                workspace_id=workspace_id,
+                base_version=base_version,
+                target_version=target_version,
+                result=result,
+            )
+            s.flush()
+            row = s.get(PromotionReceiptRow, idempotency_key)
+            return self._receipt_identity(row) if row else {}
 
     def get_promotion_receipt(self, idempotency_key: str) -> dict[str, Any] | None:
         with self.db.session() as s:

@@ -79,9 +79,11 @@ def run(base: str, out_dir: Path, only: str = "") -> dict:
         console_errors: list[str] = []
         page.on(
             "console",
-            lambda msg: console_errors.append(msg.text)
-            if msg.type == "error" and not any(k in msg.text for k in IGNORABLE_CONSOLE)
-            else None,
+            lambda msg: (
+                console_errors.append(msg.text)
+                if msg.type == "error" and not any(k in msg.text for k in IGNORABLE_CONSOLE)
+                else None
+            ),
         )
 
         # 1) 页面导航 + 渲染 + 截图
@@ -150,7 +152,10 @@ def run(base: str, out_dir: Path, only: str = "") -> dict:
         body = page.inner_text("body")
         record(
             "error-state:not-found",
-            ("失败" in body) or ("错误" in body) or ("not found" in body.lower()) or ("重试" in body),
+            ("失败" in body)
+            or ("错误" in body)
+            or ("not found" in body.lower())
+            or ("重试" in body),
             "错误提示可见",
         )
         page.screenshot(path=str(out_dir / "error-state.png"), full_page=True)

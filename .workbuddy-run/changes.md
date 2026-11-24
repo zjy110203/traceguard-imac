@@ -53,3 +53,34 @@
 - `docs/RUN-006-*.md` + `docs/assets/run006/` | 新增 | 交付文档与证据
 - `apps/web/src/views/DiagnosisDetailView.vue` | 修改 | 冲突提示、探针回灌展示、主动闭环入口、预算语义提示、390px 表格优化
 - `apps/web/src/types.ts` | 修改 | `probe_feedback`/`excluded_by`/`unresolved_conflicts`/`evaluation_history`/`ProbePlan` 类型
+
+## RUN-007-RESUME（2026-11-23，追加）
+
+| 文件 | 变更 | 说明 |
+|---|---|---|
+| `packages/execution/.../runtime/pipeline.py` | 修改 | `execute()` 开头清空 `_state_cache`（修复跨 Run 业务状态泄漏导致的假通过漏检） |
+| `apps/api/.../runtime.py` | 修改 | 新增 `TERMINAL_RUN_STATUSES` 与 `wait_for_run()`（只等待，不执行） |
+| `apps/api/.../services/repair_service.py` | 修改 | 沙箱改队列 + `wait_for_run`；无 Worker 时 fail-closed；记录 `sandbox_executed_by`/`sandbox_fencing_token` |
+| `apps/api/.../routers/intelligence.py` | 修改 | `diagnose` 增加 `use_llm` 参数（Benchmark 规则臂口径纯净） |
+| `packages/persistence/.../db.py` | 修改 | `create_schema` 重试 + 容忍重复 DDL；迁移每步包 `SAVEPOINT`；迁移记录容忍主键冲突（并发启动安全） |
+| `scripts/e2e_run007.py` | 重写 | 独立 Worker 队列执行器、`assert_worker_executed`、`/runs/{id}/evidence` 校验、图节点/边校验 |
+| `scripts/worker_fault_recovery.py` | 重写 | 真实计时/被 Run ID/同 Run 接管/代次严格递增/陈旧代次拒绝/账实核对 |
+| `scripts/soak_run007.py` | 重写 | 自启独立 API + 4 Worker + 真实 SSE 续传 + TeamFlow 真实健康 + 19 项完整性 checks |
+| `scripts/ui_review_run007.py` | 新增 | 15 视图 × 4 断点 + Dark + 四态截图与断言（暗色必须真的生效） |
+| `scripts/bench_run007.py` | 新增 | UI-FaultBench v3 四臂 + Flaky×5 + 自愈三指标 |
+| `scripts/bench_llm_arm.py` | 新增 | 受预算 LLM 对照臂（真实调用，按实际模型记录，不外推） |
+| `apps/web/src/views/DashboardView.vue` | 修改 | Worker/数据库/服务健康面板（独立 vs 内嵌 Worker） |
+| `apps/web/src/views/RunDetailView.vue` | 修改 | 「执行归属」条（Worker/attempt/fencing/租约） |
+| `apps/web/src/views/RunsView.vue` | 修改 | 筛选栏结构（`.filter-check`），修复 390px 错位 |
+| `apps/web/src/components/GraphView.vue` | 修改 | 自适应 `fit()` + 「适应画布」+ 缩放下限，修复节点裁切 |
+| `apps/web/src/style.css` | 修改 | 证据图画布高度、窄屏筛选栏布局、复选框不被拉伸 |
+| `apps/web/src/types.ts` | 修改 | `Run.lease_expires_at` |
+| `.github/workflows/pr-gate.yml` | 修改 | push 分支过滤改新分支；快速集成加新用例 |
+| `.github/workflows/nightly-gate.yml` | 修改 | 去 `\|\| true` / `\|\| echo`；LLM BLOCKED 结构化；npm audit 区分工具错误；PG16 版本与平台用例；`gate-verdict` 汇总 |
+| `.github/workflows/release-gate.yml` | 修改 | 去 RUN-005 依赖；RUN-007 文档/证据校验；Actions API 校验 Nightly `head_sha == github.sha`；benchmark 声明 fail-closed |
+| `tests/unit/test_pipeline_state_cache.py` | 新增 | 2 用例 |
+| `tests/integration/test_sandbox_worker_queue.py` | 新增 | 2 用例 |
+| `tests/integration/test_migration_v8.py` | 新增 | 4 用例 |
+| `tests/integration/test_postgres_platform.py` | 新增 | 6 用例（本地 skip，CI PG16 执行） |
+| `docs/RUN-007-*.md`（7 份） | 新增 | 交付文档 |
+| `docs/assets/run007/*` | 新增 | 证据（E2E/故障恢复/长稳/UI/benchmark） |

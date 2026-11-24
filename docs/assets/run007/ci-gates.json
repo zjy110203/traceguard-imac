@@ -1,0 +1,133 @@
+{
+  "round": "RUN-007-RESUME",
+  "generated_at": "2026-11-23T15:12:30Z",
+  "repo": "zjy110203/traceguard-imac",
+  "base": { "ref": "main", "sha": "ac2876ecef779b0bed900bdf3b5361ce1d2fa3d6", "label": "第五轮" },
+  "evidence_commit": "cc3339d291cc6b0e328922934ec82f6b689f4769",
+  "evidence_commit_note": "本文件记录的三级门禁结果全部针对此 commit（同一次 push 触发 PR Gate，同一 commit 上 dispatch Nightly 与 Release）。",
+  "pull_request": {
+    "number": 1,
+    "url": "https://github.com/zjy110203/traceguard-imac/pull/1",
+    "title": "RUN-007-RESUME: 独立 Worker 队列 E2E + 前端 15 视图验收 + 可靠性实验 + CI 门禁去掩盖",
+    "head_sha": "cc3339d291cc6b0e328922934ec82f6b689f4769",
+    "base_sha": "ac2876ecef779b0bed900bdf3b5361ce1d2fa3d6",
+    "mergeable": true,
+    "changed_files": 155,
+    "additions": 10206,
+    "deletions": 535
+  },
+  "gates": {
+    "pr_gate_push": {
+      "run_id": 45201761239,
+      "event": "push",
+      "head_sha": "cc3339d291cc6b0e328922934ec82f6b689f4769",
+      "conclusion": "success",
+      "url": "https://github.com/zjy110203/traceguard-imac/actions/runs/45201761239"
+    },
+    "pr_gate_pull_request": {
+      "run_id": 45201768385,
+      "event": "pull_request",
+      "head_sha": "cc3339d291cc6b0e328922934ec82f6b689f4769",
+      "conclusion": "success",
+      "url": "https://github.com/zjy110203/traceguard-imac/actions/runs/45201768385"
+    },
+    "nightly": {
+      "run_id": 45201774473,
+      "event": "workflow_dispatch",
+      "ref": "workbuddy/run007-resume-20261123",
+      "head_sha": "cc3339d291cc6b0e328922934ec82f6b689f4769",
+      "conclusion": "success",
+      "jobs": {
+        "backend-full": "success",
+        "postgres": "success",
+        "security": "success",
+        "llm-smoke": "success",
+        "gate-verdict": "success"
+      },
+      "url": "https://github.com/zjy110203/traceguard-imac/actions/runs/45201774473"
+    },
+    "release": {
+      "run_id": 45202185410,
+      "event": "workflow_dispatch",
+      "inputs": { "benchmark_report": "true" },
+      "ref": "workbuddy/run007-resume-20261123",
+      "head_sha": "cc3339d291cc6b0e328922934ec82f6b689f4769",
+      "conclusion": "success",
+      "jobs": {
+        "full-verification": "success",
+        "frontend": "success",
+        "nightly-attestation": "success",
+        "release-evidence": "success"
+      },
+      "url": "https://github.com/zjy110203/traceguard-imac/actions/runs/45202185410"
+    }
+  },
+  "nightly_attestation": {
+    "rule": "Release Gate 用 Actions API 查询 nightly-gate.yml 的运行，head_sha 必须严格等于 github.sha，且全部 job 无失败，且必须存在 llm-smoke job；缺失即 fail-closed。",
+    "release_gate_sha": "cc3339d291cc6b0e328922934ec82f6b689f4769",
+    "matched_nightly_run_id": 45201774473,
+    "matched_nightly_head_sha": "cc3339d291cc6b0e328922934ec82f6b689f4769",
+    "result": "MATCH",
+    "log_line": "NIGHTLY_OK id=45201774473 head_sha=cc3339d291cc6b0e328922934ec82f6b689f4769 created_at=2026-11-23T15:08:06Z",
+    "why_it_matters": "修复前 Release Gate 完全不校验 Nightly 归属，任意旧 commit 的通过结果都能冒充当前 RC。仓库里原本就有一条 sha=8f912f2 的历史 Nightly success，按新门禁它不会被接受。"
+  },
+  "iteration": [
+    {
+      "n": 1,
+      "commit": "d2e86ae",
+      "nightly_run": 45197639359,
+      "conclusion": "failure",
+      "exposed": [
+        "postgres: 新建库 URL 用 str(URL) 渲染，密码被替换为字面量 *** → FATAL: password authentication failed",
+        "security: secret 扫描规则 DEEPSEEK_API_KEY=[^[:space:]]+ 命中文档占位符（误报）",
+        "backend-full: probe_budget_multiprocess 的 spawn 子进程 ModuleNotFoundError: traceguard_api"
+      ]
+    },
+    {
+      "n": 2,
+      "commit": "7fdd2e9",
+      "nightly_run": 45198949151,
+      "conclusion": "failure",
+      "exposed": [
+        "claim_next_run 的 previous_status 恒为新值（ORM expire 后重读 PREPARING）——真实产品缺陷",
+        "PG 接管用例缺 mark_running（状态机不允许 PREPARING→COMPLETED）",
+        "create_schema 只重试 already exists，不重试 SQLite 的 database is locked（4 路并发 DDL 必炸）",
+        "sys.path 硬编码清单漏 packages/evidence（persistence 间接 import 它）"
+      ]
+    },
+    {
+      "n": 3,
+      "commit": "f00f149",
+      "nightly_run": 45201067501,
+      "conclusion": "failure",
+      "exposed": [
+        "postgres: 内联 python - <<'PY' 脚本不走 pytest 的 pythonpath → ModuleNotFoundError: traceguard_persistence"
+      ]
+    },
+    {
+      "n": 4,
+      "commit": "cc3339d",
+      "nightly_run": 45201774473,
+      "conclusion": "success",
+      "exposed": []
+    }
+  ],
+  "fixed_product_defects": [
+    "claim_next_run.previous_status 返回更新后的状态而非领取前状态（PG 上必现）",
+    "create_schema 在并发 DDL 锁冲突（SQLite database is locked / PG deadlock）时不重试"
+  ],
+  "fixed_test_or_ci_defects": [
+    "test_postgres_platform 的 _fresh_database 用 str(URL)，密码变 ***",
+    "test_postgres_platform 接管用例缺 mark_running",
+    "nightly 迁移脚本同样的 str(URL) 陷阱",
+    "probe_budget_multiprocess 缺 sys.path 注入（且清单漏 evidence）",
+    "secret 扫描规则过宽导致占位符误报",
+    "nightly/release 的内联脚本缺 PYTHONPATH"
+  ],
+  "notes": [
+    "Nightly 的 PostgreSQL 作业使用 postgres:16 service container，并先断言 SHOW server_version 以 16 开头，再用真实 PG 执行 6 个平台级用例。",
+    "llm-smoke job 在仓库 Secret 存在时真实调用；本轮结论 success（非 BLOCKED）。",
+    "release-evidence 校验七份 RUN-007 报告与五个证据 JSON 的关键字段，缺一即 fail-closed。",
+    "本文件不含任何凭据；token 仅用于 push/PR/Actions 调用，未写入仓库。"
+  ]
+}

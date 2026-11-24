@@ -155,3 +155,30 @@ Benchmark（真实）：
 | 真实环境（隔离库 `.traceguard/run006/`） | 正常 PASSED / TF-DB-001 FAILED / 诊断 CONFIRMED / probe-plan STOP_CONFIRMED(0 探针) / 真实 http_state 回灌使假设被排除 | `docs/assets/run006/*.json` |
 
 未执行（不得视为通过）：PostgreSQL 运行时、4 Worker 故障恢复、60 分钟长稳、CI 真实 Actions、前端截图验收、Benchmark v3。
+
+## RUN-007-RESUME（2026-11-23）
+
+- 起点：515 passed / 5 skipped（`ac2876e`）
+- 全量：**523 passed / 11 skipped / 0 failed，46.69s**（采集 534；11 skip = 5 PG parity + 6 PG platform，逐条打印原因）
+- WP1 专项：**163 passed**（稳定性回放/门禁/崩溃恢复/CAS/主体校验/预算多进程/目标策略 DNS）
+- 真实浏览器出站边界：**5 passed**（`tests/e2e/test_target_policy_browser.py`）
+- 迁移 v8：4 passed（新文件；修复前并发用例失败 → 已修 `db.py`）
+- E2E（独立 Worker）：**55 步 / 0 失败 / 59.4s**，5 Run 全由 w1–w4 领取，`sandbox_fencing_token=1`
+- 长稳：**60.03 min，65/65 周期 PASSED，19/19 checks true**；SSE 65/65 有事件、续传 38+27、心跳 158、重复 event id 0
+- 故障恢复：真实 SIGKILL（-9），`killed_after_s=3.02s`，接管 21.3s，同 Run `fencing_token` 1→2、`attempt` 不变，**17/17 checks**
+- UI：**75/75 checks**（内容 0 失败、溢出 0、console 0、暗色未生效 0），79 张真实截图 + 四态
+- Benchmark：30 场景 / 38 次执行 / 19 失败样本；A 3/19、C/D/E 10/19；假通过 A 4/4 → C/D/E 0/4；LLM Flash 8/19、Pro 5/8
+- 静态：`ruff check` + `format --check` 全绿；`npm run build`（含 `vue-tsc`）通过；`npm audit` high 0 / critical 0（moderate 3，dev）
+
+## RUN-007-RESUME CI 三级门禁（2026-11-23，真实运行）
+
+- 同一 commit `cc3339d291cc6b0e328922934ec82f6b689f4769`：
+  - PR Gate（push）[#45201761239](https://github.com/zjy110203/traceguard-imac/actions/runs/45201761239) success
+  - PR Gate（pull_request）[#45201768385](https://github.com/zjy110203/traceguard-imac/actions/runs/45201768385) success
+  - Nightly Gate [#45201774473](https://github.com/zjy110203/traceguard-imac/actions/runs/45201774473) success（5/5 job）
+  - Release Gate [#45202185410](https://github.com/zjy110203/traceguard-imac/actions/runs/45202185410) success（4/4 job）
+- Nightly `postgres` job：`postgres:16` → `SHOW server_version` = `16.16 (Debian 16.16-1.pgdg13+1)`，6 个平台用例全过。
+- Release `nightly-attestation`：`NIGHTLY_OK id=45201774473 head_sha=cc3339d291cc...`（严格等于 `github.sha`）。
+- **CI 首跑暴露 8 个本地掩盖的问题**，4 轮迭代修复；其中 2 个是产品缺陷：
+  `claim_next_run.previous_status` 取到更新后的状态；`create_schema` 不重试 DDL 锁冲突。
+- 迭代轮次：`d2e86ae`❌ → `7fdd2e9`❌ → `f00f149`❌ → `cc3339d`✅。证据：`docs/assets/run007/ci-gates.json`。

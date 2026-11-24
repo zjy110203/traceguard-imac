@@ -96,11 +96,7 @@ async def create_project(
 
         # TF-DB-002：重名项目持久化静默失败（假通过变体：返回 ok 但不落库）
         if FAULT_STATE.is_active("TF-DB-002"):
-            dup = (
-                session.query(Project)
-                .filter_by(workspace_slug=ws, name=req.name)
-                .first()
-            )
+            dup = session.query(Project).filter_by(workspace_slug=ws, name=req.name).first()
             if dup:
                 key = "TF-" + "".join(random.choices(string.digits, k=6))
                 return {
@@ -284,8 +280,7 @@ async def state_projects(workspace: str = "default") -> dict[str, Any]:
             rows = session.query(Project).filter_by(workspace_slug=workspace).all()
             real_count = len(rows)
             within_lag = (
-                last_create is not None
-                and (_time.time() - float(last_create)) * 1000 < lag_ms
+                last_create is not None and (_time.time() - float(last_create)) * 1000 < lag_ms
             )
             count = real_count - 1 if (within_lag and real_count > 0) else real_count
             keys = [r.key for r in rows]

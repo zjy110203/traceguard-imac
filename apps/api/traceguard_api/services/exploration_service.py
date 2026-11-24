@@ -242,6 +242,10 @@ class ExplorationService:
             run_id=doc.get("run_id", ""),
         )
         candidate = result.candidate.model_dump()
+        # intent_ref 必须是引用（intent_id），正文单独存放：
+        # 正文写进引用字段会在 PG 的 varchar(64) 上直接失败（SQLite 静默接受）。
+        candidate["intent_ref"] = doc["intent_id"]
+        candidate["intent_text"] = intent_text
         candidate["review_status"] = "PENDING"
         candidate["run_config"] = {
             **(candidate.get("run_config") or {}),

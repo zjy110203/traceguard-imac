@@ -91,7 +91,12 @@ def test_compiler_accepts_trace_backed_steps() -> None:
             {
                 "description": "创建成功后列表出现项目",
                 "kind": "business_state",
-                "expected": {"api": "/api/state/projects", "field": "count", "op": "gte", "value": 1},
+                "expected": {
+                    "api": "/api/state/projects",
+                    "field": "count",
+                    "op": "gte",
+                    "value": 1,
+                },
             }
         ],
         "warnings": ["证据有限"],
@@ -223,16 +228,28 @@ def test_probe_advisor_error_is_marked_fallback() -> None:
 def test_repair_advisor_only_allows_safe_paths() -> None:
     payload = {
         "changes": [
-            {"path": "steps[0].target", "step_index": 0, "value": {"strategy": "label", "value": "名称"}, "reason": "定位器变化"},
+            {
+                "path": "steps[0].target",
+                "step_index": 0,
+                "value": {"strategy": "label", "value": "名称"},
+                "reason": "定位器变化",
+            },
             {"path": "steps[0].expected", "step_index": 0, "value": {"x": 1}, "reason": "改预期"},
             {"path": "assertions[0].expected", "step_index": None, "value": {}, "reason": "绕过"},
             {"path": "steps[9].target", "step_index": 9, "value": {}, "reason": "越界"},
-            {"path": "run_config.wait_timeout", "step_index": None, "value": 15000, "reason": "等待不足"},
+            {
+                "path": "run_config.wait_timeout",
+                "step_index": None,
+                "value": 15000,
+                "reason": "等待不足",
+            },
         ],
         "warnings": ["仅建议"],
     }
     advisor = LLMRepairAdvisor(FakeProvider(payload), _router(), _prompts())
-    advice = advisor.suggest(symptom="locator timeout", steps=[{"step_id": "s0"}], assertions=[], step_count=2)
+    advice = advisor.suggest(
+        symptom="locator timeout", steps=[{"step_id": "s0"}], assertions=[], step_count=2
+    )
     paths = [c["path"] for c in advice.changes]
     assert paths == ["steps[0].target", "run_config.wait_timeout"]
     assert all(c["suggested_by"].startswith("llm:") for c in advice.changes)

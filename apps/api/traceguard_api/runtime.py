@@ -25,6 +25,9 @@ from traceguard_persistence.stores import (
 
 logger = get_logger("traceguard.runtime")
 
+#: Run 的终态（非终态意味着仍在排队/执行）
+TERMINAL_RUN_STATUSES = frozenset({"COMPLETED", "FAILED", "TIMED_OUT", "CANCELLED"})
+
 
 def default_worker_id() -> str:
     return f"{socket.gethostname()}-{os.getpid()}"
@@ -76,6 +79,28 @@ class Runtime:
             "test_verdict": outcome.test_verdict,
             "observer_mode": outcome.observer_mode,
             "report": outcome.report,
+        }
+
+    # -------------------------------------------------------------- run waiting
+    def wait_for_run(self, run_id: str, timeout_s: float = 300.0, poll_s: float = 0.25) -> dict:
+        """等待 Run 到达终态（由**真实 Worker 消费队列**，不由 API 线程执行）。
+
+        RUN-007-RESUME：沙箱/回归等正式执行必须走队列；这里只做等待与状态读取，
+        绝不调用 execute_run，避免"API 线程池冒充 Worker"。
+        """
+        import time as _time
+
+        deadline = _time.time() + max(1.0, timeout_s)
+        doc: dict[str, Any] | None = None
+        while _time.time() < deadline:
+            doc = self.tasks.get_run(run_id)
+            if doc and doc.get("execution_status") in TERMINAL_RUN_STATUSES:
+                return doc
+            _time.sleep(poll_s)
+        return doc or {
+            "run_id": run_id,
+            "execution_status": "UNKNOWN",
+            "test_verdict": "NOT_EVALUATED",
         }
 
     # -------------------------------------------------------------- inline worker
