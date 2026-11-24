@@ -319,7 +319,49 @@ MIGRATIONS: list[tuple[int, str, list[str]]] = [
             "CREATE INDEX IF NOT EXISTS ix_tg_audit_action ON tg_audit_log (action)",
         ],
     ),
+    (
+        12,
+        "auth_run010_login_attempt_user_scope_audit_seq",
+        [
+            "CREATE TABLE IF NOT EXISTS tg_login_attempt ("
+            "attempt_id VARCHAR(64) PRIMARY KEY, "
+            "username VARCHAR(120) NOT NULL, "
+            "client VARCHAR(120) NOT NULL DEFAULT '', "
+            "ok INTEGER NOT NULL DEFAULT 0, "
+            "created_at VARCHAR(40) NOT NULL DEFAULT '')",
+            "CREATE INDEX IF NOT EXISTS ix_tg_login_attempt_key "
+            "ON tg_login_attempt (username, client, created_at)",
+            "__CALLABLE__:_migrate_audit_seq",
+            "CREATE UNIQUE INDEX IF NOT EXISTS ux_tg_audit_seq ON tg_audit_log (seq)",
+            "ALTER TABLE tg_user ADD COLUMN workspaces VARCHAR(500) NOT NULL DEFAULT '[\"*\"]'",
+        ],
+    ),
 ]
+
+
+def _migrate_audit_seq(conn) -> None:  # type: ignore[no-untyped-def]
+    """给 tg_audit_log 追加单调 seq 列并回填（RUN-010 WP1）。
+
+    旧行没有 seq；按 (timestamp, audit_id) 排序回填 1..N，保证既有哈希链顺序
+    与新的 seq 顺序一致。跨进程并发追加依赖 seq 上的唯一索引做乐观分配。
+    """
+    from sqlalchemy import inspect
+
+    inspector = inspect(conn)
+    if "tg_audit_log" not in inspector.get_table_names():
+        return
+    cols = {c["name"] for c in inspector.get_columns("tg_audit_log")}
+    if "seq" in cols:
+        return
+    conn.execute(text("ALTER TABLE tg_audit_log ADD COLUMN seq INTEGER"))
+    rows = conn.execute(
+        text("SELECT audit_id FROM tg_audit_log ORDER BY timestamp ASC, audit_id ASC")
+    ).fetchall()
+    for idx, row in enumerate(rows, start=1):
+        conn.execute(
+            text("UPDATE tg_audit_log SET seq = :s WHERE audit_id = :a"),
+            {"s": idx, "a": row[0]},
+        )
 
 
 def _migrate_evidence_digest_semantics(conn) -> None:  # type: ignore[no-untyped-def]
@@ -460,6 +502,7 @@ _MIGRATION_CALLABLES = {
     "_migrate_review_revision": _migrate_review_revision,
     "_migrate_evidence_digest_semantics": _migrate_evidence_digest_semantics,
     "_migrate_widen_intent_ref": _migrate_widen_intent_ref,
+    "_migrate_audit_seq": _migrate_audit_seq,
 }
 
 _lock = threading.RLock()

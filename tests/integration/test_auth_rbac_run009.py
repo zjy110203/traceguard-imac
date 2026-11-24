@@ -18,10 +18,12 @@ def auth_client(tmp_path, monkeypatch):  # type: ignore[no-untyped-def]
     monkeypatch.setenv("TG_AUTH_CSRF_REQUIRED", "true")
     monkeypatch.setenv("TG_LLM_PROVIDER", "")
     reset_settings_cache()
+    from traceguard_api.auth import reset_auth_policy_cache
     from traceguard_api.main import create_app
     from traceguard_api.runtime import reset_runtime
     from traceguard_api.services import reset_services
 
+    reset_auth_policy_cache()
     db = Database(f"sqlite:///{tmp_path / 'auth.db'}")
     set_database(db)
     reset_runtime()
@@ -39,6 +41,7 @@ def auth_client(tmp_path, monkeypatch):  # type: ignore[no-untyped-def]
     reset_runtime()
     reset_services()
     reset_settings_cache()
+    reset_auth_policy_cache()
 
 
 def _login(client: TestClient, username: str) -> tuple[dict, str]:

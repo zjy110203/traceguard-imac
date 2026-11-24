@@ -29,6 +29,11 @@ class UserCreateReq(BaseModel):
     username: str = Field(min_length=1)
     password: str = Field(min_length=8)
     roles: list[str] = Field(default_factory=list)
+    workspaces: list[str] = Field(default_factory=lambda: ["*"])
+
+
+class WorkspacesReq(BaseModel):
+    workspaces: list[str]
 
 
 def _require_platform_admin(principal: Principal) -> None:
@@ -36,6 +41,17 @@ def _require_platform_admin(principal: Principal) -> None:
         raise HTTPException(
             403, detail={"code": "PERMISSION_DENIED", "message": "platform-admin required"}
         )
+
+
+@router.get("/status")
+async def auth_status() -> dict[str, Any]:
+    """公开端点：告知前端认证是否开启（不泄露任何用户/会话信息）。"""
+    from ..auth import _effective_auth_enabled
+
+    return {
+        "auth_enabled": _effective_auth_enabled(),
+        "csrf_required": get_settings().auth_csrf_required,
+    }
 
 
 @router.post("/login")
@@ -115,6 +131,7 @@ async def list_users(
                 "username": user["username"],
                 "roles": user["roles"],
                 "active": bool(user["active"]),
+                "workspaces": auth_store.parse_workspaces(user.get("workspaces")),
             }
         )
     return users
@@ -131,6 +148,7 @@ async def create_user(
         user = auth_store.create_user(
             get_runtime().db, username=req.username, password=req.password, roles=req.roles
         )
+        auth_store.set_user_workspaces(get_runtime().db, user["user_id"], req.workspaces)
     except ValueError as exc:
         raise HTTPException(400, detail={"code": str(exc), "message": str(exc)}) from exc
     auth_store.record_audit(
@@ -141,8 +159,9 @@ async def create_user(
         resource_type="user",
         resource_id=user["user_id"],
         result="SUCCESS",
+        after={"roles": req.roles, "workspaces": req.workspaces},
     )
-    return user
+    return {**user, "workspaces": auth_store.parse_workspaces(req.workspaces)}
 
 
 @router.post("/users/{user_id}/active")
@@ -169,6 +188,39 @@ async def set_user_active(
         after={"active": active},
     )
     return {"user_id": user_id, "active": active}
+
+
+@router.post("/users/{user_id}/workspaces")
+async def set_user_workspaces(
+    user_id: str,
+    req: WorkspacesReq,
+    request: Request,
+    principal: Annotated[Principal, Depends(current_principal)],
+) -> dict[str, Any]:
+    """更新用户 workspace 数据访问范围（对象级授权）。停用用户的会话全部撤销。"""
+    _require_platform_admin(principal)
+    ok = auth_store.set_user_workspaces(get_runtime().db, user_id, req.workspaces)
+    if not ok:
+        raise HTTPException(404, detail={"code": "NOT_FOUND", "message": "user not found"})
+    auth_store.record_audit(
+        get_runtime().db,
+        actor_id=principal.actor_id,
+        role=principal.primary_role,
+        action="auth.user_workspaces_changed",
+        resource_type="user",
+        resource_id=user_id,
+        result="SUCCESS",
+        after={"workspaces": auth_store.parse_workspaces(req.workspaces)},
+    )
+    return {"user_id": user_id, "workspaces": auth_store.parse_workspaces(req.workspaces)}
+
+
+@router.get("/permissions")
+async def permission_matrix(
+    principal: Annotated[Principal, Depends(current_principal)],
+) -> dict[str, Any]:
+    """角色 → 动作映射（展示用途）。服务端始终是最终权限判定者。"""
+    return {"matrix": auth_store.PERMISSION_MATRIX}
 
 
 @router.get("/audit/verify")

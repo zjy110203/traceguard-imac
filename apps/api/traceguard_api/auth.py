@@ -9,9 +9,9 @@ from __future__ import annotations
 import hmac
 import json
 import secrets
-import threading
 import time
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Any
 
 from fastapi import HTTPException, Request
@@ -21,7 +21,7 @@ from traceguard_persistence import auth as auth_store
 from traceguard_persistence.db import Database
 
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
-PUBLIC_PATHS = {"/api/v1/auth/login", "/api/v1/auth/csrf"}
+PUBLIC_PATHS = {"/api/v1/auth/login", "/api/v1/auth/csrf", "/api/v1/auth/status"}
 
 
 def action_for_request(method: str, path: str) -> str | None:
@@ -57,8 +57,13 @@ def action_for_request(method: str, path: str) -> str | None:
     return "system.configure"
 
 
-_failures: dict[str, list[float]] = {}
-_failure_lock = threading.Lock()
+# 未知用户也执行一次等价 PBKDF2 验证，抹平"用户不存在"与"密码错误"的响应时差。
+_dummy_password_hash = auth_store.hash_password("timing-equalizer-run010")
+
+
+def _equalize_login_timing() -> None:
+    """对不存在的用户名消耗一次真实 KDF 计算，防止用户名枚举计时侧信道。"""
+    auth_store.verify_password("not-a-real-password", _dummy_password_hash)
 
 
 def request_id(request: Request) -> str:
@@ -74,42 +79,85 @@ class Principal:
     actor_id: str
     csrf_token: str
     session_token: str
+    workspaces: tuple[str, ...] = ("*",)
 
     @property
     def primary_role(self) -> str:
         return self.roles[0] if self.roles else ""
+
+    def workspace_allowed(self, workspace_id: str) -> bool:
+        """对象级授权：`*` = 全部；否则显式白名单。platform-admin 永远放行。"""
+        if "platform-admin" in self.roles or "*" in self.workspaces:
+            return True
+        return workspace_id in self.workspaces
+
+
+def resolve_workspace_scope(principal: Principal, request: Request) -> str | None:
+    """从请求中提取 workspace 作用域（query 优先，body 由路由层自行校验）。
+
+    返回 None 表示请求未携带 workspace 维度（如 /users/{id} 这类无对象路径），
+    交由路由层在拿到实体 workspace 后调用 require_workspace_doc 校验。
+    """
+    workspace = request.query_params.get("workspace_id")
+    if workspace:
+        return workspace
+    for other in ("workspace", "ws"):
+        value = request.query_params.get(other)
+        if value:
+            return value
+    return None
+
+
+def require_workspace_doc(principal: Principal, doc_workspace: str) -> None:
+    """拿到实体后的对象级校验（detail 路由用）。拒绝时 403。"""
+    if not principal.workspace_allowed(doc_workspace):
+        raise HTTPException(
+            403,
+            detail={
+                "code": "WORKSPACE_FORBIDDEN",
+                "message": f"workspace '{doc_workspace}' is outside your access scope",
+            },
+        )
 
 
 class AuthManager:
     def __init__(self, db: Database, settings: Settings | None = None) -> None:
         self.db = db
         self.settings = settings or get_settings()
+        self._last_prune = 0.0
 
     def login(self, username: str, password: str, client: str = "") -> dict[str, Any]:
-        key = f"{(username or '').lower()}|{client}"
-        now = time.time()
+        """数据库级登录限速：失败计数持久化在 tg_login_attempt，多进程共享。
+
+        不可通过重启单个进程绕过；即使多个 uvicorn Worker / 多副本，同一
+        (username, client) 的失败窗口计数一致。
+        """
         window = self.settings.auth_login_window_s
-        with _failure_lock:
-            recent = [t for t in _failures.get(key, []) if now - t <= window]
-            _failures[key] = recent
-            if len(recent) >= self.settings.auth_max_failed_logins:
-                raise HTTPException(
-                    429, detail={"code": "LOGIN_RATE_LIMITED", "message": "too many attempts"}
-                )
+        failed = auth_store.count_failed_logins(
+            self.db, username=username, client=client, window_s=window
+        )
+        if failed >= self.settings.auth_max_failed_logins:
+            raise HTTPException(
+                429,
+                detail={
+                    "code": "LOGIN_RATE_LIMITED",
+                    "message": "too many failed attempts; try again later",
+                },
+            )
 
         user = auth_store.get_user_by_username(self.db, username)
         valid = bool(
             user and user["active"] and auth_store.verify_password(password, user["password_hash"])
         )
+        # 用户不存在时执行等价 KDF，抹平响应时差（防用户名枚举）。
+        auth_store.record_login_attempt(self.db, username=username, client=client, ok=valid)
         if not valid:
-            with _failure_lock:
-                _failures.setdefault(key, []).append(now)
+            if user is None:
+                _equalize_login_timing()
             raise HTTPException(
                 401, detail={"code": "INVALID_CREDENTIALS", "message": "invalid credentials"}
             )
-
-        with _failure_lock:
-            _failures.pop(key, None)
+        self._maybe_prune_attempts()
         try:
             roles = json.loads(user.get("roles") or "[]")
         except (TypeError, ValueError):
@@ -128,10 +176,24 @@ class AuthManager:
         return {
             "username": user["username"],
             "roles": roles,
+            "workspaces": auth_store.user_workspace_scope(user),
             "csrf_token": session["csrf_token"],
             "expires_in_s": session["expires_in_s"],
             "token": session["token"],
         }
+
+    def _maybe_prune_attempts(self) -> None:
+        """低频清理过期登录尝试记录（每 60s 至多一次，失败不影响登录）。"""
+        now = time.time()
+        if now - self._last_prune < 60:
+            return
+        self._last_prune = now
+        try:
+            auth_store.prune_login_attempts(
+                self.db, older_than_s=max(self.settings.auth_login_window_s, 3600)
+            )
+        except Exception:  # noqa: BLE001 - 清理失败不应阻断登录
+            pass
 
     def resolve(self, token: str) -> Principal | None:
         record = auth_store.get_session(self.db, token)
@@ -145,6 +207,7 @@ class AuthManager:
             actor_id=f"user:{record['username']}",
             csrf_token=str(record["csrf_token"]),
             session_token=token,
+            workspaces=tuple(auth_store.parse_workspaces(record.get("workspaces"))),
         )
 
     def logout(self, principal: Principal) -> None:
@@ -169,12 +232,25 @@ def get_auth_manager(request: Request) -> AuthManager:
     return manager
 
 
+@lru_cache(maxsize=1)
+def _effective_auth_enabled() -> bool:
+    """认证最终生效开关（含生产默认开启推导），与启动期 auth_policy 一致。"""
+    from .auth_policy import evaluate_auth_policy
+
+    return evaluate_auth_policy(get_settings()).auth_effective
+
+
+def reset_auth_policy_cache() -> None:
+    """测试用：环境变量变更后清空策略缓存。"""
+    _effective_auth_enabled.cache_clear()
+
+
 async def auth_middleware(request: Request, call_next):  # type: ignore[no-untyped-def]
     settings = get_settings()
     path = request.url.path
     request.state.request_id = request.headers.get("x-request-id") or secrets.token_hex(8)
     if (
-        not settings.auth_enabled
+        not _effective_auth_enabled()
         or not path.startswith("/api/v1/")
         or path in PUBLIC_PATHS
         or path.startswith("/api/v1/auth/login")
@@ -215,6 +291,21 @@ async def auth_middleware(request: Request, call_next):  # type: ignore[no-untyp
             },
             headers={"X-Request-ID": request.state.request_id},
         )
+    # RUN-010 WP1：对象级授权第一层——query 携带 workspace_id 时校验用户数据范围。
+    # 仅按 HTTP 路径映射权限 ≠ workspace 级数据隔离；detail 路由的实体级校验
+    # 由各路由在取得实体后调用 require_workspace_doc 完成。
+    scope = resolve_workspace_scope(principal, request)
+    if scope is not None and not principal.workspace_allowed(scope):
+        return JSONResponse(
+            status_code=403,
+            content={
+                "detail": {
+                    "code": "WORKSPACE_FORBIDDEN",
+                    "message": f"workspace '{scope}' is outside your access scope",
+                }
+            },
+            headers={"X-Request-ID": request.state.request_id},
+        )
     request.state.principal = principal
     response = await call_next(request)
     response.headers["X-Request-ID"] = request.state.request_id
@@ -237,10 +328,9 @@ def trusted_actor(
 
     认证开启时：忽略 declared，校验动作权限，并写审计日志。
     """
-    settings = get_settings()
     principal = getattr(request.state, "principal", None)
     if principal is None:
-        if settings.auth_enabled:
+        if _effective_auth_enabled():
             raise HTTPException(
                 401, detail={"code": "UNAUTHENTICATED", "message": "authentication required"}
             )

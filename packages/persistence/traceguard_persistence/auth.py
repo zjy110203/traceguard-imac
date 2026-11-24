@@ -29,6 +29,9 @@ ROLE_QA_LEAD = "qa-lead"
 ROLE_PLATFORM_ADMIN = "platform-admin"
 ALL_ROLES = {ROLE_VIEWER, ROLE_QA_ENGINEER, ROLE_QA_LEAD, ROLE_PLATFORM_ADMIN}
 
+# 审计写入的乐观分配重试上限（跨进程 seq 冲突）。
+_AUDIT_APPEND_RETRIES = 6
+
 PERMISSIONS: dict[str, set[str]] = {
     "read": {ROLE_VIEWER, ROLE_QA_ENGINEER, ROLE_QA_LEAD, ROLE_PLATFORM_ADMIN},
     "testcase.create": {ROLE_QA_ENGINEER, ROLE_QA_LEAD, ROLE_PLATFORM_ADMIN},
@@ -44,6 +47,12 @@ PERMISSIONS: dict[str, set[str]] = {
     "repair.rollback": {ROLE_PLATFORM_ADMIN},
     "system.configure": {ROLE_PLATFORM_ADMIN},
     "user.manage": {ROLE_PLATFORM_ADMIN},
+}
+
+#: 角色展示矩阵（前端用户管理页只做展示，服务端始终是最终权限判定者）。
+PERMISSION_MATRIX: dict[str, list[str]] = {
+    role: sorted(action for action, roles in PERMISSIONS.items() if role in roles)
+    for role in sorted(ALL_ROLES)
 }
 
 _PBKDF2_ROUNDS = 200_000
@@ -200,7 +209,7 @@ def get_session(db: Database, token: str) -> dict[str, Any] | None:
         row = (
             s.execute(
                 text(
-                    "SELECT s.*, u.username, u.roles, u.active FROM tg_session s "
+                    "SELECT s.*, u.username, u.roles, u.active, u.workspaces FROM tg_session s "
                     "LEFT JOIN tg_user u ON u.user_id = s.user_id "
                     "WHERE s.token_hash = :h"
                 ),
@@ -247,6 +256,104 @@ def purge_expired_sessions(db: Database) -> int:
     return int(result.rowcount or 0)
 
 
+# ---------------------------------------------------------------------------
+# RUN-010 WP1：数据库级登录失败计数（多进程共享，不可被单进程重启绕过）。
+# ---------------------------------------------------------------------------
+
+
+def record_login_attempt(db: Database, *, username: str, client: str, ok: bool) -> dict[str, Any]:
+    """原子追加一次登录尝试记录。失败计数以本表为准，不依赖进程内状态。"""
+    name = (username or "").strip().lower()[:120]
+    entry = {
+        "attempt_id": f"la_{secrets.token_hex(12)}",
+        "username": name,
+        "client": (client or "")[:120],
+        "ok": 1 if ok else 0,
+        "created_at": utc_now_iso(),
+    }
+    with db.session() as s:
+        s.execute(
+            text(
+                "INSERT INTO tg_login_attempt (attempt_id, username, client, ok, created_at) "
+                "VALUES (:attempt_id, :username, :client, :ok, :created_at)"
+            ),
+            entry,
+        )
+    return entry
+
+
+def count_failed_logins(db: Database, *, username: str, client: str, window_s: int) -> int:
+    """统计窗口期内的失败次数（username + client 维度，跨进程一致）。"""
+    name = (username or "").strip().lower()[:120]
+    cutoff = _iso_at(time.time() - window_s)
+    with db.session() as s:
+        row = s.execute(
+            text(
+                "SELECT COUNT(*) FROM tg_login_attempt "
+                "WHERE username = :u AND client = :c AND ok = 0 AND created_at >= :cutoff"
+            ),
+            {"u": name, "c": (client or "")[:120], "cutoff": cutoff},
+        ).first()
+    return int(row[0]) if row else 0
+
+
+def prune_login_attempts(db: Database, *, older_than_s: int) -> int:
+    """清理过期尝试记录，防止表无限增长（由登录流程周期触发）。"""
+    cutoff = _iso_at(time.time() - older_than_s)
+    with db.session() as s:
+        result = s.execute(
+            text("DELETE FROM tg_login_attempt WHERE created_at < :cutoff"), {"cutoff": cutoff}
+        )
+    return int(result.rowcount or 0)
+
+
+def _iso_at(ts: float) -> str:
+    from datetime import UTC, datetime
+
+    return datetime.fromtimestamp(ts, UTC).isoformat().replace("+00:00", "Z")
+
+
+# ---------------------------------------------------------------------------
+# RUN-010 WP1：workspace 数据访问范围（对象级授权）。
+# ---------------------------------------------------------------------------
+
+
+def parse_workspaces(raw: Any) -> list[str]:
+    """解析用户 workspace 范围。空 / 解析失败一律按仅 default 处理（fail-closed）。"""
+    if raw is None:
+        return ["default"]
+    if isinstance(raw, list):
+        items = raw
+    else:
+        try:
+            items = json.loads(str(raw) or "[]")
+        except (TypeError, ValueError):
+            return ["default"]
+    cleaned = sorted({str(w).strip() for w in items if str(w).strip()})
+    return cleaned or ["default"]
+
+
+def workspace_in_scope(scope: list[str], workspace_id: str) -> bool:
+    """`*` 表示全部 workspace；其余为显式白名单。"""
+    if "*" in scope:
+        return True
+    return workspace_id in scope
+
+
+def user_workspace_scope(user: dict[str, Any]) -> list[str]:
+    return parse_workspaces(user.get("workspaces"))
+
+
+def set_user_workspaces(db: Database, user_id: str, workspaces: list[str]) -> bool:
+    cleaned = parse_workspaces(list(workspaces) or ["default"])
+    with db.session() as s:
+        result = s.execute(
+            text("UPDATE tg_user SET workspaces = :w, updated_at = :now WHERE user_id = :id"),
+            {"w": json.dumps(cleaned), "now": utc_now_iso(), "id": user_id},
+        )
+    return result.rowcount == 1
+
+
 def _canonical(entry: dict[str, Any]) -> str:
     return json.dumps(entry, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
 
@@ -268,56 +375,95 @@ def record_audit(
     before: dict[str, Any] | None = None,
     after: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """追加一条带前序哈希的审计记录。调用方负责不传入敏感字段。"""
+    """追加一条带前序哈希的审计记录。调用方负责不传入敏感字段。
 
-    def _dump(value: dict[str, Any] | None) -> dict[str, Any] | None:
-        return value if value else None
+    RUN-010 WP1：跨进程安全。seq 通过「读最大值 + 唯一索引冲突重试」乐观分配；
+    同一 seq 不可能被两个进程同时写入（ux_tg_audit_seq 唯一索引兜底），
+    重试时重新读取 prev_hash，保证哈希链前驱永远指向已提交的真实末尾。
+    """
+
+    def _dump(value: dict[str, Any] | None) -> Any:
+        # raw text() SQL 不经过 SQLAlchemy 类型绑定：必须显式序列化为 JSON 字符串。
+        # （真实缺陷修复：RUN-009 的 set_user_active(after={...}) 在 SQLite 下 500，
+        #   因 dict 无法直接绑定；PostgreSQL 同样需要文本参数。）
+        if not value:
+            return None
+        return json.dumps(value, ensure_ascii=False, sort_keys=True)
 
     with _audit_lock:
-        with db.session() as s:
-            last = s.execute(
-                text(
-                    "SELECT entry_hash FROM tg_audit_log ORDER BY timestamp DESC, audit_id DESC LIMIT 1"
-                )
-            ).first()
-            prev = str(last[0]) if last else ""
-            now = utc_now_iso()
-            entry = {
-                "audit_id": f"aud_{secrets.token_hex(12)}",
-                "actor_id": str(actor_id),
-                "role": str(role),
-                "action": str(action),
-                "resource_type": str(resource_type),
-                "resource_id": str(resource_id),
-                "timestamp": now,
-                "result": str(result),
-                "request_id": str(request_id),
-                "before_json": _dump(before),
-                "after_json": _dump(after),
-                "prev_hash": prev,
-            }
-            entry["entry_hash"] = _audit_hash(entry)
-            s.execute(
-                text(
-                    "INSERT INTO tg_audit_log (audit_id, actor_id, role, action, resource_type, "
-                    "resource_id, timestamp, result, request_id, before_json, after_json, "
-                    "prev_hash, entry_hash) VALUES (:audit_id, :actor_id, :role, :action, "
-                    ":resource_type, :resource_id, :timestamp, :result, :request_id, :before_json, "
-                    ":after_json, :prev_hash, :entry_hash)"
-                ),
-                entry,
-            )
-    return entry
+        last_exc: Exception | None = None
+        for _ in range(_AUDIT_APPEND_RETRIES):
+            try:
+                with db.session() as s:
+                    row = s.execute(
+                        text("SELECT seq, entry_hash FROM tg_audit_log ORDER BY seq DESC LIMIT 1")
+                    ).first()
+                    seq = int(row[0]) + 1 if row and row[0] is not None else 1
+                    prev = str(row[1]) if row else ""
+                    now = utc_now_iso()
+                    entry = {
+                        "audit_id": f"aud_{secrets.token_hex(12)}",
+                        "actor_id": str(actor_id),
+                        "role": str(role),
+                        "action": str(action),
+                        "resource_type": str(resource_type),
+                        "resource_id": str(resource_id),
+                        "timestamp": now,
+                        "result": str(result),
+                        "request_id": str(request_id),
+                        "before_json": _dump(before),
+                        "after_json": _dump(after),
+                        "prev_hash": prev,
+                        "seq": seq,
+                    }
+                    entry["entry_hash"] = _audit_hash(_entry_without_seq(entry))
+                    s.execute(
+                        text(
+                            "INSERT INTO tg_audit_log (audit_id, actor_id, role, action, "
+                            "resource_type, resource_id, timestamp, result, request_id, "
+                            "before_json, after_json, prev_hash, entry_hash, seq) "
+                            "VALUES (:audit_id, :actor_id, :role, :action, "
+                            ":resource_type, :resource_id, :timestamp, :result, :request_id, "
+                            ":before_json, :after_json, :prev_hash, :entry_hash, :seq)"
+                        ),
+                        entry,
+                    )
+                return entry
+            except Exception as exc:  # noqa: BLE001 - seq 唯一冲突 → 重新读取后重试
+                if _is_seq_conflict(exc):
+                    last_exc = exc
+                    continue
+                raise
+        raise last_exc  # pragma: no cover - 重试耗尽（理论上极小概率）
+
+
+def _entry_without_seq(entry: dict[str, Any]) -> dict[str, Any]:
+    """entry_hash 不包含 seq：seq 只是物理排序保证，逻辑链仍由 prev_hash 串联。"""
+    return {k: v for k, v in entry.items() if k != "seq"}
+
+
+def _is_seq_conflict(exc: Exception) -> bool:
+    msg = str(exc).lower()
+    return (
+        "unique constraint" in msg
+        or "duplicate key" in msg
+        or "unique index" in msg
+        or "database is locked" in msg
+    )
 
 
 def verify_audit_chain(db: Database) -> dict[str, Any]:
     with db.session() as s:
         rows = [dict(r) for r in s.execute(text("SELECT * FROM tg_audit_log")).mappings().all()]
-    ordered = sorted(rows, key=lambda r: (r["timestamp"] or "", r["audit_id"] or ""))
+    ordered = sorted(
+        rows,
+        key=lambda r: (r["seq"] is None, r["seq"] or 0, r["timestamp"] or "", r["audit_id"] or ""),
+    )
     prev = ""
     broken: list[str] = []
     for row in ordered:
         entry = dict(row)
+        entry.pop("seq", None)
         expected = entry.pop("entry_hash", "")
         if entry.get("prev_hash") != prev or _audit_hash(entry) != expected:
             broken.append(str(row.get("audit_id")))
@@ -326,5 +472,5 @@ def verify_audit_chain(db: Database) -> dict[str, Any]:
         "entries": len(ordered),
         "broken": broken,
         "intact": not broken,
-        "ordering": "timestamp ASC, audit_id ASC",
+        "ordering": "seq ASC（v12 后单调分配；历史行按 timestamp, audit_id 回填）",
     }
