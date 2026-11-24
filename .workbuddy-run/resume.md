@@ -175,21 +175,23 @@ curl -X POST "http://127.0.0.1:8010/api/v1/runs/<run_id>/probe-plan?diagnosis_id
 - **处理决定**：不重试、不改参数规避、不改安全策略；补充故障矩阵 4 场景标记 BLOCKED 并跳过。
   第二次以「显式非敏感白名单环境」（无 `**os.environ`、无真实凭据）重写仍被同一策略拦截，
   按指令停止尝试；后续会话不要重试该脚本的写入，直接沿用 BLOCKED 结论。
-- **Git 现状**：分支 `workbuddy/run008-quality-hardening`，HEAD `1f8df24`，
-  相对 `origin/main` 领先 21 提交、落后 0。未提交项**必须保留**：
-  `docs/assets/run008/soak-samples.jsonl`、`docs/assets/run008/wp3/`、`scripts/worker_concurrency_run008.py`
-  （以及本次更新的 `.workbuddy-run/blockers.md` / `resume.md`）。**禁止 reset/clean/强推**。
+- **Git 现状（2026-11-24 13:53 CST 刷新）**：分支 `workbuddy/run008-quality-hardening`，
+  HEAD `49d700e`，相对 `origin/main` 领先 27 提交。已推送到 `f68298a`（CI 基于 `40efee6`
+  三段全绿；后续 `790bad3`/`2e32594`/`f68298a`/`49d700e` 是文档提交，待收尾推送）。
+  未提交项**必须保留**：`docs/assets/run008/soak-samples.jsonl`、`docs/assets/run008/wp7/`、
+  长稳最终报告（生成后）。**禁止 reset/clean/强推**。
 - **后台任务现状（不要重复启动）**：
-  - `BZ1Hp8`：60 分钟长稳，`Status: running`，已跑约 16 分钟，采样 cycle 15/60，
-    证据文件 `docs/assets/run008/soak-60min.json` 尚未生成。结束后直接归档，不重跑。
-  - TeamFlow 隔离服务：`8041`（长稳专用）、`8043`（WP3 专用）健康探测均 200；`8042` 为长稳 API。
-  - WP1 多进程测试与 WP3 并发/故障恢复脚本均已结束，非后台任务。
-- **已恢复工作包**：WP0（基线）、WP1（P0 修复 + 16/16 回归 + 冒烟 22 checks）、
-  WP2（本机 562 passed/13 skipped、E2E 12/12、Ruff 全绿、前端构建通过；
-  真实 PR Gate run 45331287430 与 Nightly Gate 45331346274 全绿，日志已归档）、
-  WP3 核心（4 Worker 并发 + 真实 SIGKILL 故障恢复证据齐备）。
-- **未完成**：WP3 补充故障矩阵（B-17 BLOCKED）、60 分钟长稳收尾（运行中）、
-  WP4 长稳报告、WP5 前端 14 视图审查、WP6 安全专项、WP7 Benchmark v3、WP8 最终报告。
-- **恢复第一步**：先看 `BZ1Hp8` 是否结束 → 若无则等其自然完成；再读 `blockers.md` B-17/B-18；
-  `docs/RUN-008-BASELINE.md` 与 `docs/RUN-008-WP1-IMPLEMENTATION.md`；
-  `docs/assets/run008/` 原始证据；最后按 WP4~WP8 顺序推进（均不需要真实凭据，Benchmark 除外）。
+  - `BZ1Hp8`：60 分钟长稳 running；采样 cycle 46/60，47 行全部 PASSED/COMPLETED/teamflow_ok=true、
+    单调唯一；`docs/assets/run008/soak-60min.json` 尚未生成。结束后直接归档，不重跑。
+  - `3TCEEN`：Benchmark v3 本轮实验 running；`samples.jsonl` 38 行 + `samples.repeat1.jsonl` 约 28 行；
+    `benchmark-v3.json` 尚未生成。结束后核验 2 轮真实数据，不引用历史数字。
+  - 服务：`8041`(长稳 TeamFlow)/`8042`(长稳 API)/`8043`(WP3 TeamFlow)/`8050`+`8000`+`5173`(WP5)/
+    `8061`+`8060`+Worker `run008-bench-w1`(WP7)。均为隔离端口，勿重启、勿占用。
+- **已完成工作包**：WP0、WP1、WP2（本机 567 passed/13 skipped；E2E 12/12；
+  PR `45335765297` / Nightly `45335777381` / Release `45336007166` 在 commit `40efee6` 全绿）、
+  WP3 核心、WP5（60/60 + 4/4）、WP6（2 个真实安全修复 + 36/36）。
+- **未完成**：WP3 补充矩阵（B-17 BLOCKED，勿重试）、WP4 长稳收尾、WP7 Benchmark 收尾、
+  WP8 最终报告定稿与末次推送。
+- **恢复第一步**：检查 `BZ1Hp8` 与 `3TCEEN` 是否结束 → 读取各自最终 JSON → 完成
+  `docs/RUN-008-FINAL-REPORT.md` 中 WP4/WP7 章节 → git add/commit/push → 收尾服务。
+  全程不需要也不得读取真实凭据。
