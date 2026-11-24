@@ -240,6 +240,22 @@ class DiagnosisEngine:
                     h_obj.contributing_factors.append("[graph] 裁决层判定权威反驳成立")
 
         # 根因：仅 CONFIRMED，可多个，不强制压缩
+        # RUN-010 WP5（Flaky 弃权规则）：Flaky 特征下，**时序敏感的 PERSISTENCE
+        # 单次确认不可靠**（状态查询滞后/最终一致性会造成同用例结论摇摆）——
+        # 按阶段 7 原则降级为 SUPPORTED 并请求多次执行证据（弃权优于硬猜）。
+        # 结构性失败（5xx / 定位器 / 网络）不受此规则影响：它们的证据不随时序摇摆。
+        for h in hypotheses:
+            if (
+                h.flaky_characteristic
+                and h.status == HypothesisStatus.CONFIRMED
+                and h.failure_mechanism == FailureMechanism.PERSISTENCE
+            ):
+                h.status = HypothesisStatus.SUPPORTED
+                h.contributing_factors.append(
+                    "[flaky] 同用例历史结论不一致：持久化类单次确认受时序影响不可靠，"
+                    "降级为 SUPPORTED 并请求多次执行证据"
+                )
+
         d.root_causes = [
             h.hypothesis_id for h in hypotheses if h.status == HypothesisStatus.CONFIRMED
         ]

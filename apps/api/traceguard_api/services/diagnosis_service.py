@@ -67,10 +67,14 @@ class DiagnosisService:
                 ErrorCode.PRECONDITION_FAILED, "run PASSED：无失败症状可诊断（不做伪诊断）"
             )
         if run["test_verdict"] == "NOT_EVALUATED":
-            raise AppError(
-                ErrorCode.PRECONDITION_FAILED,
-                "run NOT_EVALUATED：缺少 Oracle 或执行中断，只能补证据，不能下结论",
-            )
+            # RUN-010 WP4/5：有失败步骤证据的 NOT_EVALUATED 允许进入规则诊断——
+            # 结论仍是"方向性支持"（引擎不会 CONFIRMED：断言未评估），
+            # 输出 PROBABLE/INCONCLUSIVE + NEEDS_MORE_EVIDENCE 处置，不冒充结论。
+            if not report.get("steps"):
+                raise AppError(
+                    ErrorCode.PRECONDITION_FAILED,
+                    "run NOT_EVALUATED 且无步骤证据：只能补证据，不能下结论",
+                )
         if run["execution_status"] != "COMPLETED" and not report.get("steps"):
             raise AppError(
                 ErrorCode.PRECONDITION_FAILED, "run has no executable evidence (failed/cancelled)"

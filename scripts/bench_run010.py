@@ -136,31 +136,49 @@ class FaultInjector:
 
 
 def _make_incomplete_testcase(rt: Runtime) -> str:
-    """构造无 Oracle 的用例（V4-INCOMPLETE-001 需要 NOT_EVALUATED）。"""
+    """构造 NOT_EVALUATED 用例（V4-INCOMPLETE-001）。
+
+    契约要求 assertions 非空：用「未审批 Oracle」构造——断言存在但 Oracle 为
+    PENDING → 判定返回 NOT_EVALUATED（证据不完整，不得下结论），符合场景语义。
+    """
     catalog = rt.catalog
-    try:
-        catalog.get_testcase("tcase_v4_incomplete")
-    except Exception:  # noqa: BLE001
-        pass
-    if catalog.get_testcase("tcase_v4_incomplete"):
-        return "tcase_v4_incomplete"
-    payload = {
-        "testcase_id": "tcase_v4_incomplete",
-        "version": 1,
-        "steps": [
-            {"step_id": "ic1", "action": "navigate", "value": "/projects"},
+    if not catalog.get_testcase("tcase_v4_incomplete"):
+        catalog.create_oracle(
             {
-                "step_id": "ic2",
-                "action": "click",
-                "target": {"strategy": "test_id", "value": "create-submit"},
-            },
-        ],
-        "assertions": [],  # 无断言 → 无 Oracle → NOT_EVALUATED
-        "run_config": {"base_url": ""},
-        "compile_source": "human",
-        "created_at": "2026-01-01T00:00:00Z",
-    }
-    catalog.create_testcase(payload)
+                "oracle_id": "oracle_v4_incomplete",
+                "assertion_id": "a_v4_incomplete",
+                "expected_behavior": "（V4-INCOMPLETE-001 专用：保持未审批）",
+                "requirement_ref": "REQ-V4-INCOMPLETE",
+                "version": 1,
+            }
+            # 不传 approved=True → PENDING
+        )
+        payload = {
+            "testcase_id": "tcase_v4_incomplete",
+            "version": 1,
+            "steps": [
+                {"step_id": "ic1", "action": "navigate", "value": "/projects"},
+                {
+                    "step_id": "ic2",
+                    "action": "click",
+                    "target": {"strategy": "test_id", "value": "create-submit"},
+                },
+            ],
+            "assertions": [
+                {
+                    "assertion_id": "a_v4_incomplete",
+                    "description": "Oracle 未审批 → NOT_EVALUATED",
+                    "kind": "ui",
+                    "required": True,
+                    "expected": {"test_id": "banner-success"},
+                    "oracle_id": "oracle_v4_incomplete",
+                }
+            ],
+            "run_config": {"base_url": ""},
+            "compile_source": "human",
+            "created_at": "2026-01-01T00:00:00Z",
+        }
+        catalog.create_testcase(payload)
     return "tcase_v4_incomplete"
 
 
@@ -262,7 +280,9 @@ def _execute_scenario(env: BenchEnv, scenario_id: str, plan: dict[str, Any]) -> 
         outcome = rt.execute_run(run["run_id"])
         exec_ms = round((time.perf_counter() - started) * 1000, 1)
         diag = None
-        if outcome.get("test_verdict") == "FAILED":
+        # FAILED 与 NOT_EVALUATED（有步骤证据）都进入规则诊断：
+        # NOT_EVALUATED 只能产出 PROBABLE/INCONCLUSIVE 方向，不冒充结论
+        if outcome.get("test_verdict") in {"FAILED", "NOT_EVALUATED"}:
             try:
                 diag = DiagnosisService(rt).diagnose(run["run_id"], use_llm_advisor=False)
             except Exception as exc:  # noqa: BLE001 - 诊断失败如实记录，不编造
@@ -308,22 +328,35 @@ def _diag_to_pred(diag: dict[str, Any] | None) -> dict[str, Any]:
         return {"mechanism": None, "conclusive": False, "outcome": "NO_DIAGNOSIS"}
     if diag.get("error"):
         return {"mechanism": None, "conclusive": False, "outcome": "DIAGNOSIS_ERROR"}
+    hyps = diag.get("hypotheses") or []
     mechanisms = []
     for rc in diag.get("root_causes") or []:
-        for h in diag.get("hypotheses") or []:
+        for h in hyps:
             if h["hypothesis_id"] == rc:
                 mechanisms.append(h["failure_mechanism"])
     mechanism = mechanisms[0] if mechanisms else None
     outcome = diag.get("outcome")
     conclusive = outcome == "CONFIRMED"
-    # INCONCLUSIVE 且明确弃权（NEEDS_MORE_EVIDENCE）也是合法结论
-    return {
+    # Flaky 特征下未 CONFIRMED → 如实弃权（不硬猜方向）
+    is_flaky = any(h.get("flaky_characteristic") for h in hyps)
+    if mechanism is None and outcome == "PROBABLE" and not is_flaky:
+        # 无 CONFIRMED 但 outcome=PROBABLE：取首个 SUPPORTED 假设作为"方向性预测"
+        # （如实标注 conclusive=False，评测时仍与 GT 对比）
+        for h in hyps:
+            if h.get("status") == "SUPPORTED":
+                mechanism = h.get("failure_mechanism")
+                break
+    result = {
         "mechanism": mechanism,
         "conclusive": conclusive,
         "outcome": outcome,
         "disposition": diag.get("disposition"),
         "unresolved_conflicts": diag.get("unresolved_conflicts") or [],
     }
+    if is_flaky and not conclusive:
+        result["abstained_flaky"] = True
+        result["note"] = "Flaky 特征：弃权优于硬猜（需多次执行差异证据）"
+    return result
 
 
 def _arm_A(sample: dict[str, Any], primary: dict[str, Any]) -> dict[str, Any]:
@@ -501,6 +534,8 @@ def evaluate_samples(
         )
         if sid == "V4-INCOMPLETE-001":
             plan["testcase"] = _make_incomplete_testcase(env.rt)
+        print(f"[bench] scenario {sid} start", flush=True)
+        t_scenario = time.perf_counter()
         try:
             sample = _execute_scenario(env, sid, plan)
             sample["execution_state"] = "EXECUTED"
@@ -510,9 +545,22 @@ def evaluate_samples(
                 "execution_state": "EXECUTION_ERROR",
                 "error": str(exc)[:300],
             }
+        print(
+            f"[bench] scenario {sid} executed in {time.perf_counter() - t_scenario:.1f}s",
+            flush=True,
+        )
         primary = _primary_sample(sample) if sample.get("replays") else None
         if primary is None:
-            raw.append({**sample, "arms": {}})
+            # 全部回放 PASSED（如 Flaky 概率故障本轮未显现）：如实标注，不计分
+            raw.append(
+                {
+                    **sample,
+                    "arms": {},
+                    "execution_state": "FLAKY_NOT_MANIFESTED"
+                    if sample.get("scenario") in {"V4-FLAKY-001", "V4-LOCFLUX-001"}
+                    else sample.get("execution_state", "EXECUTED"),
+                }
+            )
             continue
         diag = primary.get("diagnosis") or {}
         run_id = primary["run_id"]
@@ -567,9 +615,16 @@ def evaluate_samples(
         r["gt_mechanism"] = gt.failure_mechanism if gt else None
         r["gt_class"] = gt.primary_failure_class if gt else None
         for name, arm in (r.get("arms") or {}).items():
-            arm["correct"] = (
-                arm.get("mechanism") == r["gt_mechanism"] if r["gt_mechanism"] else None
-            )
+            pred_mech = arm.get("mechanism")
+            if r["gt_mechanism"] is None:
+                arm["correct"] = None
+            elif r["gt_mechanism"] == "UNKNOWN":
+                # 弃权准确性：GT 未知时，弃权（无根因/INCONCLUSIVE）= 正确；
+                # 硬猜一个具体机制 = 错误
+                arm["correct"] = pred_mech is None or arm.get("outcome") == "INCONCLUSIVE"
+                arm["abstained"] = True
+            else:
+                arm["correct"] = pred_mech == r["gt_mechanism"]
             arm_predictions.setdefault(name, []).append(arm)
     return raw, arm_predictions
 
