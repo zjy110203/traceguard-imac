@@ -57,8 +57,9 @@
 
 - PR #2（`workbuddy/run008-quality-hardening` → `main`）保持 **open/HOLD**：<https://github.com/zjy110203/traceguard-imac/pull/2>。
 - RUN-009 提交：`e15a2b8`(WP0) → `3deeeb7`(WP1) → `48fa9a5`(WP2) → `0eb3a48`(WP3) → `6fdc438`(WP4) →
-  `7f991af`(WP5) → `6233324`(WP6/WP7) → `b45729d`(WP8) → `4a6e9f0`(WP9) → `4c88484`/`e11d7d1`(CI 格式修复)。
-- 最新 HEAD `e11d7d17cf3d4c141c7292f124309e975f307fca` 的 PR Gate：**backend=success、frontend=success**（真实 GitHub Actions 运行）。
+  `7f991af`(WP5) → `6233324`(WP6/WP7) → `b45729d`(WP8) → `4a6e9f0`(WP9) → `4c88484`/`e11d7d1`(CI 格式修复) → 文档结论提交（见 git log）。
+- CI 结论：代码提交 `e11d7d1` 与后续文档提交的 PR Gate 均 **backend=success、frontend=success**（真实 GitHub Actions 运行，
+  以 PR #2 的 check runs 为准，不沿用 `40efee6` 的旧结论）。
 - 决策依据：WP0 复核时存在未处理高风险（认证未实现、B-17、网络出口未验证）；RUN-009 已解决其中认证与用户态出口，
   但 B-17 与宿主级封锁仍未解除，因此按「无未处理高风险才可合并」保持 HOLD，待负责人决策。
 - 未 reset/clean/强推/改写历史；PR #1 未关闭、未合并。
