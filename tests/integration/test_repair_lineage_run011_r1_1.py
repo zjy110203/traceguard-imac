@@ -195,9 +195,7 @@ def test_diagnosis_run_mismatch_rejected(repair_env) -> None:  # type: ignore[no
         testcase_id=a["testcase_id"],
         workspace_id=WS_A,
     )
-    _assert_rejected(
-        svc, "CONFLICT", diagnosis_id=diag, source_run_id=a["failed_run"]
-    )
+    _assert_rejected(svc, "CONFLICT", diagnosis_id=diag, source_run_id=a["failed_run"])
 
 
 def test_diagnosis_testcase_mismatch_rejected(repair_env) -> None:  # type: ignore[no-untyped-def]
@@ -244,9 +242,7 @@ def test_workspace_mismatch_rejected(repair_env) -> None:  # type: ignore[no-unt
         testcase_id=a["testcase_id"],
         workspace_id=WS_B,
     )
-    _assert_rejected(
-        svc, "AUTHORIZATION_ERROR", diagnosis_id=diag, source_run_id=a["failed_run"]
-    )
+    _assert_rejected(svc, "AUTHORIZATION_ERROR", diagnosis_id=diag, source_run_id=a["failed_run"])
 
 
 def test_proposal_version_mismatch_rejected(repair_env) -> None:  # type: ignore[no-untyped-def]

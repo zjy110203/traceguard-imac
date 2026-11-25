@@ -415,7 +415,11 @@ def assess(
     if signal.probe_id == "dom_snapshot":
         excerpt = str((signal.data or {}).get("excerpt") or "")
         failed_targets, expected = _targets_by_origin(run_report)
-        present = {tid for tid in expected | failed_targets if f'"{tid}"' in excerpt or f"'{tid}'" in excerpt}
+        present = {
+            tid
+            for tid in expected | failed_targets
+            if f'"{tid}"' in excerpt or f"'{tid}'" in excerpt
+        }
         missing = expected - present
         missing_failed = failed_targets - present
         result.notes.update(

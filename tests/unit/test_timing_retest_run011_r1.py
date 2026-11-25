@@ -72,21 +72,33 @@ def _state_signal(
 def test_resolve_alignment_three_states() -> None:
     """ALIGNED（run 内）/ POST_HOC（Run 后）/ UNKNOWN（时间未知）三态互斥。"""
     in_run = ProbeSignal(
-        probe_id="http_state", execution_id="e1", status="SUCCEEDED",
-        evidence_ids=["x"], observed_at=_time.time(), run_scope=True,
+        probe_id="http_state",
+        execution_id="e1",
+        status="SUCCEEDED",
+        evidence_ids=["x"],
+        observed_at=_time.time(),
+        run_scope=True,
     )
     assert resolve_alignment(in_run, RUN_ENDED)[0] == ALIGNED
 
     late = ProbeSignal(
-        probe_id="http_state", execution_id="e2", status="SUCCEEDED",
-        evidence_ids=["x"], observed_at=RUN_ENDED + 100, run_scope=False,
+        probe_id="http_state",
+        execution_id="e2",
+        status="SUCCEEDED",
+        evidence_ids=["x"],
+        observed_at=RUN_ENDED + 100,
+        run_scope=False,
     )
     assert resolve_alignment(late, RUN_ENDED)[0] == POST_HOC
 
     # observed_at=0：时间未知 → UNKNOWN（不得再按 ALIGNED 处理）
     unknown = ProbeSignal(
-        probe_id="http_state", execution_id="e3", status="SUCCEEDED",
-        evidence_ids=["x"], observed_at=0.0, run_scope=False,
+        probe_id="http_state",
+        execution_id="e3",
+        status="SUCCEEDED",
+        evidence_ids=["x"],
+        observed_at=0.0,
+        run_scope=False,
     )
     alignment, note = resolve_alignment(unknown, RUN_ENDED)
     assert alignment == UNKNOWN
@@ -94,8 +106,12 @@ def test_resolve_alignment_three_states() -> None:
 
     # run_ended_at 缺失 + 非 run 作用域：同样无法证明对齐 → UNKNOWN
     unknown2 = ProbeSignal(
-        probe_id="http_state", execution_id="e4", status="SUCCEEDED",
-        evidence_ids=["x"], observed_at=500.0, run_scope=False,
+        probe_id="http_state",
+        execution_id="e4",
+        status="SUCCEEDED",
+        evidence_ids=["x"],
+        observed_at=500.0,
+        run_scope=False,
     )
     assert resolve_alignment(unknown2, None)[0] == UNKNOWN
 

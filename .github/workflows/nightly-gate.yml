@@ -129,6 +129,9 @@ jobs:
         # 覆盖：迁移 v8 幂等 + 并发启动、claim 原子性、租约接管代次、旧代次提交拒绝、
         #       晋升 CAS 单赢家 + 幂等回执、生产方序列不重号。
         run: .venv/bin/pytest -q tests/integration/test_postgres_platform.py -rs
+      - name: PostgreSQL workspace isolation, audit chain and review CAS (RUN-012 WP1)
+        # 覆盖：双 Workspace 数据查询与权限过滤、审计链完整性、审核修订号 CAS。
+        run: .venv/bin/pytest -q tests/integration/test_postgres_workspace_run012.py -rs
       - name: Migration idempotency on a fresh PostgreSQL database
         run: |
           .venv/bin/python - <<'PY'

@@ -24,9 +24,34 @@
 - `ruff check` 改动文件：All checks passed；新增文件 `ruff format` 通过。
 - 原始归档 SHA-256 前后一致（`v5-2rounds.json` `d99bc2e…`、`pilot-3scenarios.json` `2e96e24…`）。
 - 历史 False Pass 指标如实标记 **PARTIAL**（0/37，证据等级 INFERRED_ONLY），未为维持 0/37 强行归类。
-- 当前提交：待本工作包提交后填写。
+- 当前提交：`44cfb46a580ec33e80e77820d8277e68baf62c2e`。
 
 ### 剩余问题 / 下一项
 
 - 未重跑 23×2 真实 Benchmark（成本与独立部署环境约束本轮暂不做；Errata 明确历史状态）。
 - 下一项：WP1 — 修复 CI 分支触发规则，检查 PostgreSQL 16 专项，尝试真实 CI 触发并如实记录证据。
+
+---
+
+## WP1：CI 与 PostgreSQL 16 真实验收
+
+- **开始时间**：2026-11-25 16:30 CST
+- **完成时间**：2026-11-25 16:38 CST
+
+### 修改内容
+
+1. `.github/workflows/pr-gate.yml`：新增 `workbuddy/run011-*` / `workbuddy/run012-*` push 触发；纳入 R1.2 审核门禁与全局观测 RBAC 两个安全专项。
+2. `.github/workflows/nightly-gate.yml`：新增 PG Workspace 隔离 / 权限过滤 / 审计链 / 审核 CAS 专项步骤。
+3. 修复 CI 格式门禁基线失败：对 29 个既有文件执行机械格式化（无断言/语义变化）。
+4. 新增 `tests/integration/test_postgres_workspace_run012.py`（3 项 PG 专项）与 `docs/RUN-012-WP1-CI-POSTGRES.md`。
+
+### 测试结果
+
+- PG 16.16 隔离库 `traceguard_run012_wp1`：parity 5 + platform 8 + 新增 3 = **16 passed / 0 skipped**。
+- PR Gate 后端本地复现：**416 passed**；`ruff check` / `ruff format --check` 全绿。
+- GitHub Actions 真实运行：**NOT_RUN**（本机无 `gh` / Token，未触发，不伪造）。
+
+### 剩余问题 / 下一项
+
+- 待远端确认 PR Gate 是否随分支推送真实触发；拿到 run ID 后补入报告。
+- 下一项：WP2 — 建立前端统一 Workspace 上下文并接入全部视图。

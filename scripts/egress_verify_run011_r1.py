@@ -57,7 +57,11 @@ def _mk_case(
             "steps": [
                 {"step_id": "n1", "action": "navigate", "value": navigate_to},
                 {"step_id": "n2", "action": "wait", "value": "600"},
-                {"step_id": "a1", "action": "assert", "target": {"strategy": "test_id", "value": "page-title"}},
+                {
+                    "step_id": "a1",
+                    "action": "assert",
+                    "target": {"strategy": "test_id", "value": "page-title"},
+                },
             ],
             "assertions": [
                 {
@@ -104,7 +108,7 @@ def _run(engineer: Http, ex: WorkerRun, tc_id: str, note: str) -> dict[str, Any]
     out = ex.execute(tc_id, version=1, note=note)
     run = out["run"]
     report = engineer.call("GET", f"/api/v1/runs/{run['run_id']}/report") or {}
-    egress = ((report.get("browser") or {}).get("egress") or {})
+    egress = (report.get("browser") or {}).get("egress") or {}
     return {
         "run_id": run["run_id"],
         "verdict": run.get("test_verdict"),
@@ -126,7 +130,10 @@ def main() -> int:
 
     password = os.getenv("TG_RUN011_PASSWORD") or "run011-local-test-only"
     workers = [w.strip() for w in args.workers.split(",") if w.strip()]
-    roles = {name: Http(args.api, name) for name in ("viewer", "qa-engineer", "qa-lead", "platform-admin")}
+    roles = {
+        name: Http(args.api, name)
+        for name in ("viewer", "qa-engineer", "qa-lead", "platform-admin")
+    }
     for name, s in roles.items():
         s.login(name, password)
     engineer, lead = roles["qa-engineer"], roles["qa-lead"]

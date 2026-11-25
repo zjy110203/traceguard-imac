@@ -50,7 +50,9 @@ class ExecuteReq(BaseModel):
     workspace_id: str | None = None
 
 
-def _resolve_version(testcase_id: str, version: int | None, *, require_approved: bool = True) -> int:
+def _resolve_version(
+    testcase_id: str, version: int | None, *, require_approved: bool = True
+) -> int:
     rt = get_services().rt
     tc = rt.catalog.get_testcase(testcase_id)
     if not tc:
@@ -270,7 +272,11 @@ async def list_runs(
         principal_of(request), workspace_id, resource_type="run", request=request
     )
     return get_services().rt.tasks.list_runs(
-        workspace_id=workspace_id, workspace_ids=allowed, status=status, verdict=verdict, limit=limit
+        workspace_id=workspace_id,
+        workspace_ids=allowed,
+        status=status,
+        verdict=verdict,
+        limit=limit,
     )
 
 
@@ -310,9 +316,7 @@ async def run_events(run_id: str, request: Request, limit: int = 500) -> list[di
 
 
 @router.get("/runs/{run_id}/timeline")
-async def run_timeline(
-    run_id: str, request: Request, catch_up: bool = True
-) -> dict[str, Any]:
+async def run_timeline(run_id: str, request: Request, catch_up: bool = True) -> dict[str, Any]:
     """事件时间线（由 Consumer Inbox 驱动的真实内部消费者投影，非权威状态）。"""
     from traceguard_core.errors import AppError
 

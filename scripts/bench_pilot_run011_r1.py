@@ -41,12 +41,32 @@ from full_loop_run011 import CHECKS, Http, TeamFlow, WorkerRun, check  # noqa: E
 
 #: 三场景：testcase（种子内受控故障注入）→ GT 主因机制
 PILOT_SCENARIOS: list[dict[str, Any]] = [
-    {"scenario": "LOCATOR", "testcase": "tcase_bench_loc001", "gt_mechanism": "LOCATOR", "fault": "TF-LOC-001"},
-    {"scenario": "NETWORK", "testcase": "tcase_bench_net002", "gt_mechanism": "NETWORK", "fault": "TF-NET-002"},
-    {"scenario": "TIMING", "testcase": "tcase_bench_db004", "gt_mechanism": "TIMING", "fault": "TF-DB-004"},
+    {
+        "scenario": "LOCATOR",
+        "testcase": "tcase_bench_loc001",
+        "gt_mechanism": "LOCATOR",
+        "fault": "TF-LOC-001",
+    },
+    {
+        "scenario": "NETWORK",
+        "testcase": "tcase_bench_net002",
+        "gt_mechanism": "NETWORK",
+        "fault": "TF-NET-002",
+    },
+    {
+        "scenario": "TIMING",
+        "testcase": "tcase_bench_db004",
+        "gt_mechanism": "TIMING",
+        "fault": "TF-DB-004",
+    },
 ]
 
-RESULT: dict[str, Any] = {"scenarios": [], "probe_executions": [], "probe_evidence_new": [], "probe_feedback_applied": []}
+RESULT: dict[str, Any] = {
+    "scenarios": [],
+    "probe_executions": [],
+    "probe_evidence_new": [],
+    "probe_feedback_applied": [],
+}
 
 
 class ScenarioExecutionError(RuntimeError):
@@ -58,7 +78,9 @@ class ScenarioExecutionError(RuntimeError):
 
 
 def _login(api: str, password: str) -> dict[str, Http]:
-    roles = {name: Http(api, name) for name in ("viewer", "qa-engineer", "qa-lead", "platform-admin")}
+    roles = {
+        name: Http(api, name) for name in ("viewer", "qa-engineer", "qa-lead", "platform-admin")
+    }
     for name, s in roles.items():
         s.login(name, password)
     return roles
@@ -96,7 +118,13 @@ def _pred_from_diag(diag: dict[str, Any] | None) -> dict[str, Any]:
 
 
 def _arm_A(verdict: str | None) -> dict[str, Any]:
-    return {"mechanism": None, "conclusive": False, "outcome": "VERDICT_ONLY", "verdict": verdict, "note": "A 臂：只有执行 verdict，无诊断"}
+    return {
+        "mechanism": None,
+        "conclusive": False,
+        "outcome": "VERDICT_ONLY",
+        "verdict": verdict,
+        "note": "A 臂：只有执行 verdict，无诊断",
+    }
 
 
 def _arm_D_ablation(diag: dict[str, Any], engine_cls) -> dict[str, Any]:
@@ -105,10 +133,13 @@ def _arm_D_ablation(diag: dict[str, Any], engine_cls) -> dict[str, Any]:
 
     hyps = [_hypothesis_from_dict(h) for h in diag.get("hypotheses") or []]
     result = engine_cls().diagnose(str(diag.get("symptom", "")), hyps, adjudication=None)
-    return _pred_from_diag(result.to_dict() | {
-        "outcome": result.outcome.value,
-        "root_causes": list(result.root_causes),
-    })
+    return _pred_from_diag(
+        result.to_dict()
+        | {
+            "outcome": result.outcome.value,
+            "root_causes": list(result.root_causes),
+        }
+    )
 
 
 def _arm_F(
@@ -128,13 +159,18 @@ def _arm_F(
     result = engine_cls().diagnose(
         str(diag_before.get("symptom", "")), [_hypothesis_from_dict(h) for h in merged]
     )
-    pred = _pred_from_diag(result.to_dict() | {
-        "outcome": result.outcome.value,
-        "root_causes": list(result.root_causes),
-    })
+    pred = _pred_from_diag(
+        result.to_dict()
+        | {
+            "outcome": result.outcome.value,
+            "root_causes": list(result.root_causes),
+        }
+    )
     pred["probes_used"] = len(signals)
     pred["feedback_rate"] = (
-        round(sum(1 for f in feedback if f.produced_evidence) / len(feedback), 4) if feedback else None
+        round(sum(1 for f in feedback if f.produced_evidence) / len(feedback), 4)
+        if feedback
+        else None
     )
     pred["time_alignments"] = [f.time_alignment for f in feedback]
     return pred
@@ -169,7 +205,9 @@ def run_scenario(
         "arms": {},
     }
     for key in (
-        "expected_run_outcome", "control_kind", "fault_trigger_condition",
+        "expected_run_outcome",
+        "control_kind",
+        "fault_trigger_condition",
     ):
         if key in plan_def:
             sample[key] = plan_def[key]
@@ -180,14 +218,16 @@ def run_scenario(
         active = list(state.get("active") or [])
         fault_ids = {plan_def["fault"]}
         # 复合故障的底层机制也算触发证据。
-        fault_ids.update({
-            "TF-API-001": {"TF-COMP-001"},
-            "TF-UI-003": {"TF-COMP-001"},
-            "TF-DB-001": {"TF-COMP-002"},
-            "TF-TIME-001": {"TF-COMP-002"},
-            "TF-LOC-001": {"TF-COMP-003"},
-            "TF-UI-002": {"TF-COMP-003"},
-        }.get(plan_def["fault"], set()))
+        fault_ids.update(
+            {
+                "TF-API-001": {"TF-COMP-001"},
+                "TF-UI-003": {"TF-COMP-001"},
+                "TF-DB-001": {"TF-COMP-002"},
+                "TF-TIME-001": {"TF-COMP-002"},
+                "TF-LOC-001": {"TF-COMP-003"},
+                "TF-UI-002": {"TF-COMP-003"},
+            }.get(plan_def["fault"], set())
+        )
         sample["fault_state_snapshot"] = state
         sample["fault_activation_status"] = (
             "CONFIRMED" if fault_ids.intersection(active) else "UNKNOWN"
@@ -200,8 +240,11 @@ def run_scenario(
     diag_t0 = time.perf_counter()
     try:
         diag = engineer.call(
-            "POST", f"/api/v1/runs/{run_id}/diagnose?use_llm=false", None,
-            expect_status=(200, 201), timeout=300,
+            "POST",
+            f"/api/v1/runs/{run_id}/diagnose?use_llm=false",
+            None,
+            expect_status=(200, 201),
+            timeout=300,
         )
     except Exception as exc:  # noqa: BLE001
         sample["diagnosis_status"] = "ERROR"
@@ -216,8 +259,11 @@ def run_scenario(
     # ---- 真实探针执行（不是重建信号）----
     probe_t0 = time.perf_counter()
     plan = engineer.call(
-        "POST", f"/api/v1/runs/{run_id}/probe-plan?diagnosis_id={diag_id}&max_iterations=3",
-        None, expect_status=(200, 201), timeout=300,
+        "POST",
+        f"/api/v1/runs/{run_id}/probe-plan?diagnosis_id={diag_id}&max_iterations=3",
+        None,
+        expect_status=(200, 201),
+        timeout=300,
     )
     probe_latency_ms = round((time.perf_counter() - probe_t0) * 1000, 1)
     steps = plan.get("steps") or []
@@ -339,8 +385,11 @@ def run_scenario(
 
     # ---- LLM 实验组（单独记录 provider/model/prompt_version；失败如实记录）----
     llm_diag = engineer.call(
-        "POST", f"/api/v1/runs/{run_id}/diagnose?use_llm=true", None,
-        expect_status=(200, 201), timeout=300,
+        "POST",
+        f"/api/v1/runs/{run_id}/diagnose?use_llm=true",
+        None,
+        expect_status=(200, 201),
+        timeout=300,
     )
     llm_notes = llm_diag.get("llm_advisor") or {}
     sample["llm_arm"] = {
@@ -384,7 +433,9 @@ def main() -> int:
         except Exception as exc:  # noqa: BLE001 - 如实记录
             sample = {"scenario": plan_def["scenario"], "error": f"{type(exc).__name__}: {exc}"}
         RESULT["scenarios"].append(sample)
-        print(f"[scenario] {plan_def['scenario']} -> {json.dumps({k: sample.get(k) for k in ('verdict','diagnosis_outcome','probe_stop_reason','real_probe_count')}, ensure_ascii=False)}")
+        print(
+            f"[scenario] {plan_def['scenario']} -> {json.dumps({k: sample.get(k) for k in ('verdict', 'diagnosis_outcome', 'probe_stop_reason', 'real_probe_count')}, ensure_ascii=False)}"
+        )
 
     # ---- 6.1 验收：每个实验臂真实执行自己的实现 + 探针记录完整 ----
     for s in RESULT["scenarios"]:
@@ -400,9 +451,15 @@ def main() -> int:
         check(
             f"P2 {s['scenario']} 真实探针执行（非重建）且全 ID 绑定",
             bool(s.get("real_probe_count"))
-            and all(e.get("execution_id") and e.get("evidence_ids") for e in RESULT["probe_executions"] if e.get("run_id") == s.get("run_id"))
             and all(
-                e.get("observed_at") is not None and e.get("collected_at") is not None and e.get("ingested_at")
+                e.get("execution_id") and e.get("evidence_ids")
+                for e in RESULT["probe_executions"]
+                if e.get("run_id") == s.get("run_id")
+            )
+            and all(
+                e.get("observed_at") is not None
+                and e.get("collected_at") is not None
+                and e.get("ingested_at")
                 for e in RESULT["probe_evidence_new"]
                 if e.get("run_id") == s.get("run_id")
             ),
@@ -412,7 +469,17 @@ def main() -> int:
         arms = s.get("arms") or {}
         check(
             f"P3 {s['scenario']} 六臂齐全（A/C/D/E/F/G）",
-            all(k in arms for k in ("A_raw_report", "C_rule", "D_graph_ablation", "E_probe_no_feedback", "F_probe_post_hoc_aware", "G_probe_unknown_time")),
+            all(
+                k in arms
+                for k in (
+                    "A_raw_report",
+                    "C_rule",
+                    "D_graph_ablation",
+                    "E_probe_no_feedback",
+                    "F_probe_post_hoc_aware",
+                    "G_probe_unknown_time",
+                )
+            ),
             sorted(arms.keys()),
             phase="pilot",
         )
@@ -444,6 +511,7 @@ def main() -> int:
 
     # 统计（三场景小样本：如实给出，不宣称显著）
     n = len([s for s in RESULT["scenarios"] if not s.get("error")])
+
     def _acc(arm: str) -> float | None:
         hits = sum(1 for s in RESULT["scenarios"] if (s.get("gt_match") or {}).get(arm))
         return round(hits / n, 4) if n else None
@@ -451,7 +519,11 @@ def main() -> int:
     RESULT["pilot_statistics"] = {
         "sample_size": n,
         "note": "三场景试验样本：不宣称统计显著；Macro-F1/Selective Accuracy/False Pass Rate 等需 19+ 场景两轮后计算",
-        "primary_cause_accuracy": {"C_rule": _acc("C_rule"), "F_probe_post_hoc_aware": _acc("F_probe_post_hoc_aware"), "G_probe_unknown_time": _acc("G_probe_unknown_time")},
+        "primary_cause_accuracy": {
+            "C_rule": _acc("C_rule"),
+            "F_probe_post_hoc_aware": _acc("F_probe_post_hoc_aware"),
+            "G_probe_unknown_time": _acc("G_probe_unknown_time"),
+        },
         "probe_execution_success_rate": (
             round(
                 sum(1 for e in RESULT["probe_executions"] if e.get("status") == "SUCCEEDED")
@@ -462,7 +534,9 @@ def main() -> int:
             else None
         ),
         "probe_feedback_success_rate": (
-            round(len(RESULT["probe_feedback_applied"]) / max(1, len(RESULT["probe_executions"])), 4)
+            round(
+                len(RESULT["probe_feedback_applied"]) / max(1, len(RESULT["probe_executions"])), 4
+            )
             if RESULT["probe_executions"]
             else None
         ),

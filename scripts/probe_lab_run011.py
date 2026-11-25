@@ -38,7 +38,9 @@ from full_loop_run011 import CHECKS, Http, TeamFlow, WorkerRun, check  # noqa: E
 
 
 def _login(api: str, password: str) -> dict[str, Http]:
-    roles = {name: Http(api, name) for name in ("viewer", "qa-engineer", "qa-lead", "platform-admin")}
+    roles = {
+        name: Http(api, name) for name in ("viewer", "qa-engineer", "qa-lead", "platform-admin")
+    }
     for name, s in roles.items():
         s.login(name, password)
     return roles
@@ -68,7 +70,8 @@ def _diag_snapshot(diag: dict[str, Any]) -> dict[str, Any]:
                     for r in (h.get("supporting") or [])
                 ],
                 "contradicting": [
-                    {"id": r.get("id"), "trust": r.get("trust")} for r in (h.get("contradicting") or [])
+                    {"id": r.get("id"), "trust": r.get("trust")}
+                    for r in (h.get("contradicting") or [])
                 ],
                 "probe_feedback": [
                     {"relation": f.get("relation"), "alignment": f.get("time_alignment")}
@@ -119,7 +122,9 @@ def _run_case(
         rec["note"] = "用例未失败：该场景本轮未显现，不进入诊断/探针"
         return rec
 
-    diag = engineer.call("POST", f"/api/v1/runs/{run_id}/diagnose", None, expect_status=(200, 201), timeout=300)
+    diag = engineer.call(
+        "POST", f"/api/v1/runs/{run_id}/diagnose", None, expect_status=(200, 201), timeout=300
+    )
     rec["diagnosis_before"] = _diag_snapshot(diag)
     rec["suggestions"] = engineer.call(
         "GET", f"/api/v1/runs/{run_id}/probe-suggestions?diagnosis_id={diag['diagnosis_id']}"
@@ -188,9 +193,7 @@ def _run_case(
             }
         )
     rec["probe_evidence"] = probe_evidence
-    rec["hypothesis_updates"] = [
-        u for st in steps for u in (st.get("hypothesis_updates") or [])
-    ]
+    rec["hypothesis_updates"] = [u for st in steps for u in (st.get("hypothesis_updates") or [])]
     rec["executed"] = [s for s in steps if s.get("status") == "SUCCEEDED"]
     rec["failed"] = [s for s in steps if s.get("status") in {"FAILED", "TIMED_OUT", "BLOCKED"}]
     return rec
@@ -211,7 +214,12 @@ def main() -> int:
     tf = TeamFlow(args.teamflow)
     ex = WorkerRun(engineer, workers, "")
 
-    result: dict[str, Any] = {"api": args.api, "teamflow": args.teamflow, "workers": workers, "cases": {}}
+    result: dict[str, Any] = {
+        "api": args.api,
+        "teamflow": args.teamflow,
+        "workers": workers,
+        "cases": {},
+    }
 
     # 1) 有真实证据缺口的场景：定位器失效
     loc = _run_case(ex, engineer, tf, "tcase_bench_loc001", fault_hint="TF-LOC-001")
@@ -219,7 +227,10 @@ def main() -> int:
     check(
         "P1 定位器场景真实失败并进入诊断",
         loc.get("verdict") in {"FAILED", "NOT_EVALUATED"} and bool(loc.get("diagnosis_before")),
-        {"verdict": loc.get("verdict"), "outcome": (loc.get("diagnosis_before") or {}).get("outcome")},
+        {
+            "verdict": loc.get("verdict"),
+            "outcome": (loc.get("diagnosis_before") or {}).get("outcome"),
+        },
     )
     executed = loc.get("executed") or []
     check(
@@ -247,10 +258,17 @@ def main() -> int:
         "P4 证据回灌后诊断被重新评估（有可解释变化或如实无变化）",
         bool(loc.get("diagnosis_after"))
         and (
-            any(loc.get("changed", {}).values())
-            or bool((loc.get("plan") or {}).get("stop_reason"))
+            any(loc.get("changed", {}).values()) or bool((loc.get("plan") or {}).get("stop_reason"))
         ),
-        {"changed": loc.get("changed"), "before": {k: (loc.get("diagnosis_before") or {}).get(k) for k in ("outcome", "mechanisms")}, "after": {k: (loc.get("diagnosis_after") or {}).get(k) for k in ("outcome", "mechanisms")}},
+        {
+            "changed": loc.get("changed"),
+            "before": {
+                k: (loc.get("diagnosis_before") or {}).get(k) for k in ("outcome", "mechanisms")
+            },
+            "after": {
+                k: (loc.get("diagnosis_after") or {}).get(k) for k in ("outcome", "mechanisms")
+            },
+        },
     )
 
     # 2) 超时/网络场景：允许弃权
@@ -258,7 +276,8 @@ def main() -> int:
     result["cases"]["net_timeout"] = net
     check(
         "P5 网络超时场景允许 INCONCLUSIVE，且不伪造结论",
-        (net.get("diagnosis_before") or {}).get("outcome") in {"INCONCLUSIVE", "CONFIRMED", "PROBABLE"},
+        (net.get("diagnosis_before") or {}).get("outcome")
+        in {"INCONCLUSIVE", "CONFIRMED", "PROBABLE"},
         (net.get("diagnosis_before") or {}).get("outcome"),
     )
 
@@ -273,7 +292,7 @@ def main() -> int:
 
     # 4) 显式探针执行 + 5) 非白名单探针
     tf.reset()
-    run_id = (loc.get("run_id") if loc.get("run_id") else "")
+    run_id = loc.get("run_id") if loc.get("run_id") else ""
     explicit = engineer.call(
         "POST",
         "/api/v1/probes/execute",
@@ -305,7 +324,12 @@ def main() -> int:
     code, body, _ = engineer.raw(
         "POST",
         "/api/v1/probes/execute",
-        {"probe_id": "not_a_whitelisted_probe", "params": {}, "workspace_id": "default", "run_id": run_id},
+        {
+            "probe_id": "not_a_whitelisted_probe",
+            "params": {},
+            "workspace_id": "default",
+            "run_id": run_id,
+        },
     )
     after_bad = engineer.call("GET", f"/api/v1/probes/executions?run_id={run_id}&limit=200")
     result["cases"]["bad_probe"] = {"status": code, "body": body, "executions": len(after_bad)}
@@ -319,16 +343,30 @@ def main() -> int:
     if run_id and (loc.get("diagnosis_before") or {}).get("diagnosis_id"):
         did = (loc.get("diagnosis_before") or {}).get("diagnosis_id")
         p1 = engineer.call(
-            "POST", f"/api/v1/runs/{run_id}/probe-plan?diagnosis_id={did}&max_iterations=2", None,
-            expect_status=(200, 201), timeout=300,
+            "POST",
+            f"/api/v1/runs/{run_id}/probe-plan?diagnosis_id={did}&max_iterations=2",
+            None,
+            expect_status=(200, 201),
+            timeout=300,
         )
         p2 = engineer.call(
-            "POST", f"/api/v1/runs/{run_id}/probe-plan?diagnosis_id={did}&max_iterations=2", None,
-            expect_status=(200, 201), timeout=300,
+            "POST",
+            f"/api/v1/runs/{run_id}/probe-plan?diagnosis_id={did}&max_iterations=2",
+            None,
+            expect_status=(200, 201),
+            timeout=300,
         )
         result["cases"]["repeat"] = {
-            "first": {"steps": len(p1.get("steps") or []), "stop": p1.get("stop_reason"), "budget": p1.get("budget")},
-            "second": {"steps": len(p2.get("steps") or []), "stop": p2.get("stop_reason"), "budget": p2.get("budget")},
+            "first": {
+                "steps": len(p1.get("steps") or []),
+                "stop": p1.get("stop_reason"),
+                "budget": p1.get("budget"),
+            },
+            "second": {
+                "steps": len(p2.get("steps") or []),
+                "stop": p2.get("stop_reason"),
+                "budget": p2.get("budget"),
+            },
         }
         check(
             "P9 重复 probe-plan 不会重复执行同一缺口（预算受控）",
@@ -339,10 +377,16 @@ def main() -> int:
         # 7) 关闭预算后必须 STOP_BUDGET_CLOSED
         engineer.call("POST", f"/api/v1/probes/budgets/close?run_id={run_id}&diagnosis_id={did}")
         p3 = engineer.call(
-            "POST", f"/api/v1/runs/{run_id}/probe-plan?diagnosis_id={did}&max_iterations=2", None,
-            expect_status=(200, 201), timeout=120,
+            "POST",
+            f"/api/v1/runs/{run_id}/probe-plan?diagnosis_id={did}&max_iterations=2",
+            None,
+            expect_status=(200, 201),
+            timeout=120,
         )
-        result["cases"]["budget_closed"] = {"stop": p3.get("stop_reason"), "detail": p3.get("stop_detail")}
+        result["cases"]["budget_closed"] = {
+            "stop": p3.get("stop_reason"),
+            "detail": p3.get("stop_detail"),
+        }
         check(
             "P10 预算关闭后必须 STOP_BUDGET_CLOSED（不继续烧预算）",
             p3.get("stop_reason") == "STOP_BUDGET_CLOSED",

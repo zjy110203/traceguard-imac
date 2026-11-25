@@ -909,9 +909,7 @@ class DocStore:
         now = utc_now_iso()
         with self.db.session() as s:
             existing = s.get(DocRow, doc_id)
-            if existing is not None and _workspace_conflict(
-                existing.workspace_id, workspace_id
-            ):
+            if existing is not None and _workspace_conflict(existing.workspace_id, workspace_id):
                 raise AppError(
                     ErrorCode.AUTHORIZATION_ERROR,
                     f"CROSS_WORKSPACE_DOC_WRITE: {doc_id} belongs to workspace "

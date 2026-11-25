@@ -54,11 +54,29 @@ from full_loop_run011 import CHECKS, Http, TeamFlow, WorkerRun, check  # noqa: E
 V5_SCENARIOS: list[dict[str, Any]] = [
     scenario_from_contract(name)
     for name in (
-        "FALSE-PASS", "UI-MISSING", "API-500", "DB-DUP", "DB-LAG-9S", "UI-SILENT",
-        "UI-MISLEAD", "UI-DELAYED", "API-503", "API-EDIT-500", "API-EDIT-503",
-        "NET-TIMEOUT", "LOC-SUBMIT", "LOC-NAME", "TIME-STRONG", "TIME-RACE",
-        "SEC-CREATE-403", "SEC-LIST-403", "COMP-API-UI", "COMP-DB-TIME",
-        "COMP-LOC-UI", "FLAKY-DB", "FLAKY-API",
+        "FALSE-PASS",
+        "UI-MISSING",
+        "API-500",
+        "DB-DUP",
+        "DB-LAG-9S",
+        "UI-SILENT",
+        "UI-MISLEAD",
+        "UI-DELAYED",
+        "API-503",
+        "API-EDIT-500",
+        "API-EDIT-503",
+        "NET-TIMEOUT",
+        "LOC-SUBMIT",
+        "LOC-NAME",
+        "TIME-STRONG",
+        "TIME-RACE",
+        "SEC-CREATE-403",
+        "SEC-LIST-403",
+        "COMP-API-UI",
+        "COMP-DB-TIME",
+        "COMP-LOC-UI",
+        "FLAKY-DB",
+        "FLAKY-API",
     )
 ]
 
@@ -97,7 +115,9 @@ def enrich_record(sample: dict[str, Any]) -> dict[str, Any]:
     return merged
 
 
-def _exception_record(plan_def: dict[str, Any], round_no: int, exc: BaseException) -> dict[str, Any]:
+def _exception_record(
+    plan_def: dict[str, Any], round_no: int, exc: BaseException
+) -> dict[str, Any]:
     """异常记录保留 GT / 故障 / TestCase / 诊断上下文，不再只留三个字段。"""
     error_type = type(exc).__name__
     partial = getattr(exc, "sample", None)
@@ -114,15 +134,23 @@ def _exception_record(plan_def: dict[str, Any], round_no: int, exc: BaseExceptio
         "error_message": str(exc)[:1000],
     }
     for key in (
-        "testcase", "fault", "gt_mechanism", "expected_run_outcome",
-        "control_kind", "fault_trigger_condition",
+        "testcase",
+        "fault",
+        "gt_mechanism",
+        "expected_run_outcome",
+        "control_kind",
+        "fault_trigger_condition",
     ):
         if key in plan_def:
             record[key] = plan_def[key]
     return enrich_record(record)
 
 
-def compute_statistics(rounds: list[dict[str, Any]], probe_executions: list[dict[str, Any]] | None = None, probe_feedback: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+def compute_statistics(
+    rounds: list[dict[str, Any]],
+    probe_executions: list[dict[str, Any]] | None = None,
+    probe_feedback: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     """两轮合并统计（小样本如实声明，不宣称统计显著）。
 
     RUN-011-R1.2：执行记录、诊断样本、正向控制分开统计。
@@ -144,22 +172,21 @@ def compute_statistics(rounds: list[dict[str, Any]], probe_executions: list[dict
     ]
     # R1.2 兼容桶与 RUN-012 五分类的交叉核对：历史 9 条异常中，
     # 8 条是契约声明的预期通过控制，1 条是 Flaky 故障未触发，不能混为一类。
-    legacy_control_keys = {
-        (s.get("scenario"), s.get("round")) for s in positive_controls
-    }
+    legacy_control_keys = {(s.get("scenario"), s.get("round")) for s in positive_controls}
     contract_controls = [
-        c for c in classified_records
+        c
+        for c in classified_records
         if c["record_class"] == RecordClass.NORMAL_POSITIVE_CONTROL.value
     ]
     flaky_not_triggered = [
-        c for c in classified_records
-        if c["record_class"] == RecordClass.FAULT_NOT_TRIGGERED.value
+        c for c in classified_records if c["record_class"] == RecordClass.FAULT_NOT_TRIGGERED.value
     ]
     false_pass_records = [
         c for c in classified_records if c["record_class"] == RecordClass.FALSE_PASS.value
     ]
     unknown_activation = [
-        c for c in classified_records
+        c
+        for c in classified_records
         if c["record_class"] == RecordClass.UNKNOWN_FAULT_ACTIVATION.value
     ]
     failed_runs = [s for s in diagnosis_samples if s.get("verdict") in {"FAILED", "NOT_EVALUATED"}]
@@ -181,7 +208,14 @@ def compute_statistics(rounds: list[dict[str, Any]], probe_executions: list[dict
         for s in failed_runs:
             arms = s.get("arms") or {}
             a = arms.get(arm) or arms.get(legacy_alias.get(arm, "")) or {}
-            out.append({"gt": s.get("gt_mechanism"), "pred": _mechanism_of(a), "outcome": a.get("outcome"), "sample": s.get("scenario")})
+            out.append(
+                {
+                    "gt": s.get("gt_mechanism"),
+                    "pred": _mechanism_of(a),
+                    "outcome": a.get("outcome"),
+                    "sample": s.get("scenario"),
+                }
+            )
         return out
 
     def _accuracy(arm: str) -> float | None:
@@ -220,12 +254,8 @@ def compute_statistics(rounds: list[dict[str, Any]], probe_executions: list[dict
         RUN-012 的严格口径见下方 false_pass_evaluation：额外要求故障触发证据。
         两者并列保留，避免悄悄改变历史数字；新报告以严格口径为准。
         """
-        gt_samples = [
-            s for s in diagnosis_samples if str(s.get("gt_mechanism") or "").strip()
-        ]
-        count = sum(
-            1 for s in gt_samples if str(s.get("verdict") or "").upper() == "PASSED"
-        )
+        gt_samples = [s for s in diagnosis_samples if str(s.get("gt_mechanism") or "").strip()]
+        count = sum(1 for s in gt_samples if str(s.get("verdict") or "").upper() == "PASSED")
         denominator = len(gt_samples)
         return count, denominator, round(count / denominator, 4) if denominator else None
 
@@ -237,17 +267,21 @@ def compute_statistics(rounds: list[dict[str, Any]], probe_executions: list[dict
     # 412 不自动排除；故障未触发的 Flaky 样本与正向控制都不进分母。
     confirmed_failing = [c for c in classified_records if is_confirmed_failing_sample(c)]
     strict_fp_count = sum(
-        1 for c in confirmed_failing
-        if c["actual_verdict"] == "PASSED"
-        and c["record_class"] == RecordClass.FALSE_PASS.value
+        1
+        for c in confirmed_failing
+        if c["actual_verdict"] == "PASSED" and c["record_class"] == RecordClass.FALSE_PASS.value
     )
     strict_denominator = len(confirmed_failing)
     inferred_only = [
-        c for c in confirmed_failing if c["fault_effect_status"] == TriState.INFERRED_FROM_VERDICT.value
+        c
+        for c in confirmed_failing
+        if c["fault_effect_status"] == TriState.INFERRED_FROM_VERDICT.value
     ]
     strict_evidence_level = (
-        "NOT_MEASURED" if not confirmed_failing
-        else "INFERRED_ONLY" if len(inferred_only) == len(confirmed_failing)
+        "NOT_MEASURED"
+        if not confirmed_failing
+        else "INFERRED_ONLY"
+        if len(inferred_only) == len(confirmed_failing)
         else "MIXED"
     )
     false_pass_evaluation = {
@@ -263,8 +297,10 @@ def compute_statistics(rounds: list[dict[str, Any]], probe_executions: list[dict
         "excluded_unknown_activation": len(unknown_activation),
         "evidence_level": strict_evidence_level,
         "status": (
-            "NOT_MEASURED" if not confirmed_failing
-            else "PARTIAL" if strict_evidence_level == "INFERRED_ONLY"
+            "NOT_MEASURED"
+            if not confirmed_failing
+            else "PARTIAL"
+            if strict_evidence_level == "INFERRED_ONLY"
             else "VERIFIED"
         ),
         "note": (
@@ -285,7 +321,11 @@ def compute_statistics(rounds: list[dict[str, Any]], probe_executions: list[dict
 
     execs = list(probe_executions or [e for r in rounds for e in r.get("probe_executions", [])])
     fbs = list(probe_feedback or [e for r in rounds for e in r.get("probe_feedback_applied", [])])
-    lat = [s.get("diagnosis_latency_ms") for s in failed_runs if s.get("diagnosis_latency_ms") is not None]
+    lat = [
+        s.get("diagnosis_latency_ms")
+        for s in failed_runs
+        if s.get("diagnosis_latency_ms") is not None
+    ]
 
     # ---- RUN-011-R1.1 WP4 §6.2/6.3/6.4：把"混合口径"拆成可复核的分项统计 ----
     llm_samples = [s.get("llm_arm") or {} for s in failed_runs]
@@ -347,18 +387,31 @@ def compute_statistics(rounds: list[dict[str, Any]], probe_executions: list[dict
         ),
         "false_pass_evaluation": false_pass_evaluation,
         "contract_problems": list(CONTRACT_PROBLEMS),
-        "primary_cause_accuracy": {arm: _accuracy(arm) for arm in ("A_raw_report", "C_rule", "D_graph_ablation", "E_probe_no_feedback", "F_probe_post_hoc_aware", "G_probe_unknown_time", "H_llm_advisor")},
+        "primary_cause_accuracy": {
+            arm: _accuracy(arm)
+            for arm in (
+                "A_raw_report",
+                "C_rule",
+                "D_graph_ablation",
+                "E_probe_no_feedback",
+                "F_probe_post_hoc_aware",
+                "G_probe_unknown_time",
+                "H_llm_advisor",
+            )
+        },
         "macro_f1": {arm: _macro_f1(arm) for arm in ("C_rule", "F_probe_post_hoc_aware")},
-        "selective_accuracy": {arm: _selective_accuracy(arm) for arm in ("C_rule", "F_probe_post_hoc_aware")},
+        "selective_accuracy": {
+            arm: _selective_accuracy(arm) for arm in ("C_rule", "F_probe_post_hoc_aware")
+        },
         "false_pass_rate": false_pass_rate,
         "false_pass_count": false_pass_count,
         "false_pass_denominator": false_pass_denominator,
         "probe_execution_success_rate": (
-            round(sum(1 for e in execs if e.get("status") == "SUCCEEDED") / max(1, len(execs)), 4) if execs else None
+            round(sum(1 for e in execs if e.get("status") == "SUCCEEDED") / max(1, len(execs)), 4)
+            if execs
+            else None
         ),
-        "probe_feedback_success_rate": (
-            round(len(fbs) / max(1, len(execs)), 4) if execs else None
-        ),
+        "probe_feedback_success_rate": (round(len(fbs) / max(1, len(execs)), 4) if execs else None),
         "diagnosis_latency_ms": {
             "mean": round(sum(lat) / len(lat), 1) if lat else None,
             "max": max(lat) if lat else None,
@@ -403,8 +456,14 @@ def compute_statistics(rounds: list[dict[str, Any]], probe_executions: list[dict
             "note": "feedback_processed 只表示进入重新评估流程；只有 hypothesis_updates 才产生假设更新",
         },
         "diagnosis_latency_ms_breakdown": {
-            "engine_only": {"mean": round(sum(lat) / len(lat), 1) if lat else None, "count": len(lat)},
-            "end_to_end": {"mean": round(sum(e2e_lat) / len(e2e_lat), 1) if e2e_lat else None, "count": len(e2e_lat)},
+            "engine_only": {
+                "mean": round(sum(lat) / len(lat), 1) if lat else None,
+                "count": len(lat),
+            },
+            "end_to_end": {
+                "mean": round(sum(e2e_lat) / len(e2e_lat), 1) if e2e_lat else None,
+                "count": len(e2e_lat),
+            },
         },
         "abstention": {
             "rate": _abstention_accuracy("F_probe_post_hoc_aware"),
@@ -431,14 +490,23 @@ def main() -> int:
 
     password = os.getenv("TG_RUN011_PASSWORD") or "run011-local-test-only"
     workers = [w.strip() for w in args.workers.split(",") if w.strip()]
-    roles = {name: Http(args.api, name) for name in ("viewer", "qa-engineer", "qa-lead", "platform-admin")}
+    roles = {
+        name: Http(args.api, name)
+        for name in ("viewer", "qa-engineer", "qa-lead", "platform-admin")
+    }
     for name, s in roles.items():
         s.login(name, password)
     engineer = roles["qa-engineer"]
     tf = TeamFlow(args.teamflow)
     ex = WorkerRun(engineer, workers)
 
-    out: dict[str, Any] = {"api": args.api, "started_at": time.time(), "rounds": [], "probe_executions": [], "probe_feedback_applied": []}
+    out: dict[str, Any] = {
+        "api": args.api,
+        "started_at": time.time(),
+        "rounds": [],
+        "probe_executions": [],
+        "probe_feedback_applied": [],
+    }
     for rnd in range(1, args.rounds + 1):
         round_rec: dict[str, Any] = {"round": rnd, "samples": []}
         print(f"===== ROUND {rnd} =====", flush=True)
@@ -468,7 +536,9 @@ def main() -> int:
             )
         out["rounds"].append(round_rec)
 
-    out["statistics"] = compute_statistics(out["rounds"], out["probe_executions"], out["probe_feedback_applied"])
+    out["statistics"] = compute_statistics(
+        out["rounds"], out["probe_executions"], out["probe_feedback_applied"]
+    )
     out["ended_at"] = time.time()
     check(
         "V5 场景契约完整（期望/控制类别/故障触发条件）",
@@ -506,7 +576,10 @@ def main() -> int:
     check(
         "V5 探针执行真实且全 ID 绑定",
         bool(out["probe_executions"])
-        and all(e.get("execution_id") and e.get("evidence_ids") and e.get("observed_at") is not None for e in out["probe_executions"]),
+        and all(
+            e.get("execution_id") and e.get("evidence_ids") and e.get("observed_at") is not None
+            for e in out["probe_executions"]
+        ),
         {"executions": len(out["probe_executions"])},
         phase="v5",
     )

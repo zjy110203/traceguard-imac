@@ -58,7 +58,12 @@ def main() -> int:
             "title": "RUN-011 WP7：未授权目标必须被阻断",
             "compile_source": "human",
             "steps": [
-                {"step_id": "d1", "action": "navigate", "value": DENY_TARGET, "description": "访问未授权地址"},
+                {
+                    "step_id": "d1",
+                    "action": "navigate",
+                    "value": DENY_TARGET,
+                    "description": "访问未授权地址",
+                },
             ],
             "assertions": [
                 {
@@ -96,19 +101,30 @@ def main() -> int:
     reviewed = lead.call(
         "POST",
         f"/api/v1/testcases/{case_id}/versions/{version}/review",
-        {"decision": "APPROVED", "reviewer": "user:qa-lead", "note": "人工编写用例（WP7 负向验证）"},
+        {
+            "decision": "APPROVED",
+            "reviewer": "user:qa-lead",
+            "note": "人工编写用例（WP7 负向验证）",
+        },
     )
-    result["review"] = {"status": reviewed.get("review_status"), "reviewer": reviewed.get("reviewer")}
+    result["review"] = {
+        "status": reviewed.get("review_status"),
+        "reviewer": reviewed.get("reviewer"),
+    }
 
     tf.reset()
     out = ex.execute(case_id, version=version, note="未授权目标负向执行")
     run = out["run"]
     run_id = run["run_id"]
     report = engineer.call("GET", f"/api/v1/runs/{run_id}/report")
-    egress = ((report.get("browser") or {}).get("egress") or {})
+    egress = (report.get("browser") or {}).get("egress") or {}
     steps = engineer.call("GET", f"/api/v1/runs/{run_id}/steps")
     denied_errors = [
-        {"step_id": s.get("step_id"), "status": s.get("status"), "error": str(s.get("error") or "")[:200]}
+        {
+            "step_id": s.get("step_id"),
+            "status": s.get("status"),
+            "error": str(s.get("error") or "")[:200],
+        }
         for s in steps
         if s.get("status") == "FAILED"
     ]
@@ -127,7 +143,11 @@ def main() -> int:
         "N1 未授权目标执行由独立 Worker 完成且不判定为通过",
         out["trace"].get("independent_worker") is True
         and run.get("test_verdict") in {"FAILED", "NOT_EVALUATED", "INCONCLUSIVE"},
-        {"worker": result["worker"], "verdict": run.get("test_verdict"), "status": run.get("execution_status")},
+        {
+            "worker": result["worker"],
+            "verdict": run.get("test_verdict"),
+            "status": run.get("execution_status"),
+        },
     )
     want_hostport = DENY_TARGET.split("://", 1)[-1]
     blocked_hostports = [str(t).split("://", 1)[-1] for t in (egress.get("blocked_targets") or [])]
@@ -141,7 +161,9 @@ def main() -> int:
     for st in steps:
         net_entries.extend((st.get("observation") or {}).get("network") or [])
     unauthorized_success = [
-        e for e in net_entries if want_hostport in str(e.get("url")) and int(e.get("status") or 0) < 400
+        e
+        for e in net_entries
+        if want_hostport in str(e.get("url")) and int(e.get("status") or 0) < 400
     ]
     zero_outbound = want_hostport not in " ".join(blocked_hostports) and not unauthorized_success
     proxy_blocked = want_hostport in blocked_hostports
@@ -161,7 +183,9 @@ def main() -> int:
     check(
         "N3 失败原因明确指向目标访问被拒绝",
         any(
-            "TARGET" in str(x["error"]).upper() or "DENIED" in str(x["error"]).upper() or "BLOCK" in str(x["error"]).upper()
+            "TARGET" in str(x["error"]).upper()
+            or "DENIED" in str(x["error"]).upper()
+            or "BLOCK" in str(x["error"]).upper()
             for x in denied_errors
         )
         or bool(denied_errors),
@@ -175,7 +199,11 @@ def main() -> int:
     approved = json.loads(loop_file.read_text(encoding="utf-8"))["phases"]["B"]["approved"]
     control_case = str(approved["testcase_id"])
     control_version = int(approved["version"])
-    ok = ex.execute(control_case, version=control_version, note="对照组：授权目标可访问（loop2 已审批用例，预期 PASSED）")
+    ok = ex.execute(
+        control_case,
+        version=control_version,
+        note="对照组：授权目标可访问（loop2 已审批用例，预期 PASSED）",
+    )
     result["control"] = {
         "run_id": ok["run"]["run_id"],
         "verdict": ok["run"].get("test_verdict"),
@@ -183,7 +211,8 @@ def main() -> int:
     }
     check(
         "N4 对照：授权目标正常执行（阻断不是全局断网）",
-        ok["run"].get("execution_status") == "COMPLETED" and ok["run"].get("test_verdict") == "PASSED",
+        ok["run"].get("execution_status") == "COMPLETED"
+        and ok["run"].get("test_verdict") == "PASSED",
         result["control"],
     )
 

@@ -13,6 +13,9 @@ on:
       - "workbuddy/run007-resume-*"
       - "workbuddy/run007-*"
       - "workbuddy/run008-*"
+      # RUN-011 / RUN-012 工作分支必须能触发 PR Gate，否则安全修复在合并前没有快速门禁。
+      - "workbuddy/run011-*"
+      - "workbuddy/run012-*"
       - workbuddy/traceguard-autonomous
 
 concurrency:
@@ -43,6 +46,7 @@ jobs:
       - name: Fast service integration
         # 这些用例覆盖 SSE 续传、探针预算、时间线投影、稳定性回放、LLM 摘要、
         # 沙箱走 Worker 队列（无 Worker 时 fail-closed）与 Run 级状态隔离。
+        # RUN-011-R1.2 关键安全专项（审核稳定性门禁绕过、全局观测越权）纳入 PR 快速门禁。
         run: |
           .venv/bin/pytest -q \
             tests/integration/test_sse.py \
@@ -53,7 +57,9 @@ jobs:
             tests/integration/test_sandbox_worker_queue.py \
             tests/integration/test_probe_budget_multiprocess.py \
             tests/integration/test_soak_run007_guards.py \
-            tests/unit/test_pipeline_state_cache.py
+            tests/unit/test_pipeline_state_cache.py \
+            tests/integration/test_review_gate_http_security_run011_r1_2.py \
+            tests/integration/test_global_observation_rbac_run011_r1_2.py
       - name: Gate result
         if: always()
         run: |

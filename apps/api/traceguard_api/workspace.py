@@ -34,7 +34,9 @@ def visible_workspaces(principal: Principal | None) -> list[str] | None:
     return sorted({str(w) for w in principal.workspaces if w and w != "*"})
 
 
-def workspace_forbidden(workspace_id: str, *, resource_type: str = "", resource_id: str = "") -> HTTPException:
+def workspace_forbidden(
+    workspace_id: str, *, resource_type: str = "", resource_id: str = ""
+) -> HTTPException:
     return HTTPException(
         403,
         detail={

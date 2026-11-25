@@ -141,12 +141,8 @@ def dedup_hypotheses(
                     "suggested_by": str(primary.suggested_by or "rule"),
                 }
             ]
-            sup_ids: dict[str, Any] = {
-                e.evidence_id: e for e in primary.supporting
-            }
-            con_ids: dict[str, Any] = {
-                e.evidence_id: e for e in primary.contradicting
-            }
+            sup_ids: dict[str, Any] = {e.evidence_id: e for e in primary.supporting}
+            con_ids: dict[str, Any] = {e.evidence_id: e for e in primary.contradicting}
             factors = list(primary.contributing_factors)
             probe_fb = list(primary.probe_feedback)
             excluded = list(primary.excluded_by)
@@ -197,7 +193,10 @@ def dedup_hypotheses(
                 excluded_by=excluded,
             )
             # LLM 候选合并后仍不得 CONFIRMED（引擎层兜底之外的第一层）
-            if any(str(s).lower().startswith("llm") for s in sources) and status.value == "CONFIRMED":
+            if (
+                any(str(s).lower().startswith("llm") for s in sources)
+                and status.value == "CONFIRMED"
+            ):
                 merged_h.status = type(status)("SUPPORTED")
                 merged_h.contributing_factors.append(
                     "[dedup] 含 LLM 来源的合并候选不得 CONFIRMED，保持 SUPPORTED 供人工复核"

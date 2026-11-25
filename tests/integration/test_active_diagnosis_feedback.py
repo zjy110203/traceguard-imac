@@ -152,9 +152,9 @@ def test_single_probe_count_zero_does_not_confirm_persistence(rt: Runtime) -> No
     persist = [h for h in updated["hypotheses"] if h["failure_mechanism"] == "PERSISTENCE"][0]
     assert persist["status"] == "SUPPORTED", "PERSISTENCE 保留为候选（SUPPORTED）"
     assert persist["supporting"], "count=0 证据仍附着为支持（可追溯）"
-    assert not any(
-        r.get("confirming") for r in persist["supporting"]
-    ), "单查询证据不得带 directly_confirming"
+    assert not any(r.get("confirming") for r in persist["supporting"]), (
+        "单查询证据不得带 directly_confirming"
+    )
 
     # 回灌留痕：重诊断历史 + 探针反馈 + 图上探针节点
     assert updated["evaluation_history"]
@@ -454,7 +454,9 @@ def test_dom_probe_uses_failed_step_target_when_assert_never_ran() -> None:
         execution_id="exec_dom",
         status="SUCCEEDED",
         evidence_ids=["evd_dom_wp2"],
-        data={"excerpt": '<button data-testid="nav-new">新建</button><div data-testid="banner-success">ok</div>'},
+        data={
+            "excerpt": '<button data-testid="nav-new">新建</button><div data-testid="banner-success">ok</div>'
+        },
     )
     fb = assess(signal, hypotheses, report, run_ended_at=None)
     updates = {u.hypothesis_id: u for u in fb.updates}

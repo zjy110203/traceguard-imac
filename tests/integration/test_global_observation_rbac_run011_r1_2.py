@@ -60,9 +60,7 @@ def rbac_client(tmp_path, monkeypatch):  # type: ignore[no-untyped-def]
 
 
 def _login(client: TestClient, username: str) -> dict[str, str]:
-    r = client.post(
-        "/api/v1/auth/login", json={"username": username, "password": "password-123"}
-    )
+    r = client.post("/api/v1/auth/login", json={"username": username, "password": "password-123"})
     assert r.status_code == 200, r.text
     return {"X-CSRF-Token": r.json()["csrf_token"]}
 

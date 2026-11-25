@@ -92,9 +92,7 @@ async def list_intents(
     allowed = scope_filter(
         principal_of(request), workspace_id, resource_type="intent", request=request
     )
-    return get_services().rt.catalog.list_intents(
-        workspace_id, status, workspace_ids=allowed
-    )
+    return get_services().rt.catalog.list_intents(workspace_id, status, workspace_ids=allowed)
 
 
 @router.post("/intents", status_code=201)

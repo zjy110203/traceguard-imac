@@ -40,7 +40,9 @@ def _doc_or_404(doc_id: str, request: Request, *, kind: str | None = None):  # t
     """取聚合文档并做对象级授权（Graph/Diagnosis/Probe/Repair 统一入口）。"""
     rec = get_services().rt.docs.get(doc_id)
     if rec is None or (kind is not None and rec.kind != kind):
-        raise HTTPException(404, detail={"code": "NOT_FOUND", "message": f"{kind or 'doc'} not found"})
+        raise HTTPException(
+            404, detail={"code": "NOT_FOUND", "message": f"{kind or 'doc'} not found"}
+        )
     require_entity_workspace(
         principal_of(request),
         rec.workspace_id,
@@ -67,9 +69,7 @@ def _run_workspace_of(run_id: str, request: Request) -> dict[str, Any]:
 
 # ----------------------------------------------------------------- exploration
 @router.post("/intents/{intent_id}/explore", status_code=201)
-async def explore_intent(
-    intent_id: str, request: Request, max_steps: int = 8
-) -> dict[str, Any]:
+async def explore_intent(intent_id: str, request: Request, max_steps: int = 8) -> dict[str, Any]:
     """Agent 真实探索（只读工具 + 预算 + 域名白名单），产出可复现轨迹。"""
     from ..routers.catalog import _intent_or_404
 
@@ -198,9 +198,7 @@ async def get_stability_replay(
 
 # ------------------------------------------------------------------ diagnosis
 @router.post("/runs/{run_id}/diagnose", status_code=201)
-async def diagnose(
-    run_id: str, request: Request, use_llm: bool | None = None
-) -> dict[str, Any]:
+async def diagnose(run_id: str, request: Request, use_llm: bool | None = None) -> dict[str, Any]:
     """诊断。`use_llm` 显式指定是否使用 LLM 顾问（None=按全局配置）。
 
     Benchmark 分组必须显式传 `use_llm=false` 才能保证"规则组"口径纯净。
@@ -253,7 +251,10 @@ async def list_dispositions(
         principal_of(request), workspace_id, resource_type="disposition", request=request
     )
     recs = get_services().rt.docs.list(
-        kind="disposition", workspace_id=workspace_id, status=status, limit=limit,
+        kind="disposition",
+        workspace_id=workspace_id,
+        status=status,
+        limit=limit,
         workspace_ids=allowed,
     )
     return [r.to_dict() for r in recs]
@@ -437,9 +438,7 @@ async def run_probe_plan(
 async def list_probe_plans(
     request: Request, run_id: str | None = None, limit: int = 50
 ) -> list[dict[str, Any]]:
-    allowed = scope_filter(
-        principal_of(request), None, resource_type="probe_plan", request=request
-    )
+    allowed = scope_filter(principal_of(request), None, resource_type="probe_plan", request=request)
     return get_services().probe.list_plans(run_id, limit, workspace_ids=allowed)
 
 
@@ -459,9 +458,7 @@ async def probe_executions(
     allowed = scope_filter(
         principal_of(request), workspace_id, resource_type="probe_execution", request=request
     )
-    return get_services().probe.list_executions(
-        workspace_id, run_id, limit, workspace_ids=allowed
-    )
+    return get_services().probe.list_executions(workspace_id, run_id, limit, workspace_ids=allowed)
 
 
 @router.get("/probes/audit")
@@ -540,7 +537,11 @@ async def propose_repair(req: RepairProposeReq, request: Request) -> dict[str, A
 
     testcase = _testcase_or_404(req.testcase_id, request)
     actor = trusted_actor(
-        request, req.created_by, "repair.submit", resource_type="repair", resource_id=req.testcase_id
+        request,
+        req.created_by,
+        "repair.submit",
+        resource_type="repair",
+        resource_id=req.testcase_id,
     )
     if req.diagnosis_id:
         _doc_or_404(req.diagnosis_id, request, kind="diagnosis")
@@ -614,9 +615,7 @@ async def submit_repair(proposal_id: str, request: Request) -> dict[str, Any]:
 
 
 @router.post("/repairs/{proposal_id}/approve")
-async def approve_repair(
-    proposal_id: str, req: ApproveReq, request: Request
-) -> dict[str, Any]:
+async def approve_repair(proposal_id: str, req: ApproveReq, request: Request) -> dict[str, Any]:
     _doc_or_404(proposal_id, request, kind="repair")
     reviewer = trusted_actor(
         request, req.reviewer, "repair.approve", resource_type="repair", resource_id=proposal_id
@@ -644,9 +643,7 @@ class PromoteReq(BaseModel):
 
 
 @router.post("/repairs/{proposal_id}/promote")
-async def promote_repair(
-    proposal_id: str, req: PromoteReq, request: Request
-) -> dict[str, Any]:
+async def promote_repair(proposal_id: str, req: PromoteReq, request: Request) -> dict[str, Any]:
     _doc_or_404(proposal_id, request, kind="repair")
     trusted_actor(
         request,
@@ -669,9 +666,7 @@ class RollbackReq(BaseModel):
 
 
 @router.post("/repairs/{proposal_id}/rollback")
-async def rollback_repair(
-    proposal_id: str, req: RollbackReq, request: Request
-) -> dict[str, Any]:
+async def rollback_repair(proposal_id: str, req: RollbackReq, request: Request) -> dict[str, Any]:
     _doc_or_404(proposal_id, request, kind="repair")
     operator = trusted_actor(
         request, req.operator, "repair.rollback", resource_type="repair", resource_id=proposal_id

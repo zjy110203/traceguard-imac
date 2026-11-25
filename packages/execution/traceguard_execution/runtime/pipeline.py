@@ -489,7 +489,8 @@ class RunPipeline:
                         (a.kind for a in tc.assertions if a.assertion_id == o.assertion_id), "ui"
                     ),
                     "description": next(
-                        (a.description for a in tc.assertions if a.assertion_id == o.assertion_id), ""
+                        (a.description for a in tc.assertions if a.assertion_id == o.assertion_id),
+                        "",
                     ),
                     "expected": next(
                         (

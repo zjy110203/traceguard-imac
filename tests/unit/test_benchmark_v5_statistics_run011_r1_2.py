@@ -72,7 +72,9 @@ def test_positive_controls_excluded_from_diagnosis_denominator() -> None:
     st = _stats()
     # 历史主因准确率分母仍是 37 条诊断样本，不因正向控制进入而虚增/虚减。
     assert st["primary_cause_accuracy"]["C_rule"] == pytest.approx(24 / 37, abs=1e-4)
-    assert st["primary_cause_accuracy"]["F_probe_post_hoc_aware"] == pytest.approx(26 / 37, abs=1e-4)
+    assert st["primary_cause_accuracy"]["F_probe_post_hoc_aware"] == pytest.approx(
+        26 / 37, abs=1e-4
+    )
     assert st["llm_advisor_statistics"]["sample_size"] == 37
 
 
@@ -163,7 +165,9 @@ def test_historical_false_pass_rate_is_zero() -> None:
 
 def test_legacy_f_and_g_arm_aliases_still_supported() -> None:
     st = _stats()
-    assert st["primary_cause_accuracy"]["F_probe_post_hoc_aware"] == pytest.approx(26 / 37, abs=1e-4)
+    assert st["primary_cause_accuracy"]["F_probe_post_hoc_aware"] == pytest.approx(
+        26 / 37, abs=1e-4
+    )
     assert st["primary_cause_accuracy"]["G_probe_unknown_time"] == pytest.approx(26 / 37, abs=1e-4)
 
     alias_rounds = [
@@ -175,7 +179,10 @@ def test_legacy_f_and_g_arm_aliases_still_supported() -> None:
                     "gt_mechanism": "PERSISTENCE",
                     "arms": {
                         "F_probe_aligned": {"mechanism": "PERSISTENCE", "outcome": "CONFIRMED"},
-                        "G_probe_unknown_time": {"mechanism": "PERSISTENCE", "outcome": "CONFIRMED"},
+                        "G_probe_unknown_time": {
+                            "mechanism": "PERSISTENCE",
+                            "outcome": "CONFIRMED",
+                        },
                     },
                 }
             ]
@@ -202,10 +209,19 @@ def test_llm_probe_and_time_statistics_unchanged() -> None:
         "note": "H 臂总体准确率混合了 LLM 成功与规则 Fallback，不能当作 LLM 自身准确率",
     }
     fb = st["probe_feedback_statistics"]
-    assert (fb["probe_executions"], fb["feedback_processed"], fb["hypothesis_updates"]) == (54, 54, 25)
+    assert (fb["probe_executions"], fb["feedback_processed"], fb["hypothesis_updates"]) == (
+        54,
+        54,
+        25,
+    )
     assert (fb["SUPPORT"], fb["CONTRADICT"], fb["CONFIRM"], fb["EXCLUDE"]) == (15, 10, 0, 0)
     align = st["time_alignment_evidence"]
-    assert (align["total"], align["ALIGNED"], align["POST_HOC"], align["UNKNOWN"]) == (108, 0, 54, 54)
+    assert (align["total"], align["ALIGNED"], align["POST_HOC"], align["UNKNOWN"]) == (
+        108,
+        0,
+        54,
+        54,
+    )
     assert align["run_internal_aligned_probes_produced"] is False
     assert st["diagnosis_latency_ms"] == {"mean": 17.5, "max": 51.9, "count": 37}
     assert st["abstention_rate_F"] == pytest.approx(5 / 37, abs=1e-4)

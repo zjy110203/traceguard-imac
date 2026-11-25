@@ -213,9 +213,9 @@ def test_full_task_run_chain() -> None:
         workspace_id="default",
         review_status="DRAFT",
     )
-    tid = svc.create_task(
-        "tcase_x", "pipeline-idem-" + new_id("k"), workspace_id="default"
-    )["task_id"]
+    tid = svc.create_task("tcase_x", "pipeline-idem-" + new_id("k"), workspace_id="default")[
+        "task_id"
+    ]
     r1 = svc.create_run(tid, "tcase_x@1")
     lease = svc.acquire_lease(r1["run_id"], "worker-1")
     svc.submit_result(

@@ -170,7 +170,9 @@ class ProbeService:
     ) -> ProbeBudget:
         # RUN-011-R1.1 WP1 §1.4：Workspace 必须来自 Run / Diagnosis 的真实归属，
         # 不采信调用方声明（旧实现会让探针预算静默落入 default）。
-        ws = self._resolve_workspace(run_id=run_id, diagnosis_id=diagnosis_id, declared=workspace_id)
+        ws = self._resolve_workspace(
+            run_id=run_id, diagnosis_id=diagnosis_id, declared=workspace_id
+        )
         if diagnosis_id:
             scope = f"diagnosis:{diagnosis_id}"
         elif run_id:
@@ -782,8 +784,7 @@ class ProbeService:
         # 此时"是否真正落库"完全未知 —— 这是区分 LOCATOR / PERSISTENCE 的关键信息，
         # 必须补一次独立状态查询，而不是直接跳过。
         has_business_verdict = any(
-            o.get("kind") in {"business_state", "api"}
-            and o.get("status") in {"PASSED", "FAILED"}
+            o.get("kind") in {"business_state", "api"} and o.get("status") in {"PASSED", "FAILED"}
             for o in outcomes
         )
 

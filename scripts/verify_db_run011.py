@@ -71,7 +71,8 @@ def _check_lineage(out: dict, c, lineage: dict) -> None:  # type: ignore[no-unty
     check(
         "DB: 正式 Run 与失败 Run 使用批准版本",
         run_rows.get(normal_run_id, {}).get("testcase_version_id") == f"{tc_id}@{approved_version}"
-        and run_rows.get(failed_run_id, {}).get("testcase_version_id") == f"{tc_id}@{approved_version}",
+        and run_rows.get(failed_run_id, {}).get("testcase_version_id")
+        == f"{tc_id}@{approved_version}",
         {k: v.get("testcase_version_id") for k, v in run_rows.items()},
     )
     check(
@@ -82,7 +83,11 @@ def _check_lineage(out: dict, c, lineage: dict) -> None:  # type: ignore[no-unty
 
     # Diagnosis doc（tg_doc, kind='diagnosis'）
     diag_rows = [
-        {"diagnosis_id": r[0], "run_id": (r[1] or {}).get("run_id"), "testcase_id": (r[1] or {}).get("testcase_id")}
+        {
+            "diagnosis_id": r[0],
+            "run_id": (r[1] or {}).get("run_id"),
+            "testcase_id": (r[1] or {}).get("testcase_id"),
+        }
         for r in c.execute(
             text("SELECT id, doc FROM tg_doc WHERE id = :did AND kind='diagnosis'"),
             {"did": diag_id},
@@ -125,7 +130,8 @@ def _check_lineage(out: dict, c, lineage: dict) -> None:  # type: ignore[no-unty
     )
     check(
         "DB: Repair.repair_source 如实标注（human:/rule:/llm:）",
-        bool(rep_rows) and str(rep_rows[0]["repair_source"] or "").startswith(("human:", "rule:", "llm:")),
+        bool(rep_rows)
+        and str(rep_rows[0]["repair_source"] or "").startswith(("human:", "rule:", "llm:")),
         rep_rows[0]["repair_source"] if rep_rows else None,
     )
 
@@ -165,7 +171,10 @@ def _check_lineage(out: dict, c, lineage: dict) -> None:  # type: ignore[no-unty
     check(
         "DB: ROLLBACK 回执绑定 Proposal 且 base=晋升版本",
         bool(rollback_receipts)
-        and all(r["proposal_id"] == pid and r["base_version"] == promoted_version for r in rollback_receipts),
+        and all(
+            r["proposal_id"] == pid and r["base_version"] == promoted_version
+            for r in rollback_receipts
+        ),
         rollback_receipts,
     )
 
@@ -214,14 +223,25 @@ def _check_workspace_lineage(out: dict, c, lineage: dict, expected_ws: str) -> N
     phases = lineage.get("phases") or {}
     tc_id = str(ids.get("testcase_id") or "")
     version_id = str(ids.get("testcase_version_id") or "")
-    run_ids = [x for x in (ids.get("run_id"), ids.get("failed_run_id"), ids.get("regression_run_id")) if x]
+    run_ids = [
+        x for x in (ids.get("run_id"), ids.get("failed_run_id"), ids.get("regression_run_id")) if x
+    ]
     evidence_ids = [x for x in (ids.get("evidence_ids") or []) if x]
     probe = phases.get("probe") or {}
     plan_id = str(probe.get("plan_id") or "")
     budget_id = str((probe.get("budget") or {}).get("budget_id") or "")
     evidence_ids += [x for x in (probe.get("new_evidence_ids") or []) if x]
-    doc_ids = [x for x in (ids.get("diagnosis_id"), ids.get("repair_proposal_id"), plan_id, budget_id,
-                           (phases.get("exploration") or {}).get("exploration_id")) if x]
+    doc_ids = [
+        x
+        for x in (
+            ids.get("diagnosis_id"),
+            ids.get("repair_proposal_id"),
+            plan_id,
+            budget_id,
+            (phases.get("exploration") or {}).get("exploration_id"),
+        )
+        if x
+    ]
     intent_id = str(ids.get("intent_id") or "")
     oracle_ids = [x for x in (ids.get("oracle_ids") or {}).values() if x]
 
@@ -235,18 +255,50 @@ def _check_workspace_lineage(out: dict, c, lineage: dict, expected_ws: str) -> N
         return {str(r[key_col]): str(r.get("workspace_id") or "") for r in rows}
 
     entity_ws: dict[str, dict[str, str]] = {
-        "intent": fetch("SELECT intent_id, workspace_id FROM tg_intent WHERE intent_id = ANY(:ids)", "intent_id", [intent_id] if intent_id else []),
-        "testcase": fetch("SELECT testcase_id, workspace_id FROM tg_testcase WHERE testcase_id = ANY(:ids)", "testcase_id", [tc_id] if tc_id else []),
-        "testcase_version": fetch("SELECT id AS ids, workspace_id FROM tg_testcase_version WHERE id = ANY(:ids)", "ids", [version_id] if version_id else []),
-        "oracle": fetch("SELECT oracle_id AS ids, workspace_id FROM tg_oracle WHERE oracle_id = ANY(:ids)", "ids", oracle_ids),
-        "run": fetch("SELECT run_id AS ids, workspace_id FROM tg_run WHERE run_id = ANY(:ids)", "ids", run_ids),
-        "evidence": fetch("SELECT evidence_id AS ids, workspace_id FROM tg_evidence WHERE evidence_id = ANY(:ids)", "ids", evidence_ids),
-        "doc": fetch("SELECT id AS ids, workspace_id FROM tg_doc WHERE id = ANY(:ids)", "ids", doc_ids),
+        "intent": fetch(
+            "SELECT intent_id, workspace_id FROM tg_intent WHERE intent_id = ANY(:ids)",
+            "intent_id",
+            [intent_id] if intent_id else [],
+        ),
+        "testcase": fetch(
+            "SELECT testcase_id, workspace_id FROM tg_testcase WHERE testcase_id = ANY(:ids)",
+            "testcase_id",
+            [tc_id] if tc_id else [],
+        ),
+        "testcase_version": fetch(
+            "SELECT id AS ids, workspace_id FROM tg_testcase_version WHERE id = ANY(:ids)",
+            "ids",
+            [version_id] if version_id else [],
+        ),
+        "oracle": fetch(
+            "SELECT oracle_id AS ids, workspace_id FROM tg_oracle WHERE oracle_id = ANY(:ids)",
+            "ids",
+            oracle_ids,
+        ),
+        "run": fetch(
+            "SELECT run_id AS ids, workspace_id FROM tg_run WHERE run_id = ANY(:ids)",
+            "ids",
+            run_ids,
+        ),
+        "evidence": fetch(
+            "SELECT evidence_id AS ids, workspace_id FROM tg_evidence WHERE evidence_id = ANY(:ids)",
+            "ids",
+            evidence_ids,
+        ),
+        "doc": fetch(
+            "SELECT id AS ids, workspace_id FROM tg_doc WHERE id = ANY(:ids)", "ids", doc_ids
+        ),
     }
-    task_rows = c.execute(
-        text("SELECT task_id, workspace_id FROM tg_task WHERE task_id IN (SELECT task_id FROM tg_run WHERE run_id = ANY(:ids))"),
-        {"ids": run_ids},
-    ).mappings().all()
+    task_rows = (
+        c.execute(
+            text(
+                "SELECT task_id, workspace_id FROM tg_task WHERE task_id IN (SELECT task_id FROM tg_run WHERE run_id = ANY(:ids))"
+            ),
+            {"ids": run_ids},
+        )
+        .mappings()
+        .all()
+    )
     entity_ws["task"] = {str(r["task_id"]): str(r["workspace_id"] or "") for r in task_rows}
 
     out["facts"]["workspace_lineage"] = entity_ws
@@ -280,46 +332,74 @@ def _check_workspace_lineage(out: dict, c, lineage: dict, expected_ws: str) -> N
                 "WHERE r.run_id = ANY(:ids)"
             ),
             {"ids": run_ids},
-        ).mappings().all()
+        )
+        .mappings()
+        .all()
     ]
     bad_parent = [
-        r for r in run_parents
+        r
+        for r in run_parents
         if r["run_ws"] != r["task_ws"]
         or (tc_id and str(r["testcase_version_id"] or "").split("@")[0] != tc_id)
     ]
-    check("Run.workspace == Task.workspace 且版本属于主 TestCase", bool(run_parents) and not bad_parent,
-          {"runs": run_parents, "bad": bad_parent})
+    check(
+        "Run.workspace == Task.workspace 且版本属于主 TestCase",
+        bool(run_parents) and not bad_parent,
+        {"runs": run_parents, "bad": bad_parent},
+    )
 
     ev_rows = [
-        dict(r) for r in c.execute(
-            text("SELECT evidence_id, workspace_id, run_id FROM tg_evidence WHERE evidence_id = ANY(:ids)"),
+        dict(r)
+        for r in c.execute(
+            text(
+                "SELECT evidence_id, workspace_id, run_id FROM tg_evidence WHERE evidence_id = ANY(:ids)"
+            ),
             {"ids": evidence_ids},
-        ).mappings().all()
+        )
+        .mappings()
+        .all()
     ]
     foreign_ev = [r for r in ev_rows if r["run_id"] and run_ids and r["run_id"] not in run_ids]
-    check("Evidence 逐 ID 绑定本链 Run（无跨 Run 引用）", bool(ev_rows) and not foreign_ev,
-          {"evidence": ev_rows, "foreign": foreign_ev})
+    check(
+        "Evidence 逐 ID 绑定本链 Run（无跨 Run 引用）",
+        bool(ev_rows) and not foreign_ev,
+        {"evidence": ev_rows, "foreign": foreign_ev},
+    )
 
     event_rows = [
-        dict(r) for r in c.execute(
-            text("SELECT event_id, workspace_id, context_refs->>'run' AS run_id FROM tg_event "
-                 "WHERE context_refs->>'run' = ANY(:ids)"),
+        dict(r)
+        for r in c.execute(
+            text(
+                "SELECT event_id, workspace_id, context_refs->>'run' AS run_id FROM tg_event "
+                "WHERE context_refs->>'run' = ANY(:ids)"
+            ),
             {"ids": run_ids},
-        ).mappings().all()
+        )
+        .mappings()
+        .all()
     ]
     bad_events = [r for r in event_rows if expected_ws and r["workspace_id"] != expected_ws]
-    check("Event 逐 ID 属于目标 Workspace 且绑定本链 Run", not bad_events,
-          {"count": len(event_rows), "bad": bad_events})
+    check(
+        "Event 逐 ID 属于目标 Workspace 且绑定本链 Run",
+        not bad_events,
+        {"count": len(event_rows), "bad": bad_events},
+    )
 
     doc_rows = [
-        dict(r) for r in c.execute(
+        dict(r)
+        for r in c.execute(
             text("SELECT id, kind, workspace_id, ref_id, doc FROM tg_doc WHERE id = ANY(:ids)"),
             {"ids": doc_ids},
-        ).mappings().all()
+        )
+        .mappings()
+        .all()
     ]
     bad_docs = [r for r in doc_rows if expected_ws and r["workspace_id"] != expected_ws]
-    check("Diagnosis/ProbePlan/ProbeBudget/Repair 文档逐 ID Workspace 正确",
-          bool(doc_rows) and not bad_docs, {"docs": doc_rows, "bad": bad_docs})
+    check(
+        "Diagnosis/ProbePlan/ProbeBudget/Repair 文档逐 ID Workspace 正确",
+        bool(doc_rows) and not bad_docs,
+        {"docs": doc_rows, "bad": bad_docs},
+    )
 
     # Sandbox 三件套：TestCase / Task / Run 必须与 Repair 同 Workspace
     sandbox = []
@@ -330,38 +410,57 @@ def _check_workspace_lineage(out: dict, c, lineage: dict, expected_ws: str) -> N
         sandbox_case = str(d.get("sandbox_testcase_id") or d.get("sandbox_case_id") or "")
         sandbox_run = str(d.get("sandbox_run_id") or "")
         if sandbox_case or sandbox_run:
-            sandbox.append({
-                "proposal_id": r["id"],
-                "repair_ws": r["workspace_id"],
-                "sandbox_case": sandbox_case,
-                "sandbox_run": sandbox_run,
-            })
+            sandbox.append(
+                {
+                    "proposal_id": r["id"],
+                    "repair_ws": r["workspace_id"],
+                    "sandbox_case": sandbox_case,
+                    "sandbox_run": sandbox_run,
+                }
+            )
     sandbox_bad = []
     for item in sandbox:
-        for table, col, val in (("tg_testcase", "testcase_id", item["sandbox_case"]),
-                                ("tg_run", "run_id", item["sandbox_run"])):
+        for table, col, val in (
+            ("tg_testcase", "testcase_id", item["sandbox_case"]),
+            ("tg_run", "run_id", item["sandbox_run"]),
+        ):
             if not val:
                 continue
-            row = c.execute(
-                text(f"SELECT workspace_id FROM {table} WHERE {col} = :v"), {"v": val}  # noqa: S608 - 固定白名单
-            ).mappings().first()
+            row = (
+                c.execute(
+                    text(f"SELECT workspace_id FROM {table} WHERE {col} = :v"),
+                    {"v": val},  # noqa: S608 - 固定白名单
+                )
+                .mappings()
+                .first()
+            )
             if row is None or str(row["workspace_id"] or "") != item["repair_ws"]:
                 sandbox_bad.append({**item, "table": table, "row": dict(row) if row else None})
-    check("Sandbox TestCase/Run 与 Repair 同 Workspace", not sandbox_bad,
-          {"sandbox": sandbox, "bad": sandbox_bad})
+    check(
+        "Sandbox TestCase/Run 与 Repair 同 Workspace",
+        not sandbox_bad,
+        {"sandbox": sandbox, "bad": sandbox_bad},
+    )
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dsn", required=True)
     ap.add_argument("--workspace", default="")
-    ap.add_argument("--lineage-json", default="", help="full_loop_run011.py 输出 JSON（API 侧实体 ID）")
+    ap.add_argument(
+        "--lineage-json", default="", help="full_loop_run011.py 输出 JSON（API 侧实体 ID）"
+    )
     ap.add_argument("--out", default="")
     args = ap.parse_args()
 
     engine = create_engine(args.dsn, future=True)
     ws = args.workspace
-    out: dict = {"dsn_scheme": args.dsn.split("://", 1)[0], "workspace": ws, "checks": [], "facts": {}}
+    out: dict = {
+        "dsn_scheme": args.dsn.split("://", 1)[0],
+        "workspace": ws,
+        "checks": [],
+        "facts": {},
+    }
 
     def check(name: str, ok: bool, detail) -> None:  # type: ignore[no-untyped-def]
         out["checks"].append({"name": name, "ok": bool(ok), "detail": detail})
@@ -369,7 +468,8 @@ def main() -> int:
     with engine.connect() as c:
         out["facts"]["server_version"] = _scalar(c, "SHOW server_version")
         out["facts"]["migration_versions"] = [
-            r[0] for r in c.execute(text("SELECT version FROM tg_schema_migration ORDER BY version"))
+            r[0]
+            for r in c.execute(text("SELECT version FROM tg_schema_migration ORDER BY version"))
         ]
         out["facts"]["migration_count"] = len(out["facts"]["migration_versions"])
 
@@ -394,7 +494,9 @@ def main() -> int:
 
         if ws:
             out["facts"]["workspace_counts"] = {
-                "intents": _scalar(c, "SELECT count(*) FROM tg_intent WHERE workspace_id=:ws", ws=ws),
+                "intents": _scalar(
+                    c, "SELECT count(*) FROM tg_intent WHERE workspace_id=:ws", ws=ws
+                ),
                 "testcases": _scalar(
                     c, "SELECT count(*) FROM tg_testcase WHERE workspace_id=:ws", ws=ws
                 ),
@@ -472,7 +574,9 @@ def main() -> int:
         }
         check(
             "审计 seq 唯一且连续（1..N）",
-            int(audit[0]) == int(audit[3]) and int(audit[1] or 0) == 1 and int(audit[2] or 0) == int(audit[0]),
+            int(audit[0]) == int(audit[3])
+            and int(audit[1] or 0) == 1
+            and int(audit[2] or 0) == int(audit[0]),
             out["facts"]["audit"],
         )
 
@@ -532,7 +636,10 @@ def main() -> int:
         )
         check(
             "每条回执都绑定 base_version 与 target_version",
-            all(r["base_version"] >= 1 and r["target_version"] > r["base_version"] for r in receipt_rows)
+            all(
+                r["base_version"] >= 1 and r["target_version"] > r["base_version"]
+                for r in receipt_rows
+            )
             if receipt_rows
             else False,
             receipt_rows,
@@ -541,7 +648,9 @@ def main() -> int:
         out["facts"]["probe_plans"] = int(probe_plans)
         diagnoses = _scalar(c, "SELECT count(*) FROM tg_doc WHERE kind='diagnosis'")
         out["facts"]["diagnoses"] = int(diagnoses)
-        out["facts"]["replay_docs"] = int(_scalar(c, "SELECT count(*) FROM tg_doc WHERE kind='stability_replay'"))
+        out["facts"]["replay_docs"] = int(
+            _scalar(c, "SELECT count(*) FROM tg_doc WHERE kind='stability_replay'")
+        )
 
         if lineage:
             _check_lineage(out, c, lineage)

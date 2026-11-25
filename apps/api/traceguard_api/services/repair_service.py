@@ -102,14 +102,21 @@ class RepairService:
         if workspace_id and str(workspace_id).strip() != ws:
             raise AppError(
                 ErrorCode.AUTHORIZATION_ERROR,
-                f"CROSS_WORKSPACE_REPAIR: 提案 workspace '{workspace_id}' 与用例版本 "
-                f"'{ws}' 不一致",
+                f"CROSS_WORKSPACE_REPAIR: 提案 workspace '{workspace_id}' 与用例版本 '{ws}' 不一致",
             )
 
-        diagnosis_doc = self._load_diagnosis(diagnosis_id, testcase_id=testcase_id, workspace=ws) if diagnosis_id else None
-        run_doc = self._load_failure_run(
-            source_run_id, testcase_id=testcase_id, base_version=base_version, workspace=ws
-        ) if source_run_id else None
+        diagnosis_doc = (
+            self._load_diagnosis(diagnosis_id, testcase_id=testcase_id, workspace=ws)
+            if diagnosis_id
+            else None
+        )
+        run_doc = (
+            self._load_failure_run(
+                source_run_id, testcase_id=testcase_id, base_version=base_version, workspace=ws
+            )
+            if source_run_id
+            else None
+        )
 
         if diagnosis_doc is not None and run_doc is not None:
             diag_run = str(diagnosis_doc.get("run_id") or "")

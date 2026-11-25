@@ -88,9 +88,7 @@ def _testcase(
             "testcase_id": tc_id,
             "title": "R1.2 门禁用例",
             "compile_source": compile_source,
-            "steps": [
-                {"step_id": "s1", "action": "navigate", "value": "http://127.0.0.1:8011/"}
-            ],
+            "steps": [{"step_id": "s1", "action": "navigate", "value": "http://127.0.0.1:8011/"}],
             "assertions": [
                 {
                     "assertion_id": "a1",
@@ -141,9 +139,7 @@ def test_http_review_rejects_require_stability_false(lead_client):  # type: igno
 def test_compiler_candidate_without_replay_is_412_over_http(lead_client):  # type: ignore[no-untyped-def]
     client, _, headers = lead_client
     tc_id = _testcase(client, headers, compile_source="compiler")
-    r = _review(
-        client, headers, tc_id, {"decision": "APPROVED", "reviewer": "role:qa-lead"}
-    )
+    r = _review(client, headers, tc_id, {"decision": "APPROVED", "reviewer": "role:qa-lead"})
     assert r.status_code == 412, r.text
     assert "STABILITY_REPLAY_REQUIRED" in r.json()["detail"]["message"]
     assert client.get(f"/api/v1/testcases/{tc_id}/versions/1").json()["review_status"] == "PENDING"
@@ -166,9 +162,7 @@ def test_compiler_candidate_with_valid_replay_is_approved(lead_client):  # type:
     refreshed = svc.refresh(replay["replay_id"])
     assert refreshed["promotable"] is True
 
-    r = _review(
-        client, headers, tc_id, {"decision": "APPROVED", "reviewer": "role:qa-lead"}
-    )
+    r = _review(client, headers, tc_id, {"decision": "APPROVED", "reviewer": "role:qa-lead"})
     assert r.status_code == 200, r.text
     history = _stored_review_history(client, tc_id)
     assert history[-1]["stability_policy"] == "ENFORCED"
@@ -178,9 +172,7 @@ def test_compiler_candidate_with_valid_replay_is_approved(lead_client):  # type:
 def test_human_authored_exemption_unchanged_over_http(lead_client):  # type: ignore[no-untyped-def]
     client, _, headers = lead_client
     tc_id = _testcase(client, headers, compile_source="human")
-    r = _review(
-        client, headers, tc_id, {"decision": "APPROVED", "reviewer": "role:qa-lead"}
-    )
+    r = _review(client, headers, tc_id, {"decision": "APPROVED", "reviewer": "role:qa-lead"})
     assert r.status_code == 200, r.text
     history = _stored_review_history(client, tc_id)
     assert history[-1]["stability_policy"] == "EXEMPT_HUMAN_AUTHORED"
@@ -200,9 +192,7 @@ def test_no_skipped_by_caller_review_history_or_audit(lead_client):  # type: ign
         },
     )
     assert bad.status_code == 422
-    ok = _review(
-        client, headers, tc_id, {"decision": "APPROVED", "reviewer": "role:qa-lead"}
-    )
+    ok = _review(client, headers, tc_id, {"decision": "APPROVED", "reviewer": "role:qa-lead"})
     assert ok.status_code == 200
     assert all(
         h.get("stability_policy") != "SKIPPED_BY_CALLER"
@@ -210,7 +200,9 @@ def test_no_skipped_by_caller_review_history_or_audit(lead_client):  # type: ign
     )
     with db.session() as s:
         rows = s.execute(
-            text("SELECT before_json, after_json FROM tg_audit_log WHERE action = 'testcase.review'")
+            text(
+                "SELECT before_json, after_json FROM tg_audit_log WHERE action = 'testcase.review'"
+            )
         ).all()
     assert not any(
         "SKIPPED_BY_CALLER" in json.dumps(tuple(row), ensure_ascii=False) for row in rows

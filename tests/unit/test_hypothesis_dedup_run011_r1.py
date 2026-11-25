@@ -96,7 +96,12 @@ def test_shared_evidence_counted_once_after_merge() -> None:
 def test_rule_and_llm_same_mechanism_merge_preserves_sources() -> None:
     """场景4：规则与 LLM 对同一机制给出相似描述 → 合并且保留全部来源。"""
     hyps = [
-        _hyp("h_rule", FailureMechanism.NETWORK, "网络请求失败或超时（环境/链路问题）", suggested_by="rule"),
+        _hyp(
+            "h_rule",
+            FailureMechanism.NETWORK,
+            "网络请求失败或超时（环境/链路问题）",
+            suggested_by="rule",
+        ),
         _hyp(
             "h_llm",
             FailureMechanism.NETWORK,

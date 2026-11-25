@@ -56,7 +56,10 @@ def _now() -> float:
 def check(name: str, ok: bool, detail: Any = "", scenario: str = "") -> bool:
     item = {"name": name, "scenario": scenario, "ok": bool(ok), "detail": detail, "at": _now()}
     CHECKS.append(item)
-    print(f"[{'PASS' if ok else 'FAIL'}] {name}" + ("" if ok else f" :: {str(detail)[:300]}"), flush=True)
+    print(
+        f"[{'PASS' if ok else 'FAIL'}] {name}" + ("" if ok else f" :: {str(detail)[:300]}"),
+        flush=True,
+    )
     return bool(ok)
 
 
@@ -117,7 +120,9 @@ def _hyp() -> dict[str, Any]:
     }
 
 
-def _signal(exec_id: str, count: int, observed_at: float, *, run_scope: bool, status: str = "SUCCEEDED") -> ProbeSignal:
+def _signal(
+    exec_id: str, count: int, observed_at: float, *, run_scope: bool, status: str = "SUCCEEDED"
+) -> ProbeSignal:
     return ProbeSignal(
         probe_id="http_state",
         execution_id=exec_id,
@@ -168,7 +173,8 @@ def reevaluate(signals: list[ProbeSignal], run_ended_at: float | None) -> dict[s
         "persistence_contradicting": persist.get("contradicting"),
         "persistence_excluded": bool(persist.get("excluded_by")),
         "timing_hypotheses": [
-            {"description": t.get("description"), "suggested_by": t.get("suggested_by")} for t in timing
+            {"description": t.get("description"), "suggested_by": t.get("suggested_by")}
+            for t in timing
         ],
         "outcome": diag.outcome.value,
         "root_causes": diag.root_causes,
@@ -186,8 +192,17 @@ def scenario_normal(tf: TF) -> dict[str, Any]:
         run_ended,
     )
     ok = count_i >= 1 and ev["persistence_excluded"] and not ev["root_causes"]
-    check("S1 正常场景：数据可见 → PERSISTENCE 被排除", ok, {"count": count_i, **ev}, scenario="normal")
-    return {"name": "normal", "immediate": {"count": count_i, "observed_at": at_i}, "revaluation": ev}
+    check(
+        "S1 正常场景：数据可见 → PERSISTENCE 被排除",
+        ok,
+        {"count": count_i, **ev},
+        scenario="normal",
+    )
+    return {
+        "name": "normal",
+        "immediate": {"count": count_i, "observed_at": at_i},
+        "revaluation": ev,
+    }
 
 
 def scenario_real_delay(tf: TF) -> dict[str, Any]:

@@ -73,7 +73,9 @@ def check(name: str, ok: bool, detail: Any = "", *, phase: str = "") -> bool:
         "name": name,
         "phase": phase,
         "ok": bool(ok),
-        "detail": detail if isinstance(detail, (str, int, float, bool, dict, list)) else str(detail),
+        "detail": detail
+        if isinstance(detail, (str, int, float, bool, dict, list))
+        else str(detail),
         "at": _now(),
     }
     CHECKS.append(item)
@@ -133,7 +135,12 @@ class Http:
             return exc.code, parsed, raw
 
     def call(
-        self, method: str, path: str, body: Any = None, *, expect_status: int | tuple = 200,
+        self,
+        method: str,
+        path: str,
+        body: Any = None,
+        *,
+        expect_status: int | tuple = 200,
         timeout: float | None = None,
     ) -> Any:
         status, parsed, raw = self.raw(method, path, body, timeout)
@@ -174,7 +181,7 @@ class TeamFlow:
 
     def fault_state(self) -> dict[str, Any]:
         """读取当前故障注入状态（用于 Benchmark 记录真实激活证据）。"""
-        return (self.get("/api/faults").get("state") or {})
+        return self.get("/api/faults").get("state") or {}
 
     def clear_faults(self) -> dict[str, Any]:
         """清除全部故障（含 sticky）：逐个显式 clear。"""
@@ -210,8 +217,15 @@ class WorkerRun:
         note: str = "",
     ) -> dict[str, Any]:
         q = f"?version={version}" if version else ""
-        task = self.api.call("POST", "/api/v1/tasks", {"testcase_ref": testcase_id, "mode": "playwright"}, expect_status=201)
-        run = self.api.call("POST", f"/api/v1/tasks/{task['task_id']}/runs{q}", None, expect_status=201)
+        task = self.api.call(
+            "POST",
+            "/api/v1/tasks",
+            {"testcase_ref": testcase_id, "mode": "playwright"},
+            expect_status=201,
+        )
+        run = self.api.call(
+            "POST", f"/api/v1/tasks/{task['task_id']}/runs{q}", None, expect_status=201
+        )
         run_id = run["run_id"]
         started = time.time()
         trace: dict[str, Any] = {
@@ -305,7 +319,12 @@ def phase_env(api: Http, tf: TeamFlow, workers: list[str]) -> dict[str, Any]:
 
 def phase_auth(roles: dict[str, Http], anon: Http, admin: Http) -> dict[str, Any]:
     status, body, _ = anon.raw("GET", "/api/v1/runs")
-    check("未认证请求 fail-closed（401）", status == 401, {"status": status, "body": body}, phase="auth")
+    check(
+        "未认证请求 fail-closed（401）",
+        status == 401,
+        {"status": status, "body": body},
+        phase="auth",
+    )
 
     for name in ("viewer", "qa-engineer", "qa-lead", "platform-admin"):
         session = roles[name]
@@ -328,7 +347,12 @@ def phase_auth(roles: dict[str, Http], anon: Http, admin: Http) -> dict[str, Any
     code, body, _ = roles["qa-engineer"].raw("GET", "/api/v1/auth/users")
     check("qa-engineer 不能管理用户（403）", code == 403, {"status": code}, phase="auth")
     users = admin.call("GET", "/api/v1/auth/users")
-    check("platform-admin 可读取用户列表", isinstance(users, list) and len(users) >= 4, len(users or []), phase="auth")
+    check(
+        "platform-admin 可读取用户列表",
+        isinstance(users, list) and len(users) >= 4,
+        len(users or []),
+        phase="auth",
+    )
     RESULT["ids"]["users"] = [
         {"username": u.get("username"), "roles": u.get("roles"), "user_id": u.get("user_id")}
         for u in (users or [])
@@ -338,22 +362,31 @@ def phase_auth(roles: dict[str, Http], anon: Http, admin: Http) -> dict[str, Any
 
 def phase_seed(admin: Http, engineer: Http, tf: TeamFlow) -> dict[str, Any]:
     tf.reset()
-    check("TeamFlow 测试数据已重置（业务基线 count=0）", tf.project_count() == 0, tf.project_count(), phase="seed")
+    check(
+        "TeamFlow 测试数据已重置（业务基线 count=0）",
+        tf.project_count() == 0,
+        tf.project_count(),
+        phase="seed",
+    )
     code, body, _ = engineer.raw("POST", "/api/v1/system/seed", {})
-    check("qa-engineer 不能执行系统种子（403 system.configure）", code == 403, {"status": code}, phase="seed")
+    check(
+        "qa-engineer 不能执行系统种子（403 system.configure）",
+        code == 403,
+        {"status": code},
+        phase="seed",
+    )
     seeded = admin.call("POST", "/api/v1/system/seed", {}, timeout=180)
     check(
         "TeamFlow 场景资产已注入（platform-admin）",
-        isinstance(seeded, dict) and int(seeded.get("created") or 0) + int(seeded.get("skipped") or 0) > 0,
+        isinstance(seeded, dict)
+        and int(seeded.get("created") or 0) + int(seeded.get("skipped") or 0) > 0,
         seeded,
         phase="seed",
     )
     return {"seed": seeded}
 
 
-def phase_ab(
-    engineer: Http, lead: Http, workspace: str, teamflow: str
-) -> dict[str, Any]:
+def phase_ab(engineer: Http, lead: Http, workspace: str, teamflow: str) -> dict[str, Any]:
     """§1.2 步骤 1-6：Intent → 探索 → 编译 → Oracle → 稳定性回放 → 审批。"""
     intent = engineer.call(
         "POST",
@@ -372,7 +405,11 @@ def phase_ab(
     check("A1 Intent 真实创建", bool(intent_id), intent_id, phase="A")
 
     exploration = engineer.call(
-        "POST", f"/api/v1/intents/{intent_id}/explore?max_steps=8", None, expect_status=201, timeout=300
+        "POST",
+        f"/api/v1/intents/{intent_id}/explore?max_steps=8",
+        None,
+        expect_status=201,
+        timeout=300,
     )
     RESULT["ids"]["exploration_id"] = exploration.get("exploration_id")
     trace = exploration.get("trace") or {}
@@ -384,7 +421,9 @@ def phase_ab(
             "engine": exploration.get("engine") or trace.get("engine"),
             "provider": exploration.get("provider") or trace.get("provider"),
             "llm": exploration.get("llm") or trace.get("llm") or {},
-            "action_count": len(trace.get("action_sequence") or exploration.get("action_sequence") or []),
+            "action_count": len(
+                trace.get("action_sequence") or exploration.get("action_sequence") or []
+            ),
             "actions": (trace.get("action_sequence") or [])[:8],
         }
     }
@@ -396,8 +435,11 @@ def phase_ab(
     )
 
     compiled = engineer.call(
-        "POST", f"/api/v1/explorations/{exploration['exploration_id']}/compile?mode=rule_only",
-        None, expect_status=201, timeout=180,
+        "POST",
+        f"/api/v1/explorations/{exploration['exploration_id']}/compile?mode=rule_only",
+        None,
+        expect_status=201,
+        timeout=180,
     )
     comp = compiled.get("compiled") or {}
     tc_id, version = comp.get("testcase_id"), int(comp.get("version") or 1)
@@ -417,7 +459,8 @@ def phase_ab(
                 for s in version_doc.get("steps") or []
             ],
             "assertions": [
-                {"assertion_id": a.get("assertion_id"), "kind": a.get("kind")} for a in version_doc.get("assertions") or []
+                {"assertion_id": a.get("assertion_id"), "kind": a.get("kind")}
+                for a in version_doc.get("assertions") or []
             ],
         }
     }
@@ -468,7 +511,10 @@ def phase_ab(
         lead.call(
             "POST",
             f"/api/v1/testcases/{case_id}/versions/{case_version}/oracle-bindings",
-            {"bindings": {aid: {"oracle_id": oid} for aid, oid in o_ids.items()}, "actor": "user:qa-lead"},
+            {
+                "bindings": {aid: {"oracle_id": oid} for aid, oid in o_ids.items()},
+                "actor": "user:qa-lead",
+            },
         )
         rep = lead.call(
             "POST",
@@ -501,13 +547,22 @@ def phase_ab(
                 for r in recs
             ],
         }
-        info["ok"] = rep.get("status") == "COMPLETED" and cls == "STABLE_PASS" and rep.get("promotable") is True and len(recs) == 3
+        info["ok"] = (
+            rep.get("status") == "COMPLETED"
+            and cls == "STABLE_PASS"
+            and rep.get("promotable") is True
+            and len(recs) == 3
+        )
         if not info["ok"]:
             return info
         reviewed = lead.call(
             "POST",
             f"/api/v1/testcases/{case_id}/versions/{case_version}/review",
-            {"decision": "APPROVED", "reviewer": "agent:auto-heal", "note": "RUN-011-R1：请求体声明必须伪造无效"},
+            {
+                "decision": "APPROVED",
+                "reviewer": "agent:auto-heal",
+                "note": "RUN-011-R1：请求体声明必须伪造无效",
+            },
         )
         info["review"] = {
             "review_status": reviewed.get("review_status"),
@@ -515,7 +570,10 @@ def phase_ab(
             "review_revision": reviewed.get("review_revision"),
             "request_body_declared": "agent:auto-heal",
         }
-        info["ok"] = info["review"]["reviewer"] == "user:qa-lead" and reviewed.get("review_status") == "APPROVED"
+        info["ok"] = (
+            info["review"]["reviewer"] == "user:qa-lead"
+            and reviewed.get("review_status") == "APPROVED"
+        )
         return info
 
     governed = govern(tc_id, version, "compiled")
@@ -533,13 +591,20 @@ def phase_ab(
         bool(governed.get("records"))
         and all(c in declared_workers for c in claimed)
         and governed.get("worker_consumed") is True,
-        {"claimed_by": claimed, "declared_workers": declared_workers, "status": governed.get("status")},
+        {
+            "claimed_by": claimed,
+            "declared_workers": declared_workers,
+            "status": governed.get("status"),
+        },
         phase="B",
     )
     check(
         "B4 编译候选必须通过稳定性回放才能批准（否则门禁如实拒绝）",
         bool(governed.get("ok")),
-        {"classification": governed.get("classification"), "promotable": governed.get("promotable")},
+        {
+            "classification": governed.get("classification"),
+            "promotable": governed.get("promotable"),
+        },
         phase="B",
     )
 
@@ -561,10 +626,28 @@ def phase_ab(
                 "compile_source": "human",
                 "steps": [
                     {"step_id": "n1", "action": "navigate", "value": "/projects"},
-                    {"step_id": "n2", "action": "click", "target": {"strategy": "test_id", "value": "nav-new"}},
-                    {"step_id": "n3", "action": "fill", "target": {"strategy": "test_id", "value": "project-name"}, "value": "RUN-011-R1 Loop Project"},
-                    {"step_id": "n4", "action": "fill", "target": {"strategy": "test_id", "value": "project-description"}, "value": "闭环验证"},
-                    {"step_id": "n5", "action": "click", "target": {"strategy": "test_id", "value": "create-submit"}},
+                    {
+                        "step_id": "n2",
+                        "action": "click",
+                        "target": {"strategy": "test_id", "value": "nav-new"},
+                    },
+                    {
+                        "step_id": "n3",
+                        "action": "fill",
+                        "target": {"strategy": "test_id", "value": "project-name"},
+                        "value": "RUN-011-R1 Loop Project",
+                    },
+                    {
+                        "step_id": "n4",
+                        "action": "fill",
+                        "target": {"strategy": "test_id", "value": "project-description"},
+                        "value": "闭环验证",
+                    },
+                    {
+                        "step_id": "n5",
+                        "action": "click",
+                        "target": {"strategy": "test_id", "value": "create-submit"},
+                    },
                     {"step_id": "n6", "action": "wait", "value": "1200"},
                 ],
                 "assertions": [
@@ -599,7 +682,10 @@ def phase_ab(
         check(
             "B5 人工用例通过同一治理门禁（Oracle + 3 次回放 + 审批）",
             bool(governed_fb.get("ok")),
-            {"classification": governed_fb.get("classification"), "review": governed_fb.get("review")},
+            {
+                "classification": governed_fb.get("classification"),
+                "review": governed_fb.get("review"),
+            },
             phase="B",
         )
         RESULT["phases"]["B"]["fallback_reason"] = (
@@ -623,7 +709,10 @@ def phase_ab(
     check(
         "B7 审批后版本引用完整（Oracle 绑定保留）",
         bool(after.get("oracle_bindings") or after.get("bindings") or governed.get("oracles")),
-        {"oracle_bindings": after.get("oracle_bindings"), "review_status": after.get("review_status")},
+        {
+            "oracle_bindings": after.get("oracle_bindings"),
+            "review_status": after.get("review_status"),
+        },
         phase="B",
     )
     RESULT["ids"]["oracle_ids"] = governed.get("oracles") or {}
@@ -635,7 +724,9 @@ def phase_ab(
     return {"intent_id": intent_id, "testcase_id": approved_tc, "version": approved_version}
 
 
-def phase_c(engineer: Http, ex: WorkerRun, tf: TeamFlow, tc_id: str, version: int) -> dict[str, Any]:
+def phase_c(
+    engineer: Http, ex: WorkerRun, tf: TeamFlow, tc_id: str, version: int
+) -> dict[str, Any]:
     """§1.2 步骤 7：正常独立 Worker 执行（无故障）。"""
     tf.clear_faults()
     count_before = tf.project_count()
@@ -645,12 +736,24 @@ def phase_c(engineer: Http, ex: WorkerRun, tf: TeamFlow, tc_id: str, version: in
     run, trace = out["run"], out["trace"]
     run_id = run["run_id"]
     RESULT["ids"]["run_id"] = run_id
-    check("C1 Run 真实入队并由独立 Worker 终态", run.get("execution_status") in TERMINAL, trace, phase="C")
-    check("C2 执行归属为独立 Worker 进程", trace.get("independent_worker") is True, trace, phase="C")
-    check("C3 正式执行 PASSED", run.get("test_verdict") == "PASSED", {"verdict": run.get("test_verdict"), "status": run.get("execution_status")}, phase="C")
+    check(
+        "C1 Run 真实入队并由独立 Worker 终态",
+        run.get("execution_status") in TERMINAL,
+        trace,
+        phase="C",
+    )
+    check(
+        "C2 执行归属为独立 Worker 进程", trace.get("independent_worker") is True, trace, phase="C"
+    )
+    check(
+        "C3 正式执行 PASSED",
+        run.get("test_verdict") == "PASSED",
+        {"verdict": run.get("test_verdict"), "status": run.get("execution_status")},
+        phase="C",
+    )
 
     report = engineer.call("GET", f"/api/v1/runs/{run_id}/report")
-    egress = ((report.get("browser") or {}).get("egress") or {})
+    egress = (report.get("browser") or {}).get("egress") or {}
     RESULT["phases"]["C"] = {
         "run_id": run_id,
         "verdict": run.get("test_verdict"),
@@ -664,7 +767,8 @@ def phase_c(engineer: Http, ex: WorkerRun, tf: TeamFlow, tc_id: str, version: in
     }
     check(
         "C4 报告含 report.browser.egress 且强制经代理",
-        egress.get("enforced") is True and str(egress.get("url") or "").startswith("http://127.0.0.1:"),
+        egress.get("enforced") is True
+        and str(egress.get("url") or "").startswith("http://127.0.0.1:"),
         egress,
         phase="C",
     )
@@ -689,7 +793,12 @@ def phase_c(engineer: Http, ex: WorkerRun, tf: TeamFlow, tc_id: str, version: in
         "count": len(evidence),
         "types": sorted({str(e.get("source_type")) for e in evidence}),
         "sample": [
-            {"evidence_id": e.get("evidence_id"), "source_type": e.get("source_type"), "kind": e.get("kind"), "captured_at": e.get("captured_at")}
+            {
+                "evidence_id": e.get("evidence_id"),
+                "source_type": e.get("source_type"),
+                "kind": e.get("kind"),
+                "captured_at": e.get("captured_at"),
+            }
             for e in evidence[:3]
         ],
     }
@@ -698,7 +807,13 @@ def phase_c(engineer: Http, ex: WorkerRun, tf: TeamFlow, tc_id: str, version: in
     verified = []
     for eid in ids[:5]:
         v = engineer.call("POST", f"/api/v1/evidence/{eid}/verify", {})
-        verified.append({"evidence_id": eid, "integrity_check": v.get("integrity_check"), "storage": (v.get("storage_integrity") or {}).get("status")})
+        verified.append(
+            {
+                "evidence_id": eid,
+                "integrity_check": v.get("integrity_check"),
+                "storage": (v.get("storage_integrity") or {}).get("status"),
+            }
+        )
     RESULT["phases"]["C"]["evidence_verify"] = verified
     check(
         "C7 Evidence 摘要可重新计算校验（服务端）",
@@ -711,10 +826,16 @@ def phase_c(engineer: Http, ex: WorkerRun, tf: TeamFlow, tc_id: str, version: in
     seqs = [e.get("sequence") if e.get("sequence") is not None else e.get("seq") for e in events]
     seqs = sorted(s for s in seqs if isinstance(s, int))
     event_ids = [e.get("event_id") for e in events]
-    RESULT["phases"]["C"]["events"] = {"count": len(events), "seq_first": seqs[0] if seqs else None, "seq_last": seqs[-1] if seqs else None}
+    RESULT["phases"]["C"]["events"] = {
+        "count": len(events),
+        "seq_first": seqs[0] if seqs else None,
+        "seq_last": seqs[-1] if seqs else None,
+    }
     check(
         "C8 Event ID 唯一且序号连续",
-        len(set(event_ids)) == len(event_ids) and bool(seqs) and seqs == list(range(seqs[0], seqs[0] + len(seqs))),
+        len(set(event_ids)) == len(event_ids)
+        and bool(seqs)
+        and seqs == list(range(seqs[0], seqs[0] + len(seqs))),
         RESULT["phases"]["C"]["events"],
         phase="C",
     )
@@ -726,7 +847,9 @@ def _run_testcase_id(run: dict[str, Any]) -> str:
     return str(run.get("testcase_id") or (run.get("testcase_version_id") or "").split("@")[0])
 
 
-def phase_fail(engineer: Http, ex: WorkerRun, tf: TeamFlow, tc_id: str, version: int) -> dict[str, Any]:
+def phase_fail(
+    engineer: Http, ex: WorkerRun, tf: TeamFlow, tc_id: str, version: int
+) -> dict[str, Any]:
     """§1.2 步骤 8-9：对同一个 TestCase 注入 TF-LOC-001 → 再次执行并产生真实失败。
 
     注入必须是 sticky 的：Run 的 RESET_DATA 预清理会调用 /api/test/reset
@@ -749,7 +872,12 @@ def phase_fail(engineer: Http, ex: WorkerRun, tf: TeamFlow, tc_id: str, version:
     RESULT["ids"]["failed_run_id"] = run_id
     report = engineer.call("GET", f"/api/v1/runs/{run_id}/report")
     failed_steps = [
-        {"step_id": s.get("step_id"), "action": s.get("action"), "target": s.get("target"), "error": str(s.get("error") or "")[:200]}
+        {
+            "step_id": s.get("step_id"),
+            "action": s.get("action"),
+            "target": s.get("target"),
+            "error": str(s.get("error") or "")[:200],
+        }
         for s in report.get("steps") or []
         if s.get("status") == "FAILED"
     ]
@@ -770,11 +898,18 @@ def phase_fail(engineer: Http, ex: WorkerRun, tf: TeamFlow, tc_id: str, version:
         {"verdict": run.get("test_verdict"), "failed_steps": failed_steps[:3]},
         phase="D",
     )
-    check("D2 失败 Run 由独立 Worker 执行", trace.get("independent_worker") is True, trace, phase="D")
+    check(
+        "D2 失败 Run 由独立 Worker 执行", trace.get("independent_worker") is True, trace, phase="D"
+    )
     check(
         "D3 失败 Run 与主线 TestCase 同一用例同一版本",
         same_tc and same_ver,
-        {"run.testcase_id": run.get("testcase_id"), "expected": tc_id, "run.testcase_version_id": run.get("testcase_version_id"), "expected_version": f"{tc_id}@{version}"},
+        {
+            "run.testcase_id": run.get("testcase_id"),
+            "expected": tc_id,
+            "run.testcase_version_id": run.get("testcase_version_id"),
+            "expected_version": f"{tc_id}@{version}",
+        },
         phase="D",
     )
     return {"run_id": run_id, "failed_steps": failed_steps}
@@ -809,7 +944,9 @@ def _extract_evidence_refs(diag: dict[str, Any]) -> dict[str, Any]:
 
 def phase_diag(engineer: Http, run_id: str) -> dict[str, Any]:
     """§1.2 步骤 10：Diagnosis 读取该失败 Run。"""
-    diag = engineer.call("POST", f"/api/v1/runs/{run_id}/diagnose", None, expect_status=(200, 201), timeout=300)
+    diag = engineer.call(
+        "POST", f"/api/v1/runs/{run_id}/diagnose", None, expect_status=(200, 201), timeout=300
+    )
     diag_id = diag["diagnosis_id"]
     RESULT["ids"]["diagnosis_id"] = diag_id
     hyps = diag.get("hypotheses") or []
@@ -849,7 +986,11 @@ def phase_diag(engineer: Http, run_id: str) -> dict[str, Any]:
     check(
         "D6 诊断绑定失败 Run 与主线 TestCase",
         diag.get("run_id") == run_id and diag.get("testcase_id") == RESULT["ids"]["testcase_id"],
-        {"diag.run_id": diag.get("run_id"), "expected_run": run_id, "diag.testcase_id": diag.get("testcase_id")},
+        {
+            "diag.run_id": diag.get("run_id"),
+            "expected_run": run_id,
+            "diag.testcase_id": diag.get("testcase_id"),
+        },
         phase="diag",
     )
     check(
@@ -863,10 +1004,15 @@ def phase_diag(engineer: Http, run_id: str) -> dict[str, Any]:
 
 def phase_probe(engineer: Http, run_id: str, diag_id: str) -> dict[str, Any]:
     """§1.2 步骤 11：对同一个 Run 执行 Probe（或按真实停止条件 STOP）。"""
-    suggestions = engineer.call("GET", f"/api/v1/runs/{run_id}/probe-suggestions?diagnosis_id={diag_id}")
+    suggestions = engineer.call(
+        "GET", f"/api/v1/runs/{run_id}/probe-suggestions?diagnosis_id={diag_id}"
+    )
     plan = engineer.call(
-        "POST", f"/api/v1/runs/{run_id}/probe-plan?diagnosis_id={diag_id}&max_iterations=3", None,
-        expect_status=(200, 201), timeout=300,
+        "POST",
+        f"/api/v1/runs/{run_id}/probe-plan?diagnosis_id={diag_id}&max_iterations=3",
+        None,
+        expect_status=(200, 201),
+        timeout=300,
     )
     steps = plan.get("steps") or []
     succeeded = [s for s in steps if s.get("status") == "SUCCEEDED"]
@@ -899,11 +1045,19 @@ def phase_probe(engineer: Http, run_id: str, diag_id: str) -> dict[str, Any]:
     check(
         "E1 探针真实执行并落库新证据（或如实 STOP 且说明原因）",
         executed_ok or stopped_honestly,
-        {k: RESULT["phases"]["probe"].get(k) for k in ("stop_reason", "stop_detail", "new_evidence_ids")},
+        {
+            k: RESULT["phases"]["probe"].get(k)
+            for k in ("stop_reason", "stop_detail", "new_evidence_ids")
+        },
         phase="E",
     )
     if executed_ok:
-        check("E2 探针计划绑定同一 Run 与 Diagnosis", plan.get("run_id") == run_id or not plan.get("run_id"), plan, phase="E")
+        check(
+            "E2 探针计划绑定同一 Run 与 Diagnosis",
+            plan.get("run_id") == run_id or not plan.get("run_id"),
+            plan,
+            phase="E",
+        )
         ev = engineer.call("GET", f"/api/v1/evidence/{ev_ids[0]}")
         RESULT["phases"]["probe"]["probe_evidence"] = {
             "evidence_id": ev.get("evidence_id"),
@@ -925,7 +1079,10 @@ def phase_probe(engineer: Http, run_id: str, diag_id: str) -> dict[str, Any]:
             "outcome": after.get("outcome"),
             "revision": after.get("revision") or after.get("version"),
             "evaluation_history_len": len(after.get("evaluation_history") or []),
-            "hypotheses": [{"id": h.get("hypothesis_id"), "status": h.get("status")} for h in after.get("hypotheses") or []],
+            "hypotheses": [
+                {"id": h.get("hypothesis_id"), "status": h.get("status")}
+                for h in after.get("hypotheses") or []
+            ],
             "probe_evidence_ids": after.get("probe_evidence_ids"),
         }
         changed = (
@@ -934,13 +1091,29 @@ def phase_probe(engineer: Http, run_id: str, diag_id: str) -> dict[str, Any]:
                 {"id": h.get("id"), "status": h.get("status")}
                 for h in RESULT["phases"]["diag"]["hypotheses"]
             ]
-            or RESULT["phases"]["probe"]["diagnosis_after_read"]["outcome"] != RESULT["phases"]["diag"]["outcome"]
-            or (RESULT["phases"]["probe"]["diagnosis_after_read"]["evaluation_history_len"] or 0) > 0
+            or RESULT["phases"]["probe"]["diagnosis_after_read"]["outcome"]
+            != RESULT["phases"]["diag"]["outcome"]
+            or (RESULT["phases"]["probe"]["diagnosis_after_read"]["evaluation_history_len"] or 0)
+            > 0
         )
-        check("E4 证据回灌真实进入重新诊断（假设/历史变化）", bool(changed), RESULT["phases"]["probe"]["diagnosis_after_read"], phase="E")
+        check(
+            "E4 证据回灌真实进入重新诊断（假设/历史变化）",
+            bool(changed),
+            RESULT["phases"]["probe"]["diagnosis_after_read"],
+            phase="E",
+        )
     else:
-        check("E4 无新证据时不得声称回灌成功", True, f"如实记录 STOP：{plan.get('stop_reason')}", phase="E")
-    return {"plan_id": plan.get("plan_id"), "new_evidence_ids": ev_ids, "stop_reason": plan.get("stop_reason")}
+        check(
+            "E4 无新证据时不得声称回灌成功",
+            True,
+            f"如实记录 STOP：{plan.get('stop_reason')}",
+            phase="E",
+        )
+    return {
+        "plan_id": plan.get("plan_id"),
+        "new_evidence_ids": ev_ids,
+        "stop_reason": plan.get("stop_reason"),
+    }
 
 
 def derive_repair_change(
@@ -979,8 +1152,16 @@ def derive_repair_change(
 
 
 def phase_repair(
-    engineer: Http, lead: Http, admin: Http, ex: WorkerRun, tf: TeamFlow,
-    tc_id: str, version: int, diag_id: str, failed_run_id: str, failed_steps: list[dict[str, Any]],
+    engineer: Http,
+    lead: Http,
+    admin: Http,
+    ex: WorkerRun,
+    tf: TeamFlow,
+    tc_id: str,
+    version: int,
+    diag_id: str,
+    failed_run_id: str,
+    failed_steps: list[dict[str, Any]],
 ) -> dict[str, Any]:
     """§1.2 步骤 12-15：Repair Proposal（关联 Diagnosis）→ 沙箱 → 审批 → CAS 晋升。"""
     tf.clear_faults()
@@ -989,18 +1170,26 @@ def phase_repair(
     llm_out = engineer.call(
         "POST",
         "/api/v1/repairs/llm-suggest",
-        {"testcase_id": tc_id, "base_version": version, "run_id": failed_run_id, "diagnosis_id": diag_id, "propose": False},
+        {
+            "testcase_id": tc_id,
+            "base_version": version,
+            "run_id": failed_run_id,
+            "diagnosis_id": diag_id,
+            "propose": False,
+        },
         expect_status=(200, 201),
         timeout=120,
     )
-    RESULT["phases"]["repair"] = {"llm_suggest": {
-        "called": llm_out.get("called"),
-        "fallback": llm_out.get("fallback"),
-        "reason": llm_out.get("reason") or llm_out.get("error"),
-        "model": llm_out.get("model"),
-        "prompt_version": llm_out.get("prompt_version"),
-        "changes_count": len(llm_out.get("changes") or []),
-    }}
+    RESULT["phases"]["repair"] = {
+        "llm_suggest": {
+            "called": llm_out.get("called"),
+            "fallback": llm_out.get("fallback"),
+            "reason": llm_out.get("reason") or llm_out.get("error"),
+            "model": llm_out.get("model"),
+            "prompt_version": llm_out.get("prompt_version"),
+            "changes_count": len(llm_out.get("changes") or []),
+        }
+    }
 
     derived = derive_repair_change(engineer, tc_id, version, failed_steps)
     if derived is None:
@@ -1010,7 +1199,11 @@ def phase_repair(
     check(
         "F1 修复推导自真实失败步骤（rule:locator-fixture，非伪造）",
         True,
-        {"step_id": derived["step_id"], "original_target": derived["original_target"], "fixture": derived["fixture_key"]},
+        {
+            "step_id": derived["step_id"],
+            "original_target": derived["original_target"],
+            "fixture": derived["fixture_key"],
+        },
         phase="F",
     )
 
@@ -1076,7 +1269,12 @@ def phase_repair(
         "executed_by": sandbox.get("sandbox_executed_by"),
         "fencing_token": sandbox.get("sandbox_fencing_token"),
     }
-    check("F4 沙箱真实执行 PASSED（证明修复有效）", sandbox.get("sandbox_status") == "PASSED", RESULT["phases"]["repair"]["sandbox"], phase="F")
+    check(
+        "F4 沙箱真实执行 PASSED（证明修复有效）",
+        sandbox.get("sandbox_status") == "PASSED",
+        RESULT["phases"]["repair"]["sandbox"],
+        phase="F",
+    )
     check(
         "F5 沙箱 Run 由独立 Worker 执行且使用候选副本",
         bool(sandbox.get("sandbox_executed_by"))
@@ -1088,10 +1286,21 @@ def phase_repair(
     )
 
     engineer.call("POST", f"/api/v1/repairs/{pid}/submit")
-    code, body, _ = engineer.raw("POST", f"/api/v1/repairs/{pid}/approve", {"reviewer": "user:qa-lead", "note": "x"})
-    check("F6 qa-engineer 审批被服务端拒绝（403 repair.approve）", code == 403, {"status": code}, phase="F")
+    code, body, _ = engineer.raw(
+        "POST", f"/api/v1/repairs/{pid}/approve", {"reviewer": "user:qa-lead", "note": "x"}
+    )
+    check(
+        "F6 qa-engineer 审批被服务端拒绝（403 repair.approve）",
+        code == 403,
+        {"status": code},
+        phase="F",
+    )
 
-    approved = lead.call("POST", f"/api/v1/repairs/{pid}/approve", {"reviewer": "agent:auto-heal", "note": "RUN-011-R1 人工审批"})
+    approved = lead.call(
+        "POST",
+        f"/api/v1/repairs/{pid}/approve",
+        {"reviewer": "agent:auto-heal", "note": "RUN-011-R1 人工审批"},
+    )
     RESULT["phases"]["repair"]["approval"] = {
         "status": approved.get("status"),
         "approver": approved.get("approver") or approved.get("approved_by"),
@@ -1100,21 +1309,33 @@ def phase_repair(
     check(
         "F7 qa-lead 审批生效且主体来自服务端 Principal",
         str(RESULT["phases"]["repair"]["approval"].get("approver") or "").startswith("user:")
-        or RESULT["phases"]["repair"]["approval"].get("status") in {"APPROVED", "PENDING_PROMOTION"},
+        or RESULT["phases"]["repair"]["approval"].get("status")
+        in {"APPROVED", "PENDING_PROMOTION"},
         RESULT["phases"]["repair"]["approval"],
         phase="F",
     )
 
-    code, body, _ = lead.raw("POST", f"/api/v1/repairs/{pid}/promote", {"idempotency_key": f"run011r1-{pid}"})
-    check("F8 qa-lead 不能执行高风险晋升（403 repair.promote）", code == 403, {"status": code}, phase="F")
+    code, body, _ = lead.raw(
+        "POST", f"/api/v1/repairs/{pid}/promote", {"idempotency_key": f"run011r1-{pid}"}
+    )
+    check(
+        "F8 qa-lead 不能执行高风险晋升（403 repair.promote）",
+        code == 403,
+        {"status": code},
+        phase="F",
+    )
 
-    promoted = admin.call("POST", f"/api/v1/repairs/{pid}/promote", {"idempotency_key": f"run011r1-{pid}"})
+    promoted = admin.call(
+        "POST", f"/api/v1/repairs/{pid}/promote", {"idempotency_key": f"run011r1-{pid}"}
+    )
     promoted_version = int(promoted.get("promoted_version") or 0)
     RESULT["ids"]["promoted_version"] = promoted_version
     RESULT["phases"]["repair"]["promotion"] = {
         "status": promoted.get("status"),
         "promoted_version": promoted_version,
-        "receipt": promoted.get("promotion_receipt") or promoted.get("receipt") or (promoted.get("promotion_record") or {}),
+        "receipt": promoted.get("promotion_receipt")
+        or promoted.get("receipt")
+        or (promoted.get("promotion_record") or {}),
         "base_version": promoted.get("base_version") or version,
     }
     check(
@@ -1124,7 +1345,9 @@ def phase_repair(
         phase="F",
     )
 
-    replay = admin.call("POST", f"/api/v1/repairs/{pid}/promote", {"idempotency_key": f"run011r1-{pid}"})
+    replay = admin.call(
+        "POST", f"/api/v1/repairs/{pid}/promote", {"idempotency_key": f"run011r1-{pid}"}
+    )
     check(
         "F10 幂等重放返回同一版本（不重复创建版本）",
         int(replay.get("promoted_version") or 0) == promoted_version,
@@ -1135,8 +1358,14 @@ def phase_repair(
 
 
 def phase_regress(
-    engineer: Http, admin: Http, ex: WorkerRun, tf: TeamFlow,
-    tc_id: str, base_version: int, pid: str, promoted_version: int,
+    engineer: Http,
+    admin: Http,
+    ex: WorkerRun,
+    tf: TeamFlow,
+    tc_id: str,
+    base_version: int,
+    pid: str,
+    promoted_version: int,
 ) -> dict[str, Any]:
     """§1.2 步骤 16-18：固定版本回归 → 回滚 → 回滚后再次验证。"""
     reg = ex.execute(tc_id, version=promoted_version, note="晋升版本回归")
@@ -1149,14 +1378,24 @@ def phase_regress(
         "testcase_version_id": reg_run.get("testcase_version_id"),
         "trace": reg["trace"],
     }
-    check("G1 晋升版本回归 PASSED（故障仍生效，修复真实有效）", reg_run.get("test_verdict") == "PASSED", {"verdict": reg_run.get("test_verdict")}, phase="G")
+    check(
+        "G1 晋升版本回归 PASSED（故障仍生效，修复真实有效）",
+        reg_run.get("test_verdict") == "PASSED",
+        {"verdict": reg_run.get("test_verdict")},
+        phase="G",
+    )
     check(
         "G2 回归使用精确晋升版本",
         str(reg_run.get("testcase_version_id") or "") == f"{tc_id}@{promoted_version}",
         reg_run.get("testcase_version_id"),
         phase="G",
     )
-    check("G3 回归由独立 Worker 执行", reg["trace"].get("independent_worker") is True, reg["trace"], phase="G")
+    check(
+        "G3 回归由独立 Worker 执行",
+        reg["trace"].get("independent_worker") is True,
+        reg["trace"],
+        phase="G",
+    )
 
     rolled = admin.call(
         "POST",
@@ -1185,13 +1424,23 @@ def phase_regress(
     base_doc = engineer.call("GET", f"/api/v1/testcases/{tc_id}/versions/{base_version}")
     restored_doc = engineer.call("GET", f"/api/v1/testcases/{tc_id}/versions/{restored}")
     meta = engineer.call("GET", f"/api/v1/testcases/{tc_id}")
-    same_steps = [(s.get("step_id"), s.get("action"), (s.get("target") or {}).get("value"), s.get("value")) for s in restored_doc.get("steps") or []] == [
-        (s.get("step_id"), s.get("action"), (s.get("target") or {}).get("value"), s.get("value")) for s in base_doc.get("steps") or []
+    same_steps = [
+        (s.get("step_id"), s.get("action"), (s.get("target") or {}).get("value"), s.get("value"))
+        for s in restored_doc.get("steps") or []
+    ] == [
+        (s.get("step_id"), s.get("action"), (s.get("target") or {}).get("value"), s.get("value"))
+        for s in base_doc.get("steps") or []
     ]
-    same_assertions = [(a.get("assertion_id"), a.get("oracle_id"), json.dumps(a.get("expected"), sort_keys=True)) for a in restored_doc.get("assertions") or []] == [
-        (a.get("assertion_id"), a.get("oracle_id"), json.dumps(a.get("expected"), sort_keys=True)) for a in base_doc.get("assertions") or []
+    same_assertions = [
+        (a.get("assertion_id"), a.get("oracle_id"), json.dumps(a.get("expected"), sort_keys=True))
+        for a in restored_doc.get("assertions") or []
+    ] == [
+        (a.get("assertion_id"), a.get("oracle_id"), json.dumps(a.get("expected"), sort_keys=True))
+        for a in base_doc.get("assertions") or []
     ]
-    same_bindings = (restored_doc.get("oracle_bindings") or []) == (base_doc.get("oracle_bindings") or [])
+    same_bindings = (restored_doc.get("oracle_bindings") or []) == (
+        base_doc.get("oracle_bindings") or []
+    )
     RESULT["phases"]["regress"]["content_level_verify"] = {
         "latest_version": meta.get("latest_version"),
         "restored_version": restored,
@@ -1202,7 +1451,10 @@ def phase_regress(
     }
     check(
         "G5 回滚是内容级恢复（步骤/断言/Oracle 绑定 + 版本指针）",
-        same_steps and same_assertions and same_bindings and int(meta.get("latest_version") or 0) == restored,
+        same_steps
+        and same_assertions
+        and same_bindings
+        and int(meta.get("latest_version") or 0) == restored,
         RESULT["phases"]["regress"]["content_level_verify"],
         phase="G",
     )
@@ -1220,7 +1472,9 @@ def phase_regress(
         {"verdict": post_run.get("test_verdict"), "version": post_run.get("testcase_version_id")},
         phase="G",
     )
-    post2 = ex.execute(tc_id, version=promoted_version, note="回滚后复核晋升版本（历史版本仍可执行）")
+    post2 = ex.execute(
+        tc_id, version=promoted_version, note="回滚后复核晋升版本（历史版本仍可执行）"
+    )
     post2_run = post2["run"]
     RESULT["phases"]["regress"]["post_rollback_promoted_run_id"] = post2_run["run_id"]
     check(
@@ -1236,7 +1490,12 @@ def phase_regress(
 def phase_audit(admin: Http, engineer: Http) -> dict[str, Any]:
     verify = admin.call("GET", "/api/v1/auth/audit/verify")
     RESULT["phases"]["audit"] = verify
-    check("审计哈希链完整", verify.get("intact") is True and int(verify.get("entries") or 0) > 0, verify, phase="audit")
+    check(
+        "审计哈希链完整",
+        verify.get("intact") is True and int(verify.get("entries") or 0) > 0,
+        verify,
+        phase="audit",
+    )
     entries = verify.get("entries")
     check("审计条目覆盖本轮操作（>10）", int(entries or 0) > 10, entries, phase="audit")
     return {}
@@ -1277,7 +1536,10 @@ def phase_trace(engineer: Http) -> dict[str, Any]:
         rel(
             f"T2 {label}.testcase_version_id 与批准版本一致",
             (run or {}).get("testcase_version_id") == f"{tc_id}@{approved_version}",
-            {"run.testcase_version_id": (run or {}).get("testcase_version_id"), "expected": f"{tc_id}@{approved_version}"},
+            {
+                "run.testcase_version_id": (run or {}).get("testcase_version_id"),
+                "expected": f"{tc_id}@{approved_version}",
+            },
         )
 
     # ---- Diagnosis ↔ 失败 Run / 主 TestCase
@@ -1299,12 +1561,18 @@ def phase_trace(engineer: Http) -> dict[str, Any]:
     ev_extract = _extract_evidence_refs(diag or {})
     diag_ev_ids = set(ev_extract["union"])
     missing = sorted(diag_ev_ids - run_ev_ids - set(ids.get("probe_evidence_ids") or []))
-    probe_ev_ids = {str(x) for x in (RESULT["phases"].get("probe") or {}).get("new_evidence_ids") or []}
+    probe_ev_ids = {
+        str(x) for x in (RESULT["phases"].get("probe") or {}).get("new_evidence_ids") or []
+    }
     missing = sorted(diag_ev_ids - run_ev_ids - probe_ev_ids)
     rel(
         "T5 诊断支持/反驳证据引用均可读取且归属失败 Run（无跨 Run 误引）",
         bool(diag_ev_ids) and not missing,
-        {"diag_evidence": sorted(diag_ev_ids)[:10], "missing_or_foreign": missing[:10], "run_evidence_count": len(run_ev_ids)},
+        {
+            "diag_evidence": sorted(diag_ev_ids)[:10],
+            "missing_or_foreign": missing[:10],
+            "run_evidence_count": len(run_ev_ids),
+        },
     )
     # 每条证据的 source_run_id
     ev_foreign: list[str] = []
@@ -1323,14 +1591,17 @@ def phase_trace(engineer: Http) -> dict[str, Any]:
     )
 
     # ---- Graph 节点与边的实际引用关系
-    graph = engineer.call("POST", f"/api/v1/runs/{failed_run_id}/graph", {}, expect_status=(200, 201))
+    graph = engineer.call(
+        "POST", f"/api/v1/runs/{failed_run_id}/graph", {}, expect_status=(200, 201)
+    )
     nodes = graph.get("nodes") or []
     edges = graph.get("edges") or []
     node_ids = {str(n.get("node_id") or n.get("id")) for n in nodes}
     ev_nodes = [n for n in nodes if str(n.get("node_type")) in {"Evidence", "evidence"}]
     ev_node_refs = {str(n.get("ref_id") or "") for n in ev_nodes} - {""}
     dangling_edges = [
-        e for e in edges
+        e
+        for e in edges
         if str(e.get("src") or e.get("source") or e.get("from") or "") not in node_ids
         or str(e.get("dst") or e.get("target") or e.get("to") or "") not in node_ids
     ]
@@ -1375,15 +1646,21 @@ def phase_trace(engineer: Http) -> dict[str, Any]:
     )
 
     # ---- Sandbox Run 使用正确的候选版本
-    sandbox_run_id = (RESULT["phases"].get("repair") or {}).get("sandbox", {}).get("sandbox_run_id") or ""
+    sandbox_run_id = (RESULT["phases"].get("repair") or {}).get("sandbox", {}).get(
+        "sandbox_run_id"
+    ) or ""
     sandbox_run = fetch(f"/api/v1/runs/{sandbox_run_id}") if sandbox_run_id else {}
     rel(
         "T14 Sandbox Run 使用候选副本（独立 testcase_id，绑定 repair）",
         bool(sandbox_run_id)
         and not (sandbox_run or {}).get("__error__")
         and _run_testcase_id(sandbox_run or {}) != tc_id
-        and (RESULT["phases"].get("repair") or {}).get("sandbox", {}).get("sandbox_status") == "PASSED",
-        {"sandbox_run_id": sandbox_run_id, "sandbox_testcase_id": _run_testcase_id(sandbox_run or {})},
+        and (RESULT["phases"].get("repair") or {}).get("sandbox", {}).get("sandbox_status")
+        == "PASSED",
+        {
+            "sandbox_run_id": sandbox_run_id,
+            "sandbox_testcase_id": _run_testcase_id(sandbox_run or {}),
+        },
     )
 
     # ---- Promotion receipt 绑定正确的 Proposal
@@ -1394,7 +1671,11 @@ def phase_trace(engineer: Http) -> dict[str, Any]:
     rel(
         "T15 Promotion 回执绑定正确的 Proposal 与版本关系",
         bool(idem) and int(target_in_record or 0) == promoted_version,
-        {"idempotency_key": idem, "target_version": target_in_record, "promoted_version": promoted_version},
+        {
+            "idempotency_key": idem,
+            "target_version": target_in_record,
+            "promoted_version": promoted_version,
+        },
     )
 
     # ---- Regression Run 使用精确晋升版本
@@ -1402,7 +1683,10 @@ def phase_trace(engineer: Http) -> dict[str, Any]:
     rel(
         "T16 Regression Run 使用精确晋升版本",
         (reg_run or {}).get("testcase_version_id") == f"{tc_id}@{promoted_version}",
-        {"reg.testcase_version_id": (reg_run or {}).get("testcase_version_id"), "expected": f"{tc_id}@{promoted_version}"},
+        {
+            "reg.testcase_version_id": (reg_run or {}).get("testcase_version_id"),
+            "expected": f"{tc_id}@{promoted_version}",
+        },
     )
 
     # ---- Rollback receipt 绑定正确的版本关系
@@ -1417,13 +1701,22 @@ def phase_trace(engineer: Http) -> dict[str, Any]:
             str(record.get("target_version") or "") == f"{tc_id}:v{promoted_version}"
             or int(record.get("restored_version") or 0) == restored_version
         ),
-        {"record": record, "promoted_version": promoted_version, "restored_version": restored_version},
+        {
+            "record": record,
+            "promoted_version": promoted_version,
+            "restored_version": restored_version,
+        },
     )
-    post_run = fetch(f"/api/v1/runs/{RESULT['phases'].get('regress', {}).get('post_rollback_run_id')}")
+    post_run = fetch(
+        f"/api/v1/runs/{RESULT['phases'].get('regress', {}).get('post_rollback_run_id')}"
+    )
     rel(
         "T18 回滚后验证 Run 使用恢复版本",
         (post_run or {}).get("testcase_version_id") == f"{tc_id}@{restored_version}",
-        {"post.testcase_version_id": (post_run or {}).get("testcase_version_id"), "expected": f"{tc_id}@{restored_version}"},
+        {
+            "post.testcase_version_id": (post_run or {}).get("testcase_version_id"),
+            "expected": f"{tc_id}@{restored_version}",
+        },
     )
 
     RESULT["phases"]["trace"] = {
@@ -1443,7 +1736,11 @@ def main() -> int:
     parser.add_argument("--workspace", default="")
     parser.add_argument("--workers", default="", help="逗号分隔的独立 Worker ID 列表")
     parser.add_argument("--out", default="")
-    parser.add_argument("--phases", default="all", help="逗号分隔：env,auth,seed,ab,c,fail,diag,probe,repair,regress,trace,audit")
+    parser.add_argument(
+        "--phases",
+        default="all",
+        help="逗号分隔：env,auth,seed,ab,c,fail,diag,probe,repair,regress,trace,audit",
+    )
     args = parser.parse_args()
 
     password = os.getenv("TG_RUN011_PASSWORD") or FALLBACK_PASSWORD
@@ -1458,7 +1755,10 @@ def main() -> int:
     RESULT["workspace"] = workspace
 
     anon = Http(args.api, "anon")
-    roles = {name: Http(args.api, name) for name in ("viewer", "qa-engineer", "qa-lead", "platform-admin")}
+    roles = {
+        name: Http(args.api, name)
+        for name in ("viewer", "qa-engineer", "qa-lead", "platform-admin")
+    }
     tf = TeamFlow(args.teamflow)
     phases = {p.strip() for p in args.phases.split(",") if p.strip()}
 
@@ -1478,7 +1778,10 @@ def main() -> int:
         ab: dict[str, Any] = {}
         if want("ab"):
             ab = phase_ab(roles["qa-engineer"], roles["qa-lead"], workspace, args.teamflow)
-        tc_id, tc_version = ab.get("testcase_id") or RESULT["ids"].get("testcase_id"), ab.get("version") or RESULT["ids"].get("approved_version")
+        tc_id, tc_version = (
+            ab.get("testcase_id") or RESULT["ids"].get("testcase_id"),
+            ab.get("version") or RESULT["ids"].get("approved_version"),
+        )
         if tc_id and want("c"):
             phase_c(roles["qa-engineer"], ex, tf, tc_id, tc_version)
         failed: dict[str, Any] = {}
@@ -1492,13 +1795,27 @@ def main() -> int:
         rep_out: dict[str, Any] = {}
         if failed and diag_out and tc_id and want("repair"):
             rep_out = phase_repair(
-                roles["qa-engineer"], roles["qa-lead"], roles["platform-admin"], ex, tf,
-                tc_id, tc_version, diag_out["diagnosis_id"], failed["run_id"], failed.get("failed_steps") or [],
+                roles["qa-engineer"],
+                roles["qa-lead"],
+                roles["platform-admin"],
+                ex,
+                tf,
+                tc_id,
+                tc_version,
+                diag_out["diagnosis_id"],
+                failed["run_id"],
+                failed.get("failed_steps") or [],
             )
         if rep_out and tc_id and want("regress"):
             phase_regress(
-                roles["qa-engineer"], roles["platform-admin"], ex, tf,
-                tc_id, tc_version, rep_out["proposal_id"], rep_out["promoted_version"],
+                roles["qa-engineer"],
+                roles["platform-admin"],
+                ex,
+                tf,
+                tc_id,
+                tc_version,
+                rep_out["proposal_id"],
+                rep_out["promoted_version"],
             )
         if want("trace"):
             phase_trace(roles["qa-engineer"])
@@ -1519,7 +1836,9 @@ def main() -> int:
         if args.out:
             out = Path(args.out)
             out.parent.mkdir(parents=True, exist_ok=True)
-            out.write_text(json.dumps(RESULT, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            out.write_text(
+                json.dumps(RESULT, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+            )
             print(f"\n[out] {out}  checks={passed}/{total}")
         print(json.dumps(RESULT["summary"], ensure_ascii=False))
     return 0 if not RESULT["summary"]["failed"] else 1

@@ -128,9 +128,7 @@ def _seed_assets(rt: Any, workspace_id: str, slug: str) -> dict[str, Any]:
         workspace_id=workspace_id,
         review_status="DRAFT",
     )
-    rt.catalog.review_testcase(
-        tc_id, 1, "APPROVED", "human:setup", require_stability=False
-    )
+    rt.catalog.review_testcase(tc_id, 1, "APPROVED", "human:setup", require_stability=False)
     intent = rt.catalog.create_intent(
         {
             "intent_id": f"intent_iso_{slug}",
@@ -212,7 +210,13 @@ def _seed_assets(rt: Any, workspace_id: str, slug: str) -> dict[str, Any]:
     proposal = RepairService(rt).propose(
         testcase_id=tc_id,
         base_version=1,
-        changes=[{"path": "steps[].target", "step_index": 0, "value": {"strategy": "css", "value": "#ok"}}],
+        changes=[
+            {
+                "path": "steps[].target",
+                "step_index": 0,
+                "value": {"strategy": "css", "value": "#ok"},
+            }
+        ],
         reason="隔离验收候选",
         created_by="human:setup",
         actor="human:setup",
@@ -233,9 +237,7 @@ def _seed_assets(rt: Any, workspace_id: str, slug: str) -> dict[str, Any]:
 
 
 def _login(client: TestClient, username: str) -> str:
-    r = client.post(
-        "/api/v1/auth/login", json={"username": username, "password": "password-123"}
-    )
+    r = client.post("/api/v1/auth/login", json={"username": username, "password": "password-123"})
     assert r.status_code == 200, r.text
     return r.json()["csrf_token"]
 
@@ -251,10 +253,16 @@ def _count(db: Database, table: str) -> int:
 
 def _denied_audits(db: Database) -> list[dict[str, Any]]:
     with db.session() as s:
-        rows = s.execute(text(
-            "SELECT actor_id, action, resource_id, result FROM tg_audit_log "
-            "WHERE result = 'DENIED'"
-        )).mappings().all()
+        rows = (
+            s.execute(
+                text(
+                    "SELECT actor_id, action, resource_id, result FROM tg_audit_log "
+                    "WHERE result = 'DENIED'"
+                )
+            )
+            .mappings()
+            .all()
+        )
     return [dict(r) for r in rows]
 
 
@@ -499,9 +507,11 @@ def test_no_cross_workspace_evidence_or_object_enumeration(iso_env) -> None:  # 
     a_csrf = _login(client, "a_engineer")
 
     with db.session() as s:
-        rows = s.execute(text(
-            "SELECT evidence_id, workspace_id, run_id FROM tg_evidence"
-        )).mappings().all()
+        rows = (
+            s.execute(text("SELECT evidence_id, workspace_id, run_id FROM tg_evidence"))
+            .mappings()
+            .all()
+        )
     by_id = {str(r["evidence_id"]): dict(r) for r in rows}
     assert by_id[a["evidence_id"]]["workspace_id"] == WS_A
     assert by_id[b["evidence_id"]]["workspace_id"] == WS_B

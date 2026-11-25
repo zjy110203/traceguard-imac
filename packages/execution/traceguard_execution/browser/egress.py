@@ -244,7 +244,8 @@ class EgressProxyController:
             # RUN-011-R1 WP5：审计保存当前 policy_origins（授权事实源快照），
             # 用于对账「误拦是不是策略不含该 origin」（OPEN-RISK-01 排查必需）。
             "policy_origins": sorted(
-                f"{o.scheme}://{o.host}:{o.port}" for o in (self.policy.origins if self._proxy else ())
+                f"{o.scheme}://{o.host}:{o.port}"
+                for o in (self.policy.origins if self._proxy else ())
             ),
             "url": self.url if self._proxy is not None else "",
             "run_id": self._run_context.get("run_id", ""),
