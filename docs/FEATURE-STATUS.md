@@ -1,10 +1,27 @@
+# 功能状态矩阵（更新至 2026-11-25 RUN-012）
+
+> **RUN-012 状态（2026-11-25，权威）**：`docs/RUN-012-FINAL-REPORT.md` 为准。
+> WP0~WP6 全部完成，基线 `0ca128f` → HEAD `f64f0d7`：
+> - **Benchmark 口径可信**：显式场景契约 + 重定义 False Pass（原始归档哈希不变，以 Errata 追加说明）；
+> - **CI 可信**：PR Gate **真实触发并成功**（run `45578101070`，head SHA `57a5ea7`）；
+> - **多 Workspace 产品化**：前端统一上下文 + 15 视图接入，真实浏览器 25/25；
+> - **全局统计权限**：`/system/metrics` 与 `/queue/stats` 接入 Workspace 过滤，改 SQL 真实聚合（专项 11/11）；
+> - **核心业务 UI 闭环**：Oracle 绑定 / 稳定性回放 / LLM 建议入口补齐，真实浏览器闭环 29/29；
+> - **AI 可靠性**：诊断顾问补 Schema 校验、重试、fallback 标注与追踪（专项 22/22，此前零覆盖）；
+> - 质量门禁：全量 **760 passed** + PG16 **16 passed** + 长稳 **20/20 周期**（22 项检查全绿）+ Ruff/前端构建全绿。
+> 仍 BLOCKED / NOT_RUN：B-17、宿主级网络隔离、LLM 真实模型输出路径、真实人工基线、
+> Nightly/Release Gate 触发（无凭据）、23×2 Benchmark 重跑（独立部署环境）——**均不标 PASS**。
+
+---
+
 # 功能状态矩阵（更新至 2026-11-25 RUN-011-R1.1）
 
-> **RUN-011-R1.1 状态（2026-11-25，权威）**：`docs/RUN-011-R1.1-FINAL-REPORT.md` 为准。
+> **RUN-011-R1.1 状态（2026-11-25）**：`docs/RUN-011-R1.1-FINAL-REPORT.md` 为准。
 > Workspace 数据隔离与对象级授权、Repair 服务端血缘与来源可信均为**已运行验证**（隔离/血缘测试 23/23）；
 > 两轮完整闭环 API 86/86 ×2 + DB 逐实体 Workspace 24/24 ×2；Benchmark v5 口径已修正（原始数据保留）；
 > UI 验收 15/0（+2 NOTE：无 workspace 切换控件、审核成功路径由闭环覆盖）；全量 690 passed + PG16 13 passed + Ruff 全绿。
 > 仍 BLOCKED：B-17、宿主级网络隔离、LLM/人工基线、真实 CI 证据（无凭据不标 PASS）。
+> **注**：其中的「无 workspace 切换控件」缺口已由 RUN-012 WP2 修复（真实浏览器 25/25）。
 
 ---
 
@@ -294,5 +311,42 @@
 | 全量回归 | **VERIFIED** | `pytest -q` 713 passed / 13 skipped（基线 690，新增 23 项，无新增 skip）；`ruff check .`、`git diff --check` 均通过 |
 | PostgreSQL 16 专项 | **BLOCKED** | 本机无 PG URL / 服务 / 容器工具；13 项显式 skip，不标记为通过 |
 | GitHub Actions 门禁 | **NOT_RUN** | 本轮未触发，不作 PASS 声明 |
-| `/api/v1/system/metrics` 是否纳入全局观测权限 | **NEEDS_DECISION** | 跨 Workspace 计数汇总但无 Workspace 标识，SystemView 依赖；本轮不改 |
+| `/api/v1/system/metrics` 是否纳入全局观测权限 | **VERIFIED（RUN-012 WP3）** | 已接入 Workspace 过滤：显式 workspace_id 越权 403 `WORKSPACE_FORBIDDEN`；不传时普通用户只统计授权空间并集，仅 platform-admin 得全局汇总；计数改 SQL `COUNT(*)`/`GROUP BY`（旧 `limit=500` 长度推断已移除，522 条回归验证）；`/queue/stats` 同批修复。专项 11/11 |
 | RUN-012 准入 | **具备（附条件）** | 安全与 Benchmark 验收完成；进入前需补 PG16 与真实 Actions 结果 |
+
+---
+
+# RUN-012 功能状态（2026-11-25，追加；不改写上面历史条目）
+
+> 口径：VERIFIED = 本轮真实执行证据；BLOCKED = 外部条件阻塞；NOT_RUN = 未执行（不冒充通过）。
+> 详细证据见 `docs/RUN-012-FINAL-REPORT.md`。
+
+| 能力 | 状态 | 证据 / 说明 |
+|---|---|---|
+| Benchmark 场景契约显式化 | **VERIFIED** | 新增 `scripts/bench_scenario_contract.py`（场景 → 期望结果 → 记录分类）；专项 14/14；原始归档哈希不变，以 Errata 追加说明 |
+| Benchmark False Pass 口径重定义 | **VERIFIED** | Evaluator 级真实 Verdict 判定；不再用 `limit=500` 列表长度推断；统计含 `record_classification_counts` / `false_pass_evaluation` / `contract_problems` |
+| PR Gate 分支触发覆盖 | **VERIFIED** | 推送后 CI **真实触发并成功**：run `45578101070`，head SHA `57a5ea7`，`conclusion=success` |
+| CI 格式门禁修复 | **VERIFIED** | `ruff format --check` 223 files already formatted；此前大量未格式化文件会导致 CI 必红 |
+| PostgreSQL 16 专项验收 | **VERIFIED** | 真实 PG 16.16 独立库：平台 + 一致性 + Workspace 专项 **16/16**（此前因无 PG 环境显式 skip） |
+| 多 Workspace 前端上下文 | **VERIFIED** | 新增 `apps/web/src/workspace.ts`；15 视图接入；真实浏览器 **25/25**（2 空间 × 3 角色 + admin + 伪造切换/localStorage 篡改/伪造请求 + 4 分辨率深色） |
+| 前端 Workspace 硬编码清零 | **VERIFIED** | 14 处 `workspace_id=default` 硬编码全部移除，改走当前上下文 |
+| 全局统计 Workspace 过滤 | **VERIFIED** | `/system/metrics`：显式越权 403 `WORKSPACE_FORBIDDEN`；普通用户仅授权空间并集；仅 admin 全局；专项 11/11 |
+| 统计计数真实聚合 | **VERIFIED** | 改 SQL `COUNT(*)`/`GROUP BY`；`/queue/stats` 同批；**522 条 >500 截断阈值回归**通过 |
+| Oracle 绑定 UI 入口 | **VERIFIED** | 用例详情页新增绑定控件 + 保存（此前只有展示，UI 上无法完成合法审核）；真实浏览器回读 `oracle_bindings` 落库 |
+| 用例详情断言/步骤渲染 | **VERIFIED** | 修复版本列表 `doc` 未展开导致断言表格与绑定控件整体不渲染的缺陷 |
+| 被测目标地址配置化 | **VERIFIED** | 前端不再硬编码 `127.0.0.1:8001`；后端默认取 `TG_TEAMFLOW_BASE_URL`（原按 application 硬编码使配置失效） |
+| 稳定性回放 UI 入口 | **VERIFIED（入口）** | 用例详情页审核卡新增「启动稳定性回放」；compiler/healed 用例审核前置条件在 UI 上可触发 |
+| LLM 修复建议 UI 入口 | **VERIFIED** | 修复中心提案弹窗内新增「LLM 建议」（未配凭据时如实提示，不伪造成功） |
+| 核心业务 UI 全链闭环 | **VERIFIED** | 真实浏览器 **29/29**：Intent→TestCase→Oracle→绑定→审核→执行→故障注入→诊断→修复→沙箱→审批→晋升→回滚；真实 Worker + 真实 TeamFlow + `observer_mode=playwright` + 真实故障 TF-UI-002 |
+| 诊断顾问 Schema 校验 | **VERIFIED** | 顶层对象 / hypotheses 列表 / 域白名单 / 描述非空；越界条目丢弃并计数（专项 17/17） |
+| 诊断顾问重试与 Fallback 标注 | **VERIFIED** | 仅 `invalid_json` 重试 1 次（不与 provider 层重复计费）；无候选必标 `fallback=true` + `error` |
+| 诊断顾问防虚构证据 | **VERIFIED** | 虚构 `evidence_id` 剔除留痕；**无真实证据支撑的假设整条丢弃** |
+| 诊断顾问可回读追踪 | **VERIFIED** | `called/fallback/error/model/dropped/attempts/warnings` 落库；服务层 5/5 |
+| LLM 失败不影响确定性诊断 | **VERIFIED** | 服务调用层测试：LLM 失败时规则假设与结论照常产出 |
+| 全量回归 | **VERIFIED** | `pytest -q` **760 passed / 16 skipped**（16 skip 均为 PG 专项，已在真实 PG16 单独跑通）；`ruff check`/`format` 通过 |
+| 前端类型检查与构建 | **VERIFIED** | `npm run build`（vue-tsc + vite）通过 |
+| 长稳（soak） | **VERIFIED** | 6.14 分钟 / **20/20 周期** / 2 独立 Worker；20 Run 全 PASSED；0 API 错误 / 0 孤儿步骤 / 0 重复事件 / 0 未回收租约；DB `quick_check=ok`；SSE 20 周期全有事件 |
+| Nightly / Release Gate 真实触发 | **NOT_RUN** | 需 `workflow_dispatch` 与凭据，本机无；不作 PASS 声明 |
+| 23×2 真实 Benchmark 重跑 | **NOT_RUN** | 独立部署环境与成本约束；口径已修正并以 Errata 记录历史状态 |
+| 真实 LLM 模型输出路径 | **NOT_RUN** | 本环境无凭据；契约与边界由离线 FakeProvider 覆盖 22 例 |
+| compiler/healed「回放→审核」成功路径 | **PARTIAL** | 入口已接入且可点击；完整多轮回放成功路径未纳入本轮 |

@@ -161,3 +161,39 @@
 
 - 本环境无 LLM 凭据，真实模型输出路径未验证（契约与边界已由离线 FakeProvider 覆盖）。
 - 下一项：WP6 — 质量与最终交付（全量门禁、长稳检查、RUN-012-WORKLOG/FINAL-REPORT/FEATURE-STATUS 更新与推送）。
+
+---
+
+## WP6：质量门禁与最终交付
+
+- **开始时间**：2026-11-25 20:58 CST
+- **完成时间**：2026-11-25 21:12 CST
+
+### 门禁结果
+
+| 门禁 | 结果 |
+|---|---|
+| `ruff check` / `ruff format --check` | ✅ All checks passed / 223 files already formatted |
+| PR Gate 单元 + 契约 | ✅ 375 passed |
+| PR Gate 快速服务集成 | ✅ 51 passed |
+| 安全专项（审核门禁 / 全局观测 RBAC / 指标权限 / 认证 RBAC） | ✅ 57 passed |
+| PostgreSQL 16 专项（真实 PG 16.16，独立库 `traceguard_run012_wp6`） | ✅ 16 passed |
+| **全量回归** | ✅ **760 passed, 16 skipped** |
+| 前端 `npm run build`（vue-tsc + vite） | ✅ built |
+| 长稳 soak（6.14 分钟 / 20 周期 / 2 独立 Worker / 内联 Worker 关闭） | ✅ **20/20 周期**，22 项检查全绿 |
+
+长稳明细：20 个 Run 全部 `PASSED`+`COMPLETED`；0 API 错误 / 0 NOT_EVALUATED / 0 超时 /
+0 Worker 死亡 / 0 重复事件 / 0 孤儿步骤 / 0 无证据 Run / 0 未回收租约；DB `quick_check=ok`
+（260 events / 560 evidence / 160 steps）；SSE 20 周期全部有事件（resume 9 / 无新事件 11），0 重复 ID。
+
+### 文档更新
+
+- 新增 `docs/RUN-012-FINAL-REPORT.md`（最终报告：结论速览、逐工作包缺陷与证据、门禁结果、证据清单、明确未覆盖项）。
+- 更新 `docs/FEATURE-STATUS.md`：新增 RUN-012 状态头 + 追加 RUN-012 功能状态段（不改写历史条目），
+  并把 `/api/v1/system/metrics` 从 `NEEDS_DECISION` 改为 `VERIFIED`。
+
+### 剩余问题 / 下一项
+
+- Nightly / Release Gate 真实触发、23×2 Benchmark 重跑、真实 LLM 模型输出路径、真实人工基线：
+  **均为 NOT_RUN / BLOCKED，不标 PASS**（原因见最终报告 §4）。
+- 本轮到此收口；分支 `workbuddy/run012-product-completion` 待推送评审。

@@ -1,0 +1,98 @@
+{
+  "round": "RUN-012",
+  "started_at": "2026-11-25T13:01:31Z",
+  "finished_at": "2026-11-25T13:07:40Z",
+  "duration_minutes": 6.14,
+  "architecture": {
+    "api_port": 8030,
+    "api_inline_worker": false,
+    "db": ".traceguard/run012soak/api.db",
+    "artifact_dir": ".traceguard/run012soak/artifacts",
+    "workers": 2,
+    "worker_pids": {
+      "soak-w1": 32347,
+      "soak-w2": 32348
+    },
+    "teamflow": "http://127.0.0.1:8021"
+  },
+  "interval_s": 20.0,
+  "case": "tcase_tf_create_normal",
+  "resumed_from": {
+    "samples": 0,
+    "cycle_offset": 0,
+    "elapsed_s": 0.0
+  },
+  "cycles": 20,
+  "api_health_failures": 0,
+  "inline_worker_seen": 0,
+  "counts": {
+    "ok": 20,
+    "failed": 0,
+    "not_evaluated": 0,
+    "api_error": 0,
+    "timeout": 0
+  },
+  "sse": {
+    "cycles_with_events": 20,
+    "cycles_without_events": 0,
+    "resume_ok": 9,
+    "resume_no_new": 11,
+    "heartbeats": 52,
+    "duplicate_ids": 0
+  },
+  "worker_deaths": [],
+  "errors": [],
+  "integrity": {
+    "run_verdicts": {
+      "PASSED": 20
+    },
+    "run_status": {
+      "COMPLETED": 20
+    },
+    "runs_without_report": 0,
+    "duplicate_event_keys": 0,
+    "orphan_steps": 0,
+    "runs_without_evidence": 0,
+    "unrecovered_leases": 0,
+    "quick_check": "ok",
+    "db_path": "/Users/dlp--test/Desktop/traceguard/.traceguard/run012soak/api.db",
+    "final_counts": {
+      "db_path": "/Users/dlp--test/Desktop/traceguard/.traceguard/run012soak/api.db",
+      "runs": 20,
+      "tasks": 20,
+      "events": 260,
+      "evidence": 560,
+      "steps": 160,
+      "repairs": 0,
+      "size_mb": 2.56,
+      "wal_mb": 3.98
+    }
+  },
+  "checks": {
+    "duration_reached": true,
+    "cycles_reached": true,
+    "api_inline_worker_off": true,
+    "api_health_ok_all_cycles": true,
+    "no_api_errors": true,
+    "no_unexpected_failed": true,
+    "no_not_evaluated": true,
+    "all_runs_passed": true,
+    "no_run_timeouts": true,
+    "teamflow_healthy_all_cycles": true,
+    "no_worker_death": true,
+    "no_runs_without_report": true,
+    "no_duplicate_events": true,
+    "no_orphan_steps": true,
+    "no_runs_without_evidence": true,
+    "no_unrecovered_leases": true,
+    "db_integrity_ok": true,
+    "db_counts_from_current_instance": true,
+    "db_counts_readable": true,
+    "process_metrics_source_recorded": true,
+    "sse_received_events": true,
+    "sse_resume_verified": true,
+    "api_survived": true
+  },
+  "passed": true,
+  "samples_file": "docs/assets/run012/wp6/soak-samples.jsonl"
+}
