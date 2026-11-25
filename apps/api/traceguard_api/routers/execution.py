@@ -10,6 +10,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
+from sqlalchemy import bindparam, text
 from starlette.concurrency import run_in_threadpool
 from traceguard_core.errors import AppError
 
@@ -336,15 +337,34 @@ async def inbox_stats() -> dict[str, Any]:
 
 @router.get("/queue/stats")
 async def queue_stats(request: Request) -> dict[str, Any]:
+    """队列状态统计（RUN-012 WP3）：SQL GROUP BY 全量聚合。
+
+    旧实现用 `list_runs(limit=500)` 的列表长度推断计数，超过 500 条即截断失真；
+    现改为直接对 `tg_run` 分组计数，并在 response 声明口径。
+    """
     rt = get_services().rt
     allowed = scope_filter(principal_of(request), None, resource_type="run", request=request)
-    runs = rt.tasks.list_runs(limit=500, workspace_ids=allowed)
-    counts: dict[str, int] = {}
-    for r in runs:
-        counts[r["execution_status"]] = counts.get(r["execution_status"], 0) + 1
+    where = " WHERE workspace_id IN :scope_ids" if allowed is not None else ""
+    params: dict[str, Any] = {"scope_ids": allowed} if allowed is not None else {}
+
+    with rt.db.session() as session:
+        stmt = text(
+            f"SELECT execution_status, COUNT(*) AS n FROM tg_run{where} GROUP BY execution_status"
+        )
+        if allowed is not None:
+            stmt = stmt.bindparams(bindparam("scope_ids", expanding=True))
+        counts = {
+            str(row[0] or "UNKNOWN"): int(row[1]) for row in session.execute(stmt, params).all()
+        }
+    total = sum(counts.values())
     return {
         "by_status": counts,
-        "total": len(runs),
+        "total": total,
+        "counting": {
+            "source": "SQL COUNT(*) / GROUP BY 直接查询 tg_run",
+            "list_limit": None,
+            "time_range": "ALL_TIME",
+        },
         "worker": {
             "id": rt.worker_id,
             "inline_running": bool(rt._inline_thread and rt._inline_thread.is_alive()),

@@ -79,3 +79,28 @@
 
 - 实体详情类视图依赖服务端对象级授权（已由 R1.1 覆盖），本轮未重复改造。
 - 下一项：WP3 — `/system/metrics` 全局统计的 Workspace 过滤与真实聚合计数。
+
+---
+
+## WP3：全局数据权限与统计口径
+
+- **开始时间**：2026-11-25 17:55 CST
+- **完成时间**：2026-11-25 18:06 CST
+
+### 修改内容
+
+1. `apps/api/traceguard_api/routers/system.py` `/system/metrics`：接入 `principal_of` / `scope_filter` / `visible_workspaces`，显式越权空间 403、普通用户只统计授权空间并集、仅 platform-admin 得全局汇总；计数改 SQL `COUNT(*)` / `GROUP BY`，移除 `limit=500` 列表长度推断；response 声明 `scope` 与 `counting` 口径。
+2. `apps/api/traceguard_api/routers/execution.py` `/queue/stats`：同样改 SQL 分组聚合并声明 `counting.list_limit=None`，修复 >500 条截断失真。
+3. `apps/web/src/views/SystemView.vue`：类型化 `SystemMetrics`，"数据统计"卡片展示统计范围与计数口径。
+4. 新增 `tests/integration/test_system_metrics_workspace_run012.py`（11 例）与 `docs/RUN-012-WP3-GLOBAL-METRICS.md`。
+
+### 测试结果
+
+- WP3 专项：**11 passed**（含 522 条 intents 突破旧 500 截断阈值的回归）。
+- 全量：**738 passed, 16 skipped**（PG 专项需 `TG_TEST_POSTGRES_URL`，WP1 已真实验收）。
+- `ruff check` 通过；`npm run build` 通过。
+
+### 剩余问题 / 下一项
+
+- `/inbox/stats`、`/probes/audit`、`/events/conflicts` 维持 RUN-011-R1.2 的 `system.observe` admin 专属口径；`/benchmark/*` 无 Workspace 归属实体，未改。
+- 下一项：WP4 — 核心业务 UI 闭环（Intent→TestCase→Oracle→Run→Diagnosis→Repair→Rollback 全链操作入口与状态反馈）。

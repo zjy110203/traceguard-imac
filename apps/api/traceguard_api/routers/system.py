@@ -7,12 +7,14 @@ import threading
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
+from sqlalchemy import bindparam, text
 from starlette.concurrency import run_in_threadpool
 from traceguard_agents.gateway.llm_gateway import TokenUsageTracker
 
 from ..seed import seed_teamflow_catalog
 from ..services import get_services
+from ..workspace import principal_of, scope_filter, visible_workspaces
 
 router = APIRouter(prefix="/api/v1/system", tags=["system"])
 
@@ -78,22 +80,104 @@ async def seed() -> dict[str, Any]:
 
 
 @router.get("/metrics")
-async def metrics() -> dict[str, Any]:
+async def metrics(
+    request: Request, workspace_id: str | None = Query(default=None)
+) -> dict[str, Any]:
+    """真实数据库聚合统计（RUN-012 WP3）。
+
+    权限口径：
+    - 显式 workspace_id：走统一 `scope_filter()`，非授权空间 403；
+    - 不传 workspace_id：普通用户只统计授权空间并集，platform-admin 才得到全局汇总；
+    - 前端隐藏数据不作为授权依据。
+
+    计数口径：全部使用 SQL COUNT(*) / GROUP BY，不再用 limit=500 的列表长度推断；
+    时间范围为全量历史，response 中显式声明。
+    """
     rt = get_services().rt
-    runs = rt.tasks.list_runs(limit=500)
-    verdicts: dict[str, int] = {}
-    for r in runs:
-        verdicts[r["test_verdict"]] = verdicts.get(r["test_verdict"], 0) + 1
+    principal = principal_of(request)
+    if workspace_id is not None:
+        scope_filter(principal, workspace_id, resource_type="system.metrics", request=request)
+        scopes: list[str] | None = [workspace_id]
+        mode = "workspace"
+    else:
+        allowed = visible_workspaces(principal)
+        scopes = None if allowed is None else sorted(allowed)
+        mode = "global" if scopes is None else "authorized_workspaces"
+
+    where = " WHERE workspace_id IN :scope_ids" if scopes is not None else ""
+    doc_where = " WHERE kind = :kind" + (
+        " AND workspace_id IN :scope_ids" if scopes is not None else ""
+    )
+    params: dict[str, Any] = {"scope_ids": scopes} if scopes is not None else {}
+    verdict_params = dict(params)
+
+    with rt.db.session() as session:
+        stmt_verdicts = text(
+            f"SELECT test_verdict, COUNT(*) AS n FROM tg_run{where} GROUP BY test_verdict"
+        )
+        if scopes is not None:
+            stmt_verdicts = stmt_verdicts.bindparams(bindparam("scope_ids", expanding=True))
+        verdicts = {
+            str(row[0] or "UNKNOWN"): int(row[1])
+            for row in session.execute(stmt_verdicts, verdict_params).all()
+        }
+
+        def doc_count(kind: str) -> int:
+            stmt = text(f"SELECT COUNT(*) FROM tg_doc{doc_where}")
+            if scopes is not None:
+                stmt = stmt.bindparams(bindparam("scope_ids", expanding=True))
+            return int(session.scalar(stmt, {**params, "kind": kind}) or 0)
+
+        out = {
+            "runs": int(
+                session.scalar(_bind(text(f"SELECT COUNT(*) FROM tg_run{where}"), scopes), params)
+                or 0
+            ),
+            "verdicts": verdicts,
+            "evidence": int(
+                session.scalar(
+                    _bind(text(f"SELECT COUNT(*) FROM tg_evidence{where}"), scopes), params
+                )
+                or 0
+            ),
+            "events": int(
+                session.scalar(_bind(text(f"SELECT COUNT(*) FROM tg_event{where}"), scopes), params)
+                or 0
+            ),
+            "diagnoses": doc_count("diagnosis"),
+            "repairs": doc_count("repair"),
+            "testcases": int(
+                session.scalar(
+                    _bind(text(f"SELECT COUNT(*) FROM tg_testcase{where}"), scopes), params
+                )
+                or 0
+            ),
+            "intents": int(
+                session.scalar(
+                    _bind(text(f"SELECT COUNT(*) FROM tg_intent{where}"), scopes), params
+                )
+                or 0
+            ),
+        }
     return {
-        "runs": len(runs),
-        "verdicts": verdicts,
-        "evidence": rt.evidence.count_all(),
-        "events": rt.events.count_all(),
-        "diagnoses": len(rt.docs.list(kind="diagnosis", limit=500)),
-        "repairs": len(rt.docs.list(kind="repair", limit=500)),
-        "testcases": len(rt.catalog.list_testcases()),
-        "intents": len(rt.catalog.list_intents()),
+        **out,
+        "scope": {
+            "mode": mode,
+            "workspace_id": workspace_id,
+            "authorized_workspaces": scopes,
+            "global": scopes is None,
+        },
+        "counting": {
+            "source": "SQL COUNT(*) / GROUP BY 直接查询持久化表",
+            "list_limit": None,
+            "time_range": "ALL_TIME",
+            "verdict_definition": "tg_run.test_verdict 分组计数；UNKNOWN 表示空值",
+        },
     }
+
+
+def _bind(stmt: Any, scopes: list[str] | None) -> Any:
+    return stmt.bindparams(bindparam("scope_ids", expanding=True)) if scopes is not None else stmt
 
 
 @router.get("/llm/summary")

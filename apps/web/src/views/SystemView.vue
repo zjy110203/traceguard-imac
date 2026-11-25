@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { api, fmtBytes } from '../api'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import MetricCard from '../components/MetricCard.vue'
@@ -10,7 +10,45 @@ import type { BrowserHealth, SystemHealth } from '../types'
 const health = ref<SystemHealth | null>(null)
 const browser = ref<BrowserHealth | null>(null)
 const config = ref<Record<string, unknown> | null>(null)
-const metrics = ref<Record<string, number>>({})
+interface MetricsScope {
+  mode: string
+  workspace_id?: string | null
+  authorized_workspaces?: string[] | null
+  global: boolean
+}
+interface MetricsCounting {
+  source: string
+  list_limit: number | null
+  time_range: string
+  verdict_definition?: string
+}
+interface SystemMetrics {
+  runs: number
+  verdicts: Record<string, number>
+  evidence: number
+  events: number
+  diagnoses: number
+  repairs: number
+  testcases: number
+  intents: number
+  scope: MetricsScope
+  counting: MetricsCounting
+}
+const metrics = ref<SystemMetrics | null>(null)
+const metricEntries = computed<Record<string, unknown>>(() => {
+  const m = metrics.value
+  if (!m) return {}
+  return {
+    runs: m.runs,
+    verdicts: m.verdicts,
+    evidence: m.evidence,
+    events: m.events,
+    diagnoses: m.diagnoses,
+    repairs: m.repairs,
+    testcases: m.testcases,
+    intents: m.intents,
+  }
+})
 const artifacts = ref<{ artifact_id: string; media_type: string; size: number; original_name: string }[]>([])
 const loading = ref(true)
 const error = ref('')
@@ -23,7 +61,7 @@ async function load(probe = false): Promise<boolean> {
       api.get<SystemHealth>('/system/health'),
       api.get<BrowserHealth>(`/system/browser?probe=${probe}`),
       api.get<Record<string, unknown>>('/system/config'),
-      api.get<Record<string, number>>('/system/metrics'),
+      api.get<SystemMetrics>('/system/metrics'),
       api.get<{ artifact_id: string; media_type: string; size: number; original_name: string }[]>('/artifacts?limit=20'),
     ])
     health.value = h
@@ -102,7 +140,7 @@ onMounted(() => load())
             <div class="card-head"><h2>数据统计</h2></div>
             <div class="card-body">
               <div class="grid c3">
-                <div v-for="(v, k) in metrics" :key="k" class="metric" style="box-shadow: none">
+                <div v-for="(v, k) in metricEntries" :key="k" class="metric" style="box-shadow: none">
                   <div class="label">{{ k }}</div>
                   <template v-if="k === 'verdicts'">
                     <div class="chip-row" style="margin-top: 6px">
@@ -111,6 +149,10 @@ onMounted(() => load())
                   </template>
                   <div v-else class="value" style="font-size: 20px">{{ v }}</div>
                 </div>
+              </div>
+              <div v-if="metrics?.scope" class="muted small" style="margin-top: 10px">
+                统计范围：{{ metrics.scope.mode === 'global' ? '全局（platform-admin）' : metrics.scope.mode === 'workspace' ? `指定空间 ${metrics.scope.workspace_id}` : `授权空间并集 ${(metrics.scope.authorized_workspaces || []).join('、')}` }}
+                · 计数口径：{{ metrics.counting?.source || '—' }}（limit={{ metrics.counting?.list_limit ?? 'none' }}，{{ metrics.counting?.time_range || 'ALL_TIME' }}）
               </div>
             </div>
           </div>
