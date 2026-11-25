@@ -157,6 +157,18 @@ function handleClickOutside(e: MouseEvent): void {
   if (userMenuOpen.value && !target.closest('.user-menu-anchor')) userMenuOpen.value = false
 }
 
+// RUN-013 WP2：多标签页同步——其他标签切换空间后，本标签重新向服务端验证并切换，
+// 避免两个标签长期停留在不同 Workspace 造成上下文混淆。
+function onWorkspaceStorage(e: StorageEvent): void {
+  if (e.key !== 'tg-workspace') return
+  const next = e.newValue || ''
+  if (!next) {
+    void loadWorkspaces()
+    return
+  }
+  if (next !== currentWorkspaceId.value) void switchWorkspace(next)
+}
+
 const crumb = computed(() => String(route.meta.crumb ?? ''))
 const env = computed(() => health.value?.environment ?? 'local')
 const dbOk = computed(() => health.value?.database?.ok ?? false)
@@ -239,8 +251,15 @@ watch(() => route.fullPath, () => { mobileOpen.value = false; searchOpen.value =
 // Workspace 切换后刷新导航统计与搜索缓存；视图本体由 :key 强制重挂载。
 watch(currentWorkspaceId, () => { results.value = []; load() })
 // 登录前 onMounted 的 /auth/me 会 401；登录成功后必须重新向服务端拉取可见空间。
+// RUN-013 WP2：身份变化（含换用户登录）必须先清空上一身份的上下文与视图缓存，
+// 否则同一 workspace_id 下 generation 不变，旧用户数据会残留在已挂载视图中。
 watch(() => authState.user?.user_id, async (id, previous) => {
-  if (!id || id === previous) return
+  if (id === previous) return
+  if (!id) {
+    resetWorkspaceContext()
+    return
+  }
+  resetWorkspaceContext()
   await loadWorkspaces()
   await load()
 })
@@ -252,8 +271,11 @@ onMounted(async () => {
   timer = window.setInterval(load, 20000)
   window.addEventListener('keydown', onKey)
   window.addEventListener('click', handleClickOutside)
+  window.addEventListener('storage', onWorkspaceStorage)
   // RUN-010：全局 401 → 跳转登录页并记录回跳地址
+  // RUN-013 WP2：同时清空 Workspace 上下文，防止会话失效后旧数据继续驻留。
   onUnauthorized(() => {
+    resetWorkspaceContext()
     const current = route.fullPath
     if (route.name !== 'login') {
       void router.replace({ name: 'login', query: current && current !== '/' ? { redirect: current } : {} })
@@ -264,6 +286,7 @@ onUnmounted(() => {
   window.clearInterval(timer)
   window.removeEventListener('keydown', onKey)
   window.removeEventListener('click', handleClickOutside)
+  window.removeEventListener('storage', onWorkspaceStorage)
 })
 </script>
 

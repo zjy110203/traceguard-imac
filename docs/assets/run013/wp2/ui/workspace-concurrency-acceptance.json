@@ -1,0 +1,70 @@
+{
+  "workpackage": "RUN-013 WP2",
+  "engine": "Playwright Chromium + real API + real SQLite (multi-workspace)",
+  "total": 10,
+  "passed": 10,
+  "failed": 0,
+  "screenshots": [],
+  "results": [
+    {
+      "check": "环境：真实 API 独立进程",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "http://127.0.0.1:61410"
+    },
+    {
+      "check": "环境：两个 Workspace 与隔离数据已创建",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "ws-a / ws-b"
+    },
+    {
+      "check": "UI：alice 默认空间为 ws-a",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "current=ws-a"
+    },
+    {
+      "check": "UI：只显示 ws-a 数据，不出现 ws-b",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "ws-a visible, ws-b absent"
+    },
+    {
+      "check": "UI：localStorage 篡改为 ws-b 后回落 ws-a，且无 ws-b 数据",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "current=ws-a"
+    },
+    {
+      "check": "安全：页面内并发越权 workspace_id 请求全部 403",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "statuses=[403, 403, 403, 403, 403, 403]"
+    },
+    {
+      "check": "安全：授权撤销后已打开页面的下一次请求立即 403",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=403"
+    },
+    {
+      "check": "并发：快速 A/B 切换后只显示当前空间数据（无回填/混显）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "current=ws-b"
+    },
+    {
+      "check": "多标签页：其他标签切换空间后本标签同步（storage 事件）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "tab2=ws-a"
+    },
+    {
+      "check": "前端：390px 深色模式无横向溢出",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "overflow=0px"
+    }
+  ]
+}

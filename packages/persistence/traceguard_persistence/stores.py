@@ -210,6 +210,7 @@ class PersistentEventStore:
         after_at: str = "",
         after_event_id: str = "",
         workspace_id: str | None = None,
+        workspace_ids: Sequence[str] | None = None,
         run_id: str | None = None,
         event_type: str | None = None,
         limit: int = 200,
@@ -235,6 +236,10 @@ class PersistentEventStore:
                 )
             if workspace_id:
                 q = q.where(EventRow.workspace_id == workspace_id)
+            if workspace_ids is not None:
+                # SSE 的授权范围（多 Workspace 并集）：下推到 SQL，避免“先取全库再过滤”
+                # 造成游标饥饿或越权数据进入内存。
+                q = q.where(EventRow.workspace_id.in_(list(workspace_ids)))
             if event_type:
                 q = q.where(EventRow.event_type == event_type)
             # run 过滤在 JSON 列上跨方言不一致，统一在应用层过滤（同一 workspace 内数据量可控）

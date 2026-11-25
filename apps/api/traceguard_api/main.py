@@ -16,7 +16,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from traceguard_core.config import get_settings
 from traceguard_core.errors import AppError, ErrorCode, app_error_handler, error_response
@@ -137,7 +137,32 @@ def create_app() -> FastAPI:
         - SSE 只做实时展示，业务状态权威来源仍是 API / 数据库。
         """
         from . import sse as sse_util
+        from .auth import _effective_auth_enabled, get_auth_manager
         from .runtime import get_runtime
+        from .workspace import principal_of, scope_filter
+
+        # RUN-013 WP2：`/events/stream` 不在 `/api/v1` 下，认证中间件不会覆盖它。
+        # 必须在此显式完成身份解析 + Workspace 作用域校验，否则匿名用户可订阅
+        # 任意 Workspace 的事件流（跨空间泄露）。
+        principal = principal_of(request)
+        if _effective_auth_enabled() and principal is None:
+            token = request.cookies.get(settings.auth_cookie_name, "")
+            principal = get_auth_manager(request).resolve(token) if token else None
+            if principal is None:
+                return JSONResponse(
+                    status_code=401,
+                    content={
+                        "detail": {
+                            "code": "UNAUTHENTICATED",
+                            "message": "authentication required",
+                        }
+                    },
+                )
+            request.state.principal = principal
+        allowed = scope_filter(principal, workspace_id, resource_type="event", request=request)
+        # allowed=None：管理员 / 认证关闭 → 不限制；否则按授权 Workspace 并集过滤。
+        stream_workspace = workspace_id if allowed is None else None
+        stream_workspaces = allowed
 
         rt = get_runtime()
         cursor = sse_util.decode_cursor(last_event_id or request.headers.get("last-event-id"))
@@ -160,7 +185,8 @@ def create_app() -> FastAPI:
                             rt.events.list_events_after,
                             after_at=at,
                             after_event_id=eid,
-                            workspace_id=workspace_id,
+                            workspace_id=stream_workspace,
+                            workspace_ids=stream_workspaces,
                             run_id=run_id,
                             event_type=event_type,
                             limit=100,
