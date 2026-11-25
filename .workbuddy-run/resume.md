@@ -1,5 +1,7 @@
 # RESUME（RUN-011-R1.1，2026-11-25 追加；下方 R1 历史保留）
 
+- **交付提交**：`ec05061`（`workbuddy/run011-full-loop`），已推送，本地与 origin HEAD 同步；
+  工作区 clean。未改 main / PR #1 / PR #2，未强推。pre-push hook 的 `/bin/ps` 权限警告不阻断推送。
 - 状态：**交付完成**（除 BLOCKED 项）。先读 `docs/RUN-011-R1.1-FINAL-REPORT.md`（10 问）→
   `RUN-011-R1.1-BASELINE.md` → 四份专题报告（WP1 安全 / WP2 Repair / WP3 Benchmark / WP6 UI）。
 - 证据：`docs/assets/run011-r1.1/lineage/loop{1,2}{,-db}.json`（各 86/86 + 24/24）、
