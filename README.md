@@ -1,12 +1,27 @@
 # TraceGuard
 
-> **RUN-010（2026-11-24）**：核心整合与智能成熟——认证产品化、Egress 正式内核集成、
-> 幂等冻结、诊断 v2（时间对齐/图裁决）、Benchmark v4 真实执行、无障碍 0 违规、供应链治理。
-> 状态与风险见 `docs/RUN-010-FINAL-REPORT.md`。以下历史内容保留。
+> **RUN-013（2026-11-25）**：生产形态验证与可靠性强化——独立 Worker 真实 UI 闭环、
+> Workspace 并发与 SSE 授权收口、稳定性回放审核闭环、60 分钟 PostgreSQL 16 长稳、
+> 真实 LLM Smoke 与 AI 质量量化。状态与限制见 `docs/RUN-013-FINAL-REPORT.md`。
+> 历史阶段报告保留在 `docs/`。
 
 Agentic Web UI Testing & Quality Intelligence Platform（智能 Web UI 自动化测试与质量情报平台）
 
 > 真实浏览器执行 · 业务事实校验 · 证据可追溯 · 诊断与修复闭环
+
+## RUN-013 新增能力（2026-11-25）
+
+- **独立 Worker 部署闭环**：`TG_INLINE_WORKER=false` 下由独立进程 claim/执行，
+  真实覆盖 SIGTERM/SIGKILL/租约接管/旧 Worker 恢复/API 重启/双 Worker 并发幂等；
+  修复“旧 Worker 恢复后重复写证据”，写证据前增加同步租约校验。
+- **Workspace 并发与安全**：修复 `/events/stream` 未鉴权与跨空间订阅（含游标绕过）；
+  前端修复快速切换竞态、参数覆盖、换用户残留、多标签不同步；授权撤销后下一请求立即 403。
+- **稳定性回放→审核闭环**：compiler/healed 两类候选真实回放与 UI 审核；
+  审核前重新核验 Oracle 版本/审批状态，杜绝“旧回放批准新 Oracle”；用例详情新增回放状态面板。
+- **60 分钟长稳（PostgreSQL 16）**：独立 API + 双 Worker + 真实 Chromium，真实故障注入，
+  产出资源/一致性/证据完整性的可回读 JSON。
+- **AI 真实能力**：DeepSeek 真实 Smoke 11/11；诊断顾问 6 场景质量量化（Schema/证据支持/重复/成本），
+  明确区分规则组、LLM 组、FakeProvider 与真实 Provider。
 
 ## RUN-009 新增能力（2026-11-24）
 

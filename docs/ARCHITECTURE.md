@@ -156,6 +156,8 @@ INCONCLUSIVE 且无 FAILED → 不判 PASSED。
 - **消费**：`PersistentConsumerInbox` 提供幂等消费；`run-timeline-projector` 是真实消费者，
   把事件投影为时间线文档（派生视图）。
 - **前端**：`subscribeEvents()` 优先 EventSource，连续失败切轮询；SSE 仅触发刷新，界面状态仍读权威接口。
+- **SSE 授权（RUN-013）**：`/events/stream` 不在 `/api/v1` 认证中间件范围，路由内显式解析会话并调用
+  `scope_filter()`；事件查询在 SQL 层按授权 Workspace 并集过滤，`Last-Event-ID` 游标不能扩大范围。
 
 ### 4. LLM 顾问层
 

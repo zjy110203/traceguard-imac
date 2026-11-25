@@ -12,7 +12,7 @@
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| GET | `/system/health` | DB 可用性、Worker 状态、计数 |
+| GET | `/system/health` | DB 可用性、Worker 状态、API 进程 RSS/CPU、按 Workspace 授权范围统计的计数（SQL COUNT，无 1000 截断） |
 | GET | `/system/browser?probe=true` | 真实启动一次浏览器自检（渠道/版本/冒烟结果） |
 | GET | `/system/config` | 脱敏后的运行配置 |
 | GET | `/system/metrics` | 运行/证据/事件/诊断/修复统计 |
@@ -135,7 +135,7 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/testcases/tcase_tf_create_normal/ex
 
 | 方法 | 路径 | 语义要点 |
 |---|---|---|
-| GET | `/events/stream` | 真实 SSE。参数 `workspace_id/run_id/event_type/last_event_id/heartbeat_seconds/poll_interval/limit`；也接受 `Last-Event-ID` 头。`id` 游标形如 `pi=…;seq=…;at=…;eid=…`（来源+续传位置）；**sequence 是 producer 实例内序号，不存在跨 producer 全局顺序**；投递 at-least-once，客户端按 `event_id` 去重 |
+| GET | `/events/stream` | 真实 SSE。**必须认证**（认证开启时未登录 401）；`workspace_id` 越权 403，省略时只推送调用方授权 Workspace 并集。参数 `workspace_id/run_id/event_type/last_event_id/heartbeat_seconds/poll_interval/limit`；也接受 `Last-Event-ID` 头。`id` 游标形如 `pi=…;seq=…;at=…;eid=…`（来源+续传位置）；**sequence 是 producer 实例内序号，不存在跨 producer 全局顺序**；投递 at-least-once，客户端按 `event_id` 去重；游标不能绕过 Workspace 授权 |
 | POST | `/runs/{run_id}/probe-plan` | Active Diagnosis 闭环：返回 `steps[]`（probe/score/status/evidence/execution_id）、`stop_reason`、`budget`、`gaps_before/gaps_after`、`llm_planner` |
 | GET | `/probe-plans`、`/probe-plans/{id}` | 计划列表/详情（含 LLM 建议与 fallback 标记） |
 | GET | `/probes/budgets` | 预算快照；`provisional=true` 表示 P06 未确认 |
@@ -145,6 +145,7 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/testcases/tcase_tf_create_normal/ex
 | POST | `/explorations/{id}/compile?mode=` | `rule_only / llm_only / llm_plus_rule_validation`；失败回退规则并在 `compiled.llm_meta.fallback=true` |
 | POST | `/testcases/{id}/versions/{v}/stability-replay` | `repeats`（1..10）、`risk_profile`、`sync`；返回独立 Run 记录与 `promotable`（不稳定或 Oracle 不完整 → false） |
 | GET | `/stability-replays`、`/{id}` | `refresh=true` 汇总最新 verdict 并重算分类 |
+| GET | `/testcases/{id}/versions/{v}/stability-gate` | 审核条件只读预检：`satisfied` + `problems` + 回放证据摘要；与审核事务同一规则（含 Oracle 版本重核验） |
 | POST | `/repairs/llm-suggest` | LLM 受限变更候选；`propose=true` 仅生成提案，不审批/不晋升 |
 | GET | `/system/llm/summary` | 新增 `enabled.compiler_mode/probe_planner/repair_planner` 与各模块调用/兜底计数 |
 

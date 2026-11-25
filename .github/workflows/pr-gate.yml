@@ -16,6 +16,7 @@ on:
       # RUN-011 / RUN-012 工作分支必须能触发 PR Gate，否则安全修复在合并前没有快速门禁。
       - "workbuddy/run011-*"
       - "workbuddy/run012-*"
+      - "workbuddy/run013-*"
       - workbuddy/traceguard-autonomous
 
 concurrency:

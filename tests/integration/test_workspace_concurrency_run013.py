@@ -25,6 +25,7 @@ from traceguard_api import sse as sse_util
 from traceguard_core.config import reset_settings_cache
 from traceguard_persistence import Database, set_database
 from traceguard_persistence import auth as auth_store
+from traceguard_persistence.models import IntentRow
 from traceguard_persistence.stores import PersistentEventStore
 
 
@@ -59,6 +60,20 @@ def ws_client(tmp_path, monkeypatch):  # type: ignore[no-untyped-def]
             )
             auth_store.set_user_workspaces(db, created["user_id"], workspaces)
             users[name] = created["user_id"]
+
+        # 健康计数按 Workspace 过滤的夹具：每个空间 2 条 intent。
+        with db.session() as session:
+            for ws in ("ws-a", "ws-b", "ws-c"):
+                for idx in range(2):
+                    session.add(
+                        IntentRow(
+                            intent_id=f"intent_{ws}_{idx}",
+                            workspace_id=ws,
+                            title=f"intent {ws} {idx}",
+                            status="DRAFT",
+                            doc={"title": f"intent {ws} {idx}"},
+                        )
+                    )
 
         store = PersistentEventStore(db)
         events: dict[str, dict[str, Any]] = {}
@@ -231,3 +246,19 @@ def test_foreign_event_detail_denied(ws_client) -> None:  # type: ignore[no-unty
     own = client.get(f"/api/v1/events/{events['ws-a']['event_id']}")
     assert own.status_code == 200, own.text
     assert own.json()["workspace_id"] == "ws-a"
+
+
+def test_system_health_counts_are_workspace_scoped(ws_client) -> None:  # type: ignore[no-untyped-def]
+    """RUN-013 WP6：/system/health 计数不得泄露全局业务规模。"""
+    client, _, _, _, _ = ws_client
+    _login(client, "alice")
+    alice = client.get("/api/v1/system/health")
+    assert alice.status_code == 200, alice.text
+    assert alice.json()["counts"]["intents"] == 2, alice.json()["counts"]
+
+    _login(client, "admin")
+    admin = client.get("/api/v1/system/health")
+    assert admin.status_code == 200, admin.text
+    admin_count = int(admin.json()["counts"]["intents"])
+    # seed 会在 default 空间写入演示需求；admin 至少能看到 6 条 + default 的种子数据。
+    assert admin_count > 2 and admin_count >= 6, admin.json()["counts"]

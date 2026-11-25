@@ -1,3 +1,25 @@
+# 功能状态矩阵（更新至 2026-11-25 RUN-013）
+
+> **RUN-013 状态（2026-11-25，权威）**：`docs/RUN-013-FINAL-REPORT.md` 为准。
+> 基线 `90f6f4e` → 本轮 HEAD（见最终报告）；主题：生产形态验证与可靠性强化。
+>
+> - **独立 Worker 部署**：`TG_INLINE_WORKER=false` + 2 独立 Worker，真实 UI 全链路
+>   **56 条记录 = 55 PASS / 0 FAIL / 1 NOTE**；故障注入 22 项通过。修复旧 Worker 恢复后重复写证据。
+> - **Workspace 并发与安全**：修复 `/events/stream` 未鉴权/跨空间订阅（含游标绕过）；
+>   API 专项 **8 passed**、真实浏览器 **10/10**；授权撤销后下一请求立即 403；多标签同步。
+> - **稳定性回放→审核**：compiler + healed 真实回放/审核 **15/15**；
+>   修复 Oracle 改版后旧回放仍可批准；UI 新增回放状态/进度/结论/Oracle/审核条件面板。
+> - **长稳（PostgreSQL 16）**：见 `docs/RUN-013-WP4-SOAK.md`（真实 60 分钟 / ≥100 Run / 多故障注入）。
+> - **AI 真实能力**：DeepSeek Smoke **11/11**；诊断顾问 6 场景质量评估（结构/Schema/证据支持 1.0，
+>   Fallback 0，归一化采纳率 0.833，6 次 $0.001116，n=6 不外推）。
+> - **系统审查**：见 `docs/RUN-013-WP6-SYSTEM-REVIEW.md`；修复 `/system/health` 全局计数泄露。
+>
+> 仍 BLOCKED / NOT_RUN：B-17、宿主级网络隔离、外部真实站点、真实人工基线、
+> Benchmark 23×2（长稳占用隔离环境，NOT_RUN）、Nightly/Release Gate（无凭据）。
+> 以上均不标 PASS。
+
+---
+
 # 功能状态矩阵（更新至 2026-11-25 RUN-012）
 
 > **RUN-012 状态（2026-11-25，权威）**：`docs/RUN-012-FINAL-REPORT.md` 为准。

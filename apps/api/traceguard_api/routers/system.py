@@ -23,13 +23,17 @@ _browser_lock = threading.Lock()
 
 
 @router.get("/health")
-async def health() -> dict[str, Any]:
+async def health(request: Request) -> dict[str, Any]:
     rt = get_services().rt
+    # RUN-013 WP6：计数按调用方授权 Workspace 过滤（与 /system/metrics 同口径）。
+    allowed = scope_filter(
+        principal_of(request), None, resource_type="system_health", request=request
+    )
     return {
         "status": "ok",
         "app": rt.settings.app_name,
         "environment": rt.settings.environment,
-        **rt.health(),
+        **rt.health(workspace_ids=allowed),
     }
 
 
