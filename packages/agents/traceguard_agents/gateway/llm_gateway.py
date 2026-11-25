@@ -790,6 +790,11 @@ class LLMExplorerPlanner:
 
 VALID_FAILURE_DOMAINS = {"API", "NETWORK", "UI", "PERSISTENCE", "LOCATOR", "JS", "TIMEOUT"}
 
+#: 诊断顾问允许的最大候选数（与 Prompt 声明一致；超出部分直接丢弃）。
+MAX_DIAGNOSIS_HYPOTHESES = 3
+#: JSON 解析失败时的重试次数（一次重试足以覆盖围栏/截断等常见问题）。
+DIAGNOSIS_JSON_RETRIES = 1
+
 
 @dataclass
 class HypothesisCandidate:
@@ -799,6 +804,24 @@ class HypothesisCandidate:
     supporting_evidence_ids: list[str] = field(default_factory=list)
     confidence: float = 0.0
     suggested_by: str = "llm"
+    warnings: list[str] = field(default_factory=list)
+
+
+@dataclass
+class DiagnosisAdvice:
+    """诊断顾问的结构化输出（RUN-012 WP5）。
+
+    与其它三类顾问对齐：`called` 表示是否真的调用了模型，`fallback` 表示
+    **没有产出可用候选**（调用失败或输出全部越界），调用方据此回退规则引擎。
+    """
+
+    candidates: list[HypothesisCandidate] = field(default_factory=list)
+    called: bool = False
+    fallback: bool = False
+    error: str = ""
+    model: str = ""
+    dropped: int = 0
+    attempts: int = 0
     warnings: list[str] = field(default_factory=list)
 
 
@@ -838,8 +861,17 @@ class LLMDiagnosisAdvisor:
         symptom: str,
         failed_steps: list[dict[str, Any]],
         evidence_summary: list[dict[str, str]],
-    ) -> list[HypothesisCandidate]:
-        valid_ids = {e["evidence_id"] for e in evidence_summary}
+    ) -> DiagnosisAdvice:
+        """产出诊断候选假设（RUN-012 WP5：Schema 校验 + 重试 + fallback 标注）。
+
+        可靠性约定（与 compiler/probe/repair 三类顾问对齐）：
+        - **Schema 校验**：顶层必须是对象；`hypotheses` 必须是列表；越界条目直接丢弃并计数；
+        - **重试**：JSON 解析失败时有限重试（`DIAGNOSIS_JSON_RETRIES`），仍失败才回退；
+        - **fallback 标注**：没有产出任何可用候选时 `fallback=True`，调用方必须回退规则引擎，
+          绝不把「调用过但无结果」伪装成「有 AI 建议」；
+        - **虚构证据**：引用不存在的 evidence_id 一律剔除并留痕。
+        """
+        valid_ids = {e["evidence_id"] for e in evidence_summary if e.get("evidence_id")}
         model, route = (
             (self.router.reasoning_model, "pro")
             if self.use_pro
@@ -855,43 +887,110 @@ class LLMDiagnosisAdvisor:
         # 推理模型（Pro）的 reasoning tokens 计入 max_tokens，预算过小会导致
         # finish_reason=length 且 content 为空；按模型类型区分输出预算。
         max_tokens = 4000 if model == self.router.reasoning_model else 900
-        parsed, _ = self.provider.chat_json(
-            messages,
-            model=model,
-            agent="diagnosis",
-            task_id=self.task_id,
-            run_id=self.run_id,
-            prompt_version=f"deepseek:{model}:diagnosis_advisor@v1",
-            max_tokens=max_tokens,
-            tracker=self.tracker,
-        )
-        out: list[HypothesisCandidate] = []
-        for h in (parsed.get("hypotheses") or [])[:3]:
-            if not isinstance(h, dict):
-                continue
-            domain = str(h.get("failure_domain", "")).upper()
-            desc = str(h.get("description", ""))[:500]
-            if not desc or domain not in VALID_FAILURE_DOMAINS:
-                continue
-            ids = [i for i in (h.get("supporting_evidence_ids") or []) if isinstance(i, str)]
-            known = [i for i in ids if i in valid_ids]
-            fabricated = [i for i in ids if i not in valid_ids]
+
+        advice = DiagnosisAdvice(model=model)
+        parsed: dict[str, Any] | None = None
+        attempts = 0
+        last_error = ""
+        for attempt in range(1 + DIAGNOSIS_JSON_RETRIES):
+            attempts = attempt + 1
             try:
-                conf = min(max(float(h.get("confidence", 0.0)), 0.0), 1.0)
-            except (TypeError, ValueError):
-                conf = 0.0
-            out.append(
-                HypothesisCandidate(
-                    description=desc,
-                    failure_domain=domain,
-                    failure_mechanism=str(h.get("failure_mechanism", ""))[:120],
-                    supporting_evidence_ids=known,
-                    confidence=conf,
-                    suggested_by=f"llm:{model}",
-                    warnings=(["fabricated_evidence_id_removed"] if fabricated else []),
+                parsed, _ = self.provider.chat_json(
+                    messages,
+                    model=model,
+                    agent="diagnosis",
+                    task_id=self.task_id,
+                    run_id=self.run_id,
+                    prompt_version=f"deepseek:{model}:diagnosis_advisor@v1",
+                    max_tokens=max_tokens,
+                    tracker=self.tracker,
+                    json_retries=0,  # 重试由本层统一控制，避免重复计费
                 )
-            )
-        return out
+                advice.called = True
+                break
+            except LLMError as exc:
+                last_error = exc.kind
+                if exc.kind != "invalid_json":
+                    break
+                # 仅 JSON 解析失败值得重试；其它错误（鉴权/限流/网络）立即回退。
+        advice.attempts = attempts
+        if parsed is None:
+            advice.called = advice.called or attempts > 0
+            advice.fallback = True
+            advice.error = last_error or "llm_call_failed"
+            self.last_error = advice.error
+            return advice
+
+        raw_hypotheses = parsed.get("hypotheses")
+        if raw_hypotheses is None:
+            advice.warnings.append("missing_hypotheses_field")
+        elif not isinstance(raw_hypotheses, list):
+            advice.warnings.append("hypotheses_not_a_list")
+            raw_hypotheses = []
+        else:
+            for h in raw_hypotheses[:MAX_DIAGNOSIS_HYPOTHESES]:
+                candidate = self._validate_hypothesis(h, valid_ids, model, advice.warnings)
+                if candidate is None:
+                    advice.dropped += 1
+                    continue
+                advice.candidates.append(candidate)
+            if len(raw_hypotheses) > MAX_DIAGNOSIS_HYPOTHESES:
+                advice.dropped += len(raw_hypotheses) - MAX_DIAGNOSIS_HYPOTHESES
+
+        if not advice.candidates:
+            advice.fallback = True
+            advice.error = "llm_returned_no_valid_hypothesis"
+            self.last_error = advice.error
+        return advice
+
+    @staticmethod
+    def _validate_hypothesis(
+        raw: Any,
+        valid_ids: set[str],
+        model: str,
+        warnings: list[str],
+    ) -> HypothesisCandidate | None:
+        """单条假设的 Schema 与白名单校验；不合格返回 None（调用方计数丢弃）。"""
+        if not isinstance(raw, dict):
+            warnings.append("hypothesis_not_an_object")
+            return None
+        domain = str(raw.get("failure_domain", "")).strip().upper()
+        desc = str(raw.get("description", "")).strip()[:500]
+        if not desc:
+            warnings.append("hypothesis_missing_description")
+            return None
+        if domain not in VALID_FAILURE_DOMAINS:
+            warnings.append(f"hypothesis_domain_not_allowed: {domain or '<empty>'}")
+            return None
+        raw_ids = raw.get("supporting_evidence_ids")
+        if raw_ids is None:
+            raw_ids = []
+        elif not isinstance(raw_ids, list):
+            warnings.append("supporting_evidence_ids_not_a_list")
+            raw_ids = []
+        ids = [i for i in raw_ids if isinstance(i, str) and i.strip()]
+        known = [i for i in ids if i in valid_ids]
+        fabricated = [i for i in ids if i not in valid_ids]
+        # 没有任何真实证据支撑的假设不允许进入诊断（避免"凭空猜测"污染候选集）。
+        if not known:
+            warnings.append("hypothesis_without_real_evidence_dropped")
+            return None
+        try:
+            conf = min(max(float(raw.get("confidence", 0.0)), 0.0), 1.0)
+        except (TypeError, ValueError):
+            conf = 0.0
+        candidate_warnings = list(warnings) if fabricated else []
+        if fabricated:
+            candidate_warnings.append("fabricated_evidence_id_removed")
+        return HypothesisCandidate(
+            description=desc,
+            failure_domain=domain,
+            failure_mechanism=str(raw.get("failure_mechanism", ""))[:120],
+            supporting_evidence_ids=known,
+            confidence=conf,
+            suggested_by=f"llm:{model}",
+            warnings=candidate_warnings,
+        )
 
 
 # -------------------------------------------------------------- bootstrap

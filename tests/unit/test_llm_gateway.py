@@ -235,9 +235,11 @@ def test_advisor_fabricated_evidence_ids_removed():
         failed_steps=[{"step_id": "s1", "action": "click", "error": "assert failed"}],
         evidence_summary=[{"evidence_id": "evd_real1", "source_type": "network", "brief": "500"}],
     )
-    assert len(out) == 1
-    assert out[0].supporting_evidence_ids == ["evd_real1"]
-    assert out[0].warnings == ["fabricated_evidence_id_removed"]
+    # RUN-012 WP5：顾问返回结构化 DiagnosisAdvice（含 called/fallback/attempts）。
+    assert len(out.candidates) == 1
+    assert out.fallback is False
+    assert out.candidates[0].supporting_evidence_ids == ["evd_real1"]
+    assert out.candidates[0].warnings == ["fabricated_evidence_id_removed"]
 
 
 def test_advisor_domain_whitelist_and_confidence_clamp():
@@ -269,17 +271,23 @@ def test_advisor_domain_whitelist_and_confidence_clamp():
         prov, ModelRouter("deepseek-flash", "deepseek-v4-pro"), PromptManager()
     )
     out = advisor.suggest("sym", [], [])
-    assert len(out) == 1  # 非法域被丢弃
-    assert out[0].confidence == 0.0  # clamp 到 0
+    # 非法域被丢弃；剩余条目没有真实证据支撑（evidence 为空）→ 同样整条丢弃。
+    assert out.candidates == []
+    assert out.fallback is True
+    assert out.dropped == 2
 
 
 def test_advisor_llm_error_propagates_for_caller_fallback():
+    """RUN-012 WP5：错误不再冒泡，而是结构化为 fallback，调用方据此回退规则引擎。"""
     prov = FakeProvider(error=LLMError("rate_limit", "429"))
     advisor = LLMDiagnosisAdvisor(
         prov, ModelRouter("deepseek-flash", "deepseek-v4-pro"), PromptManager()
     )
-    with pytest.raises(LLMError):
-        advisor.suggest("sym", [], [])
+    out = advisor.suggest("sym", [], [])
+    assert out.fallback is True
+    assert out.error == "rate_limit"
+    assert out.candidates == []
+    assert out.attempts == 1
 
 
 # ---------------------------------------------------------------- usage/cost

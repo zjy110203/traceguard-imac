@@ -695,7 +695,9 @@ def main() -> int:
                     # 先在列表中选中本条提案，避免误操作列表首条
                     lead_p.click(f"tr:has-text('{proposal_id[-10:]}')")
                     lead_p.wait_for_timeout(1200)
-                    lead_p.click("button:has-text('批准')")  # 页面按钮是「批准」，确认弹窗按钮是「审批」
+                    lead_p.click(
+                        "button:has-text('批准')"
+                    )  # 页面按钮是「批准」，确认弹窗按钮是「审批」
                     lead_p.wait_for_timeout(1200)
                     lead_p.click(".confirm-dialog button:has-text('审批')")
                     lead_p.wait_for_timeout(1800)

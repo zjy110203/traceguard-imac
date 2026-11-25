@@ -617,11 +617,12 @@ class DiagnosisService:
             advisor = self._get_advisor(stack, run_id)
             if advisor is None:
                 return {"called": False, "skipped": "not_configured"}
-            candidates = advisor.suggest(
+            advice = advisor.suggest(
                 symptom=symptom,
                 failed_steps=failed_steps,
                 evidence_summary=evidence_summary,
             )
+            candidates = list(advice.candidates)
 
             # 域映射 + 复核 evidence id + 追加候选（不改已有规则假设）
             known_ids = {e.evidence_id for e in evidence_list}
@@ -654,11 +655,26 @@ class DiagnosisService:
                         "warnings": c.warnings,
                     }
                 )
+            fallbacks: list[str] = []
+            if advice.fallback:
+                # 调用了模型但没有可用候选 → 必须显式记录回退事实，不能伪装成"有 AI 建议"。
+                fallbacks.append(advice.error or "llm_no_valid_hypothesis")
+                logger.warning(
+                    "llm_advisor_fallback",
+                    error_kind=advice.error,
+                    attempts=advice.attempts,
+                    dropped=advice.dropped,
+                )
             return {
-                "called": True,
+                "called": bool(advice.called),
                 "added": added,
-                "model": advisor.router.default_model,
-                "fallbacks": [],
+                "model": advice.model,
+                "fallbacks": fallbacks,
+                "fallback": advice.fallback,
+                "error": advice.error,
+                "attempts": advice.attempts,
+                "dropped": advice.dropped,
+                "warnings": list(advice.warnings)[:10],
             }
         except LLMError as exc:
             logger.warning("llm_advisor_failed", error_kind=exc.kind)

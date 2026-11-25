@@ -131,3 +131,33 @@
 
 - compiler/healed 用例的「稳定性回放→审核」完整成功路径需多轮真实浏览器执行，本轮只验证入口可用；真实 LLM 模型输出路径待 WP5 覆盖。
 - 下一项：WP5 — AI 可靠性升级（Diagnosis Advisor JSON 解析、Schema、重试/Fallback、追踪与离线测试）。
+
+---
+
+## WP5：AI 可靠性升级
+
+- **开始时间**：2026-11-25 20:45 CST
+- **完成时间**：2026-11-25 20:57 CST
+
+### 修改内容
+
+1. 审查四类 LLM 调用点：Compiler / Probe / Repair 三类顾问已具备 Schema 校验、重试、fallback 标注与离线测试；
+   **Diagnosis 顾问是唯一缺口**（返回裸 list、异常冒泡、无追踪、零测试覆盖）。
+2. `packages/agents/traceguard_agents/gateway/llm_gateway.py`：新增 `DiagnosisAdvice` 结构化返回；
+   `LLMDiagnosisAdvisor.suggest()` 补 Schema 校验（顶层对象/hypotheses 列表/域白名单/描述非空）、
+   有限重试（仅 invalid_json）、fallback 标注、追踪字段（attempts/dropped/error/model/warnings）、
+   防虚构（无真实证据支撑的假设整条丢弃）；重试由本层控制，避免与 provider 层重复计费。
+3. `apps/api/traceguard_api/services/diagnosis_service.py`：调用层适配新契约，
+   `llm_advisor` 段落新增 fallback/error/attempts/dropped/warnings，回退写结构化日志。
+4. 新增 `tests/unit/test_llm_diagnosis_advisor_run012.py`（17 例）与
+   `tests/unit/test_diagnosis_llm_advisor_run012.py`（5 例），同步更新 `tests/unit/test_llm_gateway.py` 的 3 个旧用例。
+5. 新增 `docs/RUN-012-WP5-AI-RELIABILITY.md`。
+
+### 测试结果
+
+- WP5 专项：**22 passed**；全量：**760 passed, 16 skipped**；`ruff check`/`format` 通过。
+
+### 剩余问题 / 下一项
+
+- 本环境无 LLM 凭据，真实模型输出路径未验证（契约与边界已由离线 FakeProvider 覆盖）。
+- 下一项：WP6 — 质量与最终交付（全量门禁、长稳检查、RUN-012-WORKLOG/FINAL-REPORT/FEATURE-STATUS 更新与推送）。
