@@ -53,9 +53,14 @@ class ProbeSignal:
     run_scope: bool = False
 
 
-#: 时间对齐标记：ALIGNED = 可作为历史状态的证据；POST_HOC = 事后观测。
+#: 时间对齐标记（RUN-011-R1 WP2 三态语义，决策 R1-01）：
+#: - ALIGNED：有证据证明观测与 Run 时间窗口对齐，可作历史状态证据；
+#: - POST_HOC：明确发生在 Run 结束之后，只能反映"当前状态"；
+#: - UNKNOWN：无法确定观测时间。**时间未知 ≠ 时间已对齐**：
+#:   UNKNOWN 不得作为 CONFIRMED / EXCLUDED 的权威依据（决策 R1-02）。
 ALIGNED = "ALIGNED"
 POST_HOC = "POST_HOC"
+UNKNOWN = "UNKNOWN"
 
 
 @dataclass
@@ -208,11 +213,12 @@ def _hypotheses_by_mechanism(
 
 # ------------------------------------------------------------------ assessment
 def resolve_alignment(signal: ProbeSignal, run_ended_at: float | None) -> tuple[str, str]:
-    """判定探针观测与 Run 历史状态的时间对齐性。
+    """判定探针观测与 Run 历史状态的时间对齐性（RUN-011-R1 WP2 三态）。
 
     - run_scope=True：Run 作用域内采集 → ALIGNED；
     - 事后观测（observed_at > run_ended_at）：只能反映"当前状态" → POST_HOC；
-    - 时间未知：保守视为 ALIGNED，但在 notes 中如实标注 unknown_timing。
+    - 时间未知（observed_at=0 或 run_ended_at 缺失）→ **UNKNOWN**：
+      时间未知不等于时间已对齐（决策 R1-01）；UNKNOWN 不作权威确认/排除依据。
     """
     if signal.run_scope:
         return ALIGNED, ""
@@ -221,7 +227,10 @@ def resolve_alignment(signal: ProbeSignal, run_ended_at: float | None) -> tuple[
             f"probe observed_at={signal.observed_at:.0f} > run_ended_at={run_ended_at:.0f}: "
             "事后观测反映当前状态，不能冒充 Run 时历史状态"
         )
-    return ALIGNED, "unknown_timing: 未能证明 run 作用域，按 ALIGNED 保守处理并留痕"
+    return UNKNOWN, (
+        "unknown_timing: 观测时间无法确定（时间未知 ≠ 时间已对齐），"
+        "降权为 UNKNOWN：不作为 CONFIRMED/EXCLUDED 权威依据"
+    )
 
 
 def assess(
@@ -234,11 +243,12 @@ def assess(
     """把一次探针结果映射成对现有假设的支持/反驳/排除。
 
     RUN-010 WP4：所有更新带 time_alignment。
-    POST_HOC（事后观测）的裁决权降级：
+    RUN-011-R1 WP2（三态语义）：POST_HOC 与 UNKNOWN 的裁决权降级：
     - 不得作为权威确认（confirming 强制 False）；
     - 不得单独排除假设（exclude 强制 False，只记反驳）；
-    - 事后状态与 Run 时假设冲突时 → 生成"状态查询滞后（TIMING）"新假设，
-      而不是错误反驳 Run 时假设（RUN-009 误差分析的主根因之一）。
+    - 事后状态与 Run 时假设冲突时 → 生成"状态查询滞后（TIMING）"新假设
+      （仅 POST_HOC：已知发生在 Run 后；UNKNOWN 不生成，时间关系本身未知）；
+    - UNKNOWN 的 trust 标记 TIME_UNKNOWN（不持有 TRUSTED）。
     """
     alignment, alignment_note = resolve_alignment(signal, run_ended_at)
     result = FeedbackResult(
@@ -267,11 +277,15 @@ def assess(
         exclude: bool,
         reason: str,
     ) -> HypothesisUpdate:
-        # POST_HOC 裁决权降级（见 docstring）
+        # POST_HOC / UNKNOWN 裁决权降级（见 docstring；决策 R1-02）
         if alignment == POST_HOC:
             confirming = False
             exclude = False
             reason = f"[POST_HOC] {reason}"
+        elif alignment == UNKNOWN:
+            confirming = False
+            exclude = False
+            reason = f"[TIME_UNKNOWN] {reason}"
         return HypothesisUpdate(
             hid, relation, confirming, [evidence_id], exclude, reason, time_alignment=alignment
         )
@@ -287,13 +301,18 @@ def assess(
             mech = h.get("failure_mechanism")
             if mech == "PERSISTENCE":
                 if count == 0:
+                    # RUN-011-R1 WP2（决策 R1-04）：单次 count=0 不直接确认永久性
+                    # 持久化故障（TF-DB-004 延迟场景下单查询会误判）。
+                    # 只作支持证据（候选级）；确认须业务断言级证据
+                    # （diagnosis_service 的 failed_biz 规则）或多点一致证据。
                     result.updates.append(
                         upd(
                             hid,
-                            SUPPORT,
-                            True,
+                            "SUPPORT",
                             False,
-                            "独立状态查询 count=0：业务数据确实未持久化",
+                            False,
+                            "独立状态查询 count=0：业务数据未见持久化（单查询仅支持，"
+                            "不直接确认永久性故障；延迟复测后再评估 PERSISTENCE/TIMING）",
                         )
                     )
                 else:
@@ -538,10 +557,17 @@ def merge_signals(
             for eid in update.evidence_ids:
                 if eid in existing:
                     continue
-                # POST_HOC 证据不持有 TRUSTED：无法用于权威确认/排除
+                # POST_HOC / TIME_UNKNOWN 证据不持有 TRUSTED：
+                # 无法用于权威确认/排除（决策 R1-02）
+                if update.post_hoc:
+                    trust = "POST_HOC"
+                elif update.time_alignment == UNKNOWN:
+                    trust = "TIME_UNKNOWN"
+                else:
+                    trust = "TRUSTED"
                 ref = {
                     "id": eid,
-                    "trust": "POST_HOC" if update.post_hoc else "TRUSTED",
+                    "trust": trust,
                     "time_alignment": update.time_alignment,
                 }
                 if bucket == "supporting":
@@ -609,6 +635,7 @@ __all__ = [
     "NONE",
     "POST_HOC",
     "SUPPORT",
+    "UNKNOWN",
     "FeedbackResult",
     "HypothesisUpdate",
     "ProbeSignal",

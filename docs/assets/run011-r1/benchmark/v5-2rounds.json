@@ -1,0 +1,5196 @@
+{
+  "api": "http://127.0.0.1:8110",
+  "started_at": 1795579182.343194,
+  "rounds": [
+    {
+      "round": 1,
+      "samples": [
+        {
+          "scenario": "FALSE-PASS",
+          "testcase": "tcase_tf_false_pass",
+          "gt_mechanism": "PERSISTENCE",
+          "fault": "TF-DB-001",
+          "run_id": "run_1795579182397cd0806f29097",
+          "verdict": "FAILED",
+          "exec_ms": 5510.6,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "D_graph_ablation": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 2,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 2,
+              "feedback_rate": 0.5,
+              "time_alignments": [
+                "POST_HOC",
+                "POST_HOC"
+              ]
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 2,
+              "feedback_rate": 0.5,
+              "time_alignments": [
+                "UNKNOWN",
+                "UNKNOWN"
+              ]
+            },
+            "H_llm_advisor": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            }
+          },
+          "diagnosis_id": "diagnosis_1795579187904e44e2dab0c0e",
+          "diagnosis_latency_ms": 20.9,
+          "diagnosis_outcome": "PROBABLE",
+          "probe_plan_id": "probeplan_1795579187920fa86037cd0b7",
+          "probe_stop_reason": "STOP_NO_HIGH_VALUE_PROBE",
+          "probe_latency_ms": 35.2,
+          "real_probe_count": 2,
+          "probe_execution_success_rate": 1.0,
+          "probe_feedback_success_rate": 1.0,
+          "llm_arm": {
+            "called": false,
+            "skipped": "llm_error:invalid_json",
+            "model": null,
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 0,
+            "engine": "rule-v2+graph-adjudication",
+            "llm_diagnosis_id": "diagnosis_1795579199086a7768df42b9c"
+          },
+          "round": 1
+        },
+        {
+          "scenario": "UI-MISSING",
+          "testcase": "tcase_tf_ui_missing",
+          "gt_mechanism": "UI_RENDERING",
+          "fault": "TF-UI-001",
+          "run_id": "run_1795579199100409c74b1acbd",
+          "verdict": "FAILED",
+          "exec_ms": 6122.4,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579205218fe61e25095f2"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            },
+            "D_graph_ablation": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579205218fe61e25095f2"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579205218fe61e25095f2"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579205218fe61e25095f2"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579205218fe61e25095f2"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "H_llm_advisor": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955792052504aefb598e1d7"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            }
+          },
+          "diagnosis_id": "diagnosis_179557920522327327825a1d8",
+          "diagnosis_latency_ms": 12.0,
+          "diagnosis_outcome": "CONFIRMED",
+          "probe_plan_id": "probeplan_1795579205231af6635590cad",
+          "probe_stop_reason": "STOP_CONFIRMED",
+          "probe_latency_ms": 15.6,
+          "real_probe_count": 0,
+          "probe_execution_success_rate": null,
+          "probe_feedback_success_rate": null,
+          "llm_arm": {
+            "called": false,
+            "skipped": "llm_error:invalid_json",
+            "model": null,
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 0,
+            "engine": "rule-v2+graph-adjudication",
+            "llm_diagnosis_id": "diagnosis_1795579218133950cb44b7ff6"
+          },
+          "round": 1
+        },
+        {
+          "scenario": "API-500",
+          "testcase": "tcase_tf_api_error",
+          "gt_mechanism": "API",
+          "fault": "TF-API-001",
+          "run_id": "run_17955792181556e8e2597f655",
+          "verdict": "FAILED",
+          "exec_ms": 4320.0,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955792224664011487d4810"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            },
+            "D_graph_ablation": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955792224664011487d4810"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955792224664011487d4810"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955792224664011487d4810"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955792224664011487d4810"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "H_llm_advisor": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579222497697551718d29"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            }
+          },
+          "diagnosis_id": "diagnosis_1795579222471884945c48a1e",
+          "diagnosis_latency_ms": 11.3,
+          "diagnosis_outcome": "CONFIRMED",
+          "probe_plan_id": "probeplan_17955792224791cdb57e2ff5e",
+          "probe_stop_reason": "STOP_CONFIRMED",
+          "probe_latency_ms": 14.9,
+          "real_probe_count": 0,
+          "probe_execution_success_rate": null,
+          "probe_feedback_success_rate": null,
+          "llm_arm": {
+            "called": true,
+            "skipped": null,
+            "model": "deepseek-flash",
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 3,
+            "engine": "rule-v2+graph-adjudication+llm-advisor",
+            "llm_diagnosis_id": "diagnosis_1795579226533ea35040cc06f"
+          },
+          "round": 1
+        },
+        {
+          "scenario": "DB-DUP",
+          "testcase": "tcase_bench_db002",
+          "gt_mechanism": "PERSISTENCE",
+          "fault": "TF-DB-002",
+          "run_id": "run_17955792265501d01b5595856",
+          "verdict": "FAILED",
+          "exec_ms": 9159.7,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "D_graph_ablation": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 2,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 2,
+              "feedback_rate": 0.5,
+              "time_alignments": [
+                "POST_HOC",
+                "POST_HOC"
+              ]
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 2,
+              "feedback_rate": 0.5,
+              "time_alignments": [
+                "UNKNOWN",
+                "UNKNOWN"
+              ]
+            },
+            "H_llm_advisor": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            }
+          },
+          "diagnosis_id": "diagnosis_1795579235709eebe37e86ad0",
+          "diagnosis_latency_ms": 12.3,
+          "diagnosis_outcome": "PROBABLE",
+          "probe_plan_id": "probeplan_1795579235717b2486d0c3c7d",
+          "probe_stop_reason": "STOP_NO_HIGH_VALUE_PROBE",
+          "probe_latency_ms": 33.5,
+          "real_probe_count": 2,
+          "probe_execution_success_rate": 1.0,
+          "probe_feedback_success_rate": 1.0,
+          "llm_arm": {
+            "called": true,
+            "skipped": null,
+            "model": "deepseek-flash",
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 3,
+            "engine": "rule-v2+graph-adjudication+llm-advisor",
+            "llm_diagnosis_id": "diagnosis_1795579241142c0b87c4f4218"
+          },
+          "round": 1
+        },
+        {
+          "scenario": "DB-LAG-9S",
+          "testcase": "tcase_bench_db004",
+          "gt_mechanism": "TIMING",
+          "fault": "TF-DB-004",
+          "run_id": "run_1795579241154bc3dfc22a104",
+          "verdict": "FAILED",
+          "exec_ms": 4927.6,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "D_graph_ablation": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 2,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 2,
+              "feedback_rate": 0.5,
+              "time_alignments": [
+                "POST_HOC",
+                "POST_HOC"
+              ]
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 2,
+              "feedback_rate": 0.5,
+              "time_alignments": [
+                "UNKNOWN",
+                "UNKNOWN"
+              ]
+            },
+            "H_llm_advisor": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            }
+          },
+          "diagnosis_id": "diagnosis_17955792460853ad5083b3fc1",
+          "diagnosis_latency_ms": 14.1,
+          "diagnosis_outcome": "PROBABLE",
+          "probe_plan_id": "probeplan_1795579246096539ba52064e2",
+          "probe_stop_reason": "STOP_NO_HIGH_VALUE_PROBE",
+          "probe_latency_ms": 51.5,
+          "real_probe_count": 2,
+          "probe_execution_success_rate": 1.0,
+          "probe_feedback_success_rate": 1.0,
+          "llm_arm": {
+            "called": false,
+            "skipped": "llm_error:invalid_json",
+            "model": null,
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 0,
+            "engine": "rule-v2+graph-adjudication",
+            "llm_diagnosis_id": "diagnosis_1795579261196d1586cbe19cb"
+          },
+          "round": 1
+        },
+        {
+          "scenario": "UI-SILENT",
+          "testcase": "tcase_bench_ui002",
+          "gt_mechanism": "UI_RENDERING",
+          "fault": "TF-UI-002",
+          "run_id": "run_1795579261210dd15735e2c49",
+          "verdict": "FAILED",
+          "exec_ms": 4894.6,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "INCONCLUSIVE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "D_graph_ablation": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "INCONCLUSIVE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "INCONCLUSIVE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "INCONCLUSIVE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback_rate": 0.0,
+              "time_alignments": [
+                "POST_HOC",
+                "POST_HOC",
+                "POST_HOC"
+              ]
+            },
+            "G_probe_no_alignment": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "INCONCLUSIVE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback_rate": 0.0,
+              "time_alignments": [
+                "UNKNOWN",
+                "UNKNOWN",
+                "UNKNOWN"
+              ]
+            },
+            "H_llm_advisor": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "INCONCLUSIVE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            }
+          },
+          "diagnosis_id": "diagnosis_1795579266107bd6be1a8117f",
+          "diagnosis_latency_ms": 15.1,
+          "diagnosis_outcome": "INCONCLUSIVE",
+          "probe_plan_id": "probeplan_179557926611647162c5fcac3",
+          "probe_stop_reason": "STOP_ITERATION_LIMIT",
+          "probe_latency_ms": 51.9,
+          "real_probe_count": 3,
+          "probe_execution_success_rate": 1.0,
+          "probe_feedback_success_rate": 1.0,
+          "llm_arm": {
+            "called": false,
+            "skipped": "llm_error:invalid_json",
+            "model": null,
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 0,
+            "engine": "rule-v2+graph-adjudication",
+            "llm_diagnosis_id": "diagnosis_1795579277288feb522730c39"
+          },
+          "round": 1
+        },
+        {
+          "scenario": "UI-MISLEAD",
+          "testcase": "tcase_bench_ui003",
+          "gt_mechanism": "UI_RENDERING",
+          "fault": "TF-UI-003",
+          "run_id": "run_1795579277303f6c0d74b4ab6",
+          "verdict": "FAILED",
+          "exec_ms": 5046.1,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_179557928234645a2f4bd8b95"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            },
+            "D_graph_ablation": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_179557928234645a2f4bd8b95"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_179557928234645a2f4bd8b95"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_179557928234645a2f4bd8b95"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_179557928234645a2f4bd8b95"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "H_llm_advisor": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579282379df5279c5ecfc"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            }
+          },
+          "diagnosis_id": "diagnosis_17955792823515b215f3d7397",
+          "diagnosis_latency_ms": 12.8,
+          "diagnosis_outcome": "CONFIRMED",
+          "probe_plan_id": "probeplan_179557928236070325d73cc7b",
+          "probe_stop_reason": "STOP_CONFIRMED",
+          "probe_latency_ms": 16.7,
+          "real_probe_count": 0,
+          "probe_execution_success_rate": null,
+          "probe_feedback_success_rate": null,
+          "llm_arm": {
+            "called": true,
+            "skipped": null,
+            "model": "deepseek-flash",
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 3,
+            "engine": "rule-v2+graph-adjudication+llm-advisor",
+            "llm_diagnosis_id": "diagnosis_1795579298108d86ce3f9dbb3"
+          },
+          "round": 1
+        },
+        {
+          "scenario": "UI-DELAYED",
+          "round": 1,
+          "error": "RuntimeError: POST /api/v1/runs/run_1795579298130a6604ef153ad/diagnose?use_llm=false -> 412: {\"detail\":{\"code\":\"PRECONDITION_FAILED\",\"message\":\"run PASSED：无失败症状可诊断（不做伪诊断）\"}}"
+        },
+        {
+          "scenario": "API-503",
+          "testcase": "tcase_bench_api002",
+          "gt_mechanism": "API",
+          "fault": "TF-API-002",
+          "run_id": "run_179557930612478328b349cf0",
+          "verdict": "FAILED",
+          "exec_ms": 4892.2,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955793110137b382bb15661"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            },
+            "D_graph_ablation": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955793110137b382bb15661"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955793110137b382bb15661"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955793110137b382bb15661"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955793110137b382bb15661"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "H_llm_advisor": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_179557931105390b7f1ca1bce"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            }
+          },
+          "diagnosis_id": "diagnosis_1795579311021c4e20201e871",
+          "diagnosis_latency_ms": 18.3,
+          "diagnosis_outcome": "CONFIRMED",
+          "probe_plan_id": "probeplan_179557931103146053ff00e14",
+          "probe_stop_reason": "STOP_CONFIRMED",
+          "probe_latency_ms": 20.0,
+          "real_probe_count": 0,
+          "probe_execution_success_rate": null,
+          "probe_feedback_success_rate": null,
+          "llm_arm": {
+            "called": true,
+            "skipped": null,
+            "model": "deepseek-flash",
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 3,
+            "engine": "rule-v2+graph-adjudication+llm-advisor",
+            "llm_diagnosis_id": "diagnosis_1795579325118f1f7717bb6e9"
+          },
+          "round": 1
+        },
+        {
+          "scenario": "API-EDIT-500",
+          "round": 1,
+          "error": "RuntimeError: POST /api/v1/runs/run_1795579325132e58d50d68c9e/diagnose?use_llm=false -> 412: {\"detail\":{\"code\":\"PRECONDITION_FAILED\",\"message\":\"run PASSED：无失败症状可诊断（不做伪诊断）\"}}"
+        },
+        {
+          "scenario": "API-EDIT-503",
+          "round": 1,
+          "error": "RuntimeError: POST /api/v1/runs/run_1795579334906a232f02fe7ab/diagnose?use_llm=false -> 412: {\"detail\":{\"code\":\"PRECONDITION_FAILED\",\"message\":\"run PASSED：无失败症状可诊断（不做伪诊断）\"}}"
+        },
+        {
+          "scenario": "NET-TIMEOUT",
+          "testcase": "tcase_bench_net002",
+          "gt_mechanism": "NETWORK",
+          "fault": "TF-NET-002",
+          "run_id": "run_179557934405596978d0402b0",
+          "verdict": "FAILED",
+          "exec_ms": 15926.3,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "INCONCLUSIVE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "D_graph_ablation": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "INCONCLUSIVE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "INCONCLUSIVE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "INCONCLUSIVE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback_rate": 0.0,
+              "time_alignments": [
+                "POST_HOC",
+                "POST_HOC",
+                "POST_HOC"
+              ]
+            },
+            "G_probe_no_alignment": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "INCONCLUSIVE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback_rate": 0.0,
+              "time_alignments": [
+                "UNKNOWN",
+                "UNKNOWN",
+                "UNKNOWN"
+              ]
+            },
+            "H_llm_advisor": {
+              "mechanism": "API",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            }
+          },
+          "diagnosis_id": "diagnosis_1795579359985ae510c14ef3b",
+          "diagnosis_latency_ms": 14.8,
+          "diagnosis_outcome": "INCONCLUSIVE",
+          "probe_plan_id": "probeplan_1795579359994a2f85bced8a1",
+          "probe_stop_reason": "STOP_ITERATION_LIMIT",
+          "probe_latency_ms": 51.2,
+          "real_probe_count": 3,
+          "probe_execution_success_rate": 1.0,
+          "probe_feedback_success_rate": 1.0,
+          "llm_arm": {
+            "called": true,
+            "skipped": null,
+            "model": "deepseek-flash",
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 3,
+            "engine": "rule-v2+graph-adjudication+llm-advisor",
+            "llm_diagnosis_id": "diagnosis_1795579373996ebc68d1ebd0a"
+          },
+          "round": 1
+        },
+        {
+          "scenario": "LOC-SUBMIT",
+          "testcase": "tcase_bench_loc001",
+          "gt_mechanism": "LOCATOR",
+          "fault": "TF-LOC-001",
+          "run_id": "run_1795579374010f0b71904ed32",
+          "verdict": "NOT_EVALUATED",
+          "exec_ms": 12806.4,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "NOT_EVALUATED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "D_graph_ablation": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback_rate": 0.6667,
+              "time_alignments": [
+                "POST_HOC",
+                "POST_HOC",
+                "POST_HOC"
+              ]
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback_rate": 0.6667,
+              "time_alignments": [
+                "UNKNOWN",
+                "UNKNOWN",
+                "UNKNOWN"
+              ]
+            },
+            "H_llm_advisor": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            }
+          },
+          "diagnosis_id": "diagnosis_1795579386820b1a8d78b284f",
+          "diagnosis_latency_ms": 15.8,
+          "diagnosis_outcome": "PROBABLE",
+          "probe_plan_id": "probeplan_1795579386829eb856e3c17ce",
+          "probe_stop_reason": "STOP_ITERATION_LIMIT",
+          "probe_latency_ms": 50.2,
+          "real_probe_count": 3,
+          "probe_execution_success_rate": 1.0,
+          "probe_feedback_success_rate": 1.0,
+          "llm_arm": {
+            "called": false,
+            "skipped": "llm_error:invalid_json",
+            "model": null,
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 0,
+            "engine": "rule-v2+graph-adjudication",
+            "llm_diagnosis_id": "diagnosis_1795579405082439259d73d0b"
+          },
+          "round": 1
+        },
+        {
+          "scenario": "LOC-NAME",
+          "testcase": "tcase_bench_loc002",
+          "gt_mechanism": "LOCATOR",
+          "fault": "TF-LOC-002",
+          "run_id": "run_1795579405096031300b897bc",
+          "verdict": "NOT_EVALUATED",
+          "exec_ms": 12857.7,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "NOT_EVALUATED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "INCONCLUSIVE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "D_graph_ablation": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "INCONCLUSIVE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "INCONCLUSIVE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback_rate": 0.6667,
+              "time_alignments": [
+                "POST_HOC",
+                "POST_HOC",
+                "POST_HOC"
+              ]
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback_rate": 0.6667,
+              "time_alignments": [
+                "UNKNOWN",
+                "UNKNOWN",
+                "UNKNOWN"
+              ]
+            },
+            "H_llm_advisor": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            }
+          },
+          "diagnosis_id": "diagnosis_1795579417956c51b1559dec8",
+          "diagnosis_latency_ms": 13.5,
+          "diagnosis_outcome": "INCONCLUSIVE",
+          "probe_plan_id": "probeplan_17955794179647c52ed77ab11",
+          "probe_stop_reason": "STOP_ITERATION_LIMIT",
+          "probe_latency_ms": 48.0,
+          "real_probe_count": 3,
+          "probe_execution_success_rate": 1.0,
+          "probe_feedback_success_rate": 1.0,
+          "llm_arm": {
+            "called": true,
+            "skipped": null,
+            "model": "deepseek-flash",
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 3,
+            "engine": "rule-v2+graph-adjudication+llm-advisor",
+            "llm_diagnosis_id": "diagnosis_17955794300492d94d055adb4"
+          },
+          "round": 1
+        },
+        {
+          "scenario": "TIME-STRONG",
+          "round": 1,
+          "error": "RuntimeError: POST /api/v1/runs/run_1795579430064a00b5ebd2a1b/diagnose?use_llm=false -> 412: {\"detail\":{\"code\":\"PRECONDITION_FAILED\",\"message\":\"run PASSED：无失败症状可诊断（不做伪诊断）\"}}"
+        },
+        {
+          "scenario": "TIME-RACE",
+          "testcase": "tcase_bench_time003",
+          "gt_mechanism": "TIMING",
+          "fault": "TF-TIME-003",
+          "run_id": "run_17955794430067f73000d8f14",
+          "verdict": "NOT_EVALUATED",
+          "exec_ms": 12787.0,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "NOT_EVALUATED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "D_graph_ablation": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback_rate": 0.6667,
+              "time_alignments": [
+                "POST_HOC",
+                "POST_HOC",
+                "POST_HOC"
+              ]
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback_rate": 0.6667,
+              "time_alignments": [
+                "UNKNOWN",
+                "UNKNOWN",
+                "UNKNOWN"
+              ]
+            },
+            "H_llm_advisor": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            }
+          },
+          "diagnosis_id": "diagnosis_1795579455795d5e753966bee",
+          "diagnosis_latency_ms": 14.1,
+          "diagnosis_outcome": "PROBABLE",
+          "probe_plan_id": "probeplan_179557945580284838d4468df",
+          "probe_stop_reason": "STOP_ITERATION_LIMIT",
+          "probe_latency_ms": 46.9,
+          "real_probe_count": 3,
+          "probe_execution_success_rate": 1.0,
+          "probe_feedback_success_rate": 1.0,
+          "llm_arm": {
+            "called": false,
+            "skipped": "llm_error:invalid_json",
+            "model": null,
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 0,
+            "engine": "rule-v2+graph-adjudication",
+            "llm_diagnosis_id": "diagnosis_17955794664071d9382f61bad"
+          },
+          "round": 1
+        },
+        {
+          "scenario": "SEC-CREATE-403",
+          "testcase": "tcase_bench_sec001",
+          "gt_mechanism": "AUTHORIZATION",
+          "fault": "TF-SEC-001",
+          "run_id": "run_17955794664212472edd12604",
+          "verdict": "FAILED",
+          "exec_ms": 5492.1,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "AUTHORIZATION",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579471908da8301bc8c67"
+              ],
+              "disposition": "TEST_EXECUTION_ISSUE"
+            },
+            "D_graph_ablation": {
+              "mechanism": "AUTHORIZATION",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579471908da8301bc8c67"
+              ],
+              "disposition": "TEST_EXECUTION_ISSUE"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "AUTHORIZATION",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579471908da8301bc8c67"
+              ],
+              "disposition": "TEST_EXECUTION_ISSUE",
+              "probes_used": 0,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "AUTHORIZATION",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579471908da8301bc8c67"
+              ],
+              "disposition": "TEST_EXECUTION_ISSUE",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "AUTHORIZATION",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579471908da8301bc8c67"
+              ],
+              "disposition": "TEST_EXECUTION_ISSUE",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "H_llm_advisor": {
+              "mechanism": "AUTHORIZATION",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579471944f4bff6420642"
+              ],
+              "disposition": "TEST_EXECUTION_ISSUE"
+            }
+          },
+          "diagnosis_id": "diagnosis_1795579471915da19d5b42370",
+          "diagnosis_latency_ms": 13.0,
+          "diagnosis_outcome": "CONFIRMED",
+          "probe_plan_id": "probeplan_17955794719232c0fc5b2bdc7",
+          "probe_stop_reason": "STOP_CONFIRMED",
+          "probe_latency_ms": 18.6,
+          "real_probe_count": 0,
+          "probe_execution_success_rate": null,
+          "probe_feedback_success_rate": null,
+          "llm_arm": {
+            "called": true,
+            "skipped": null,
+            "model": "deepseek-flash",
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 3,
+            "engine": "rule-v2+graph-adjudication+llm-advisor",
+            "llm_diagnosis_id": "diagnosis_1795579479172ec08e6470afb"
+          },
+          "round": 1
+        },
+        {
+          "scenario": "SEC-LIST-403",
+          "testcase": "tcase_bench_sec002",
+          "gt_mechanism": "AUTHORIZATION",
+          "fault": "TF-SEC-002",
+          "run_id": "run_17955794791891ba8e53c2abf",
+          "verdict": "FAILED",
+          "exec_ms": 7347.1,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "AUTHORIZATION",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955794865340cb6d96dd124",
+                "hyp_17955794865341dbe20ff95b2"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            },
+            "D_graph_ablation": {
+              "mechanism": "AUTHORIZATION",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955794865340cb6d96dd124",
+                "hyp_17955794865341dbe20ff95b2"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "AUTHORIZATION",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955794865340cb6d96dd124",
+                "hyp_17955794865341dbe20ff95b2"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "AUTHORIZATION",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955794865340cb6d96dd124",
+                "hyp_17955794865341dbe20ff95b2"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "AUTHORIZATION",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955794865340cb6d96dd124",
+                "hyp_17955794865341dbe20ff95b2"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "H_llm_advisor": {
+              "mechanism": "AUTHORIZATION",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579486572103706e3a13e",
+                "hyp_17955794865722e77fa2890c3"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            }
+          },
+          "diagnosis_id": "diagnosis_17955794865402e3d99ad6f49",
+          "diagnosis_latency_ms": 17.2,
+          "diagnosis_outcome": "CONFIRMED",
+          "probe_plan_id": "probeplan_1795579486549d01e14e511e3",
+          "probe_stop_reason": "STOP_CONFIRMED",
+          "probe_latency_ms": 19.0,
+          "real_probe_count": 0,
+          "probe_execution_success_rate": null,
+          "probe_feedback_success_rate": null,
+          "llm_arm": {
+            "called": false,
+            "skipped": "llm_error:invalid_json",
+            "model": null,
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 0,
+            "engine": "rule-v2+graph-adjudication",
+            "llm_diagnosis_id": "diagnosis_1795579499541bc17f4d0458e"
+          },
+          "round": 1
+        },
+        {
+          "scenario": "COMP-API-UI",
+          "testcase": "tcase_bench_comp001",
+          "gt_mechanism": "API",
+          "fault": "TF-COMP-001",
+          "run_id": "run_1795579499555d1182862d816",
+          "verdict": "FAILED",
+          "exec_ms": 4881.4,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_179557950443383b7f793cab2"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            },
+            "D_graph_ablation": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_179557950443383b7f793cab2"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_179557950443383b7f793cab2"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_179557950443383b7f793cab2"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_179557950443383b7f793cab2"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "H_llm_advisor": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579504473a4827ad5615b"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            }
+          },
+          "diagnosis_id": "diagnosis_17955795044422a9c723ddffe",
+          "diagnosis_latency_ms": 17.2,
+          "diagnosis_outcome": "CONFIRMED",
+          "probe_plan_id": "probeplan_1795579504451f8cfaa4c14f4",
+          "probe_stop_reason": "STOP_CONFIRMED",
+          "probe_latency_ms": 19.9,
+          "real_probe_count": 0,
+          "probe_execution_success_rate": null,
+          "probe_feedback_success_rate": null,
+          "llm_arm": {
+            "called": false,
+            "skipped": "llm_error:invalid_json",
+            "model": null,
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 0,
+            "engine": "rule-v2+graph-adjudication",
+            "llm_diagnosis_id": "diagnosis_17955795171790ae65ed0e6a2"
+          },
+          "round": 1
+        },
+        {
+          "scenario": "COMP-DB-TIME",
+          "testcase": "tcase_bench_comp002",
+          "gt_mechanism": "PERSISTENCE",
+          "fault": "TF-COMP-002",
+          "run_id": "run_17955795172079d7fcd9c4226",
+          "verdict": "FAILED",
+          "exec_ms": 9179.8,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "D_graph_ablation": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 2,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 2,
+              "feedback_rate": 0.5,
+              "time_alignments": [
+                "POST_HOC",
+                "POST_HOC"
+              ]
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 2,
+              "feedback_rate": 0.5,
+              "time_alignments": [
+                "UNKNOWN",
+                "UNKNOWN"
+              ]
+            },
+            "H_llm_advisor": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            }
+          },
+          "diagnosis_id": "diagnosis_17955795263883b1a4cabb1cd",
+          "diagnosis_latency_ms": 14.6,
+          "diagnosis_outcome": "PROBABLE",
+          "probe_plan_id": "probeplan_1795579526396c0652ee196d3",
+          "probe_stop_reason": "STOP_NO_HIGH_VALUE_PROBE",
+          "probe_latency_ms": 34.3,
+          "real_probe_count": 2,
+          "probe_execution_success_rate": 1.0,
+          "probe_feedback_success_rate": 1.0,
+          "llm_arm": {
+            "called": false,
+            "skipped": "llm_error:invalid_json",
+            "model": null,
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 0,
+            "engine": "rule-v2+graph-adjudication",
+            "llm_diagnosis_id": "diagnosis_17955795362568b17bdc683b4"
+          },
+          "round": 1
+        },
+        {
+          "scenario": "COMP-LOC-UI",
+          "testcase": "tcase_bench_comp003",
+          "gt_mechanism": "LOCATOR",
+          "fault": "TF-COMP-003",
+          "run_id": "run_179557953627009c742d40973",
+          "verdict": "NOT_EVALUATED",
+          "exec_ms": 12794.5,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "NOT_EVALUATED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "D_graph_ablation": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback_rate": 0.6667,
+              "time_alignments": [
+                "POST_HOC",
+                "POST_HOC",
+                "POST_HOC"
+              ]
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback_rate": 0.6667,
+              "time_alignments": [
+                "UNKNOWN",
+                "UNKNOWN",
+                "UNKNOWN"
+              ]
+            },
+            "H_llm_advisor": {
+              "mechanism": "API",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            }
+          },
+          "diagnosis_id": "diagnosis_1795579549070ada31b9a575c",
+          "diagnosis_latency_ms": 17.8,
+          "diagnosis_outcome": "PROBABLE",
+          "probe_plan_id": "probeplan_179557954908367f817021b3d",
+          "probe_stop_reason": "STOP_ITERATION_LIMIT",
+          "probe_latency_ms": 60.7,
+          "real_probe_count": 3,
+          "probe_execution_success_rate": 1.0,
+          "probe_feedback_success_rate": 1.0,
+          "llm_arm": {
+            "called": true,
+            "skipped": null,
+            "model": "deepseek-flash",
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 3,
+            "engine": "rule-v2+graph-adjudication+llm-advisor",
+            "llm_diagnosis_id": "diagnosis_17955795593266156759d2c84"
+          },
+          "round": 1
+        },
+        {
+          "scenario": "FLAKY-DB",
+          "round": 1,
+          "error": "RuntimeError: POST /api/v1/runs/run_1795579559342855d6e64ec50/diagnose?use_llm=false -> 412: {\"detail\":{\"code\":\"PRECONDITION_FAILED\",\"message\":\"run PASSED：无失败症状可诊断（不做伪诊断）\"}}"
+        },
+        {
+          "scenario": "FLAKY-API",
+          "testcase": "tcase_bench_flaky002",
+          "gt_mechanism": "API",
+          "fault": "TF-FLAKY-002",
+          "run_id": "run_1795579564244498d15fdd2b9",
+          "verdict": "FAILED",
+          "exec_ms": 5010.2,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955795692499a70c1565492"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            },
+            "D_graph_ablation": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955795692499a70c1565492"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955795692499a70c1565492"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955795692499a70c1565492"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955795692499a70c1565492"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "H_llm_advisor": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579569297c8e37a2f3b65"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            }
+          },
+          "diagnosis_id": "diagnosis_17955795692616d73dcb06b64",
+          "diagnosis_latency_ms": 20.0,
+          "diagnosis_outcome": "CONFIRMED",
+          "probe_plan_id": "probeplan_17955795692706f74e81056e3",
+          "probe_stop_reason": "STOP_CONFIRMED",
+          "probe_latency_ms": 23.8,
+          "real_probe_count": 0,
+          "probe_execution_success_rate": null,
+          "probe_feedback_success_rate": null,
+          "llm_arm": {
+            "called": false,
+            "skipped": "llm_error:invalid_json",
+            "model": null,
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 0,
+            "engine": "rule-v2+graph-adjudication",
+            "llm_diagnosis_id": "diagnosis_1795579582075e39ae25aeb5c"
+          },
+          "round": 1
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "samples": [
+        {
+          "scenario": "FALSE-PASS",
+          "testcase": "tcase_tf_false_pass",
+          "gt_mechanism": "PERSISTENCE",
+          "fault": "TF-DB-001",
+          "run_id": "run_1795579582087f5ec04bd5526",
+          "verdict": "FAILED",
+          "exec_ms": 5498.2,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "D_graph_ablation": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 2,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 2,
+              "feedback_rate": 0.5,
+              "time_alignments": [
+                "POST_HOC",
+                "POST_HOC"
+              ]
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 2,
+              "feedback_rate": 0.5,
+              "time_alignments": [
+                "UNKNOWN",
+                "UNKNOWN"
+              ]
+            },
+            "H_llm_advisor": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            }
+          },
+          "diagnosis_id": "diagnosis_17955795875913a88cf8fbab1",
+          "diagnosis_latency_ms": 16.9,
+          "diagnosis_outcome": "PROBABLE",
+          "probe_plan_id": "probeplan_17955795875999ddecb4e56f9",
+          "probe_stop_reason": "STOP_NO_HIGH_VALUE_PROBE",
+          "probe_latency_ms": 33.7,
+          "real_probe_count": 2,
+          "probe_execution_success_rate": 1.0,
+          "probe_feedback_success_rate": 1.0,
+          "llm_arm": {
+            "called": true,
+            "skipped": null,
+            "model": "deepseek-flash",
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 3,
+            "engine": "rule-v2+graph-adjudication+llm-advisor",
+            "llm_diagnosis_id": "diagnosis_1795579599675fcff1608f20b"
+          },
+          "round": 2
+        },
+        {
+          "scenario": "UI-MISSING",
+          "testcase": "tcase_tf_ui_missing",
+          "gt_mechanism": "UI_RENDERING",
+          "fault": "TF-UI-001",
+          "run_id": "run_1795579599696974f8848153a",
+          "verdict": "FAILED",
+          "exec_ms": 5509.9,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579605203b20f2f5992b7"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            },
+            "D_graph_ablation": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579605203b20f2f5992b7"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579605203b20f2f5992b7"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579605203b20f2f5992b7"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579605203b20f2f5992b7"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "H_llm_advisor": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955796052660edb2e0bba26"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            }
+          },
+          "diagnosis_id": "diagnosis_17955796052118af6fbef5215",
+          "diagnosis_latency_ms": 21.5,
+          "diagnosis_outcome": "CONFIRMED",
+          "probe_plan_id": "probeplan_179557960522001f73d0ce568",
+          "probe_stop_reason": "STOP_CONFIRMED",
+          "probe_latency_ms": 35.6,
+          "real_probe_count": 0,
+          "probe_execution_success_rate": null,
+          "probe_feedback_success_rate": null,
+          "llm_arm": {
+            "called": true,
+            "skipped": null,
+            "model": "deepseek-flash",
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 3,
+            "engine": "rule-v2+graph-adjudication+llm-advisor",
+            "llm_diagnosis_id": "diagnosis_179557961504991d26b2dfb09"
+          },
+          "round": 2
+        },
+        {
+          "scenario": "API-500",
+          "testcase": "tcase_tf_api_error",
+          "gt_mechanism": "API",
+          "fault": "TF-API-001",
+          "run_id": "run_17955796150707b022c4a4e45",
+          "verdict": "FAILED",
+          "exec_ms": 3689.0,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579618752d4303f92ae3f"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            },
+            "D_graph_ablation": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579618752d4303f92ae3f"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579618752d4303f92ae3f"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579618752d4303f92ae3f"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579618752d4303f92ae3f"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "H_llm_advisor": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955796187940b0f0a5fdedc"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            }
+          },
+          "diagnosis_id": "diagnosis_179557961876018cf7845b574",
+          "diagnosis_latency_ms": 15.6,
+          "diagnosis_outcome": "CONFIRMED",
+          "probe_plan_id": "probeplan_1795579618768022ac961d791",
+          "probe_stop_reason": "STOP_CONFIRMED",
+          "probe_latency_ms": 19.5,
+          "real_probe_count": 0,
+          "probe_execution_success_rate": null,
+          "probe_feedback_success_rate": null,
+          "llm_arm": {
+            "called": false,
+            "skipped": "llm_error:invalid_json",
+            "model": null,
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 0,
+            "engine": "rule-v2+graph-adjudication",
+            "llm_diagnosis_id": "diagnosis_179557962956232a19752ee48"
+          },
+          "round": 2
+        },
+        {
+          "scenario": "DB-DUP",
+          "testcase": "tcase_bench_db002",
+          "gt_mechanism": "PERSISTENCE",
+          "fault": "TF-DB-002",
+          "run_id": "run_179557962958691f742930964",
+          "verdict": "FAILED",
+          "exec_ms": 9163.6,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "D_graph_ablation": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 2,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 2,
+              "feedback_rate": 0.5,
+              "time_alignments": [
+                "POST_HOC",
+                "POST_HOC"
+              ]
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 2,
+              "feedback_rate": 0.5,
+              "time_alignments": [
+                "UNKNOWN",
+                "UNKNOWN"
+              ]
+            },
+            "H_llm_advisor": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            }
+          },
+          "diagnosis_id": "diagnosis_1795579638750d76812e19956",
+          "diagnosis_latency_ms": 17.1,
+          "diagnosis_outcome": "PROBABLE",
+          "probe_plan_id": "probeplan_179557963875924cc0d44801d",
+          "probe_stop_reason": "STOP_NO_HIGH_VALUE_PROBE",
+          "probe_latency_ms": 42.9,
+          "real_probe_count": 2,
+          "probe_execution_success_rate": 1.0,
+          "probe_feedback_success_rate": 1.0,
+          "llm_arm": {
+            "called": false,
+            "skipped": "llm_error:invalid_json",
+            "model": null,
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 0,
+            "engine": "rule-v2+graph-adjudication",
+            "llm_diagnosis_id": "diagnosis_1795579651597e30c0b331969"
+          },
+          "round": 2
+        },
+        {
+          "scenario": "DB-LAG-9S",
+          "testcase": "tcase_bench_db004",
+          "gt_mechanism": "TIMING",
+          "fault": "TF-DB-004",
+          "run_id": "run_1795579651612850e31e0f5d6",
+          "verdict": "FAILED",
+          "exec_ms": 4905.4,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "D_graph_ablation": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 2,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 2,
+              "feedback_rate": 0.5,
+              "time_alignments": [
+                "POST_HOC",
+                "POST_HOC"
+              ]
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 2,
+              "feedback_rate": 0.5,
+              "time_alignments": [
+                "UNKNOWN",
+                "UNKNOWN"
+              ]
+            },
+            "H_llm_advisor": {
+              "mechanism": "API",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            }
+          },
+          "diagnosis_id": "diagnosis_17955796565217b77d521d6e4",
+          "diagnosis_latency_ms": 16.1,
+          "diagnosis_outcome": "PROBABLE",
+          "probe_plan_id": "probeplan_17955796565295e431ef7a2b9",
+          "probe_stop_reason": "STOP_NO_HIGH_VALUE_PROBE",
+          "probe_latency_ms": 34.0,
+          "real_probe_count": 2,
+          "probe_execution_success_rate": 1.0,
+          "probe_feedback_success_rate": 1.0,
+          "llm_arm": {
+            "called": true,
+            "skipped": null,
+            "model": "deepseek-flash",
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 3,
+            "engine": "rule-v2+graph-adjudication+llm-advisor",
+            "llm_diagnosis_id": "diagnosis_17955796662333b3f03d3dfb8"
+          },
+          "round": 2
+        },
+        {
+          "scenario": "UI-SILENT",
+          "testcase": "tcase_bench_ui002",
+          "gt_mechanism": "UI_RENDERING",
+          "fault": "TF-UI-002",
+          "run_id": "run_17955796662565333397dc2ea",
+          "verdict": "FAILED",
+          "exec_ms": 4900.2,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "INCONCLUSIVE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "D_graph_ablation": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "INCONCLUSIVE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "INCONCLUSIVE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "INCONCLUSIVE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback_rate": 0.0,
+              "time_alignments": [
+                "POST_HOC",
+                "POST_HOC",
+                "POST_HOC"
+              ]
+            },
+            "G_probe_no_alignment": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "INCONCLUSIVE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback_rate": 0.0,
+              "time_alignments": [
+                "UNKNOWN",
+                "UNKNOWN",
+                "UNKNOWN"
+              ]
+            },
+            "H_llm_advisor": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            }
+          },
+          "diagnosis_id": "diagnosis_17955796711531a5f95a39603",
+          "diagnosis_latency_ms": 15.5,
+          "diagnosis_outcome": "INCONCLUSIVE",
+          "probe_plan_id": "probeplan_17955796711621b60867ea2e8",
+          "probe_stop_reason": "STOP_ITERATION_LIMIT",
+          "probe_latency_ms": 53.3,
+          "real_probe_count": 3,
+          "probe_execution_success_rate": 1.0,
+          "probe_feedback_success_rate": 1.0,
+          "llm_arm": {
+            "called": true,
+            "skipped": null,
+            "model": "deepseek-flash",
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 3,
+            "engine": "rule-v2+graph-adjudication+llm-advisor",
+            "llm_diagnosis_id": "diagnosis_179557967504134ad9be1a2b0"
+          },
+          "round": 2
+        },
+        {
+          "scenario": "UI-MISLEAD",
+          "testcase": "tcase_bench_ui003",
+          "gt_mechanism": "UI_RENDERING",
+          "fault": "TF-UI-003",
+          "run_id": "run_179557967505941df892c34cf",
+          "verdict": "FAILED",
+          "exec_ms": 4895.1,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955796799530127af083366"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            },
+            "D_graph_ablation": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955796799530127af083366"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955796799530127af083366"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955796799530127af083366"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955796799530127af083366"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "H_llm_advisor": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955796800121917d9aab572"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            }
+          },
+          "diagnosis_id": "diagnosis_1795579679964279cac682b24",
+          "diagnosis_latency_ms": 25.1,
+          "diagnosis_outcome": "CONFIRMED",
+          "probe_plan_id": "probeplan_1795579679976dd0bb118dd5a",
+          "probe_stop_reason": "STOP_CONFIRMED",
+          "probe_latency_ms": 29.3,
+          "real_probe_count": 0,
+          "probe_execution_success_rate": null,
+          "probe_feedback_success_rate": null,
+          "llm_arm": {
+            "called": true,
+            "skipped": null,
+            "model": "deepseek-flash",
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 3,
+            "engine": "rule-v2+graph-adjudication+llm-advisor",
+            "llm_diagnosis_id": "diagnosis_1795579684902d4640d5437b2"
+          },
+          "round": 2
+        },
+        {
+          "scenario": "UI-DELAYED",
+          "round": 2,
+          "error": "RuntimeError: POST /api/v1/runs/run_179557968492364dafb8aa23b/diagnose?use_llm=false -> 412: {\"detail\":{\"code\":\"PRECONDITION_FAILED\",\"message\":\"run PASSED：无失败症状可诊断（不做伪诊断）\"}}"
+        },
+        {
+          "scenario": "API-503",
+          "testcase": "tcase_bench_api002",
+          "gt_mechanism": "API",
+          "fault": "TF-API-002",
+          "run_id": "run_17955796928836f5291add1bb",
+          "verdict": "FAILED",
+          "exec_ms": 5537.6,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_179557969841681a30a99824d"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            },
+            "D_graph_ablation": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_179557969841681a30a99824d"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_179557969841681a30a99824d"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_179557969841681a30a99824d"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_179557969841681a30a99824d"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "H_llm_advisor": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955796984548ecea8d1724c"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            }
+          },
+          "diagnosis_id": "diagnosis_179557969842432bd66ead350",
+          "diagnosis_latency_ms": 14.3,
+          "diagnosis_outcome": "CONFIRMED",
+          "probe_plan_id": "probeplan_17955796984313bdc72451009",
+          "probe_stop_reason": "STOP_CONFIRMED",
+          "probe_latency_ms": 19.9,
+          "real_probe_count": 0,
+          "probe_execution_success_rate": null,
+          "probe_feedback_success_rate": null,
+          "llm_arm": {
+            "called": true,
+            "skipped": null,
+            "model": "deepseek-flash",
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 3,
+            "engine": "rule-v2+graph-adjudication+llm-advisor",
+            "llm_diagnosis_id": "diagnosis_179557970256600a9933b4957"
+          },
+          "round": 2
+        },
+        {
+          "scenario": "API-EDIT-500",
+          "round": 2,
+          "error": "RuntimeError: POST /api/v1/runs/run_1795579702586883862a5173f/diagnose?use_llm=false -> 412: {\"detail\":{\"code\":\"PRECONDITION_FAILED\",\"message\":\"run PASSED：无失败症状可诊断（不做伪诊断）\"}}"
+        },
+        {
+          "scenario": "API-EDIT-503",
+          "round": 2,
+          "error": "RuntimeError: POST /api/v1/runs/run_1795579711774d5a38563cb6a/diagnose?use_llm=false -> 412: {\"detail\":{\"code\":\"PRECONDITION_FAILED\",\"message\":\"run PASSED：无失败症状可诊断（不做伪诊断）\"}}"
+        },
+        {
+          "scenario": "NET-TIMEOUT",
+          "testcase": "tcase_bench_net002",
+          "gt_mechanism": "NETWORK",
+          "fault": "TF-NET-002",
+          "run_id": "run_1795579720954036b9d9b0c64",
+          "verdict": "FAILED",
+          "exec_ms": 15859.5,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "INCONCLUSIVE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "D_graph_ablation": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "INCONCLUSIVE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "INCONCLUSIVE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "INCONCLUSIVE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback_rate": 0.0,
+              "time_alignments": [
+                "POST_HOC",
+                "POST_HOC",
+                "POST_HOC"
+              ]
+            },
+            "G_probe_no_alignment": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "INCONCLUSIVE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback_rate": 0.0,
+              "time_alignments": [
+                "UNKNOWN",
+                "UNKNOWN",
+                "UNKNOWN"
+              ]
+            },
+            "H_llm_advisor": {
+              "mechanism": "API",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            }
+          },
+          "diagnosis_id": "diagnosis_1795579736822961f7466bd02",
+          "diagnosis_latency_ms": 21.5,
+          "diagnosis_outcome": "INCONCLUSIVE",
+          "probe_plan_id": "probeplan_179557973683092baa3426aba",
+          "probe_stop_reason": "STOP_ITERATION_LIMIT",
+          "probe_latency_ms": 60.9,
+          "real_probe_count": 3,
+          "probe_execution_success_rate": 1.0,
+          "probe_feedback_success_rate": 1.0,
+          "llm_arm": {
+            "called": true,
+            "skipped": null,
+            "model": "deepseek-flash",
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 3,
+            "engine": "rule-v2+graph-adjudication+llm-advisor",
+            "llm_diagnosis_id": "diagnosis_1795579741700d08007e69afd"
+          },
+          "round": 2
+        },
+        {
+          "scenario": "LOC-SUBMIT",
+          "testcase": "tcase_bench_loc001",
+          "gt_mechanism": "LOCATOR",
+          "fault": "TF-LOC-001",
+          "run_id": "run_1795579741715fcecdac9aa30",
+          "verdict": "NOT_EVALUATED",
+          "exec_ms": 12819.3,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "NOT_EVALUATED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "D_graph_ablation": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback_rate": 0.6667,
+              "time_alignments": [
+                "POST_HOC",
+                "POST_HOC",
+                "POST_HOC"
+              ]
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback_rate": 0.6667,
+              "time_alignments": [
+                "UNKNOWN",
+                "UNKNOWN",
+                "UNKNOWN"
+              ]
+            },
+            "H_llm_advisor": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            }
+          },
+          "diagnosis_id": "diagnosis_17955797545753a028b7b4e0a",
+          "diagnosis_latency_ms": 51.9,
+          "diagnosis_outcome": "PROBABLE",
+          "probe_plan_id": "probeplan_17955797545838491947b8382",
+          "probe_stop_reason": "STOP_ITERATION_LIMIT",
+          "probe_latency_ms": 53.7,
+          "real_probe_count": 3,
+          "probe_execution_success_rate": 1.0,
+          "probe_feedback_success_rate": 1.0,
+          "llm_arm": {
+            "called": false,
+            "skipped": "llm_error:invalid_json",
+            "model": null,
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 0,
+            "engine": "rule-v2+graph-adjudication",
+            "llm_diagnosis_id": "diagnosis_1795579765586983dd75f2203"
+          },
+          "round": 2
+        },
+        {
+          "scenario": "LOC-NAME",
+          "testcase": "tcase_bench_loc002",
+          "gt_mechanism": "LOCATOR",
+          "fault": "TF-LOC-002",
+          "run_id": "run_17955797656023982680614ce",
+          "verdict": "NOT_EVALUATED",
+          "exec_ms": 12829.9,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "NOT_EVALUATED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "INCONCLUSIVE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "D_graph_ablation": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "INCONCLUSIVE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "INCONCLUSIVE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback_rate": 0.6667,
+              "time_alignments": [
+                "POST_HOC",
+                "POST_HOC",
+                "POST_HOC"
+              ]
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback_rate": 0.6667,
+              "time_alignments": [
+                "UNKNOWN",
+                "UNKNOWN",
+                "UNKNOWN"
+              ]
+            },
+            "H_llm_advisor": {
+              "mechanism": "API",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            }
+          },
+          "diagnosis_id": "diagnosis_17955797784373ac711bdcd12",
+          "diagnosis_latency_ms": 16.3,
+          "diagnosis_outcome": "INCONCLUSIVE",
+          "probe_plan_id": "probeplan_17955797784446a788b183adf",
+          "probe_stop_reason": "STOP_ITERATION_LIMIT",
+          "probe_latency_ms": 54.1,
+          "real_probe_count": 3,
+          "probe_execution_success_rate": 1.0,
+          "probe_feedback_success_rate": 1.0,
+          "llm_arm": {
+            "called": true,
+            "skipped": null,
+            "model": "deepseek-flash",
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 3,
+            "engine": "rule-v2+graph-adjudication+llm-advisor",
+            "llm_diagnosis_id": "diagnosis_1795579787601ecf1050f40f8"
+          },
+          "round": 2
+        },
+        {
+          "scenario": "TIME-STRONG",
+          "round": 2,
+          "error": "RuntimeError: POST /api/v1/runs/run_1795579787615aa9514c01c99/diagnose?use_llm=false -> 412: {\"detail\":{\"code\":\"PRECONDITION_FAILED\",\"message\":\"run PASSED：无失败症状可诊断（不做伪诊断）\"}}"
+        },
+        {
+          "scenario": "TIME-RACE",
+          "testcase": "tcase_bench_time003",
+          "gt_mechanism": "TIMING",
+          "fault": "TF-TIME-003",
+          "run_id": "run_1795579800527e5b58abd0ef7",
+          "verdict": "NOT_EVALUATED",
+          "exec_ms": 12926.4,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "NOT_EVALUATED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "D_graph_ablation": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback_rate": 0.6667,
+              "time_alignments": [
+                "POST_HOC",
+                "POST_HOC",
+                "POST_HOC"
+              ]
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback_rate": 0.6667,
+              "time_alignments": [
+                "UNKNOWN",
+                "UNKNOWN",
+                "UNKNOWN"
+              ]
+            },
+            "H_llm_advisor": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            }
+          },
+          "diagnosis_id": "diagnosis_17955798134596b6478aacc09",
+          "diagnosis_latency_ms": 17.9,
+          "diagnosis_outcome": "PROBABLE",
+          "probe_plan_id": "probeplan_179557981346887f0f686af54",
+          "probe_stop_reason": "STOP_ITERATION_LIMIT",
+          "probe_latency_ms": 53.8,
+          "real_probe_count": 3,
+          "probe_execution_success_rate": 1.0,
+          "probe_feedback_success_rate": 1.0,
+          "llm_arm": {
+            "called": false,
+            "skipped": "llm_error:invalid_json",
+            "model": null,
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 0,
+            "engine": "rule-v2+graph-adjudication",
+            "llm_diagnosis_id": "diagnosis_1795579823742abd8e320c0ad"
+          },
+          "round": 2
+        },
+        {
+          "scenario": "SEC-CREATE-403",
+          "testcase": "tcase_bench_sec001",
+          "gt_mechanism": "AUTHORIZATION",
+          "fault": "TF-SEC-001",
+          "run_id": "run_1795579823761bd5ff4ff8144",
+          "verdict": "FAILED",
+          "exec_ms": 4892.8,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "AUTHORIZATION",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_179557982864694760dfacba5"
+              ],
+              "disposition": "TEST_EXECUTION_ISSUE"
+            },
+            "D_graph_ablation": {
+              "mechanism": "AUTHORIZATION",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_179557982864694760dfacba5"
+              ],
+              "disposition": "TEST_EXECUTION_ISSUE"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "AUTHORIZATION",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_179557982864694760dfacba5"
+              ],
+              "disposition": "TEST_EXECUTION_ISSUE",
+              "probes_used": 0,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "AUTHORIZATION",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_179557982864694760dfacba5"
+              ],
+              "disposition": "TEST_EXECUTION_ISSUE",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "AUTHORIZATION",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_179557982864694760dfacba5"
+              ],
+              "disposition": "TEST_EXECUTION_ISSUE",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "H_llm_advisor": {
+              "mechanism": "AUTHORIZATION",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579828899388eada187da"
+              ],
+              "disposition": "TEST_EXECUTION_ISSUE"
+            }
+          },
+          "diagnosis_id": "diagnosis_1795579828657963c5c11e49b",
+          "diagnosis_latency_ms": 18.1,
+          "diagnosis_outcome": "CONFIRMED",
+          "probe_plan_id": "probeplan_179557982871208f8e130bdcb",
+          "probe_stop_reason": "STOP_CONFIRMED",
+          "probe_latency_ms": 228.1,
+          "real_probe_count": 0,
+          "probe_execution_success_rate": null,
+          "probe_feedback_success_rate": null,
+          "llm_arm": {
+            "called": true,
+            "skipped": null,
+            "model": "deepseek-flash",
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 3,
+            "engine": "rule-v2+graph-adjudication+llm-advisor",
+            "llm_diagnosis_id": "diagnosis_179557983256996ec2529a358"
+          },
+          "round": 2
+        },
+        {
+          "scenario": "SEC-LIST-403",
+          "testcase": "tcase_bench_sec002",
+          "gt_mechanism": "AUTHORIZATION",
+          "fault": "TF-SEC-002",
+          "run_id": "run_1795579832583a50da5dac7e2",
+          "verdict": "FAILED",
+          "exec_ms": 7325.5,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "AUTHORIZATION",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579839907fb81f406ccfa",
+                "hyp_179557983990757936532581e"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            },
+            "D_graph_ablation": {
+              "mechanism": "AUTHORIZATION",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579839907fb81f406ccfa",
+                "hyp_179557983990757936532581e"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "AUTHORIZATION",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579839907fb81f406ccfa",
+                "hyp_179557983990757936532581e"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "AUTHORIZATION",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579839907fb81f406ccfa",
+                "hyp_179557983990757936532581e"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "AUTHORIZATION",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579839907fb81f406ccfa",
+                "hyp_179557983990757936532581e"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "H_llm_advisor": {
+              "mechanism": "AUTHORIZATION",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955798399555d1a9e129b80",
+                "hyp_1795579839955437784058703"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            }
+          },
+          "diagnosis_id": "diagnosis_1795579839915be0e099da5f4",
+          "diagnosis_latency_ms": 18.2,
+          "diagnosis_outcome": "CONFIRMED",
+          "probe_plan_id": "probeplan_1795579839928ef9e38639c21",
+          "probe_stop_reason": "STOP_CONFIRMED",
+          "probe_latency_ms": 25.7,
+          "real_probe_count": 0,
+          "probe_execution_success_rate": null,
+          "probe_feedback_success_rate": null,
+          "llm_arm": {
+            "called": false,
+            "skipped": "llm_error:invalid_json",
+            "model": null,
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 0,
+            "engine": "rule-v2+graph-adjudication",
+            "llm_diagnosis_id": "diagnosis_1795579850025e7f97ca5fadb"
+          },
+          "round": 2
+        },
+        {
+          "scenario": "COMP-API-UI",
+          "testcase": "tcase_bench_comp001",
+          "gt_mechanism": "API",
+          "fault": "TF-COMP-001",
+          "run_id": "run_1795579850041894593ae257c",
+          "verdict": "FAILED",
+          "exec_ms": 4892.8,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955798549299c880f386f84"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            },
+            "D_graph_ablation": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955798549299c880f386f84"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955798549299c880f386f84"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955798549299c880f386f84"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955798549299c880f386f84"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "H_llm_advisor": {
+              "mechanism": "API",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_179557985497472135945bbd4"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            }
+          },
+          "diagnosis_id": "diagnosis_1795579854939f8ee00def564",
+          "diagnosis_latency_ms": 17.7,
+          "diagnosis_outcome": "CONFIRMED",
+          "probe_plan_id": "probeplan_17955798549473325514dd2ef",
+          "probe_stop_reason": "STOP_CONFIRMED",
+          "probe_latency_ms": 23.4,
+          "real_probe_count": 0,
+          "probe_execution_success_rate": null,
+          "probe_feedback_success_rate": null,
+          "llm_arm": {
+            "called": true,
+            "skipped": null,
+            "model": "deepseek-flash",
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 3,
+            "engine": "rule-v2+graph-adjudication+llm-advisor",
+            "llm_diagnosis_id": "diagnosis_1795579864602334191663ef4"
+          },
+          "round": 2
+        },
+        {
+          "scenario": "COMP-DB-TIME",
+          "testcase": "tcase_bench_comp002",
+          "gt_mechanism": "PERSISTENCE",
+          "fault": "TF-COMP-002",
+          "run_id": "run_17955798646173243d8510327",
+          "verdict": "FAILED",
+          "exec_ms": 9160.2,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "D_graph_ablation": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 2,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 2,
+              "feedback_rate": 0.5,
+              "time_alignments": [
+                "POST_HOC",
+                "POST_HOC"
+              ]
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 2,
+              "feedback_rate": 0.5,
+              "time_alignments": [
+                "UNKNOWN",
+                "UNKNOWN"
+              ]
+            },
+            "H_llm_advisor": {
+              "mechanism": "PERSISTENCE",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            }
+          },
+          "diagnosis_id": "diagnosis_179557987378471bef5e205c0",
+          "diagnosis_latency_ms": 18.1,
+          "diagnosis_outcome": "PROBABLE",
+          "probe_plan_id": "probeplan_1795579873792f4cc1e73c9cd",
+          "probe_stop_reason": "STOP_NO_HIGH_VALUE_PROBE",
+          "probe_latency_ms": 35.0,
+          "real_probe_count": 2,
+          "probe_execution_success_rate": 1.0,
+          "probe_feedback_success_rate": 1.0,
+          "llm_arm": {
+            "called": true,
+            "skipped": null,
+            "model": "deepseek-flash",
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 3,
+            "engine": "rule-v2+graph-adjudication+llm-advisor",
+            "llm_diagnosis_id": "diagnosis_1795579883777c5e79c19fe04"
+          },
+          "round": 2
+        },
+        {
+          "scenario": "COMP-LOC-UI",
+          "testcase": "tcase_bench_comp003",
+          "gt_mechanism": "LOCATOR",
+          "fault": "TF-COMP-003",
+          "run_id": "run_1795579883793643143dc876e",
+          "verdict": "NOT_EVALUATED",
+          "exec_ms": 12830.8,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "NOT_EVALUATED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "D_graph_ablation": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback_rate": 0.6667,
+              "time_alignments": [
+                "POST_HOC",
+                "POST_HOC",
+                "POST_HOC"
+              ]
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "LOCATOR",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "probes_used": 3,
+              "feedback_rate": 0.6667,
+              "time_alignments": [
+                "UNKNOWN",
+                "UNKNOWN",
+                "UNKNOWN"
+              ]
+            },
+            "H_llm_advisor": {
+              "mechanism": "API",
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE"
+            }
+          },
+          "diagnosis_id": "diagnosis_1795579896629c93670605db3",
+          "diagnosis_latency_ms": 16.3,
+          "diagnosis_outcome": "PROBABLE",
+          "probe_plan_id": "probeplan_17955798966389a009f281fba",
+          "probe_stop_reason": "STOP_ITERATION_LIMIT",
+          "probe_latency_ms": 56.2,
+          "real_probe_count": 3,
+          "probe_execution_success_rate": 1.0,
+          "probe_feedback_success_rate": 1.0,
+          "llm_arm": {
+            "called": true,
+            "skipped": null,
+            "model": "deepseek-flash",
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 3,
+            "engine": "rule-v2+graph-adjudication+llm-advisor",
+            "llm_diagnosis_id": "diagnosis_1795579906940ee3e0fe8957c"
+          },
+          "round": 2
+        },
+        {
+          "scenario": "FLAKY-DB",
+          "testcase": "tcase_bench_flaky001",
+          "gt_mechanism": "PERSISTENCE",
+          "fault": "TF-FLAKY-001",
+          "run_id": "run_1795579906962c8097d50da3e",
+          "verdict": "FAILED",
+          "exec_ms": 4888.7,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "abstained_flaky": true
+            },
+            "D_graph_ablation": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "abstained_flaky": true
+            },
+            "E_probe_no_feedback": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "abstained_flaky": true,
+              "probes_used": 2,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "abstained_flaky": true,
+              "probes_used": 2,
+              "feedback_rate": 0.5,
+              "time_alignments": [
+                "POST_HOC",
+                "POST_HOC"
+              ]
+            },
+            "G_probe_no_alignment": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "abstained_flaky": true,
+              "probes_used": 2,
+              "feedback_rate": 0.5,
+              "time_alignments": [
+                "UNKNOWN",
+                "UNKNOWN"
+              ]
+            },
+            "H_llm_advisor": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "abstained_flaky": true
+            }
+          },
+          "diagnosis_id": "diagnosis_179557991185789e6a0bf6ecd",
+          "diagnosis_latency_ms": 19.3,
+          "diagnosis_outcome": "PROBABLE",
+          "probe_plan_id": "probeplan_179557991186440fdff134f91",
+          "probe_stop_reason": "STOP_NO_HIGH_VALUE_PROBE",
+          "probe_latency_ms": 38.6,
+          "real_probe_count": 2,
+          "probe_execution_success_rate": 1.0,
+          "probe_feedback_success_rate": 1.0,
+          "llm_arm": {
+            "called": true,
+            "skipped": null,
+            "model": "deepseek-flash",
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 3,
+            "engine": "rule-v2+graph-adjudication+llm-advisor",
+            "llm_diagnosis_id": "diagnosis_1795579916261e5554895d1b5"
+          },
+          "round": 2
+        },
+        {
+          "scenario": "FLAKY-API",
+          "testcase": "tcase_bench_flaky002",
+          "gt_mechanism": "API",
+          "fault": "TF-FLAKY-002",
+          "run_id": "run_1795579916275a52ab773f4ac",
+          "verdict": "FAILED",
+          "exec_ms": 4887.6,
+          "independent_worker": true,
+          "arms": {
+            "A_raw_report": {
+              "mechanism": null,
+              "conclusive": false,
+              "outcome": "VERDICT_ONLY",
+              "verdict": "FAILED",
+              "note": "A 臂：只有执行 verdict，无诊断"
+            },
+            "C_rule": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579921158ef71491ea085"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            },
+            "D_graph_ablation": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579921158ef71491ea085"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            },
+            "E_probe_no_feedback": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579921158ef71491ea085"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback": "NOT_APPLIED",
+              "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+            },
+            "F_probe_aligned": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579921158ef71491ea085"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "G_probe_no_alignment": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_1795579921158ef71491ea085"
+              ],
+              "disposition": "PRODUCT_DEFECT",
+              "probes_used": 0,
+              "feedback_rate": null,
+              "time_alignments": []
+            },
+            "H_llm_advisor": {
+              "mechanism": "UI_RENDERING",
+              "conclusive": true,
+              "outcome": "CONFIRMED",
+              "root_causes": [
+                "hyp_17955799212014d242d29df7b"
+              ],
+              "disposition": "PRODUCT_DEFECT"
+            }
+          },
+          "diagnosis_id": "diagnosis_179557992116629f88cb45343",
+          "diagnosis_latency_ms": 15.2,
+          "diagnosis_outcome": "CONFIRMED",
+          "probe_plan_id": "probeplan_17955799211751128757ae808",
+          "probe_stop_reason": "STOP_CONFIRMED",
+          "probe_latency_ms": 22.4,
+          "real_probe_count": 0,
+          "probe_execution_success_rate": null,
+          "probe_feedback_success_rate": null,
+          "llm_arm": {
+            "called": false,
+            "skipped": "llm_error:invalid_json",
+            "model": null,
+            "prompt_version": "diagnosis_advisor@v1",
+            "added": 0,
+            "engine": "rule-v2+graph-adjudication",
+            "llm_diagnosis_id": "diagnosis_17955799315731717163af7d7"
+          },
+          "round": 2
+        }
+      ]
+    }
+  ],
+  "probe_executions": [
+    {
+      "run_id": "run_1795579182397cd0806f29097",
+      "diagnosis_id": "diagnosis_1795579187904e44e2dab0c0e",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579187922059f19e32f7a",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579187922040016434c70"
+      ],
+      "observed_at": 1795579187.92291,
+      "collected_at": 1795579187.9229288,
+      "ingested_at": "2026-11-25T03:59:47.922930Z"
+    },
+    {
+      "run_id": "run_1795579182397cd0806f29097",
+      "diagnosis_id": "diagnosis_1795579187904e44e2dab0c0e",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_179557918793403d24d0639fa",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579187934a06bf306084b"
+      ],
+      "observed_at": 1795579187.934874,
+      "collected_at": 1795579187.93489,
+      "ingested_at": "2026-11-25T03:59:47.934891Z"
+    },
+    {
+      "run_id": "run_17955792265501d01b5595856",
+      "diagnosis_id": "diagnosis_1795579235709eebe37e86ad0",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579235719a81d4e009166",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_179557923571992dc7e1382d9"
+      ],
+      "observed_at": 1795579235.719813,
+      "collected_at": 1795579235.71983,
+      "ingested_at": "2026-11-25T04:00:35.719831Z"
+    },
+    {
+      "run_id": "run_17955792265501d01b5595856",
+      "diagnosis_id": "diagnosis_1795579235709eebe37e86ad0",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_1795579235727672d0f22134e",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_17955792357273cb174a4f96b"
+      ],
+      "observed_at": 1795579235.727954,
+      "collected_at": 1795579235.727971,
+      "ingested_at": "2026-11-25T04:00:35.727972Z"
+    },
+    {
+      "run_id": "run_1795579241154bc3dfc22a104",
+      "diagnosis_id": "diagnosis_17955792460853ad5083b3fc1",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579246100f2376a8f29b8",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579246100d4e35417a413"
+      ],
+      "observed_at": 1795579246.100495,
+      "collected_at": 1795579246.100516,
+      "ingested_at": "2026-11-25T04:00:46.100518Z"
+    },
+    {
+      "run_id": "run_1795579241154bc3dfc22a104",
+      "diagnosis_id": "diagnosis_17955792460853ad5083b3fc1",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_1795579246113c44354459698",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579246113621bd0146bb2"
+      ],
+      "observed_at": 1795579246.113485,
+      "collected_at": 1795579246.1135218,
+      "ingested_at": "2026-11-25T04:00:46.113524Z"
+    },
+    {
+      "run_id": "run_1795579261210dd15735e2c49",
+      "diagnosis_id": "diagnosis_1795579266107bd6be1a8117f",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579266118185d642493fe",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_17955792661182ae2fdd12c29"
+      ],
+      "observed_at": 1795579266.118704,
+      "collected_at": 1795579266.118718,
+      "ingested_at": "2026-11-25T04:01:06.118719Z"
+    },
+    {
+      "run_id": "run_1795579261210dd15735e2c49",
+      "diagnosis_id": "diagnosis_1795579266107bd6be1a8117f",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_17955792661263cf31604ec5a",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579266126dc1f88ce929f"
+      ],
+      "observed_at": 1795579266.1266198,
+      "collected_at": 1795579266.126636,
+      "ingested_at": "2026-11-25T04:01:06.126637Z"
+    },
+    {
+      "run_id": "run_1795579261210dd15735e2c49",
+      "diagnosis_id": "diagnosis_1795579266107bd6be1a8117f",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_1795579266143eaac1ca9ee94",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_179557926614350318fd4c480"
+      ],
+      "observed_at": 1795579266.143291,
+      "collected_at": 1795579266.143311,
+      "ingested_at": "2026-11-25T04:01:06.143312Z"
+    },
+    {
+      "run_id": "run_179557934405596978d0402b0",
+      "diagnosis_id": "diagnosis_1795579359985ae510c14ef3b",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_179557935999620a49dcd6fbc",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579359996ec1691068e80"
+      ],
+      "observed_at": 1795579359.99662,
+      "collected_at": 1795579359.9966311,
+      "ingested_at": "2026-11-25T04:02:39.996632Z"
+    },
+    {
+      "run_id": "run_179557934405596978d0402b0",
+      "diagnosis_id": "diagnosis_1795579359985ae510c14ef3b",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_17955793600036476c06dceaf",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_17955793600039fe979a9c369"
+      ],
+      "observed_at": 1795579360.003927,
+      "collected_at": 1795579360.003937,
+      "ingested_at": "2026-11-25T04:02:40.003937Z"
+    },
+    {
+      "run_id": "run_179557934405596978d0402b0",
+      "diagnosis_id": "diagnosis_1795579359985ae510c14ef3b",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_17955793600210ec9e5909f48",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579360021deb5aed14bee"
+      ],
+      "observed_at": 1795579360.021644,
+      "collected_at": 1795579360.0216599,
+      "ingested_at": "2026-11-25T04:02:40.021660Z"
+    },
+    {
+      "run_id": "run_1795579374010f0b71904ed32",
+      "diagnosis_id": "diagnosis_1795579386820b1a8d78b284f",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_17955793868311c43092df700",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_17955793868317344b8b1ffd1"
+      ],
+      "observed_at": 1795579386.831272,
+      "collected_at": 1795579386.8312802,
+      "ingested_at": "2026-11-25T04:03:06.831280Z"
+    },
+    {
+      "run_id": "run_1795579374010f0b71904ed32",
+      "diagnosis_id": "diagnosis_1795579386820b1a8d78b284f",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_179557938683992451ce9b80c",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579386839c144b35e5211"
+      ],
+      "observed_at": 1795579386.839165,
+      "collected_at": 1795579386.839178,
+      "ingested_at": "2026-11-25T04:03:06.839179Z"
+    },
+    {
+      "run_id": "run_1795579374010f0b71904ed32",
+      "diagnosis_id": "diagnosis_1795579386820b1a8d78b284f",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_1795579386855c5d8168587a9",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_17955793868556e7c4cf9b39c"
+      ],
+      "observed_at": 1795579386.855513,
+      "collected_at": 1795579386.8555331,
+      "ingested_at": "2026-11-25T04:03:06.855534Z"
+    },
+    {
+      "run_id": "run_1795579405096031300b897bc",
+      "diagnosis_id": "diagnosis_1795579417956c51b1559dec8",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_1795579417965f966aa6e978c",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579417965ddae5ec20cee"
+      ],
+      "observed_at": 1795579417.965568,
+      "collected_at": 1795579417.965579,
+      "ingested_at": "2026-11-25T04:03:37.965579Z"
+    },
+    {
+      "run_id": "run_1795579405096031300b897bc",
+      "diagnosis_id": "diagnosis_1795579417956c51b1559dec8",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579417973884e1a71b005",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579417973e24edd0bb361"
+      ],
+      "observed_at": 1795579417.97388,
+      "collected_at": 1795579417.973897,
+      "ingested_at": "2026-11-25T04:03:37.973899Z"
+    },
+    {
+      "run_id": "run_1795579405096031300b897bc",
+      "diagnosis_id": "diagnosis_1795579417956c51b1559dec8",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_1795579417989ab2e3dd0c75b",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579417989b58522c1ff91"
+      ],
+      "observed_at": 1795579417.989179,
+      "collected_at": 1795579417.989195,
+      "ingested_at": "2026-11-25T04:03:37.989197Z"
+    },
+    {
+      "run_id": "run_17955794430067f73000d8f14",
+      "diagnosis_id": "diagnosis_1795579455795d5e753966bee",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_1795579455804c16aebefced9",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579455804ccdfe373ba00"
+      ],
+      "observed_at": 1795579455.804378,
+      "collected_at": 1795579455.8043861,
+      "ingested_at": "2026-11-25T04:04:15.804386Z"
+    },
+    {
+      "run_id": "run_17955794430067f73000d8f14",
+      "diagnosis_id": "diagnosis_1795579455795d5e753966bee",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_17955794558128d74860bf223",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579455812d9d57773bf7e"
+      ],
+      "observed_at": 1795579455.812438,
+      "collected_at": 1795579455.812452,
+      "ingested_at": "2026-11-25T04:04:15.812452Z"
+    },
+    {
+      "run_id": "run_17955794430067f73000d8f14",
+      "diagnosis_id": "diagnosis_1795579455795d5e753966bee",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_1795579455827876fe48e1a76",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_17955794558276e4e03b632a4"
+      ],
+      "observed_at": 1795579455.8274791,
+      "collected_at": 1795579455.8274932,
+      "ingested_at": "2026-11-25T04:04:15.827494Z"
+    },
+    {
+      "run_id": "run_17955795172079d7fcd9c4226",
+      "diagnosis_id": "diagnosis_17955795263883b1a4cabb1cd",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_17955795263981864d200ecb4",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579526398b18576f09e1f"
+      ],
+      "observed_at": 1795579526.398616,
+      "collected_at": 1795579526.398628,
+      "ingested_at": "2026-11-25T04:05:26.398629Z"
+    },
+    {
+      "run_id": "run_17955795172079d7fcd9c4226",
+      "diagnosis_id": "diagnosis_17955795263883b1a4cabb1cd",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_17955795264058bcaf57645d4",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579526405eae89f060a0a"
+      ],
+      "observed_at": 1795579526.405845,
+      "collected_at": 1795579526.405857,
+      "ingested_at": "2026-11-25T04:05:26.405858Z"
+    },
+    {
+      "run_id": "run_179557953627009c742d40973",
+      "diagnosis_id": "diagnosis_1795579549070ada31b9a575c",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_1795579549085398f19af84f9",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_17955795490852db116421da0"
+      ],
+      "observed_at": 1795579549.085933,
+      "collected_at": 1795579549.0859468,
+      "ingested_at": "2026-11-25T04:05:49.085948Z"
+    },
+    {
+      "run_id": "run_179557953627009c742d40973",
+      "diagnosis_id": "diagnosis_1795579549070ada31b9a575c",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_17955795490979451c17b3e81",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_179557954909754541ab0633b"
+      ],
+      "observed_at": 1795579549.097752,
+      "collected_at": 1795579549.0977652,
+      "ingested_at": "2026-11-25T04:05:49.097765Z"
+    },
+    {
+      "run_id": "run_179557953627009c742d40973",
+      "diagnosis_id": "diagnosis_1795579549070ada31b9a575c",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_17955795491153b11af46d807",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_179557954911537ca538ea7a4"
+      ],
+      "observed_at": 1795579549.115287,
+      "collected_at": 1795579549.1153011,
+      "ingested_at": "2026-11-25T04:05:49.115303Z"
+    },
+    {
+      "run_id": "run_1795579582087f5ec04bd5526",
+      "diagnosis_id": "diagnosis_17955795875913a88cf8fbab1",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579587601ea5eb5294dce",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_17955795876011c5264e0a373"
+      ],
+      "observed_at": 1795579587.601964,
+      "collected_at": 1795579587.6019788,
+      "ingested_at": "2026-11-25T04:06:27.601979Z"
+    },
+    {
+      "run_id": "run_1795579582087f5ec04bd5526",
+      "diagnosis_id": "diagnosis_17955795875913a88cf8fbab1",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_1795579587609e02cd2be4814",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_17955795876096e275c581afc"
+      ],
+      "observed_at": 1795579587.609262,
+      "collected_at": 1795579587.609277,
+      "ingested_at": "2026-11-25T04:06:27.609278Z"
+    },
+    {
+      "run_id": "run_179557962958691f742930964",
+      "diagnosis_id": "diagnosis_1795579638750d76812e19956",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579638762a519104df703",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_17955796387627613af36a75e"
+      ],
+      "observed_at": 1795579638.762678,
+      "collected_at": 1795579638.762698,
+      "ingested_at": "2026-11-25T04:07:18.762700Z"
+    },
+    {
+      "run_id": "run_179557962958691f742930964",
+      "diagnosis_id": "diagnosis_1795579638750d76812e19956",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_179557963877368f9563b1433",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_17955796387737affde6e488e"
+      ],
+      "observed_at": 1795579638.773024,
+      "collected_at": 1795579638.77304,
+      "ingested_at": "2026-11-25T04:07:18.773041Z"
+    },
+    {
+      "run_id": "run_1795579651612850e31e0f5d6",
+      "diagnosis_id": "diagnosis_17955796565217b77d521d6e4",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_17955796565318fd60ed9f76b",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579656531d0fc133fe920"
+      ],
+      "observed_at": 1795579656.5316522,
+      "collected_at": 1795579656.5316648,
+      "ingested_at": "2026-11-25T04:07:36.531666Z"
+    },
+    {
+      "run_id": "run_1795579651612850e31e0f5d6",
+      "diagnosis_id": "diagnosis_17955796565217b77d521d6e4",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_17955796565394ef3005cffd5",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_179557965653983f88dce5a06"
+      ],
+      "observed_at": 1795579656.5395808,
+      "collected_at": 1795579656.5396,
+      "ingested_at": "2026-11-25T04:07:36.539601Z"
+    },
+    {
+      "run_id": "run_17955796662565333397dc2ea",
+      "diagnosis_id": "diagnosis_17955796711531a5f95a39603",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_17955796711641a5ef9981b29",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_179557967116489b5ea700ca7"
+      ],
+      "observed_at": 1795579671.16452,
+      "collected_at": 1795579671.164534,
+      "ingested_at": "2026-11-25T04:07:51.164535Z"
+    },
+    {
+      "run_id": "run_17955796662565333397dc2ea",
+      "diagnosis_id": "diagnosis_17955796711531a5f95a39603",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_179557967117178bd5c533af6",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579671171068cc417d386"
+      ],
+      "observed_at": 1795579671.171807,
+      "collected_at": 1795579671.171819,
+      "ingested_at": "2026-11-25T04:07:51.171820Z"
+    },
+    {
+      "run_id": "run_17955796662565333397dc2ea",
+      "diagnosis_id": "diagnosis_17955796711531a5f95a39603",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_17955796711906cb06389ca02",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579671190591e51b13c82"
+      ],
+      "observed_at": 1795579671.1906471,
+      "collected_at": 1795579671.190666,
+      "ingested_at": "2026-11-25T04:07:51.190668Z"
+    },
+    {
+      "run_id": "run_1795579720954036b9d9b0c64",
+      "diagnosis_id": "diagnosis_1795579736822961f7466bd02",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579736833d0408a6ea986",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_179557973683313deb750e05c"
+      ],
+      "observed_at": 1795579736.833194,
+      "collected_at": 1795579736.8332071,
+      "ingested_at": "2026-11-25T04:08:56.833207Z"
+    },
+    {
+      "run_id": "run_1795579720954036b9d9b0c64",
+      "diagnosis_id": "diagnosis_1795579736822961f7466bd02",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_1795579736842c83cc68fc264",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_17955797368425cce3e4ee66a"
+      ],
+      "observed_at": 1795579736.842541,
+      "collected_at": 1795579736.842556,
+      "ingested_at": "2026-11-25T04:08:56.842556Z"
+    },
+    {
+      "run_id": "run_1795579720954036b9d9b0c64",
+      "diagnosis_id": "diagnosis_1795579736822961f7466bd02",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_1795579736863a536e0630af0",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579736863925040cd57dd"
+      ],
+      "observed_at": 1795579736.8634071,
+      "collected_at": 1795579736.863424,
+      "ingested_at": "2026-11-25T04:08:56.863425Z"
+    },
+    {
+      "run_id": "run_1795579741715fcecdac9aa30",
+      "diagnosis_id": "diagnosis_17955797545753a028b7b4e0a",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_17955797545849282f53ad381",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579754584acbeb0f3d30b"
+      ],
+      "observed_at": 1795579754.58476,
+      "collected_at": 1795579754.584768,
+      "ingested_at": "2026-11-25T04:09:14.584768Z"
+    },
+    {
+      "run_id": "run_1795579741715fcecdac9aa30",
+      "diagnosis_id": "diagnosis_17955797545753a028b7b4e0a",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_179557975459220c9b00d4905",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_179557975459231ad559fca5a"
+      ],
+      "observed_at": 1795579754.592932,
+      "collected_at": 1795579754.592947,
+      "ingested_at": "2026-11-25T04:09:14.592948Z"
+    },
+    {
+      "run_id": "run_1795579741715fcecdac9aa30",
+      "diagnosis_id": "diagnosis_17955797545753a028b7b4e0a",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_17955797546110a519a844266",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579754611d109177bec1b"
+      ],
+      "observed_at": 1795579754.6110132,
+      "collected_at": 1795579754.611029,
+      "ingested_at": "2026-11-25T04:09:14.611031Z"
+    },
+    {
+      "run_id": "run_17955797656023982680614ce",
+      "diagnosis_id": "diagnosis_17955797784373ac711bdcd12",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_17955797784466a0537642cad",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579778446ecd1c98b8b12"
+      ],
+      "observed_at": 1795579778.446595,
+      "collected_at": 1795579778.446605,
+      "ingested_at": "2026-11-25T04:09:38.446605Z"
+    },
+    {
+      "run_id": "run_17955797656023982680614ce",
+      "diagnosis_id": "diagnosis_17955797784373ac711bdcd12",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579778454f9e038bfb812",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579778454dfee21a092d1"
+      ],
+      "observed_at": 1795579778.454887,
+      "collected_at": 1795579778.454907,
+      "ingested_at": "2026-11-25T04:09:38.454909Z"
+    },
+    {
+      "run_id": "run_17955797656023982680614ce",
+      "diagnosis_id": "diagnosis_17955797784373ac711bdcd12",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_179557977847354a2fba57088",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579778473df0b36477a10"
+      ],
+      "observed_at": 1795579778.473679,
+      "collected_at": 1795579778.4736938,
+      "ingested_at": "2026-11-25T04:09:38.473696Z"
+    },
+    {
+      "run_id": "run_1795579800527e5b58abd0ef7",
+      "diagnosis_id": "diagnosis_17955798134596b6478aacc09",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_179557981347006d8b3b8c2b6",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_17955798134702d91c037edc4"
+      ],
+      "observed_at": 1795579813.4701738,
+      "collected_at": 1795579813.470186,
+      "ingested_at": "2026-11-25T04:10:13.470186Z"
+    },
+    {
+      "run_id": "run_1795579800527e5b58abd0ef7",
+      "diagnosis_id": "diagnosis_17955798134596b6478aacc09",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579813477011fce57ce8f",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579813477791a7391b7fc"
+      ],
+      "observed_at": 1795579813.477967,
+      "collected_at": 1795579813.477982,
+      "ingested_at": "2026-11-25T04:10:13.477982Z"
+    },
+    {
+      "run_id": "run_1795579800527e5b58abd0ef7",
+      "diagnosis_id": "diagnosis_17955798134596b6478aacc09",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_179557981349569b909d891d3",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579813495ea5b772bc2a2"
+      ],
+      "observed_at": 1795579813.4951649,
+      "collected_at": 1795579813.4951801,
+      "ingested_at": "2026-11-25T04:10:13.495182Z"
+    },
+    {
+      "run_id": "run_17955798646173243d8510327",
+      "diagnosis_id": "diagnosis_179557987378471bef5e205c0",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579873794ddc8a0376151",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_17955798737946afda25b9177"
+      ],
+      "observed_at": 1795579873.794229,
+      "collected_at": 1795579873.794241,
+      "ingested_at": "2026-11-25T04:11:13.794242Z"
+    },
+    {
+      "run_id": "run_17955798646173243d8510327",
+      "diagnosis_id": "diagnosis_179557987378471bef5e205c0",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_179557987380103b9bd249713",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_17955798738015e789f4e38ba"
+      ],
+      "observed_at": 1795579873.801138,
+      "collected_at": 1795579873.8011498,
+      "ingested_at": "2026-11-25T04:11:13.801150Z"
+    },
+    {
+      "run_id": "run_1795579883793643143dc876e",
+      "diagnosis_id": "diagnosis_1795579896629c93670605db3",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_1795579896640471309d044cf",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_179557989664088bce67c6965"
+      ],
+      "observed_at": 1795579896.640727,
+      "collected_at": 1795579896.640738,
+      "ingested_at": "2026-11-25T04:11:36.640739Z"
+    },
+    {
+      "run_id": "run_1795579883793643143dc876e",
+      "diagnosis_id": "diagnosis_1795579896629c93670605db3",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_179557989664869916051cea9",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_17955798966489a16afde167f"
+      ],
+      "observed_at": 1795579896.648052,
+      "collected_at": 1795579896.6480691,
+      "ingested_at": "2026-11-25T04:11:36.648070Z"
+    },
+    {
+      "run_id": "run_1795579883793643143dc876e",
+      "diagnosis_id": "diagnosis_1795579896629c93670605db3",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_17955798966661f0763f16923",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_17955798966663969c3ba2868"
+      ],
+      "observed_at": 1795579896.6660328,
+      "collected_at": 1795579896.66605,
+      "ingested_at": "2026-11-25T04:11:36.666052Z"
+    },
+    {
+      "run_id": "run_1795579906962c8097d50da3e",
+      "diagnosis_id": "diagnosis_179557991185789e6a0bf6ecd",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579911867fa34bc6c1f6d",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579911867ff0c0ace8ddb"
+      ],
+      "observed_at": 1795579911.86715,
+      "collected_at": 1795579911.8671622,
+      "ingested_at": "2026-11-25T04:11:51.867164Z"
+    },
+    {
+      "run_id": "run_1795579906962c8097d50da3e",
+      "diagnosis_id": "diagnosis_179557991185789e6a0bf6ecd",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_179557991187594c6abfa370a",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_17955799118759ac97783d78e"
+      ],
+      "observed_at": 1795579911.875296,
+      "collected_at": 1795579911.875309,
+      "ingested_at": "2026-11-25T04:11:51.875309Z"
+    }
+  ],
+  "probe_feedback_applied": [
+    {
+      "run_id": "run_1795579182397cd0806f29097",
+      "diagnosis_id": "diagnosis_1795579187904e44e2dab0c0e",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579187922059f19e32f7a",
+      "updates": 1,
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_17955791878990674cae3a47b",
+          "relation": "SUPPORT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_1795579187922040016434c70"
+          ],
+          "exclude": false,
+          "reason": "[POST_HOC] 独立状态查询 count=0：业务数据未见持久化（单查询仅支持，不直接确认永久性故障；延迟复测后再评估 PERSISTENCE/TIMING）",
+          "time_alignment": "POST_HOC"
+        }
+      ]
+    },
+    {
+      "run_id": "run_1795579182397cd0806f29097",
+      "diagnosis_id": "diagnosis_1795579187904e44e2dab0c0e",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_179557918793403d24d0639fa",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_17955792265501d01b5595856",
+      "diagnosis_id": "diagnosis_1795579235709eebe37e86ad0",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579235719a81d4e009166",
+      "updates": 1,
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_1795579235705a2d7357fd1f3",
+          "relation": "CONTRADICT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_179557923571992dc7e1382d9"
+          ],
+          "exclude": false,
+          "reason": "[POST_HOC] 独立状态查询 count=1：数据已存在，排除'未持久化'",
+          "time_alignment": "POST_HOC"
+        }
+      ]
+    },
+    {
+      "run_id": "run_17955792265501d01b5595856",
+      "diagnosis_id": "diagnosis_1795579235709eebe37e86ad0",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_1795579235727672d0f22134e",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_1795579241154bc3dfc22a104",
+      "diagnosis_id": "diagnosis_17955792460853ad5083b3fc1",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579246100f2376a8f29b8",
+      "updates": 1,
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_1795579246081630fe3846b06",
+          "relation": "SUPPORT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_1795579246100d4e35417a413"
+          ],
+          "exclude": false,
+          "reason": "[POST_HOC] 独立状态查询 count=0：业务数据未见持久化（单查询仅支持，不直接确认永久性故障；延迟复测后再评估 PERSISTENCE/TIMING）",
+          "time_alignment": "POST_HOC"
+        }
+      ]
+    },
+    {
+      "run_id": "run_1795579241154bc3dfc22a104",
+      "diagnosis_id": "diagnosis_17955792460853ad5083b3fc1",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_1795579246113c44354459698",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_1795579261210dd15735e2c49",
+      "diagnosis_id": "diagnosis_1795579266107bd6be1a8117f",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579266118185d642493fe",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_1795579261210dd15735e2c49",
+      "diagnosis_id": "diagnosis_1795579266107bd6be1a8117f",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_17955792661263cf31604ec5a",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_1795579261210dd15735e2c49",
+      "diagnosis_id": "diagnosis_1795579266107bd6be1a8117f",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_1795579266143eaac1ca9ee94",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_179557934405596978d0402b0",
+      "diagnosis_id": "diagnosis_1795579359985ae510c14ef3b",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_179557935999620a49dcd6fbc",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_179557934405596978d0402b0",
+      "diagnosis_id": "diagnosis_1795579359985ae510c14ef3b",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_17955793600036476c06dceaf",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_179557934405596978d0402b0",
+      "diagnosis_id": "diagnosis_1795579359985ae510c14ef3b",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_17955793600210ec9e5909f48",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_1795579374010f0b71904ed32",
+      "diagnosis_id": "diagnosis_1795579386820b1a8d78b284f",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_17955793868311c43092df700",
+      "updates": 1,
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_17955793868147dd82ef560cf",
+          "relation": "CONTRADICT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_17955793868317344b8b1ffd1"
+          ],
+          "exclude": false,
+          "reason": "[POST_HOC] 网络观测无失败请求，网络层问题假设不成立",
+          "time_alignment": "POST_HOC"
+        }
+      ]
+    },
+    {
+      "run_id": "run_1795579374010f0b71904ed32",
+      "diagnosis_id": "diagnosis_1795579386820b1a8d78b284f",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_179557938683992451ce9b80c",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_1795579374010f0b71904ed32",
+      "diagnosis_id": "diagnosis_1795579386820b1a8d78b284f",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_1795579386855c5d8168587a9",
+      "updates": 1,
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_17955793868148c5035e56d98",
+          "relation": "SUPPORT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_17955793868556e7c4cf9b39c"
+          ],
+          "exclude": false,
+          "reason": "[POST_HOC] 失败步骤的目标元素 ['create-submit'] 不在 DOM 中：定位器无法解析，属于用例资产/定位策略问题",
+          "time_alignment": "POST_HOC"
+        }
+      ]
+    },
+    {
+      "run_id": "run_1795579405096031300b897bc",
+      "diagnosis_id": "diagnosis_1795579417956c51b1559dec8",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_1795579417965f966aa6e978c",
+      "updates": 1,
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_1795579417949fbea53883e9b",
+          "relation": "CONTRADICT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_1795579417965ddae5ec20cee"
+          ],
+          "exclude": false,
+          "reason": "[POST_HOC] 网络观测无失败请求，网络层问题假设不成立",
+          "time_alignment": "POST_HOC"
+        }
+      ]
+    },
+    {
+      "run_id": "run_1795579405096031300b897bc",
+      "diagnosis_id": "diagnosis_1795579417956c51b1559dec8",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579417973884e1a71b005",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_1795579405096031300b897bc",
+      "diagnosis_id": "diagnosis_1795579417956c51b1559dec8",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_1795579417989ab2e3dd0c75b",
+      "updates": 1,
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_1795579417949d3d5779d6376",
+          "relation": "SUPPORT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_1795579417989b58522c1ff91"
+          ],
+          "exclude": false,
+          "reason": "[POST_HOC] 失败步骤的目标元素 ['project-name'] 不在 DOM 中：定位器无法解析，属于用例资产/定位策略问题",
+          "time_alignment": "POST_HOC"
+        }
+      ]
+    },
+    {
+      "run_id": "run_17955794430067f73000d8f14",
+      "diagnosis_id": "diagnosis_1795579455795d5e753966bee",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_1795579455804c16aebefced9",
+      "updates": 1,
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_179557945578894651c6fd354",
+          "relation": "CONTRADICT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_1795579455804ccdfe373ba00"
+          ],
+          "exclude": false,
+          "reason": "[POST_HOC] 网络观测无失败请求，网络层问题假设不成立",
+          "time_alignment": "POST_HOC"
+        }
+      ]
+    },
+    {
+      "run_id": "run_17955794430067f73000d8f14",
+      "diagnosis_id": "diagnosis_1795579455795d5e753966bee",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_17955794558128d74860bf223",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_17955794430067f73000d8f14",
+      "diagnosis_id": "diagnosis_1795579455795d5e753966bee",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_1795579455827876fe48e1a76",
+      "updates": 1,
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_179557945578897d46c86b056",
+          "relation": "SUPPORT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_17955794558276e4e03b632a4"
+          ],
+          "exclude": false,
+          "reason": "[POST_HOC] 失败步骤的目标元素 ['create-submit'] 不在 DOM 中：定位器无法解析，属于用例资产/定位策略问题",
+          "time_alignment": "POST_HOC"
+        }
+      ]
+    },
+    {
+      "run_id": "run_17955795172079d7fcd9c4226",
+      "diagnosis_id": "diagnosis_17955795263883b1a4cabb1cd",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_17955795263981864d200ecb4",
+      "updates": 1,
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_17955795263817101788bbd8e",
+          "relation": "SUPPORT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_1795579526398b18576f09e1f"
+          ],
+          "exclude": false,
+          "reason": "[POST_HOC] 独立状态查询 count=0：业务数据未见持久化（单查询仅支持，不直接确认永久性故障；延迟复测后再评估 PERSISTENCE/TIMING）",
+          "time_alignment": "POST_HOC"
+        }
+      ]
+    },
+    {
+      "run_id": "run_17955795172079d7fcd9c4226",
+      "diagnosis_id": "diagnosis_17955795263883b1a4cabb1cd",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_17955795264058bcaf57645d4",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_179557953627009c742d40973",
+      "diagnosis_id": "diagnosis_1795579549070ada31b9a575c",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_1795579549085398f19af84f9",
+      "updates": 1,
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_1795579549062d532b7e4b294",
+          "relation": "CONTRADICT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_17955795490852db116421da0"
+          ],
+          "exclude": false,
+          "reason": "[POST_HOC] 网络观测无失败请求，网络层问题假设不成立",
+          "time_alignment": "POST_HOC"
+        }
+      ]
+    },
+    {
+      "run_id": "run_179557953627009c742d40973",
+      "diagnosis_id": "diagnosis_1795579549070ada31b9a575c",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_17955795490979451c17b3e81",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_179557953627009c742d40973",
+      "diagnosis_id": "diagnosis_1795579549070ada31b9a575c",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_17955795491153b11af46d807",
+      "updates": 1,
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_1795579549062a4ec3132cbd3",
+          "relation": "SUPPORT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_179557954911537ca538ea7a4"
+          ],
+          "exclude": false,
+          "reason": "[POST_HOC] 失败步骤的目标元素 ['create-submit'] 不在 DOM 中：定位器无法解析，属于用例资产/定位策略问题",
+          "time_alignment": "POST_HOC"
+        }
+      ]
+    },
+    {
+      "run_id": "run_1795579582087f5ec04bd5526",
+      "diagnosis_id": "diagnosis_17955795875913a88cf8fbab1",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579587601ea5eb5294dce",
+      "updates": 1,
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_179557958758224315bafb50f",
+          "relation": "SUPPORT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_17955795876011c5264e0a373"
+          ],
+          "exclude": false,
+          "reason": "[POST_HOC] 独立状态查询 count=0：业务数据未见持久化（单查询仅支持，不直接确认永久性故障；延迟复测后再评估 PERSISTENCE/TIMING）",
+          "time_alignment": "POST_HOC"
+        }
+      ]
+    },
+    {
+      "run_id": "run_1795579582087f5ec04bd5526",
+      "diagnosis_id": "diagnosis_17955795875913a88cf8fbab1",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_1795579587609e02cd2be4814",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_179557962958691f742930964",
+      "diagnosis_id": "diagnosis_1795579638750d76812e19956",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579638762a519104df703",
+      "updates": 1,
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_1795579638742bd018d23fbca",
+          "relation": "CONTRADICT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_17955796387627613af36a75e"
+          ],
+          "exclude": false,
+          "reason": "[POST_HOC] 独立状态查询 count=1：数据已存在，排除'未持久化'",
+          "time_alignment": "POST_HOC"
+        }
+      ]
+    },
+    {
+      "run_id": "run_179557962958691f742930964",
+      "diagnosis_id": "diagnosis_1795579638750d76812e19956",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_179557963877368f9563b1433",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_1795579651612850e31e0f5d6",
+      "diagnosis_id": "diagnosis_17955796565217b77d521d6e4",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_17955796565318fd60ed9f76b",
+      "updates": 1,
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_1795579656512577201f57f12",
+          "relation": "SUPPORT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_1795579656531d0fc133fe920"
+          ],
+          "exclude": false,
+          "reason": "[POST_HOC] 独立状态查询 count=0：业务数据未见持久化（单查询仅支持，不直接确认永久性故障；延迟复测后再评估 PERSISTENCE/TIMING）",
+          "time_alignment": "POST_HOC"
+        }
+      ]
+    },
+    {
+      "run_id": "run_1795579651612850e31e0f5d6",
+      "diagnosis_id": "diagnosis_17955796565217b77d521d6e4",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_17955796565394ef3005cffd5",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_17955796662565333397dc2ea",
+      "diagnosis_id": "diagnosis_17955796711531a5f95a39603",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_17955796711641a5ef9981b29",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_17955796662565333397dc2ea",
+      "diagnosis_id": "diagnosis_17955796711531a5f95a39603",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_179557967117178bd5c533af6",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_17955796662565333397dc2ea",
+      "diagnosis_id": "diagnosis_17955796711531a5f95a39603",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_17955796711906cb06389ca02",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_1795579720954036b9d9b0c64",
+      "diagnosis_id": "diagnosis_1795579736822961f7466bd02",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579736833d0408a6ea986",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_1795579720954036b9d9b0c64",
+      "diagnosis_id": "diagnosis_1795579736822961f7466bd02",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_1795579736842c83cc68fc264",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_1795579720954036b9d9b0c64",
+      "diagnosis_id": "diagnosis_1795579736822961f7466bd02",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_1795579736863a536e0630af0",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_1795579741715fcecdac9aa30",
+      "diagnosis_id": "diagnosis_17955797545753a028b7b4e0a",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_17955797545849282f53ad381",
+      "updates": 1,
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_1795579754530d046741dbb34",
+          "relation": "CONTRADICT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_1795579754584acbeb0f3d30b"
+          ],
+          "exclude": false,
+          "reason": "[POST_HOC] 网络观测无失败请求，网络层问题假设不成立",
+          "time_alignment": "POST_HOC"
+        }
+      ]
+    },
+    {
+      "run_id": "run_1795579741715fcecdac9aa30",
+      "diagnosis_id": "diagnosis_17955797545753a028b7b4e0a",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_179557975459220c9b00d4905",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_1795579741715fcecdac9aa30",
+      "diagnosis_id": "diagnosis_17955797545753a028b7b4e0a",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_17955797546110a519a844266",
+      "updates": 1,
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_179557975453045cc5490175f",
+          "relation": "SUPPORT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_1795579754611d109177bec1b"
+          ],
+          "exclude": false,
+          "reason": "[POST_HOC] 失败步骤的目标元素 ['create-submit'] 不在 DOM 中：定位器无法解析，属于用例资产/定位策略问题",
+          "time_alignment": "POST_HOC"
+        }
+      ]
+    },
+    {
+      "run_id": "run_17955797656023982680614ce",
+      "diagnosis_id": "diagnosis_17955797784373ac711bdcd12",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_17955797784466a0537642cad",
+      "updates": 1,
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_179557977842733cfec02af85",
+          "relation": "CONTRADICT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_1795579778446ecd1c98b8b12"
+          ],
+          "exclude": false,
+          "reason": "[POST_HOC] 网络观测无失败请求，网络层问题假设不成立",
+          "time_alignment": "POST_HOC"
+        }
+      ]
+    },
+    {
+      "run_id": "run_17955797656023982680614ce",
+      "diagnosis_id": "diagnosis_17955797784373ac711bdcd12",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579778454f9e038bfb812",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_17955797656023982680614ce",
+      "diagnosis_id": "diagnosis_17955797784373ac711bdcd12",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_179557977847354a2fba57088",
+      "updates": 1,
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_17955797784272f8586a7fe3a",
+          "relation": "SUPPORT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_1795579778473df0b36477a10"
+          ],
+          "exclude": false,
+          "reason": "[POST_HOC] 失败步骤的目标元素 ['project-name'] 不在 DOM 中：定位器无法解析，属于用例资产/定位策略问题",
+          "time_alignment": "POST_HOC"
+        }
+      ]
+    },
+    {
+      "run_id": "run_1795579800527e5b58abd0ef7",
+      "diagnosis_id": "diagnosis_17955798134596b6478aacc09",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_179557981347006d8b3b8c2b6",
+      "updates": 1,
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_1795579813449194a15bf5df2",
+          "relation": "CONTRADICT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_17955798134702d91c037edc4"
+          ],
+          "exclude": false,
+          "reason": "[POST_HOC] 网络观测无失败请求，网络层问题假设不成立",
+          "time_alignment": "POST_HOC"
+        }
+      ]
+    },
+    {
+      "run_id": "run_1795579800527e5b58abd0ef7",
+      "diagnosis_id": "diagnosis_17955798134596b6478aacc09",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579813477011fce57ce8f",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_1795579800527e5b58abd0ef7",
+      "diagnosis_id": "diagnosis_17955798134596b6478aacc09",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_179557981349569b909d891d3",
+      "updates": 1,
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_17955798134491988f1fea7b7",
+          "relation": "SUPPORT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_1795579813495ea5b772bc2a2"
+          ],
+          "exclude": false,
+          "reason": "[POST_HOC] 失败步骤的目标元素 ['create-submit'] 不在 DOM 中：定位器无法解析，属于用例资产/定位策略问题",
+          "time_alignment": "POST_HOC"
+        }
+      ]
+    },
+    {
+      "run_id": "run_17955798646173243d8510327",
+      "diagnosis_id": "diagnosis_179557987378471bef5e205c0",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579873794ddc8a0376151",
+      "updates": 1,
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_179557987377496009d8cc2ab",
+          "relation": "SUPPORT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_17955798737946afda25b9177"
+          ],
+          "exclude": false,
+          "reason": "[POST_HOC] 独立状态查询 count=0：业务数据未见持久化（单查询仅支持，不直接确认永久性故障；延迟复测后再评估 PERSISTENCE/TIMING）",
+          "time_alignment": "POST_HOC"
+        }
+      ]
+    },
+    {
+      "run_id": "run_17955798646173243d8510327",
+      "diagnosis_id": "diagnosis_179557987378471bef5e205c0",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_179557987380103b9bd249713",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_1795579883793643143dc876e",
+      "diagnosis_id": "diagnosis_1795579896629c93670605db3",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_1795579896640471309d044cf",
+      "updates": 1,
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_1795579896620062d34bf0379",
+          "relation": "CONTRADICT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_179557989664088bce67c6965"
+          ],
+          "exclude": false,
+          "reason": "[POST_HOC] 网络观测无失败请求，网络层问题假设不成立",
+          "time_alignment": "POST_HOC"
+        }
+      ]
+    },
+    {
+      "run_id": "run_1795579883793643143dc876e",
+      "diagnosis_id": "diagnosis_1795579896629c93670605db3",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_179557989664869916051cea9",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_1795579883793643143dc876e",
+      "diagnosis_id": "diagnosis_1795579896629c93670605db3",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_17955798966661f0763f16923",
+      "updates": 1,
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_1795579896620a2e36b444279",
+          "relation": "SUPPORT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_17955798966663969c3ba2868"
+          ],
+          "exclude": false,
+          "reason": "[POST_HOC] 失败步骤的目标元素 ['create-submit'] 不在 DOM 中：定位器无法解析，属于用例资产/定位策略问题",
+          "time_alignment": "POST_HOC"
+        }
+      ]
+    },
+    {
+      "run_id": "run_1795579906962c8097d50da3e",
+      "diagnosis_id": "diagnosis_179557991185789e6a0bf6ecd",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579911867fa34bc6c1f6d",
+      "updates": 1,
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_17955799118460e5e4ee2f3e4",
+          "relation": "SUPPORT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_1795579911867ff0c0ace8ddb"
+          ],
+          "exclude": false,
+          "reason": "[POST_HOC] 独立状态查询 count=0：业务数据未见持久化（单查询仅支持，不直接确认永久性故障；延迟复测后再评估 PERSISTENCE/TIMING）",
+          "time_alignment": "POST_HOC"
+        }
+      ]
+    },
+    {
+      "run_id": "run_1795579906962c8097d50da3e",
+      "diagnosis_id": "diagnosis_179557991185789e6a0bf6ecd",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_179557991187594c6abfa370a",
+      "updates": 0,
+      "hypothesis_updates": []
+    }
+  ],
+  "statistics": {
+    "sample_size": 37,
+    "rounds": 2,
+    "scenario_coverage": {
+      "total_scenarios": 19,
+      "produced_failure_samples": 19,
+      "coverage": 1.0
+    },
+    "primary_cause_accuracy": {
+      "A_raw_report": 0.0,
+      "C_rule": 0.6486,
+      "D_graph_ablation": 0.6486,
+      "E_probe_no_feedback": 0.6486,
+      "F_probe_aligned": 0.7027,
+      "G_probe_no_alignment": 0.7027,
+      "H_llm_advisor": 0.6216
+    },
+    "macro_f1": {
+      "C_rule": 0.5701,
+      "F_probe_aligned": 0.5973
+    },
+    "selective_accuracy": {
+      "C_rule": 0.875,
+      "F_probe_aligned": 0.875
+    },
+    "false_pass_rate_F": 0.0,
+    "probe_execution_success_rate": 1.0,
+    "probe_feedback_success_rate": 1.0,
+    "diagnosis_latency_ms": {
+      "mean": 17.5,
+      "max": 51.9,
+      "count": 37
+    },
+    "abstention_rate_F": 0.1351,
+    "note": "n=37 失败样本（两轮合并）：小样本，不宣称统计显著；GT 来自故障机制定义（复合场景取首要机制）；Flaky 场景概率注入，单轮可能未触发故障",
+    "probe_executions_total": 54,
+    "executed_scenarios": 23
+  },
+  "ended_at": 1795579931.579374,
+  "summary": {
+    "total": 3,
+    "passed": 3,
+    "failed": []
+  }
+}

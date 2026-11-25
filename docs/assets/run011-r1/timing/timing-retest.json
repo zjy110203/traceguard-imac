@@ -1,0 +1,448 @@
+{
+  "scenarios": [
+    {
+      "name": "normal",
+      "immediate": {
+        "count": 1,
+        "observed_at": 1795577797.41915
+      },
+      "revaluation": {
+        "signals": [
+          {
+            "execution_id": "normal",
+            "status": "SUCCEEDED",
+            "time_alignment": "ALIGNED",
+            "skipped_reason": "",
+            "updates": [
+              {
+                "hypothesis_id": "h_persist",
+                "relation": "CONTRADICT",
+                "confirming": false,
+                "evidence_ids": [
+                  "evd_timing_normal"
+                ],
+                "exclude": true,
+                "reason": "独立状态查询 count=1：数据已存在，排除'未持久化'",
+                "time_alignment": "ALIGNED"
+              }
+            ]
+          }
+        ],
+        "persistence_status": "CONTRADICTED",
+        "persistence_supporting": [],
+        "persistence_contradicting": [
+          {
+            "id": "evd_timing_normal",
+            "trust": "TRUSTED",
+            "time_alignment": "ALIGNED"
+          }
+        ],
+        "persistence_excluded": true,
+        "timing_hypotheses": [],
+        "outcome": "INCONCLUSIVE",
+        "root_causes": []
+      }
+    },
+    {
+      "name": "real_delay",
+      "fault": "TF-DB-004",
+      "immediate": {
+        "count": 0,
+        "observed_at": 1795577797.431413
+      },
+      "delayed": {
+        "count": 1,
+        "observed_at": 1795577806.937289,
+        "lag_s": 9.51
+      },
+      "revaluation": {
+        "signals": [
+          {
+            "execution_id": "delay-immediate",
+            "status": "SUCCEEDED",
+            "time_alignment": "ALIGNED",
+            "skipped_reason": "",
+            "updates": [
+              {
+                "hypothesis_id": "h_persist",
+                "relation": "SUPPORT",
+                "confirming": false,
+                "evidence_ids": [
+                  "evd_timing_delay-immediate"
+                ],
+                "exclude": false,
+                "reason": "独立状态查询 count=0：业务数据未见持久化（单查询仅支持，不直接确认永久性故障；延迟复测后再评估 PERSISTENCE/TIMING）",
+                "time_alignment": "ALIGNED"
+              }
+            ]
+          },
+          {
+            "execution_id": "delay-later",
+            "status": "SUCCEEDED",
+            "time_alignment": "POST_HOC",
+            "skipped_reason": "",
+            "updates": [
+              {
+                "hypothesis_id": "h_persist",
+                "relation": "CONTRADICT",
+                "confirming": false,
+                "evidence_ids": [
+                  "evd_timing_delay-later"
+                ],
+                "exclude": false,
+                "reason": "[POST_HOC] 独立状态查询 count=1：数据已存在，排除'未持久化'",
+                "time_alignment": "POST_HOC"
+              }
+            ]
+          }
+        ],
+        "persistence_status": "SUPPORTED",
+        "persistence_supporting": [
+          {
+            "id": "evd_timing_delay-immediate",
+            "trust": "TRUSTED",
+            "time_alignment": "ALIGNED",
+            "confirming": false
+          }
+        ],
+        "persistence_contradicting": [
+          {
+            "id": "evd_timing_delay-later",
+            "trust": "POST_HOC",
+            "time_alignment": "POST_HOC"
+          }
+        ],
+        "persistence_excluded": false,
+        "timing_hypotheses": [
+          {
+            "description": "业务状态查询滞后（写入延迟）：Run 作用域证据显示未落库，事后探针显示数据已存在",
+            "suggested_by": "rule:probe-timing"
+          }
+        ],
+        "outcome": "PROBABLE",
+        "root_causes": []
+      }
+    },
+    {
+      "name": "permanent_failure",
+      "fault": "TF-DB-001",
+      "immediate": {
+        "count": 0,
+        "observed_at": 1795577806.95489
+      },
+      "delayed": {
+        "count": 0,
+        "observed_at": 1795577808.962125
+      },
+      "revaluation": {
+        "signals": [
+          {
+            "execution_id": "perm-immediate",
+            "status": "SUCCEEDED",
+            "time_alignment": "ALIGNED",
+            "skipped_reason": "",
+            "updates": [
+              {
+                "hypothesis_id": "h_persist",
+                "relation": "SUPPORT",
+                "confirming": false,
+                "evidence_ids": [
+                  "evd_timing_perm-immediate"
+                ],
+                "exclude": false,
+                "reason": "独立状态查询 count=0：业务数据未见持久化（单查询仅支持，不直接确认永久性故障；延迟复测后再评估 PERSISTENCE/TIMING）",
+                "time_alignment": "ALIGNED"
+              }
+            ]
+          },
+          {
+            "execution_id": "perm-later",
+            "status": "SUCCEEDED",
+            "time_alignment": "POST_HOC",
+            "skipped_reason": "",
+            "updates": [
+              {
+                "hypothesis_id": "h_persist",
+                "relation": "SUPPORT",
+                "confirming": false,
+                "evidence_ids": [
+                  "evd_timing_perm-later"
+                ],
+                "exclude": false,
+                "reason": "[POST_HOC] 独立状态查询 count=0：业务数据未见持久化（单查询仅支持，不直接确认永久性故障；延迟复测后再评估 PERSISTENCE/TIMING）",
+                "time_alignment": "POST_HOC"
+              }
+            ]
+          }
+        ],
+        "persistence_status": "SUPPORTED",
+        "persistence_supporting": [
+          {
+            "id": "evd_timing_perm-immediate",
+            "trust": "TRUSTED",
+            "time_alignment": "ALIGNED",
+            "confirming": false
+          },
+          {
+            "id": "evd_timing_perm-later",
+            "trust": "POST_HOC",
+            "time_alignment": "POST_HOC",
+            "confirming": false
+          }
+        ],
+        "persistence_contradicting": [],
+        "persistence_excluded": false,
+        "timing_hypotheses": [],
+        "outcome": "PROBABLE",
+        "root_causes": []
+      }
+    },
+    {
+      "name": "probe_timeout",
+      "fault": "TF-NET-002",
+      "probe_status": "TIMED_OUT",
+      "observed_at": 1795577808.970273,
+      "revaluation": {
+        "signals": [
+          {
+            "execution_id": "timeout",
+            "status": "TIMED_OUT",
+            "time_alignment": "UNKNOWN",
+            "skipped_reason": "PROBE_TIMED_OUT_NOT_EVIDENCE",
+            "updates": []
+          }
+        ],
+        "persistence_status": "CANDIDATE",
+        "persistence_supporting": [],
+        "persistence_contradicting": [],
+        "persistence_excluded": false,
+        "timing_hypotheses": [],
+        "outcome": "INCONCLUSIVE",
+        "root_causes": []
+      }
+    }
+  ],
+  "checks": [
+    {
+      "name": "S1 正常场景：数据可见 → PERSISTENCE 被排除",
+      "scenario": "normal",
+      "ok": true,
+      "detail": {
+        "count": 1,
+        "signals": [
+          {
+            "execution_id": "normal",
+            "status": "SUCCEEDED",
+            "time_alignment": "ALIGNED",
+            "skipped_reason": "",
+            "updates": [
+              {
+                "hypothesis_id": "h_persist",
+                "relation": "CONTRADICT",
+                "confirming": false,
+                "evidence_ids": [
+                  "evd_timing_normal"
+                ],
+                "exclude": true,
+                "reason": "独立状态查询 count=1：数据已存在，排除'未持久化'",
+                "time_alignment": "ALIGNED"
+              }
+            ]
+          }
+        ],
+        "persistence_status": "CONTRADICTED",
+        "persistence_supporting": [],
+        "persistence_contradicting": [
+          {
+            "id": "evd_timing_normal",
+            "trust": "TRUSTED",
+            "time_alignment": "ALIGNED"
+          }
+        ],
+        "persistence_excluded": true,
+        "timing_hypotheses": [],
+        "outcome": "INCONCLUSIVE",
+        "root_causes": []
+      },
+      "at": 1795577797.421188
+    },
+    {
+      "name": "S2 真实延迟场景：即时 count=0 + 延迟后 count>=1 → 识别 TIMING，不确认 PERSISTENCE",
+      "scenario": "real_delay",
+      "ok": true,
+      "detail": {
+        "immediate": 0,
+        "later": 1,
+        "signals": [
+          {
+            "execution_id": "delay-immediate",
+            "status": "SUCCEEDED",
+            "time_alignment": "ALIGNED",
+            "skipped_reason": "",
+            "updates": [
+              {
+                "hypothesis_id": "h_persist",
+                "relation": "SUPPORT",
+                "confirming": false,
+                "evidence_ids": [
+                  "evd_timing_delay-immediate"
+                ],
+                "exclude": false,
+                "reason": "独立状态查询 count=0：业务数据未见持久化（单查询仅支持，不直接确认永久性故障；延迟复测后再评估 PERSISTENCE/TIMING）",
+                "time_alignment": "ALIGNED"
+              }
+            ]
+          },
+          {
+            "execution_id": "delay-later",
+            "status": "SUCCEEDED",
+            "time_alignment": "POST_HOC",
+            "skipped_reason": "",
+            "updates": [
+              {
+                "hypothesis_id": "h_persist",
+                "relation": "CONTRADICT",
+                "confirming": false,
+                "evidence_ids": [
+                  "evd_timing_delay-later"
+                ],
+                "exclude": false,
+                "reason": "[POST_HOC] 独立状态查询 count=1：数据已存在，排除'未持久化'",
+                "time_alignment": "POST_HOC"
+              }
+            ]
+          }
+        ],
+        "persistence_status": "SUPPORTED",
+        "persistence_supporting": [
+          {
+            "id": "evd_timing_delay-immediate",
+            "trust": "TRUSTED",
+            "time_alignment": "ALIGNED",
+            "confirming": false
+          }
+        ],
+        "persistence_contradicting": [
+          {
+            "id": "evd_timing_delay-later",
+            "trust": "POST_HOC",
+            "time_alignment": "POST_HOC"
+          }
+        ],
+        "persistence_excluded": false,
+        "timing_hypotheses": [
+          {
+            "description": "业务状态查询滞后（写入延迟）：Run 作用域证据显示未落库，事后探针显示数据已存在",
+            "suggested_by": "rule:probe-timing"
+          }
+        ],
+        "outcome": "PROBABLE",
+        "root_causes": []
+      },
+      "at": 1795577806.942849
+    },
+    {
+      "name": "S3 永久失败场景：两次 count=0 → PERSISTENCE 保留候选（单查询不确认永久故障）",
+      "scenario": "permanent_failure",
+      "ok": true,
+      "detail": {
+        "immediate": 0,
+        "later": 0,
+        "signals": [
+          {
+            "execution_id": "perm-immediate",
+            "status": "SUCCEEDED",
+            "time_alignment": "ALIGNED",
+            "skipped_reason": "",
+            "updates": [
+              {
+                "hypothesis_id": "h_persist",
+                "relation": "SUPPORT",
+                "confirming": false,
+                "evidence_ids": [
+                  "evd_timing_perm-immediate"
+                ],
+                "exclude": false,
+                "reason": "独立状态查询 count=0：业务数据未见持久化（单查询仅支持，不直接确认永久性故障；延迟复测后再评估 PERSISTENCE/TIMING）",
+                "time_alignment": "ALIGNED"
+              }
+            ]
+          },
+          {
+            "execution_id": "perm-later",
+            "status": "SUCCEEDED",
+            "time_alignment": "POST_HOC",
+            "skipped_reason": "",
+            "updates": [
+              {
+                "hypothesis_id": "h_persist",
+                "relation": "SUPPORT",
+                "confirming": false,
+                "evidence_ids": [
+                  "evd_timing_perm-later"
+                ],
+                "exclude": false,
+                "reason": "[POST_HOC] 独立状态查询 count=0：业务数据未见持久化（单查询仅支持，不直接确认永久性故障；延迟复测后再评估 PERSISTENCE/TIMING）",
+                "time_alignment": "POST_HOC"
+              }
+            ]
+          }
+        ],
+        "persistence_status": "SUPPORTED",
+        "persistence_supporting": [
+          {
+            "id": "evd_timing_perm-immediate",
+            "trust": "TRUSTED",
+            "time_alignment": "ALIGNED",
+            "confirming": false
+          },
+          {
+            "id": "evd_timing_perm-later",
+            "trust": "POST_HOC",
+            "time_alignment": "POST_HOC",
+            "confirming": false
+          }
+        ],
+        "persistence_contradicting": [],
+        "persistence_excluded": false,
+        "timing_hypotheses": [],
+        "outcome": "PROBABLE",
+        "root_causes": []
+      },
+      "at": 1795577808.965058
+    },
+    {
+      "name": "S4 探针超时场景：TIMED_OUT 零证据、零假设变更（不冒充目标系统故障）",
+      "scenario": "probe_timeout",
+      "ok": true,
+      "detail": {
+        "probe_status": "TIMED_OUT",
+        "signals": [
+          {
+            "execution_id": "timeout",
+            "status": "TIMED_OUT",
+            "time_alignment": "UNKNOWN",
+            "skipped_reason": "PROBE_TIMED_OUT_NOT_EVIDENCE",
+            "updates": []
+          }
+        ],
+        "persistence_status": "CANDIDATE",
+        "persistence_supporting": [],
+        "persistence_contradicting": [],
+        "persistence_excluded": false,
+        "timing_hypotheses": [],
+        "outcome": "INCONCLUSIVE",
+        "root_causes": []
+      },
+      "at": 1795577809.9735339
+    }
+  ],
+  "teamflow": "http://127.0.0.1:8111",
+  "started_at": 1795577797.391891,
+  "ended_at": 1795577809.981122,
+  "summary": {
+    "total": 4,
+    "passed": 4,
+    "failed": []
+  }
+}

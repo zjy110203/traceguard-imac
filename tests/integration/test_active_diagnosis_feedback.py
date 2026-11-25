@@ -116,7 +116,14 @@ def _diagnose(rt: Runtime, run_id: str) -> dict[str, Any]:
 
 
 # ------------------------------------------------------------------ CONFIRMED
-def test_probe_confirms_persistence_and_stops(rt: Runtime) -> None:
+def test_single_probe_count_zero_does_not_confirm_persistence(rt: Runtime) -> None:
+    """RUN-011-R1 WP2 决策 R1-04：单次 count=0 不得直接确认永久性持久化故障。
+
+    旧语义（RUN-010 WP4）把单查询 count=0 视为 directly_confirming → CONFIRMED，
+    在 TF-DB-004（状态查询延迟）场景会把 TIMING 误判为 PERSISTENCE（OPEN-RISK-02）。
+    新语义：count=0 仅作支持证据（SUPPORTED 候选）；确认须业务断言级证据
+    （failed_biz 规则路径）或多点一致证据 + 时间对齐。
+    """
     _insert_run(rt, "run_diag", _report())
     diag = _diagnose(rt, "run_diag")
     assert diag["outcome"] == "INCONCLUSIVE"
@@ -131,24 +138,27 @@ def test_probe_confirms_persistence_and_stops(rt: Runtime) -> None:
     )
     plan = svc.plan_and_probe("run_diag", diag["diagnosis_id"], max_iterations=3)
 
-    assert plan["stop_reason"] == "STOP_CONFIRMED"
+    # 单查询 count=0：不得 CONFIRMED（延迟复测前只保留候选方向）
+    assert plan["diagnosis_after"]["outcome"] != "CONFIRMED"
+    assert plan["stop_reason"] != "STOP_CONFIRMED"
     assert plan["diagnosis_before"]["outcome"] == "INCONCLUSIVE"
-    assert plan["diagnosis_after"]["outcome"] == "CONFIRMED"
-    assert plan["diagnosis_after"]["root_causes"]
     assert plan["steps"][0]["applied_to_diagnosis"] is True
 
     updated = rt.docs.get(diag["diagnosis_id"]).doc
-    assert updated["outcome"] == "CONFIRMED"
-    assert updated["evaluation_history"]  # 重诊断留痕
-    assert updated["probe_feedback"]
+    assert updated["outcome"] != "CONFIRMED"
+    assert updated["root_causes"] == []
     confirmed = [h for h in updated["hypotheses"] if h["status"] == "CONFIRMED"]
-    assert confirmed and confirmed[0]["failure_mechanism"] == "PERSISTENCE"
+    assert not confirmed, "单次 count=0 不得把任何假设推到 CONFIRMED"
+    persist = [h for h in updated["hypotheses"] if h["failure_mechanism"] == "PERSISTENCE"][0]
+    assert persist["status"] == "SUPPORTED", "PERSISTENCE 保留为候选（SUPPORTED）"
+    assert persist["supporting"], "count=0 证据仍附着为支持（可追溯）"
+    assert not any(
+        r.get("confirming") for r in persist["supporting"]
+    ), "单查询证据不得带 directly_confirming"
 
-    # Disposition 随结论更新（不再停留在 NEEDS_MORE_EVIDENCE）
-    disp = rt.docs.list(kind="disposition", ref_id=diag["diagnosis_id"], limit=1)[0]
-    assert disp.doc["kind"] != "NEEDS_MORE_EVIDENCE"
-
-    # 图上出现探针节点与它评估的假设
+    # 回灌留痕：重诊断历史 + 探针反馈 + 图上探针节点
+    assert updated["evaluation_history"]
+    assert updated["probe_feedback"]
     graph = GraphService(rt).build_for_run("run_diag")
     kinds = {n["node_type"] for n in graph["nodes"]}
     assert "ProbeExecution" in kinds
@@ -278,6 +288,9 @@ def test_feedback_detects_conflicting_evidence(rt: Runtime) -> None:
         status="SUCCEEDED",
         evidence_ids=["evd_probe_state"],
         data={"response": {"ok": True, "count": 3, "keys": ["a"]}},
+        # RUN-011-R1 WP2 三态：时间未知不再默认 ALIGNED（决策 R1-01）。
+        # 冲突检测要求 TRUSTED 反驳 → 显式声明 Run 作用域采集（ALIGNED）。
+        run_scope=True,
     )
     out = svc.reassess("diag_conflict", [signal])
     assert out["after"]["unresolved_conflicts"] == ["hyp_persist"]

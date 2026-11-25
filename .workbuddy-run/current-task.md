@@ -1,3 +1,17 @@
+# 当前任务（RUN-011-R1 交付，2026-11-25）
+
+> **RUN-011-R1 已完成（B-17 保持 BLOCKED）**：单一 TestCase 血缘 18 步闭环两轮
+> （API 86/86 + DB 17/17 ×2）；时间三态 + TF-DB-004 四场景 4/4；假设去重 5 场景；
+> Benchmark v5 三场景 Pilot 15/15 + 23 场景×2 轮（37 样本，探针 54/54 真实执行）；
+> Egress 误拦根因修复（复验 6/6）；PG 并行修复（680 串行 + 3 进程并行 2/3~3/3 全绿）。
+> 权威报告：`docs/RUN-011-R1-FINAL-REPORT.md`（含最终 9 问）；基线：`docs/RUN-011-R1-BASELINE.md`。
+> BLOCKED（保持）：B-17（安全批准申请已备）、宿主级隔离、LLM 计费臂、人工基线、CI、增量 PR。
+> NOT RUN（保持）：UI 全链路点击、多 API/DB 断连/长事务、生产部署验收。
+> 测试终态：**680 passed / 0 failed / 0 skipped**（PG16）+ Ruff 全绿。
+> 待负责人决策：PR 创建与合并、LICENSE、B-17 安全批准（材料见 WP7 报告）。
+
+---
+
 # 当前任务（RUN-011 交付，2026-11-25 02:25 CST）
 
 > **RUN-011 已完成（PARTIAL 明确标注）**：在独立 API + 3 独立 Worker + PG16.16 + 真实 Chromium +

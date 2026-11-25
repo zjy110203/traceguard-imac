@@ -72,3 +72,33 @@
 | D7-04 | 暗色验收增加"真实亮度断言" | 首轮 15 个暗色检查全失败，暴露截图假深色 | 视觉证据必须可自证，不能只信标签 |
 | D7-05 | Release Gate 以 Actions API 的 `head_sha` 作为 RC 归属唯一依据 | 旧 commit 的通过不得冒充新 RC | 找不到匹配运行即 BLOCKED（fail-closed） |
 | D7-06 | Benchmark LLM 臂限定故障子集并记录实际模型 | 日预算 1 USD + 路由决定模型 | 只报子集准确率，禁止外推；Pro/Routed 全量标 BLOCKED |
+
+## RUN-011-R1 WP2 决策记录（2026-11-25，OPEN-RISK-02 时序语义修正）
+
+> 背景：`resolve_alignment()` 时间未知时返回 ALIGNED；`GraphAdjudicator._time_ok()`
+> 允许未知时间通过——「时间未知 ≠ 时间已对齐」，造成 TF-DB-004 类延迟故障被误 CONFIRMED 为 PERSISTENCE。
+> 指令要求三态语义：ALIGNED / POST_HOC / UNKNOWN；UNKNOWN 不作 CONFIRMED/EXCLUDED 权威依据。
+
+| 编号 | 决策 | 理由 | 兼容性影响 |
+|---|---|---|---|
+| R1-01 | `time_alignment` 三态化：新增 `UNKNOWN`（观测时间无法确定），未知时间不再按 ALIGNED 处理 | 时间未知不等于时间对齐；旧语义是 OPEN-RISK-02 的直接根因 | 仅新增枚举值；`to_dict()` 字段形状不变（字符串值扩展）；老数据无 time_alignment 字段按 captured_at 判定 |
+| R1-02 | UNKNOWN 与 POST_HOC 一样降权：confirming=False、exclude=False；引用 trust 标记 `TIME_UNKNOWN`（不持有 TRUSTED） | UNKNOWN 不应成为 CONFIRMED 或 EXCLUDED 的权威依据（含 CONTRADICTED 同口径保守处理） | 新增 trust 值；TRUSTED/POST_HOC/UNTRUSTED 取值不变 |
+| R1-03 | `_time_ok()`：alignment∈{POST_HOC,UNKNOWN} 或 captured_at=0（未知）→ 不通过权威门槛（留痕 notes） | Graph 裁决层同口径：未知时间不作权威确认/反驳/独立支持来源 | 行为修正：此前 captured_at=0 视为匹配；受影响的仅是「时间未知的证据不再确权」——正是本次要修的语义 |
+| R1-04 | **探针 `http_state` 单次 count=0 不再 `directly_confirming=True`**（改为 SUPPORT/非确权） | 「不能因为单次 count=0 就直接确认永久性持久化故障」（指令 §4.1）；确认需业务断言级证据（diagnosis_service 的 failed_biz 规则保留 confirming=True，覆盖 RUN-011 False Pass 能力） | **语义变更**：`tests/integration/test_active_diagnosis_feedback.py::test_probe_confirms_persistence_and_stops` 的期望从「单查询 CONFIRMED」更正为「SUPPORTED/PROBABLE 候选」（断言重写为新语义，非弱化）；RUN-011 TF-DB-001 False Pass 的 CONFIRMED 路径（业务断言失败）不受影响 |
+| R1-05 | TF-DB-004 延迟复测语义：双查询（Run 内即时 + 延迟后）比较；数据延迟出现→生成 TIMING 方向；始终不存在→PERSISTENCE 保留候选（不因单查询升级 CONFIRMED）；证据不足→INCONCLUSIVE；探针超时→零证据零假设变更 | 指令 §4.1 预期矩阵 | 新增回归测试与真实场景脚本；不改冻结契约（ProbeSignal/FeedbackResult 均为非契约内部类型） |
+
+- 验证：全量测试套件在上述变更后必须保持 663+（新增回归测试计入）0 failed；不允许弱化其它断言换通过。
+
+### R1-04 扩展（2026-11-25，WP4 Pilot 实测触发）
+
+Benchmark Pilot TIMING 场景（TF-DB-004 真实滞后）实测：业务断言失败路径
+（`diagnosis_service` failed_biz 规则）仍以单次状态查询 `directly_confirming=True`
+确认 PERSISTENCE → CONFIRMED → 探针 STOP_CONFIRMED 零执行，TIMING 方向永远
+无法识别——OPEN-RISK-02 的完整形态。按指令 §4.1「不能因为单次 count=0 就直接
+确认永久性持久化故障」，将该路径的 state 证据同步降为 confirming=False（候选级）。
+
+- 影响：TF-DB-001（False Pass）诊断从 CONFIRMED 变为 PROBABLE/SUPPORTED（候选），
+  延迟复测持续缺失后仍可保留 PERSISTENCE 候选（指令预期矩阵第一条）；
+  RUN-011 的 D1「Trusted Oracle 揭穿假成功」指 Run 真实失败（verdict 级），不受影响；
+  D5 一直接受 CONFIRMED/PROBABLE/SUPPORTED/INCONCLUSIVE 全部合法结论。
+- 不是弱化：是把「单查询确认」换成「延迟复测后多点一致才可确认」的正确门槛。

@@ -219,14 +219,30 @@ class GraphAdjudicator:
     def _time_ok(
         self, ref: dict[str, Any], meta: EvidenceMeta | None, v: HypothesisAdjudication
     ) -> bool:
-        """证据时间是否落在 Run 窗口内（未知时间视为匹配，留痕不阻断）。"""
+        """证据时间是否落在 Run 窗口内（RUN-011-R1 WP2 三态语义）。
+
+        - POST_HOC / UNKNOWN（时间未知）→ 不通过：**时间未知不等于时间已对齐**，
+          未知时间不得作为 CONFIRMED / EXCLUDED 的权威依据（决策 R1-01/R1-03）；
+        - captured_at=0（未知）→ 不通过（留痕 notes）；
+        - 明确晚于 run 结束 +5s → 不通过（time_mismatched）。
+        """
         alignment = str(ref.get("time_alignment") or "")
         if alignment == "POST_HOC":
             v.time_mismatched.append(str(ref.get("id")))
             v.notes.append(f"evidence {ref.get('id')} 为事后观测（POST_HOC），不作为权威")
             return False
+        if alignment == "UNKNOWN":
+            v.notes.append(
+                f"evidence {ref.get('id')} 观测时间未知（UNKNOWN）：时间未知 ≠ 时间已对齐，不作为权威"
+            )
+            return False
         ts = meta.captured_at if meta else 0.0
-        if ts and self.run_ended_at and ts > self.run_ended_at + 5.0:
+        if not ts:
+            v.notes.append(
+                f"evidence {ref.get('id')} captured_at 未知（=0）：无法证明时间对齐，不作为权威"
+            )
+            return False
+        if self.run_ended_at and ts > self.run_ended_at + 5.0:
             v.time_mismatched.append(str(ref.get("id")))
             v.notes.append(
                 f"evidence {ref.get('id')} captured_at {ts:.0f} 晚于 run 结束 {self.run_ended_at:.0f}"

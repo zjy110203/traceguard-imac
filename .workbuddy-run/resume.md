@@ -1,3 +1,13 @@
+# RESUME（RUN-011-R1，2026-11-25）
+
+- 状态：**交付完成**（除 BLOCKED 项）。从 `docs/RUN-011-R1-FINAL-REPORT.md` 九问与交付清单继续。
+- 若续作：优先等负责人对 B-17 安全批准（WP7 材料）、LICENSE、PR 的决策；
+  其次 UI 全链路点击验收、多 API/DB 断连/长事务（NOT RUN 项）。
+- 环境快照：PG16 :55432（traceguard_run011_r1_l1/l2/pgtest）、本机无 gh/凭据、
+  测试终态 680/0/0（PG16）。
+- 决策记录：`.workbuddy-run/decisions.md`（R1-01~R1-05，含 R1-04 扩展）。
+
+---
 # 中断恢复指引（RUN-006 结束点）
 
 > **RUN-010 恢复摘要（2026-11-24 22:05 CST）**：RUN-010 WP0~WP7 已完成并推送

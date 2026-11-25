@@ -1,0 +1,2712 @@
+{
+  "checks": [
+    {
+      "name": "API 独立进程 + PostgreSQL 方言",
+      "phase": "env",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "dialect": "postgresql+psycopg",
+        "error": ""
+      },
+      "at": "2026-11-25T11:14:10+0800"
+    },
+    {
+      "name": "API 内嵌 Worker 未运行（TG_INLINE_WORKER=0 生效）",
+      "phase": "env",
+      "ok": true,
+      "detail": {
+        "id": "run011r1-api",
+        "inline_running": false
+      },
+      "at": "2026-11-25T11:14:10+0800"
+    },
+    {
+      "name": "认证已开启（服务端强制）",
+      "phase": "env",
+      "ok": true,
+      "detail": {
+        "auth_enabled": true,
+        "csrf_required": true
+      },
+      "at": "2026-11-25T11:14:10+0800"
+    },
+    {
+      "name": "真实 Chromium 可用",
+      "phase": "env",
+      "ok": true,
+      "detail": {
+        "available": true,
+        "version": "159.0.8154.6",
+        "channel": "bundled-chromium",
+        "error": null
+      },
+      "at": "2026-11-25T11:14:10+0800"
+    },
+    {
+      "name": "Vue 前端正式构建产物可访问（GET /）",
+      "phase": "env",
+      "ok": true,
+      "detail": "<!DOCTYPE html>\n<html lang=\"zh-CN\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <title>TraceGuard 工作台</title>\n    <script typ",
+      "at": "2026-11-25T11:14:11+0800"
+    },
+    {
+      "name": "TeamFlow 独立业务目标服务可用",
+      "phase": "env",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "source": "authoritative-state",
+        "workspace": "default",
+        "count": 1,
+        "keys": [
+          "TF-548526"
+        ]
+      },
+      "at": "2026-11-25T11:14:11+0800"
+    },
+    {
+      "name": "未认证请求 fail-closed（401）",
+      "phase": "auth",
+      "ok": true,
+      "detail": {
+        "status": 401,
+        "body": {
+          "detail": {
+            "code": "UNAUTHENTICATED",
+            "message": "authentication required"
+          }
+        }
+      },
+      "at": "2026-11-25T11:14:11+0800"
+    },
+    {
+      "name": "登录成功且身份来自服务端（viewer）",
+      "phase": "auth",
+      "ok": true,
+      "detail": {
+        "user": "viewer",
+        "roles": [
+          "viewer"
+        ]
+      },
+      "at": "2026-11-25T11:14:11+0800"
+    },
+    {
+      "name": "登录成功且身份来自服务端（qa-engineer）",
+      "phase": "auth",
+      "ok": true,
+      "detail": {
+        "user": "qa-engineer",
+        "roles": [
+          "qa-engineer"
+        ]
+      },
+      "at": "2026-11-25T11:14:11+0800"
+    },
+    {
+      "name": "登录成功且身份来自服务端（qa-lead）",
+      "phase": "auth",
+      "ok": true,
+      "detail": {
+        "user": "qa-lead",
+        "roles": [
+          "qa-lead"
+        ]
+      },
+      "at": "2026-11-25T11:14:11+0800"
+    },
+    {
+      "name": "登录成功且身份来自服务端（platform-admin）",
+      "phase": "auth",
+      "ok": true,
+      "detail": {
+        "user": "platform-admin",
+        "roles": [
+          "platform-admin"
+        ]
+      },
+      "at": "2026-11-25T11:14:11+0800"
+    },
+    {
+      "name": "viewer 不能创建 Intent（403 PERMISSION_DENIED）",
+      "phase": "auth",
+      "ok": true,
+      "detail": {
+        "status": 403,
+        "body": {
+          "detail": {
+            "code": "PERMISSION_DENIED",
+            "message": "permission denied: testcase.create"
+          }
+        }
+      },
+      "at": "2026-11-25T11:14:11+0800"
+    },
+    {
+      "name": "qa-engineer 不能管理用户（403）",
+      "phase": "auth",
+      "ok": true,
+      "detail": {
+        "status": 403
+      },
+      "at": "2026-11-25T11:14:11+0800"
+    },
+    {
+      "name": "platform-admin 可读取用户列表",
+      "phase": "auth",
+      "ok": true,
+      "detail": 4,
+      "at": "2026-11-25T11:14:11+0800"
+    },
+    {
+      "name": "TeamFlow 测试数据已重置（业务基线 count=0）",
+      "phase": "seed",
+      "ok": true,
+      "detail": 0,
+      "at": "2026-11-25T11:14:11+0800"
+    },
+    {
+      "name": "qa-engineer 不能执行系统种子（403 system.configure）",
+      "phase": "seed",
+      "ok": true,
+      "detail": {
+        "status": 403
+      },
+      "at": "2026-11-25T11:14:11+0800"
+    },
+    {
+      "name": "TeamFlow 场景资产已注入（platform-admin）",
+      "phase": "seed",
+      "ok": true,
+      "detail": {
+        "created": 0,
+        "skipped": 14
+      },
+      "at": "2026-11-25T11:14:11+0800"
+    },
+    {
+      "name": "A1 Intent 真实创建",
+      "phase": "A",
+      "ok": true,
+      "detail": "intent_17955764510956ef3bd4764aa",
+      "at": "2026-11-25T11:14:11+0800"
+    },
+    {
+      "name": "A2 真实浏览器探索产出可复现轨迹",
+      "phase": "A",
+      "ok": true,
+      "detail": {
+        "exploration_id": "exploration_1795576451427d87ae75c4996",
+        "status": "COMPLETED",
+        "stop_reason": "页面已显示「项目创建成功」提示（banner-success），且项目行 TF-890705「R1血缘闭环项目」已出现，满足成功提示即完成的探索目标。",
+        "engine": "llm:deepseek",
+        "provider": null,
+        "llm": {},
+        "action_count": 5,
+        "actions": [
+          {
+            "action": "navigate",
+            "params": {
+              "url": "http://127.0.0.1:8111"
+            },
+            "result": "http://127.0.0.1:8111/",
+            "reason": "当前页面为 about:blank，需先导航到允许的应用地址以开始项目创建流程",
+            "gateway": "allowed"
+          },
+          {
+            "action": "navigate",
+            "params": {
+              "url": "http://127.0.0.1:8111/projects"
+            },
+            "result": "http://127.0.0.1:8111/projects",
+            "reason": "根路径返回 Not Found，尝试导航到项目列表页面以开始创建项目流程",
+            "gateway": "allowed"
+          },
+          {
+            "action": "click",
+            "params": {
+              "test_id": "nav-new"
+            },
+            "result": "http://127.0.0.1:8111/projects/new",
+            "reason": "项目列表暂无项目，需要点击「新建项目」入口以打开创建表单。",
+            "gateway": "allowed"
+          },
+          {
+            "action": "fill",
+            "params": {
+              "test_id": "project-name",
+              "value": "R1血缘闭环项目"
+            },
+            "result": "filled",
+            "reason": "当前已在新建项目页，表单可见，先填写项目名称输入框。",
+            "gateway": "allowed"
+          },
+          {
+            "action": "click",
+            "params": {
+              "test_id": "create-submit"
+            },
+            "result": "http://127.0.0.1:8111/projects?created=1",
+            "reason": "项目名称已填写，点击「创建」提交表单，以触发成功提示并完成持久化验证。",
+            "gateway": "allowed"
+          }
+        ]
+      },
+      "at": "2026-11-25T11:14:22+0800"
+    },
+    {
+      "name": "A3 轨迹编译为候选用例（PENDING）",
+      "phase": "A",
+      "ok": true,
+      "detail": {
+        "testcase_id": "tcase_1795576462905a6038d543b3a",
+        "version": 1,
+        "warnings": [
+          "NO_BUSINESS_STATE_API: 只能验证 UI 行为，不能宣称持久化已验证"
+        ],
+        "compiler_version": "compiler-v1",
+        "prompt_version": "prompt-v1",
+        "model_version": "rule-based-v1",
+        "llm_meta": {
+          "mode": "rule_only",
+          "called": false,
+          "fallback": false
+        }
+      },
+      "at": "2026-11-25T11:14:22+0800"
+    },
+    {
+      "name": "A4 候选用例必须处于 PENDING（不得自动批准）",
+      "phase": "A",
+      "ok": true,
+      "detail": "PENDING",
+      "at": "2026-11-25T11:14:22+0800"
+    },
+    {
+      "name": "B1 审核门禁：无稳定性回放时拒绝（412）",
+      "phase": "B",
+      "ok": true,
+      "detail": {
+        "status": 412,
+        "body": {
+          "detail": {
+            "code": "PRECONDITION_FAILED",
+            "message": "ORACLE_BINDING_INCOMPLETE: MISSING_ORACLE: cand_a_create_ui"
+          }
+        }
+      },
+      "at": "2026-11-25T11:14:22+0800"
+    },
+    {
+      "name": "B2 Oracle 已审批并带版本",
+      "phase": "B",
+      "ok": true,
+      "detail": {
+        "oracles": {
+          "cand_a_create_ui": "oracle_run011r1_compiled_cand_a_create_ui"
+        },
+        "versions": {
+          "cand_a_create_ui": 1
+        }
+      },
+      "at": "2026-11-25T11:14:27+0800"
+    },
+    {
+      "name": "B3 稳定性回放完成（3 次真实 Run）且独立 Worker 领取",
+      "phase": "B",
+      "ok": true,
+      "detail": {
+        "claimed_by": [
+          "run011r1-w2",
+          "run011r1-w1",
+          "run011r1-w3"
+        ],
+        "declared_workers": [
+          "run011r1-w1",
+          "run011r1-w2",
+          "run011r1-w3"
+        ],
+        "status": "COMPLETED"
+      },
+      "at": "2026-11-25T11:14:27+0800"
+    },
+    {
+      "name": "B4 编译候选必须通过稳定性回放才能批准（否则门禁如实拒绝）",
+      "phase": "B",
+      "ok": true,
+      "detail": {
+        "classification": "STABLE_PASS",
+        "promotable": true
+      },
+      "at": "2026-11-25T11:14:27+0800"
+    },
+    {
+      "name": "B6 请求体伪造 reviewer 无效（服务端 Principal 生效）",
+      "phase": "B",
+      "ok": true,
+      "detail": {
+        "review_status": "APPROVED",
+        "reviewer": "user:qa-lead",
+        "review_revision": 1,
+        "request_body_declared": "agent:auto-heal"
+      },
+      "at": "2026-11-25T11:14:27+0800"
+    },
+    {
+      "name": "B7 审批后版本引用完整（Oracle 绑定保留）",
+      "phase": "B",
+      "ok": true,
+      "detail": {
+        "oracle_bindings": {
+          "cand_a_create_ui": {
+            "oracle_id": "oracle_run011r1_compiled_cand_a_create_ui",
+            "oracle_version": 1,
+            "workspace_id": "ws-run011-r1-1",
+            "approved": true,
+            "approved_by": "user:qa-lead",
+            "oracle_assertion_id": "cand_a_create_ui",
+            "assertion_id_mismatch": false,
+            "bound_by": "user:qa-lead",
+            "bound_at": "2026-11-25T03:14:22.930975Z",
+            "pinned_at": "2026-11-25T03:14:27.820112Z"
+          }
+        },
+        "review_status": "APPROVED"
+      },
+      "at": "2026-11-25T11:14:27+0800"
+    },
+    {
+      "name": "C1 Run 真实入队并由独立 Worker 终态",
+      "phase": "C",
+      "ok": true,
+      "detail": {
+        "task_id": "task_17955764678382642a98f386c",
+        "run_id": "run_1795576467843ed00afc32d75",
+        "version": 1,
+        "note": "正式执行（无故障）",
+        "queued_at": "2026-11-25T11:14:27+0800",
+        "workers_seen": [
+          "run011r1-w2"
+        ],
+        "fencing_tokens": [
+          0,
+          1
+        ],
+        "attempts": [
+          1
+        ],
+        "polls": 8,
+        "submitted_submit_receipt": null,
+        "elapsed_ms": 4278.9,
+        "terminal_status": "COMPLETED",
+        "test_verdict": "PASSED",
+        "lease_owner_final": "run011r1-w2",
+        "fencing_token_final": 1,
+        "independent_worker": true
+      },
+      "at": "2026-11-25T11:14:32+0800"
+    },
+    {
+      "name": "C2 执行归属为独立 Worker 进程",
+      "phase": "C",
+      "ok": true,
+      "detail": {
+        "task_id": "task_17955764678382642a98f386c",
+        "run_id": "run_1795576467843ed00afc32d75",
+        "version": 1,
+        "note": "正式执行（无故障）",
+        "queued_at": "2026-11-25T11:14:27+0800",
+        "workers_seen": [
+          "run011r1-w2"
+        ],
+        "fencing_tokens": [
+          0,
+          1
+        ],
+        "attempts": [
+          1
+        ],
+        "polls": 8,
+        "submitted_submit_receipt": null,
+        "elapsed_ms": 4278.9,
+        "terminal_status": "COMPLETED",
+        "test_verdict": "PASSED",
+        "lease_owner_final": "run011r1-w2",
+        "fencing_token_final": 1,
+        "independent_worker": true
+      },
+      "at": "2026-11-25T11:14:32+0800"
+    },
+    {
+      "name": "C3 正式执行 PASSED",
+      "phase": "C",
+      "ok": true,
+      "detail": {
+        "verdict": "PASSED",
+        "status": "COMPLETED"
+      },
+      "at": "2026-11-25T11:14:32+0800"
+    },
+    {
+      "name": "C4 报告含 report.browser.egress 且强制经代理",
+      "phase": "C",
+      "ok": true,
+      "detail": {
+        "total": 14,
+        "allowed": 14,
+        "blocked": 0,
+        "blocked_targets": [],
+        "blocked_reasons": [],
+        "url": "http://127.0.0.1:50468",
+        "run_id": "run_1795576467843ed00afc32d75",
+        "worker_id": "run011r1-w2",
+        "enforced": true
+      },
+      "at": "2026-11-25T11:14:32+0800"
+    },
+    {
+      "name": "C5 业务状态真实变化（持久化生效，考虑 cleanup_policy）",
+      "phase": "C",
+      "ok": true,
+      "detail": {
+        "before": 3,
+        "after": 1,
+        "cleanup_policy": "RESET_DATA"
+      },
+      "at": "2026-11-25T11:14:32+0800"
+    },
+    {
+      "name": "C6 Evidence 真实落库",
+      "phase": "C",
+      "ok": true,
+      "detail": {
+        "count": 23,
+        "types": [
+          "api",
+          "browser",
+          "network"
+        ],
+        "sample": [
+          {
+            "evidence_id": "evd_179557647211026c6157c9e09",
+            "source_type": "api",
+            "kind": "raw",
+            "captured_at": "2026-11-25T03:14:32.110636Z"
+          },
+          {
+            "evidence_id": "evd_1795576471972dbff35b60943",
+            "source_type": "browser",
+            "kind": "raw",
+            "captured_at": "2026-11-25T03:14:31.972840Z"
+          },
+          {
+            "evidence_id": "evd_1795576471971bbbcd862d8d8",
+            "source_type": "browser",
+            "kind": "raw",
+            "captured_at": "2026-11-25T03:14:31.971877Z"
+          }
+        ]
+      },
+      "at": "2026-11-25T11:14:32+0800"
+    },
+    {
+      "name": "C7 Evidence 摘要可重新计算校验（服务端）",
+      "phase": "C",
+      "ok": true,
+      "detail": [
+        {
+          "evidence_id": "evd_179557647211026c6157c9e09",
+          "integrity_check": "PASS",
+          "storage": "PASS"
+        },
+        {
+          "evidence_id": "evd_1795576471972dbff35b60943",
+          "integrity_check": "PASS",
+          "storage": "PASS"
+        },
+        {
+          "evidence_id": "evd_1795576471971bbbcd862d8d8",
+          "integrity_check": "PASS",
+          "storage": "PASS"
+        },
+        {
+          "evidence_id": "evd_1795576471970d6ea5219f2fb",
+          "integrity_check": "PASS",
+          "storage": "PASS"
+        },
+        {
+          "evidence_id": "evd_17955764719340d06bb7fb639",
+          "integrity_check": "PASS",
+          "storage": "PASS"
+        }
+      ],
+      "at": "2026-11-25T11:14:32+0800"
+    },
+    {
+      "name": "C8 Event ID 唯一且序号连续",
+      "phase": "C",
+      "ok": true,
+      "detail": {
+        "count": 9,
+        "seq_first": 10,
+        "seq_last": 18
+      },
+      "at": "2026-11-25T11:14:32+0800"
+    },
+    {
+      "name": "D0 TF-LOC-001 已注入且为 sticky（可穿过 Run 的 RESET_DATA 预清理）",
+      "phase": "D",
+      "ok": true,
+      "detail": {
+        "active": [
+          "TF-LOC-001"
+        ],
+        "sticky": [
+          "TF-LOC-001"
+        ]
+      },
+      "at": "2026-11-25T11:14:32+0800"
+    },
+    {
+      "name": "D1 真实失败（FAILED/NOT_EVALUATED + 存在带错误的失败步骤）",
+      "phase": "D",
+      "ok": true,
+      "detail": {
+        "verdict": "NOT_EVALUATED",
+        "failed_steps": [
+          {
+            "step_id": "s4",
+            "action": "click",
+            "target": {
+              "strategy": "test_id",
+              "value": "create-submit",
+              "source": "compiler",
+              "stability_score": 0.85
+            },
+            "error": "TIMEOUT: Locator.wait_for: Timeout 8000ms exceeded.\nCall log:\n  - waiting for get_by_test_id(\"create-submit\").first to be visible\n"
+          }
+        ]
+      },
+      "at": "2026-11-25T11:14:44+0800"
+    },
+    {
+      "name": "D2 失败 Run 由独立 Worker 执行",
+      "phase": "D",
+      "ok": true,
+      "detail": {
+        "task_id": "task_1795576472187be8b1961152f",
+        "run_id": "run_17955764721925f11e3fce7b6",
+        "version": 1,
+        "note": "故障执行（TF-LOC-001 定位器失效）",
+        "queued_at": "2026-11-25T11:14:32+0800",
+        "workers_seen": [
+          "run011r1-w1"
+        ],
+        "fencing_tokens": [
+          0,
+          1
+        ],
+        "attempts": [
+          1
+        ],
+        "polls": 21,
+        "submitted_submit_receipt": null,
+        "elapsed_ms": 12241.0,
+        "terminal_status": "FAILED",
+        "test_verdict": "NOT_EVALUATED",
+        "lease_owner_final": "run011r1-w1",
+        "fencing_token_final": 1,
+        "independent_worker": true
+      },
+      "at": "2026-11-25T11:14:44+0800"
+    },
+    {
+      "name": "D3 失败 Run 与主线 TestCase 同一用例同一版本",
+      "phase": "D",
+      "ok": true,
+      "detail": {
+        "run.testcase_id": null,
+        "expected": "tcase_1795576462905a6038d543b3a",
+        "run.testcase_version_id": "tcase_1795576462905a6038d543b3a@1",
+        "expected_version": "tcase_1795576462905a6038d543b3a@1"
+      },
+      "at": "2026-11-25T11:14:44+0800"
+    },
+    {
+      "name": "D4 诊断产出可追溯假设",
+      "phase": "diag",
+      "ok": true,
+      "detail": [
+        {
+          "id": "hyp_17955764844425ca881cb27f2",
+          "mechanism": "NETWORK",
+          "domain": "ENVIRONMENT",
+          "status": "SUPPORTED",
+          "suggested_by": "rule",
+          "supporting": [
+            {
+              "id": "evd_17955764837716dfb71744e09",
+              "trust": "TRUSTED",
+              "confirming": false
+            },
+            {
+              "id": "evd_1795576483770d52703ea2f33",
+              "trust": "TRUSTED",
+              "confirming": false
+            },
+            {
+              "id": "evd_1795576483769d5b9dc2749c1",
+              "trust": "TRUSTED",
+              "confirming": false
+            }
+          ],
+          "contradicting": []
+        },
+        {
+          "id": "hyp_1795576484442f630881fc170",
+          "mechanism": "LOCATOR",
+          "domain": "TEST_ASSET",
+          "status": "SUPPORTED",
+          "suggested_by": "rule",
+          "supporting": [
+            {
+              "id": "evd_17955764837716dfb71744e09",
+              "trust": "TRUSTED",
+              "confirming": false
+            },
+            {
+              "id": "evd_1795576483770d52703ea2f33",
+              "trust": "TRUSTED",
+              "confirming": false
+            },
+            {
+              "id": "evd_1795576483769d5b9dc2749c1",
+              "trust": "TRUSTED",
+              "confirming": false
+            }
+          ],
+          "contradicting": []
+        }
+      ],
+      "at": "2026-11-25T11:15:02+0800"
+    },
+    {
+      "name": "D5 诊断结论合法（含如实弃权）",
+      "phase": "diag",
+      "ok": true,
+      "detail": "PROBABLE",
+      "at": "2026-11-25T11:15:02+0800"
+    },
+    {
+      "name": "D6 诊断绑定失败 Run 与主线 TestCase",
+      "phase": "diag",
+      "ok": true,
+      "detail": {
+        "diag.run_id": "run_17955764721925f11e3fce7b6",
+        "expected_run": "run_17955764721925f11e3fce7b6",
+        "diag.testcase_id": "tcase_1795576462905a6038d543b3a"
+      },
+      "at": "2026-11-25T11:15:02+0800"
+    },
+    {
+      "name": "D7 证据引用真实提取（supporting/contradicting/evidence_refs，而非 Graph 节点数）",
+      "phase": "diag",
+      "ok": true,
+      "detail": {
+        "from_hypotheses_supporting": [
+          "evd_1795576483769d5b9dc2749c1",
+          "evd_1795576483770d52703ea2f33",
+          "evd_17955764837716dfb71744e09"
+        ],
+        "from_hypotheses_contradicting": [],
+        "from_doc_evidence_refs": [
+          "evd_1795576483769d5b9dc2749c1",
+          "evd_1795576483770d52703ea2f33",
+          "evd_17955764837716dfb71744e09"
+        ],
+        "union": [
+          "evd_1795576483769d5b9dc2749c1",
+          "evd_1795576483770d52703ea2f33",
+          "evd_17955764837716dfb71744e09"
+        ]
+      },
+      "at": "2026-11-25T11:15:02+0800"
+    },
+    {
+      "name": "E1 探针真实执行并落库新证据（或如实 STOP 且说明原因）",
+      "phase": "E",
+      "ok": true,
+      "detail": {
+        "stop_reason": "STOP_ITERATION_LIMIT",
+        "stop_detail": "达到最大迭代 3",
+        "new_evidence_ids": [
+          "evd_1795576502948ed22f786993f",
+          "evd_1795576502967ce3cf7fdfb08",
+          "evd_179557650298188203e4cb9c2"
+        ]
+      },
+      "at": "2026-11-25T11:15:03+0800"
+    },
+    {
+      "name": "E2 探针计划绑定同一 Run 与 Diagnosis",
+      "phase": "E",
+      "ok": true,
+      "detail": {
+        "plan_id": "probeplan_1795576502944f080ddd60191",
+        "run_id": "run_17955764721925f11e3fce7b6",
+        "diagnosis_id": "diagnosis_1795576502919eff4037ad9cc",
+        "workspace_id": "default",
+        "budget": {
+          "budget_id": "pbudget_diagnosis-diagnosis_1795576502919eff4037ad9cc",
+          "scope_key": "diagnosis:diagnosis_1795576502919eff4037ad9cc",
+          "owner_run_id": "run_17955764721925f11e3fce7b6",
+          "owner_diagnosis_id": "diagnosis_1795576502919eff4037ad9cc",
+          "workspace_id": "default",
+          "max_probes": 50,
+          "probes_used": 3,
+          "probes_left": 47,
+          "max_total_cost": 100.0,
+          "cost_used": 1.4,
+          "cost_left": 98.6,
+          "max_duration_seconds": 60.0,
+          "elapsed_seconds": 0.06,
+          "time_left": 59.94,
+          "closed": false,
+          "close_reason": "",
+          "provisional": true,
+          "note": "P06 待负责人确认：以下预算与风险阈值为 provisional 配置，仅用于本轮实现与测试，不得视为正式冻结的工程决策。",
+          "started_at": 1795576502.930912,
+          "closed_at": null,
+          "version": 4,
+          "doc_version": 4
+        },
+        "gaps_before": [
+          {
+            "gap_id": "business_state_unknown",
+            "probe_id": "http_state",
+            "params": {
+              "template": "get_state_projects",
+              "run_id": "run_17955764721925f11e3fce7b6"
+            },
+            "why": "业务状态证据缺失或不足，需要独立状态查询确认是否真正持久化",
+            "info_gain": 0.7
+          },
+          {
+            "gap_id": "network_unverified",
+            "probe_id": "network_trace",
+            "params": {
+              "template": "run_network",
+              "run_id": "run_17955764721925f11e3fce7b6"
+            },
+            "why": "核对网络请求状态码与失败原因，排除环境/接口因素",
+            "info_gain": 0.55
+          },
+          {
+            "gap_id": "dom_unverified",
+            "probe_id": "dom_snapshot",
+            "params": {
+              "template": "run_dom",
+              "run_id": "run_17955764721925f11e3fce7b6"
+            },
+            "why": "核对真实 DOM 是否渲染期望元素（区分定位器问题与渲染问题）",
+            "info_gain": 0.45
+          },
+          {
+            "gap_id": "backend_log_unchecked",
+            "probe_id": "backend_log",
+            "params": {
+              "template": "tail_teamflow",
+              "line_limit": 100
+            },
+            "why": "核对后端日志尾部，确认服务端是否报错或异常退出",
+            "info_gain": 0.35
+          }
+        ],
+        "gaps_after": [
+          {
+            "gap_id": "backend_log_unchecked",
+            "probe_id": "backend_log",
+            "params": {
+              "template": "tail_teamflow",
+              "line_limit": 100
+            },
+            "why": "核对后端日志尾部，确认服务端是否报错或异常退出",
+            "info_gain": 0.35
+          }
+        ],
+        "steps": [
+          {
+            "iteration": 1,
+            "gap_id": "network_unverified",
+            "probe_id": "network_trace",
+            "why": "核对网络请求状态码与失败原因，排除环境/接口因素",
+            "info_gain": 0.55,
+            "score": 0.49,
+            "status": "SUCCEEDED",
+            "reason": "",
+            "evidence_ids": [
+              "evd_1795576502948ed22f786993f"
+            ],
+            "duration_ms": 3,
+            "execution_id": "probeexec_179557650294835034d376e10",
+            "budget": {
+              "budget_id": "pbudget_diagnosis-diagnosis_1795576502919eff4037ad9cc",
+              "scope_key": "diagnosis:diagnosis_1795576502919eff4037ad9cc",
+              "owner_run_id": "run_17955764721925f11e3fce7b6",
+              "owner_diagnosis_id": "diagnosis_1795576502919eff4037ad9cc",
+              "workspace_id": "default",
+              "max_probes": 50,
+              "probes_used": 1,
+              "probes_left": 49,
+              "max_total_cost": 100.0,
+              "cost_used": 0.2,
+              "cost_left": 99.8,
+              "max_duration_seconds": 60.0,
+              "elapsed_seconds": 0.02,
+              "time_left": 59.98,
+              "closed": false,
+              "close_reason": "",
+              "provisional": true,
+              "note": "P06 待负责人确认：以下预算与风险阈值为 provisional 配置，仅用于本轮实现与测试，不得视为正式冻结的工程决策。",
+              "started_at": 1795576502.930912,
+              "closed_at": null,
+              "version": 2,
+              "doc_version": 2
+            },
+            "applied_to_diagnosis": true,
+            "diagnosis_after": {
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "unresolved_conflicts": []
+            },
+            "hypothesis_updates": [
+              {
+                "hypothesis_id": "hyp_17955764844425ca881cb27f2",
+                "relation": "CONTRADICT",
+                "confirming": false,
+                "evidence_ids": [
+                  "evd_1795576502948ed22f786993f"
+                ],
+                "exclude": false,
+                "reason": "[POST_HOC] 网络观测无失败请求，网络层问题假设不成立",
+                "time_alignment": "POST_HOC"
+              }
+            ]
+          },
+          {
+            "iteration": 2,
+            "gap_id": "business_state_unknown",
+            "probe_id": "http_state",
+            "why": "业务状态证据缺失或不足，需要独立状态查询确认是否真正持久化",
+            "info_gain": 0.7,
+            "score": 0.4,
+            "status": "SUCCEEDED",
+            "reason": "",
+            "evidence_ids": [
+              "evd_1795576502967ce3cf7fdfb08"
+            ],
+            "duration_ms": 10,
+            "execution_id": "probeexec_17955765029675fdd17e3db2c",
+            "budget": {
+              "budget_id": "pbudget_diagnosis-diagnosis_1795576502919eff4037ad9cc",
+              "scope_key": "diagnosis:diagnosis_1795576502919eff4037ad9cc",
+              "owner_run_id": "run_17955764721925f11e3fce7b6",
+              "owner_diagnosis_id": "diagnosis_1795576502919eff4037ad9cc",
+              "workspace_id": "default",
+              "max_probes": 50,
+              "probes_used": 2,
+              "probes_left": 48,
+              "max_total_cost": 100.0,
+              "cost_used": 1.2,
+              "cost_left": 98.8,
+              "max_duration_seconds": 60.0,
+              "elapsed_seconds": 0.038,
+              "time_left": 59.962,
+              "closed": false,
+              "close_reason": "",
+              "provisional": true,
+              "note": "P06 待负责人确认：以下预算与风险阈值为 provisional 配置，仅用于本轮实现与测试，不得视为正式冻结的工程决策。",
+              "started_at": 1795576502.930912,
+              "closed_at": null,
+              "version": 3,
+              "doc_version": 3
+            },
+            "applied_to_diagnosis": true,
+            "diagnosis_after": {
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "unresolved_conflicts": []
+            },
+            "hypothesis_updates": []
+          },
+          {
+            "iteration": 3,
+            "gap_id": "dom_unverified",
+            "probe_id": "dom_snapshot",
+            "why": "核对真实 DOM 是否渲染期望元素（区分定位器问题与渲染问题）",
+            "info_gain": 0.45,
+            "score": 0.39,
+            "status": "SUCCEEDED",
+            "reason": "",
+            "evidence_ids": [
+              "evd_179557650298188203e4cb9c2"
+            ],
+            "duration_ms": 6,
+            "execution_id": "probeexec_179557650298177081292c610",
+            "budget": {
+              "budget_id": "pbudget_diagnosis-diagnosis_1795576502919eff4037ad9cc",
+              "scope_key": "diagnosis:diagnosis_1795576502919eff4037ad9cc",
+              "owner_run_id": "run_17955764721925f11e3fce7b6",
+              "owner_diagnosis_id": "diagnosis_1795576502919eff4037ad9cc",
+              "workspace_id": "default",
+              "max_probes": 50,
+              "probes_used": 3,
+              "probes_left": 47,
+              "max_total_cost": 100.0,
+              "cost_used": 1.4,
+              "cost_left": 98.6,
+              "max_duration_seconds": 60.0,
+              "elapsed_seconds": 0.052,
+              "time_left": 59.948,
+              "closed": false,
+              "close_reason": "",
+              "provisional": true,
+              "note": "P06 待负责人确认：以下预算与风险阈值为 provisional 配置，仅用于本轮实现与测试，不得视为正式冻结的工程决策。",
+              "started_at": 1795576502.930912,
+              "closed_at": null,
+              "version": 4,
+              "doc_version": 4
+            },
+            "applied_to_diagnosis": true,
+            "diagnosis_after": {
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "unresolved_conflicts": []
+            },
+            "hypothesis_updates": [
+              {
+                "hypothesis_id": "hyp_1795576484442f630881fc170",
+                "relation": "SUPPORT",
+                "confirming": false,
+                "evidence_ids": [
+                  "evd_179557650298188203e4cb9c2"
+                ],
+                "exclude": false,
+                "reason": "[POST_HOC] 失败步骤的目标元素 ['create-submit'] 不在 DOM 中：定位器无法解析，属于用例资产/定位策略问题",
+                "time_alignment": "POST_HOC"
+              }
+            ]
+          }
+        ],
+        "evidence_ids": [
+          "evd_1795576502948ed22f786993f",
+          "evd_1795576502967ce3cf7fdfb08",
+          "evd_179557650298188203e4cb9c2"
+        ],
+        "diagnosis_before": {
+          "diagnosis_id": "diagnosis_1795576502919eff4037ad9cc",
+          "outcome": "PROBABLE",
+          "disposition": "NEEDS_MORE_EVIDENCE",
+          "root_causes": [],
+          "unresolved_conflicts": []
+        },
+        "diagnosis_after": {
+          "diagnosis_id": "diagnosis_1795576502919eff4037ad9cc",
+          "outcome": "PROBABLE",
+          "disposition": "NEEDS_MORE_EVIDENCE",
+          "root_causes": [],
+          "unresolved_conflicts": []
+        },
+        "assessments": [
+          {
+            "probe_id": "network_trace",
+            "execution_id": "probeexec_179557650294835034d376e10",
+            "before": {
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "unresolved_conflicts": []
+            },
+            "after": {
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "unresolved_conflicts": []
+            },
+            "updates": [
+              {
+                "hypothesis_id": "hyp_17955764844425ca881cb27f2",
+                "relation": "CONTRADICT",
+                "confirming": false,
+                "evidence_ids": [
+                  "evd_1795576502948ed22f786993f"
+                ],
+                "exclude": false,
+                "reason": "[POST_HOC] 网络观测无失败请求，网络层问题假设不成立",
+                "time_alignment": "POST_HOC"
+              }
+            ]
+          },
+          {
+            "probe_id": "http_state",
+            "execution_id": "probeexec_17955765029675fdd17e3db2c",
+            "before": {
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "unresolved_conflicts": []
+            },
+            "after": {
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "unresolved_conflicts": []
+            },
+            "updates": []
+          },
+          {
+            "probe_id": "dom_snapshot",
+            "execution_id": "probeexec_179557650298177081292c610",
+            "before": {
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "unresolved_conflicts": []
+            },
+            "after": {
+              "outcome": "PROBABLE",
+              "root_causes": [],
+              "unresolved_conflicts": []
+            },
+            "updates": [
+              {
+                "hypothesis_id": "hyp_1795576484442f630881fc170",
+                "relation": "SUPPORT",
+                "confirming": false,
+                "evidence_ids": [
+                  "evd_179557650298188203e4cb9c2"
+                ],
+                "exclude": false,
+                "reason": "[POST_HOC] 失败步骤的目标元素 ['create-submit'] 不在 DOM 中：定位器无法解析，属于用例资产/定位策略问题",
+                "time_alignment": "POST_HOC"
+              }
+            ]
+          }
+        ],
+        "unresolved_conflicts": [],
+        "stop_reason": "STOP_ITERATION_LIMIT",
+        "stop_detail": "达到最大迭代 3",
+        "planner": {
+          "weights": {
+            "w_i": 1.0,
+            "w_c": 0.3,
+            "w_r": 0.5,
+            "note": "启发式默认权重，归一化与参数仍为待确认事项（P05），非校准概率"
+          },
+          "note": "启发式默认权重，归一化与参数仍为待确认事项（P05），非校准概率"
+        },
+        "llm_planner": {
+          "called": false
+        },
+        "provisional": true,
+        "note": "P06 待负责人确认：以下预算与风险阈值为 provisional 配置，仅用于本轮实现与测试，不得视为正式冻结的工程决策。",
+        "created_at": "2026-11-25T03:15:02.991406Z"
+      },
+      "at": "2026-11-25T11:15:03+0800"
+    },
+    {
+      "name": "E3 探针证据保留 observed_at / collected_at 语义",
+      "phase": "E",
+      "ok": true,
+      "detail": {
+        "evidence_id": "evd_1795576502948ed22f786993f",
+        "run_id": "run_17955764721925f11e3fce7b6",
+        "source_type": "probe",
+        "source_ref": "probe:network_trace",
+        "captured_at": "2026-11-25T03:15:02.948795Z",
+        "content_keys": [
+          "budget_scope",
+          "collected_at",
+          "collected_at_iso",
+          "data",
+          "diagnosis_id",
+          "execution_id",
+          "ingested_at",
+          "observed_at",
+          "observed_at_iso",
+          "params",
+          "probe_id",
+          "run_id",
+          "source",
+          "workspace_id"
+        ],
+        "observed_at": 1795576502.9484138
+      },
+      "at": "2026-11-25T11:15:03+0800"
+    },
+    {
+      "name": "E4 证据回灌真实进入重新诊断（假设/历史变化）",
+      "phase": "E",
+      "ok": true,
+      "detail": {
+        "outcome": "PROBABLE",
+        "revision": 1,
+        "evaluation_history_len": 3,
+        "hypotheses": [
+          {
+            "id": "hyp_17955764844425ca881cb27f2",
+            "status": "SUPPORTED"
+          },
+          {
+            "id": "hyp_1795576484442f630881fc170",
+            "status": "SUPPORTED"
+          }
+        ],
+        "probe_evidence_ids": [
+          "evd_1795576502948ed22f786993f",
+          "evd_1795576502967ce3cf7fdfb08",
+          "evd_179557650298188203e4cb9c2"
+        ]
+      },
+      "at": "2026-11-25T11:15:03+0800"
+    },
+    {
+      "name": "F1 修复推导自真实失败步骤（rule:locator-fixture，非伪造）",
+      "phase": "F",
+      "ok": true,
+      "detail": {
+        "step_id": "s4",
+        "original_target": {
+          "strategy": "test_id",
+          "value": "create-submit",
+          "source": "compiler",
+          "stability_score": 0.85
+        },
+        "fixture": "create-submit"
+      },
+      "at": "2026-11-25T11:15:03+0800"
+    },
+    {
+      "name": "F2 Repair 与 Diagnosis/失败 Run 明确关联（diagnosis_id + source_run_id + repair_source）",
+      "phase": "F",
+      "ok": true,
+      "detail": {
+        "proposal_id": "repair_1795576503017aa0234f9836b",
+        "testcase_id": "tcase_1795576462905a6038d543b3a",
+        "base_version": 1,
+        "diagnosis_id": "diagnosis_1795576502919eff4037ad9cc",
+        "source_run_id": "run_17955764721925f11e3fce7b6",
+        "repair_source": "rule:locator-fixture",
+        "diff": [
+          {
+            "path": "steps[].target",
+            "from": null,
+            "to": {
+              "strategy": "role",
+              "value": "button:创建",
+              "source": "healed"
+            },
+            "step_index": 4,
+            "reason": "TF-LOC-001：create-submit 定位器失效，改用等价 role/label 定位（rule:locator-fixture）"
+          }
+        ]
+      },
+      "at": "2026-11-25T11:15:03+0800"
+    },
+    {
+      "name": "F3 断言保护与 Oracle 完整性校验通过",
+      "phase": "F",
+      "ok": true,
+      "detail": {
+        "status": "VALIDATED",
+        "assertion_preservation": "PASS",
+        "oracle_integrity": "PASS",
+        "diff": [
+          {
+            "path": "steps[].target",
+            "from": null,
+            "to": {
+              "strategy": "role",
+              "value": "button:创建",
+              "source": "healed"
+            },
+            "step_index": 4,
+            "reason": "TF-LOC-001：create-submit 定位器失效，改用等价 role/label 定位（rule:locator-fixture）"
+          }
+        ]
+      },
+      "at": "2026-11-25T11:15:03+0800"
+    },
+    {
+      "name": "F4 沙箱真实执行 PASSED（证明修复有效）",
+      "phase": "F",
+      "ok": true,
+      "detail": {
+        "sandbox_status": "PASSED",
+        "sandbox_run_id": "run_1795576503026dbb1c86cc713",
+        "sandbox_testcase_id": "tcase_1795576503022e0f3ee8221bb",
+        "candidate_version": 1,
+        "executed_by": "run011r1-w3",
+        "fencing_token": 1
+      },
+      "at": "2026-11-25T11:15:07+0800"
+    },
+    {
+      "name": "F5 沙箱 Run 由独立 Worker 执行且使用候选副本",
+      "phase": "F",
+      "ok": true,
+      "detail": {
+        "sandbox_status": "PASSED",
+        "sandbox_run_id": "run_1795576503026dbb1c86cc713",
+        "sandbox_testcase_id": "tcase_1795576503022e0f3ee8221bb",
+        "candidate_version": 1,
+        "executed_by": "run011r1-w3",
+        "fencing_token": 1
+      },
+      "at": "2026-11-25T11:15:07+0800"
+    },
+    {
+      "name": "F6 qa-engineer 审批被服务端拒绝（403 repair.approve）",
+      "phase": "F",
+      "ok": true,
+      "detail": {
+        "status": 403
+      },
+      "at": "2026-11-25T11:15:07+0800"
+    },
+    {
+      "name": "F7 qa-lead 审批生效且主体来自服务端 Principal",
+      "phase": "F",
+      "ok": true,
+      "detail": {
+        "status": "APPROVED",
+        "approver": "user:qa-lead",
+        "body_declared": "agent:auto-heal"
+      },
+      "at": "2026-11-25T11:15:07+0800"
+    },
+    {
+      "name": "F8 qa-lead 不能执行高风险晋升（403 repair.promote）",
+      "phase": "F",
+      "ok": true,
+      "detail": {
+        "status": 403
+      },
+      "at": "2026-11-25T11:15:07+0800"
+    },
+    {
+      "name": "F9 platform-admin CAS 晋升成功且带回执",
+      "phase": "F",
+      "ok": true,
+      "detail": {
+        "status": "PROMOTED",
+        "promoted_version": 2,
+        "receipt": {
+          "idempotency_key": "run011r1-repair_1795576503017aa0234f9836b",
+          "target_version": 2,
+          "operator": "system:promotion",
+          "check": "CAS_OK",
+          "atomic": true,
+          "receipt_recovered": false,
+          "at": "2026-11-25T03:15:07.186877Z"
+        },
+        "base_version": 1
+      },
+      "at": "2026-11-25T11:15:07+0800"
+    },
+    {
+      "name": "F10 幂等重放返回同一版本（不重复创建版本）",
+      "phase": "F",
+      "ok": true,
+      "detail": {
+        "first": 2,
+        "replay": 2
+      },
+      "at": "2026-11-25T11:15:07+0800"
+    },
+    {
+      "name": "G1 晋升版本回归 PASSED（故障仍生效，修复真实有效）",
+      "phase": "G",
+      "ok": true,
+      "detail": {
+        "verdict": "PASSED"
+      },
+      "at": "2026-11-25T11:15:11+0800"
+    },
+    {
+      "name": "G2 回归使用精确晋升版本",
+      "phase": "G",
+      "ok": true,
+      "detail": "tcase_1795576462905a6038d543b3a@2",
+      "at": "2026-11-25T11:15:11+0800"
+    },
+    {
+      "name": "G3 回归由独立 Worker 执行",
+      "phase": "G",
+      "ok": true,
+      "detail": {
+        "task_id": "task_1795576507197f8533f00ba02",
+        "run_id": "run_1795576507201613d62ba3c3f",
+        "version": 2,
+        "note": "晋升版本回归",
+        "queued_at": "2026-11-25T11:15:07+0800",
+        "workers_seen": [
+          "run011r1-w1"
+        ],
+        "fencing_tokens": [
+          0,
+          1
+        ],
+        "attempts": [
+          1
+        ],
+        "polls": 8,
+        "submitted_submit_receipt": null,
+        "elapsed_ms": 4265.8,
+        "terminal_status": "COMPLETED",
+        "test_verdict": "PASSED",
+        "lease_owner_final": "run011r1-w1",
+        "fencing_token_final": 1,
+        "independent_worker": true
+      },
+      "at": "2026-11-25T11:15:11+0800"
+    },
+    {
+      "name": "G4 回滚成功并产生可追溯回执（restored_version + target_version）",
+      "phase": "G",
+      "ok": true,
+      "detail": {
+        "status": "ROLLED_BACK",
+        "restored_version": 3,
+        "record": {
+          "target_version": "tcase_1795576462905a6038d543b3a:v2",
+          "restored_version": 3,
+          "operator": "user:platform-admin",
+          "reason": "RUN-011-R1 闭环结束回滚",
+          "receipt_recovered": false,
+          "at": "2026-11-25T03:15:11.484309Z"
+        },
+        "promoted_version": 2
+      },
+      "at": "2026-11-25T11:15:11+0800"
+    },
+    {
+      "name": "G5 回滚是内容级恢复（步骤/断言/Oracle 绑定 + 版本指针）",
+      "phase": "G",
+      "ok": true,
+      "detail": {
+        "latest_version": 3,
+        "restored_version": 3,
+        "steps_equal": true,
+        "assertions_equal": true,
+        "bindings_equal": true,
+        "review_status": "APPROVED"
+      },
+      "at": "2026-11-25T11:15:11+0800"
+    },
+    {
+      "name": "G6 回滚后复核：恢复版本真实执行且 PASSED",
+      "phase": "G",
+      "ok": true,
+      "detail": {
+        "verdict": "PASSED",
+        "version": "tcase_1795576462905a6038d543b3a@3"
+      },
+      "at": "2026-11-25T11:15:16+0800"
+    },
+    {
+      "name": "G7 回滚后复核：晋升版本仍可独立执行并通过",
+      "phase": "G",
+      "ok": true,
+      "detail": {
+        "verdict": "PASSED"
+      },
+      "at": "2026-11-25T11:15:20+0800"
+    },
+    {
+      "name": "T1 正式 Run.testcase_id 与主 TestCase 一致",
+      "phase": "trace",
+      "ok": true,
+      "detail": {
+        "run.testcase_id(derived)": "tcase_1795576462905a6038d543b3a",
+        "expected": "tcase_1795576462905a6038d543b3a"
+      },
+      "at": "2026-11-25T11:15:20+0800"
+    },
+    {
+      "name": "T2 正式 Run.testcase_version_id 与批准版本一致",
+      "phase": "trace",
+      "ok": true,
+      "detail": {
+        "run.testcase_version_id": "tcase_1795576462905a6038d543b3a@1",
+        "expected": "tcase_1795576462905a6038d543b3a@1"
+      },
+      "at": "2026-11-25T11:15:20+0800"
+    },
+    {
+      "name": "T1 失败 Run.testcase_id 与主 TestCase 一致",
+      "phase": "trace",
+      "ok": true,
+      "detail": {
+        "run.testcase_id(derived)": "tcase_1795576462905a6038d543b3a",
+        "expected": "tcase_1795576462905a6038d543b3a"
+      },
+      "at": "2026-11-25T11:15:20+0800"
+    },
+    {
+      "name": "T2 失败 Run.testcase_version_id 与批准版本一致",
+      "phase": "trace",
+      "ok": true,
+      "detail": {
+        "run.testcase_version_id": "tcase_1795576462905a6038d543b3a@1",
+        "expected": "tcase_1795576462905a6038d543b3a@1"
+      },
+      "at": "2026-11-25T11:15:20+0800"
+    },
+    {
+      "name": "T3 Diagnosis.run_id 与失败 Run 一致",
+      "phase": "trace",
+      "ok": true,
+      "detail": {
+        "diag.run_id": "run_17955764721925f11e3fce7b6",
+        "expected": "run_17955764721925f11e3fce7b6"
+      },
+      "at": "2026-11-25T11:15:20+0800"
+    },
+    {
+      "name": "T4 Diagnosis.testcase_id 与主 TestCase 一致",
+      "phase": "trace",
+      "ok": true,
+      "detail": {
+        "diag.testcase_id": "tcase_1795576462905a6038d543b3a",
+        "expected": "tcase_1795576462905a6038d543b3a"
+      },
+      "at": "2026-11-25T11:15:20+0800"
+    },
+    {
+      "name": "T5 诊断支持/反驳证据引用均可读取且归属失败 Run（无跨 Run 误引）",
+      "phase": "trace",
+      "ok": true,
+      "detail": {
+        "diag_evidence": [
+          "evd_1795576483769d5b9dc2749c1",
+          "evd_1795576483770d52703ea2f33",
+          "evd_17955764837716dfb71744e09",
+          "evd_1795576502948ed22f786993f",
+          "evd_179557650298188203e4cb9c2"
+        ],
+        "missing_or_foreign": [],
+        "run_evidence_count": 25
+      },
+      "at": "2026-11-25T11:15:20+0800"
+    },
+    {
+      "name": "T6 每条诊断证据的 source_run_id 属于失败 Run（或明确标记的探针证据）",
+      "phase": "trace",
+      "ok": true,
+      "detail": [],
+      "at": "2026-11-25T11:15:20+0800"
+    },
+    {
+      "name": "T7 Graph Evidence 节点引用真实 Evidence（不允许悬空引用）",
+      "phase": "trace",
+      "ok": true,
+      "detail": {
+        "evidence_nodes": 25,
+        "foreign_refs": []
+      },
+      "at": "2026-11-25T11:15:20+0800"
+    },
+    {
+      "name": "T8 Graph 边端点都存在于节点集（引用关系可复核）",
+      "phase": "trace",
+      "ok": true,
+      "detail": {
+        "edges": 62,
+        "dangling": []
+      },
+      "at": "2026-11-25T11:15:20+0800"
+    },
+    {
+      "name": "T9 Repair.testcase_id 与主 TestCase 一致",
+      "phase": "trace",
+      "ok": true,
+      "detail": {
+        "repair.testcase_id": "tcase_1795576462905a6038d543b3a",
+        "expected": "tcase_1795576462905a6038d543b3a"
+      },
+      "at": "2026-11-25T11:15:20+0800"
+    },
+    {
+      "name": "T10 Repair.diagnosis_id 与 Diagnosis 一致",
+      "phase": "trace",
+      "ok": true,
+      "detail": {
+        "repair.diagnosis_id": "diagnosis_1795576502919eff4037ad9cc",
+        "expected": "diagnosis_1795576502919eff4037ad9cc"
+      },
+      "at": "2026-11-25T11:15:20+0800"
+    },
+    {
+      "name": "T11 Repair.source_run_id 与失败 Run 一致",
+      "phase": "trace",
+      "ok": true,
+      "detail": {
+        "repair.source_run_id": "run_17955764721925f11e3fce7b6",
+        "expected": "run_17955764721925f11e3fce7b6"
+      },
+      "at": "2026-11-25T11:15:20+0800"
+    },
+    {
+      "name": "T12 Repair.base_version 与失败用例版本一致",
+      "phase": "trace",
+      "ok": true,
+      "detail": {
+        "repair.base_version": 1,
+        "expected": 1
+      },
+      "at": "2026-11-25T11:15:20+0800"
+    },
+    {
+      "name": "T13 Repair.repair_source 如实标注（human:/rule:/llm:）",
+      "phase": "trace",
+      "ok": true,
+      "detail": "rule:locator-fixture",
+      "at": "2026-11-25T11:15:20+0800"
+    },
+    {
+      "name": "T14 Sandbox Run 使用候选副本（独立 testcase_id，绑定 repair）",
+      "phase": "trace",
+      "ok": true,
+      "detail": {
+        "sandbox_run_id": "run_1795576503026dbb1c86cc713",
+        "sandbox_testcase_id": "tcase_1795576503022e0f3ee8221bb"
+      },
+      "at": "2026-11-25T11:15:20+0800"
+    },
+    {
+      "name": "T15 Promotion 回执绑定正确的 Proposal 与版本关系",
+      "phase": "trace",
+      "ok": true,
+      "detail": {
+        "idempotency_key": "run011r1-repair_1795576503017aa0234f9836b",
+        "target_version": 2,
+        "promoted_version": 2
+      },
+      "at": "2026-11-25T11:15:20+0800"
+    },
+    {
+      "name": "T16 Regression Run 使用精确晋升版本",
+      "phase": "trace",
+      "ok": true,
+      "detail": {
+        "reg.testcase_version_id": "tcase_1795576462905a6038d543b3a@2",
+        "expected": "tcase_1795576462905a6038d543b3a@2"
+      },
+      "at": "2026-11-25T11:15:20+0800"
+    },
+    {
+      "name": "T17 Rollback 回执绑定正确的版本关系（target=晋升版本 → restored=恢复版本）",
+      "phase": "trace",
+      "ok": true,
+      "detail": {
+        "record": {
+          "target_version": "tcase_1795576462905a6038d543b3a:v2",
+          "restored_version": 3,
+          "operator": "user:platform-admin",
+          "reason": "RUN-011-R1 闭环结束回滚",
+          "receipt_recovered": false,
+          "at": "2026-11-25T03:15:11.484309Z"
+        },
+        "promoted_version": 2,
+        "restored_version": 3
+      },
+      "at": "2026-11-25T11:15:20+0800"
+    },
+    {
+      "name": "T18 回滚后验证 Run 使用恢复版本",
+      "phase": "trace",
+      "ok": true,
+      "detail": {
+        "post.testcase_version_id": "tcase_1795576462905a6038d543b3a@3",
+        "expected": "tcase_1795576462905a6038d543b3a@3"
+      },
+      "at": "2026-11-25T11:15:20+0800"
+    },
+    {
+      "name": "审计哈希链完整",
+      "phase": "audit",
+      "ok": true,
+      "detail": {
+        "entries": 16,
+        "broken": [],
+        "intact": true,
+        "ordering": "seq ASC（v12 后单调分配；历史行按 timestamp, audit_id 回填）"
+      },
+      "at": "2026-11-25T11:15:20+0800"
+    },
+    {
+      "name": "审计条目覆盖本轮操作（>10）",
+      "phase": "audit",
+      "ok": true,
+      "detail": 16,
+      "at": "2026-11-25T11:15:20+0800"
+    }
+  ],
+  "ids": {
+    "users": [
+      {
+        "username": "platform-admin",
+        "roles": "[\"platform-admin\"]",
+        "user_id": "usr_1d301f7095bfbdd73f3e"
+      },
+      {
+        "username": "qa-engineer",
+        "roles": "[\"qa-engineer\"]",
+        "user_id": "usr_909b0620b43ebdb29657"
+      },
+      {
+        "username": "qa-lead",
+        "roles": "[\"qa-lead\"]",
+        "user_id": "usr_5ed2d23dae8508e4bab4"
+      },
+      {
+        "username": "viewer",
+        "roles": "[\"viewer\"]",
+        "user_id": "usr_0a123b0d0f7251bcad85"
+      }
+    ],
+    "intent_id": "intent_17955764510956ef3bd4764aa",
+    "exploration_id": "exploration_1795576451427d87ae75c4996",
+    "compiled_testcase_id": "tcase_1795576462905a6038d543b3a",
+    "compiled_version": 1,
+    "oracle_ids": {
+      "cand_a_create_ui": "oracle_run011r1_compiled_cand_a_create_ui"
+    },
+    "oracle_versions": {
+      "cand_a_create_ui": 1
+    },
+    "testcase_id": "tcase_1795576462905a6038d543b3a",
+    "testcase_version_id": "tcase_1795576462905a6038d543b3a@1",
+    "approved_version": 1,
+    "run_id": "run_1795576467843ed00afc32d75",
+    "evidence_ids": [
+      "evd_179557647211026c6157c9e09",
+      "evd_1795576471972dbff35b60943",
+      "evd_1795576471971bbbcd862d8d8",
+      "evd_1795576471970d6ea5219f2fb",
+      "evd_17955764719340d06bb7fb639",
+      "evd_1795576471933dc6cbb3db67a",
+      "evd_17955764719329ae07c121975",
+      "evd_1795576471932131b214f6fb4",
+      "evd_1795576471519d41c717e624c",
+      "evd_1795576471518707751dcbab0",
+      "evd_1795576471517e41dea72f6e6",
+      "evd_1795576471120ac159a2e2774",
+      "evd_17955764711192a551e16a3bd",
+      "evd_17955764711189846351cf8f8",
+      "evd_1795576471117068f9f6bf061",
+      "evd_179557647017525d0fa13ab27",
+      "evd_1795576470174852f9f8c9263",
+      "evd_1795576470173d107db4bbf46",
+      "evd_17955764701720e343e50c61d",
+      "evd_17955764692504e73320617de",
+      "evd_179557646924952c16c1b479c",
+      "evd_1795576469248cd51de0d1275",
+      "evd_1795576469248d000bee483a0"
+    ],
+    "failed_run_id": "run_17955764721925f11e3fce7b6",
+    "diagnosis_id": "diagnosis_1795576502919eff4037ad9cc",
+    "repair_proposal_id": "repair_1795576503017aa0234f9836b",
+    "promoted_version": 2,
+    "regression_run_id": "run_1795576507201613d62ba3c3f",
+    "rollback_receipt": {
+      "target_version": "tcase_1795576462905a6038d543b3a:v2",
+      "restored_version": 3,
+      "operator": "user:platform-admin",
+      "reason": "RUN-011-R1 闭环结束回滚",
+      "receipt_recovered": false,
+      "at": "2026-11-25T03:15:11.484309Z"
+    },
+    "restored_version": 3
+  },
+  "phases": {
+    "A": {
+      "exploration": {
+        "exploration_id": "exploration_1795576451427d87ae75c4996",
+        "status": "COMPLETED",
+        "stop_reason": "页面已显示「项目创建成功」提示（banner-success），且项目行 TF-890705「R1血缘闭环项目」已出现，满足成功提示即完成的探索目标。",
+        "engine": "llm:deepseek",
+        "provider": null,
+        "llm": {},
+        "action_count": 5,
+        "actions": [
+          {
+            "action": "navigate",
+            "params": {
+              "url": "http://127.0.0.1:8111"
+            },
+            "result": "http://127.0.0.1:8111/",
+            "reason": "当前页面为 about:blank，需先导航到允许的应用地址以开始项目创建流程",
+            "gateway": "allowed"
+          },
+          {
+            "action": "navigate",
+            "params": {
+              "url": "http://127.0.0.1:8111/projects"
+            },
+            "result": "http://127.0.0.1:8111/projects",
+            "reason": "根路径返回 Not Found，尝试导航到项目列表页面以开始创建项目流程",
+            "gateway": "allowed"
+          },
+          {
+            "action": "click",
+            "params": {
+              "test_id": "nav-new"
+            },
+            "result": "http://127.0.0.1:8111/projects/new",
+            "reason": "项目列表暂无项目，需要点击「新建项目」入口以打开创建表单。",
+            "gateway": "allowed"
+          },
+          {
+            "action": "fill",
+            "params": {
+              "test_id": "project-name",
+              "value": "R1血缘闭环项目"
+            },
+            "result": "filled",
+            "reason": "当前已在新建项目页，表单可见，先填写项目名称输入框。",
+            "gateway": "allowed"
+          },
+          {
+            "action": "click",
+            "params": {
+              "test_id": "create-submit"
+            },
+            "result": "http://127.0.0.1:8111/projects?created=1",
+            "reason": "项目名称已填写，点击「创建」提交表单，以触发成功提示并完成持久化验证。",
+            "gateway": "allowed"
+          }
+        ]
+      },
+      "compiled": {
+        "testcase_id": "tcase_1795576462905a6038d543b3a",
+        "version": 1,
+        "warnings": [
+          "NO_BUSINESS_STATE_API: 只能验证 UI 行为，不能宣称持久化已验证"
+        ],
+        "compiler_version": "compiler-v1",
+        "prompt_version": "prompt-v1",
+        "model_version": "rule-based-v1",
+        "llm_meta": {
+          "mode": "rule_only",
+          "called": false,
+          "fallback": false
+        }
+      }
+    },
+    "B": {
+      "compiled_testcase": {
+        "testcase_id": "tcase_1795576462905a6038d543b3a",
+        "version": 1,
+        "review_status": "PENDING",
+        "steps": [
+          {
+            "step_id": "s0",
+            "action": "navigate",
+            "target": null
+          },
+          {
+            "step_id": "s1",
+            "action": "navigate",
+            "target": null
+          },
+          {
+            "step_id": "s2",
+            "action": "click",
+            "target": {
+              "strategy": "test_id",
+              "value": "nav-new",
+              "source": "compiler",
+              "stability_score": 0.85
+            }
+          },
+          {
+            "step_id": "s3",
+            "action": "fill",
+            "target": {
+              "strategy": "test_id",
+              "value": "project-name",
+              "source": "compiler",
+              "stability_score": 0.85
+            }
+          },
+          {
+            "step_id": "s4",
+            "action": "click",
+            "target": {
+              "strategy": "test_id",
+              "value": "create-submit",
+              "source": "compiler",
+              "stability_score": 0.85
+            }
+          },
+          {
+            "step_id": "assert_cand_a_create_ui",
+            "action": "assert",
+            "target": {
+              "strategy": "test_id",
+              "value": "banner-success",
+              "source": "compiler",
+              "stability_score": 0.9
+            }
+          }
+        ],
+        "assertions": [
+          {
+            "assertion_id": "cand_a_create_ui",
+            "kind": "ui"
+          }
+        ]
+      },
+      "governed_compiled": {
+        "tag": "compiled",
+        "testcase_id": "tcase_1795576462905a6038d543b3a",
+        "version": 1,
+        "oracles": {
+          "cand_a_create_ui": "oracle_run011r1_compiled_cand_a_create_ui"
+        },
+        "oracle_versions": {
+          "cand_a_create_ui": 1
+        },
+        "replay_id": "replay_179557646293426e1d87eebad",
+        "status": "COMPLETED",
+        "classification": "STABLE_PASS",
+        "promotable": true,
+        "worker_consumed": true,
+        "records": [
+          {
+            "run_id": "run_1795576462937d88ef4fcbe05",
+            "verdict": "PASSED",
+            "status": "COMPLETED",
+            "claimed_by": "run011r1-w2"
+          },
+          {
+            "run_id": "run_17955764629412c1f48ffbb6e",
+            "verdict": "PASSED",
+            "status": "COMPLETED",
+            "claimed_by": "run011r1-w1"
+          },
+          {
+            "run_id": "run_179557646294497b166a2351a",
+            "verdict": "PASSED",
+            "status": "COMPLETED",
+            "claimed_by": "run011r1-w3"
+          }
+        ],
+        "ok": true,
+        "review": {
+          "review_status": "APPROVED",
+          "reviewer": "user:qa-lead",
+          "review_revision": 1,
+          "request_body_declared": "agent:auto-heal"
+        }
+      },
+      "approved": {
+        "testcase_id": "tcase_1795576462905a6038d543b3a",
+        "version": 1
+      }
+    },
+    "C": {
+      "run_id": "run_1795576467843ed00afc32d75",
+      "verdict": "PASSED",
+      "testcase_id": null,
+      "testcase_version_id": "tcase_1795576462905a6038d543b3a@1",
+      "execution_trace": {
+        "task_id": "task_17955764678382642a98f386c",
+        "run_id": "run_1795576467843ed00afc32d75",
+        "version": 1,
+        "note": "正式执行（无故障）",
+        "queued_at": "2026-11-25T11:14:27+0800",
+        "workers_seen": [
+          "run011r1-w2"
+        ],
+        "fencing_tokens": [
+          0,
+          1
+        ],
+        "attempts": [
+          1
+        ],
+        "polls": 8,
+        "submitted_submit_receipt": null,
+        "elapsed_ms": 4278.9,
+        "terminal_status": "COMPLETED",
+        "test_verdict": "PASSED",
+        "lease_owner_final": "run011r1-w2",
+        "fencing_token_final": 1,
+        "independent_worker": true
+      },
+      "egress": {
+        "total": 14,
+        "allowed": 14,
+        "blocked": 0,
+        "blocked_targets": [],
+        "blocked_reasons": [],
+        "url": "http://127.0.0.1:50468",
+        "run_id": "run_1795576467843ed00afc32d75",
+        "worker_id": "run011r1-w2",
+        "enforced": true
+      },
+      "mode": null,
+      "project_count_before": 3,
+      "project_count_after": 1,
+      "cleanup_policy": "RESET_DATA",
+      "evidence": {
+        "count": 23,
+        "types": [
+          "api",
+          "browser",
+          "network"
+        ],
+        "sample": [
+          {
+            "evidence_id": "evd_179557647211026c6157c9e09",
+            "source_type": "api",
+            "kind": "raw",
+            "captured_at": "2026-11-25T03:14:32.110636Z"
+          },
+          {
+            "evidence_id": "evd_1795576471972dbff35b60943",
+            "source_type": "browser",
+            "kind": "raw",
+            "captured_at": "2026-11-25T03:14:31.972840Z"
+          },
+          {
+            "evidence_id": "evd_1795576471971bbbcd862d8d8",
+            "source_type": "browser",
+            "kind": "raw",
+            "captured_at": "2026-11-25T03:14:31.971877Z"
+          }
+        ]
+      },
+      "evidence_verify": [
+        {
+          "evidence_id": "evd_179557647211026c6157c9e09",
+          "integrity_check": "PASS",
+          "storage": "PASS"
+        },
+        {
+          "evidence_id": "evd_1795576471972dbff35b60943",
+          "integrity_check": "PASS",
+          "storage": "PASS"
+        },
+        {
+          "evidence_id": "evd_1795576471971bbbcd862d8d8",
+          "integrity_check": "PASS",
+          "storage": "PASS"
+        },
+        {
+          "evidence_id": "evd_1795576471970d6ea5219f2fb",
+          "integrity_check": "PASS",
+          "storage": "PASS"
+        },
+        {
+          "evidence_id": "evd_17955764719340d06bb7fb639",
+          "integrity_check": "PASS",
+          "storage": "PASS"
+        }
+      ],
+      "events": {
+        "count": 9,
+        "seq_first": 10,
+        "seq_last": 18
+      }
+    },
+    "D": {
+      "run_id": "run_17955764721925f11e3fce7b6",
+      "verdict": "NOT_EVALUATED",
+      "testcase_id": "tcase_1795576462905a6038d543b3a",
+      "testcase_version_id": "tcase_1795576462905a6038d543b3a@1",
+      "failed_steps": [
+        {
+          "step_id": "s4",
+          "action": "click",
+          "target": {
+            "strategy": "test_id",
+            "value": "create-submit",
+            "source": "compiler",
+            "stability_score": 0.85
+          },
+          "error": "TIMEOUT: Locator.wait_for: Timeout 8000ms exceeded.\nCall log:\n  - waiting for get_by_test_id(\"create-submit\").first to be visible\n"
+        }
+      ],
+      "trace": {
+        "task_id": "task_1795576472187be8b1961152f",
+        "run_id": "run_17955764721925f11e3fce7b6",
+        "version": 1,
+        "note": "故障执行（TF-LOC-001 定位器失效）",
+        "queued_at": "2026-11-25T11:14:32+0800",
+        "workers_seen": [
+          "run011r1-w1"
+        ],
+        "fencing_tokens": [
+          0,
+          1
+        ],
+        "attempts": [
+          1
+        ],
+        "polls": 21,
+        "submitted_submit_receipt": null,
+        "elapsed_ms": 12241.0,
+        "terminal_status": "FAILED",
+        "test_verdict": "NOT_EVALUATED",
+        "lease_owner_final": "run011r1-w1",
+        "fencing_token_final": 1,
+        "independent_worker": true
+      }
+    },
+    "diag": {
+      "run_id": "run_17955764721925f11e3fce7b6",
+      "diagnosis_id": "diagnosis_1795576502919eff4037ad9cc",
+      "diagnosis_run_id": "run_17955764721925f11e3fce7b6",
+      "diagnosis_testcase_id": "tcase_1795576462905a6038d543b3a",
+      "outcome": "PROBABLE",
+      "disposition": "NEEDS_MORE_EVIDENCE",
+      "hypotheses": [
+        {
+          "id": "hyp_17955764844425ca881cb27f2",
+          "mechanism": "NETWORK",
+          "domain": "ENVIRONMENT",
+          "status": "SUPPORTED",
+          "suggested_by": "rule",
+          "supporting": [
+            {
+              "id": "evd_17955764837716dfb71744e09",
+              "trust": "TRUSTED",
+              "confirming": false
+            },
+            {
+              "id": "evd_1795576483770d52703ea2f33",
+              "trust": "TRUSTED",
+              "confirming": false
+            },
+            {
+              "id": "evd_1795576483769d5b9dc2749c1",
+              "trust": "TRUSTED",
+              "confirming": false
+            }
+          ],
+          "contradicting": []
+        },
+        {
+          "id": "hyp_1795576484442f630881fc170",
+          "mechanism": "LOCATOR",
+          "domain": "TEST_ASSET",
+          "status": "SUPPORTED",
+          "suggested_by": "rule",
+          "supporting": [
+            {
+              "id": "evd_17955764837716dfb71744e09",
+              "trust": "TRUSTED",
+              "confirming": false
+            },
+            {
+              "id": "evd_1795576483770d52703ea2f33",
+              "trust": "TRUSTED",
+              "confirming": false
+            },
+            {
+              "id": "evd_1795576483769d5b9dc2749c1",
+              "trust": "TRUSTED",
+              "confirming": false
+            }
+          ],
+          "contradicting": []
+        }
+      ],
+      "root_causes": [],
+      "unresolved_conflicts": [],
+      "evidence_refs_extracted": {
+        "from_hypotheses_supporting": [
+          "evd_1795576483769d5b9dc2749c1",
+          "evd_1795576483770d52703ea2f33",
+          "evd_17955764837716dfb71744e09"
+        ],
+        "from_hypotheses_contradicting": [],
+        "from_doc_evidence_refs": [
+          "evd_1795576483769d5b9dc2749c1",
+          "evd_1795576483770d52703ea2f33",
+          "evd_17955764837716dfb71744e09"
+        ],
+        "union": [
+          "evd_1795576483769d5b9dc2749c1",
+          "evd_1795576483770d52703ea2f33",
+          "evd_17955764837716dfb71744e09"
+        ]
+      },
+      "revision": null,
+      "engine": "rule-v2+graph-adjudication"
+    },
+    "probe": {
+      "suggestions_count": 4,
+      "plan_id": "probeplan_1795576502944f080ddd60191",
+      "plan_run_id": "run_17955764721925f11e3fce7b6",
+      "plan_diagnosis_id": "diagnosis_1795576502919eff4037ad9cc",
+      "stop_reason": "STOP_ITERATION_LIMIT",
+      "stop_detail": "达到最大迭代 3",
+      "steps": [
+        {
+          "probe_id": "network_trace",
+          "status": "SUCCEEDED",
+          "gap_id": "network_unverified",
+          "info_gain": 0.55,
+          "evidence_ids": [
+            "evd_1795576502948ed22f786993f"
+          ],
+          "execution_id": "probeexec_179557650294835034d376e10",
+          "applied_to_diagnosis": true,
+          "hypothesis_updates": [
+            {
+              "hypothesis_id": "hyp_17955764844425ca881cb27f2",
+              "relation": "CONTRADICT",
+              "confirming": false,
+              "evidence_ids": [
+                "evd_1795576502948ed22f786993f"
+              ],
+              "exclude": false,
+              "reason": "[POST_HOC] 网络观测无失败请求，网络层问题假设不成立",
+              "time_alignment": "POST_HOC"
+            }
+          ]
+        },
+        {
+          "probe_id": "http_state",
+          "status": "SUCCEEDED",
+          "gap_id": "business_state_unknown",
+          "info_gain": 0.7,
+          "evidence_ids": [
+            "evd_1795576502967ce3cf7fdfb08"
+          ],
+          "execution_id": "probeexec_17955765029675fdd17e3db2c",
+          "applied_to_diagnosis": true,
+          "hypothesis_updates": []
+        },
+        {
+          "probe_id": "dom_snapshot",
+          "status": "SUCCEEDED",
+          "gap_id": "dom_unverified",
+          "info_gain": 0.45,
+          "evidence_ids": [
+            "evd_179557650298188203e4cb9c2"
+          ],
+          "execution_id": "probeexec_179557650298177081292c610",
+          "applied_to_diagnosis": true,
+          "hypothesis_updates": [
+            {
+              "hypothesis_id": "hyp_1795576484442f630881fc170",
+              "relation": "SUPPORT",
+              "confirming": false,
+              "evidence_ids": [
+                "evd_179557650298188203e4cb9c2"
+              ],
+              "exclude": false,
+              "reason": "[POST_HOC] 失败步骤的目标元素 ['create-submit'] 不在 DOM 中：定位器无法解析，属于用例资产/定位策略问题",
+              "time_alignment": "POST_HOC"
+            }
+          ]
+        }
+      ],
+      "new_evidence_ids": [
+        "evd_1795576502948ed22f786993f",
+        "evd_1795576502967ce3cf7fdfb08",
+        "evd_179557650298188203e4cb9c2"
+      ],
+      "budget": {
+        "budget_id": "pbudget_diagnosis-diagnosis_1795576502919eff4037ad9cc",
+        "scope_key": "diagnosis:diagnosis_1795576502919eff4037ad9cc",
+        "owner_run_id": "run_17955764721925f11e3fce7b6",
+        "owner_diagnosis_id": "diagnosis_1795576502919eff4037ad9cc",
+        "workspace_id": "default",
+        "max_probes": 50,
+        "probes_used": 3,
+        "probes_left": 47,
+        "max_total_cost": 100.0,
+        "cost_used": 1.4,
+        "cost_left": 98.6,
+        "max_duration_seconds": 60.0,
+        "elapsed_seconds": 0.06,
+        "time_left": 59.94,
+        "closed": false,
+        "close_reason": "",
+        "provisional": true,
+        "note": "P06 待负责人确认：以下预算与风险阈值为 provisional 配置，仅用于本轮实现与测试，不得视为正式冻结的工程决策。",
+        "started_at": 1795576502.930912,
+        "closed_at": null,
+        "version": 4,
+        "doc_version": 4
+      },
+      "probe_evidence": {
+        "evidence_id": "evd_1795576502948ed22f786993f",
+        "run_id": "run_17955764721925f11e3fce7b6",
+        "source_type": "probe",
+        "source_ref": "probe:network_trace",
+        "captured_at": "2026-11-25T03:15:02.948795Z",
+        "content_keys": [
+          "budget_scope",
+          "collected_at",
+          "collected_at_iso",
+          "data",
+          "diagnosis_id",
+          "execution_id",
+          "ingested_at",
+          "observed_at",
+          "observed_at_iso",
+          "params",
+          "probe_id",
+          "run_id",
+          "source",
+          "workspace_id"
+        ],
+        "observed_at": 1795576502.9484138
+      },
+      "diagnosis_after_read": {
+        "outcome": "PROBABLE",
+        "revision": 1,
+        "evaluation_history_len": 3,
+        "hypotheses": [
+          {
+            "id": "hyp_17955764844425ca881cb27f2",
+            "status": "SUPPORTED"
+          },
+          {
+            "id": "hyp_1795576484442f630881fc170",
+            "status": "SUPPORTED"
+          }
+        ],
+        "probe_evidence_ids": [
+          "evd_1795576502948ed22f786993f",
+          "evd_1795576502967ce3cf7fdfb08",
+          "evd_179557650298188203e4cb9c2"
+        ]
+      }
+    },
+    "repair": {
+      "llm_suggest": {
+        "called": false,
+        "fallback": null,
+        "reason": "disabled",
+        "model": null,
+        "prompt_version": null,
+        "changes_count": 0
+      },
+      "proposal": {
+        "proposal_id": "repair_1795576503017aa0234f9836b",
+        "testcase_id": "tcase_1795576462905a6038d543b3a",
+        "base_version": 1,
+        "diagnosis_id": "diagnosis_1795576502919eff4037ad9cc",
+        "source_run_id": "run_17955764721925f11e3fce7b6",
+        "repair_source": "rule:locator-fixture",
+        "diff": [
+          {
+            "path": "steps[].target",
+            "from": null,
+            "to": {
+              "strategy": "role",
+              "value": "button:创建",
+              "source": "healed"
+            },
+            "step_index": 4,
+            "reason": "TF-LOC-001：create-submit 定位器失效，改用等价 role/label 定位（rule:locator-fixture）"
+          }
+        ]
+      },
+      "validation": {
+        "status": "VALIDATED",
+        "assertion_preservation": "PASS",
+        "oracle_integrity": "PASS",
+        "diff": [
+          {
+            "path": "steps[].target",
+            "from": null,
+            "to": {
+              "strategy": "role",
+              "value": "button:创建",
+              "source": "healed"
+            },
+            "step_index": 4,
+            "reason": "TF-LOC-001：create-submit 定位器失效，改用等价 role/label 定位（rule:locator-fixture）"
+          }
+        ]
+      },
+      "sandbox": {
+        "sandbox_status": "PASSED",
+        "sandbox_run_id": "run_1795576503026dbb1c86cc713",
+        "sandbox_testcase_id": "tcase_1795576503022e0f3ee8221bb",
+        "candidate_version": 1,
+        "executed_by": "run011r1-w3",
+        "fencing_token": 1
+      },
+      "approval": {
+        "status": "APPROVED",
+        "approver": "user:qa-lead",
+        "body_declared": "agent:auto-heal"
+      },
+      "promotion": {
+        "status": "PROMOTED",
+        "promoted_version": 2,
+        "receipt": {
+          "idempotency_key": "run011r1-repair_1795576503017aa0234f9836b",
+          "target_version": 2,
+          "operator": "system:promotion",
+          "check": "CAS_OK",
+          "atomic": true,
+          "receipt_recovered": false,
+          "at": "2026-11-25T03:15:07.186877Z"
+        },
+        "base_version": 1
+      }
+    },
+    "regress": {
+      "regression_run_id": "run_1795576507201613d62ba3c3f",
+      "verdict": "PASSED",
+      "testcase_id": null,
+      "testcase_version_id": "tcase_1795576462905a6038d543b3a@2",
+      "trace": {
+        "task_id": "task_1795576507197f8533f00ba02",
+        "run_id": "run_1795576507201613d62ba3c3f",
+        "version": 2,
+        "note": "晋升版本回归",
+        "queued_at": "2026-11-25T11:15:07+0800",
+        "workers_seen": [
+          "run011r1-w1"
+        ],
+        "fencing_tokens": [
+          0,
+          1
+        ],
+        "attempts": [
+          1
+        ],
+        "polls": 8,
+        "submitted_submit_receipt": null,
+        "elapsed_ms": 4265.8,
+        "terminal_status": "COMPLETED",
+        "test_verdict": "PASSED",
+        "lease_owner_final": "run011r1-w1",
+        "fencing_token_final": 1,
+        "independent_worker": true
+      },
+      "rollback": {
+        "status": "ROLLED_BACK",
+        "restored_version": 3,
+        "record": {
+          "target_version": "tcase_1795576462905a6038d543b3a:v2",
+          "restored_version": 3,
+          "operator": "user:platform-admin",
+          "reason": "RUN-011-R1 闭环结束回滚",
+          "receipt_recovered": false,
+          "at": "2026-11-25T03:15:11.484309Z"
+        },
+        "promoted_version": 2
+      },
+      "content_level_verify": {
+        "latest_version": 3,
+        "restored_version": 3,
+        "steps_equal": true,
+        "assertions_equal": true,
+        "bindings_equal": true,
+        "review_status": "APPROVED"
+      },
+      "post_rollback_run_id": "run_179557651150690b76b057cc0",
+      "post_rollback_verdict": "PASSED",
+      "post_rollback_version_id": "tcase_1795576462905a6038d543b3a@3",
+      "post_rollback_promoted_run_id": "run_1795576516400dceb4d59c740"
+    },
+    "trace": {
+      "relations": [
+        {
+          "name": "T1 正式 Run.testcase_id 与主 TestCase 一致",
+          "ok": true,
+          "detail": {
+            "run.testcase_id(derived)": "tcase_1795576462905a6038d543b3a",
+            "expected": "tcase_1795576462905a6038d543b3a"
+          }
+        },
+        {
+          "name": "T2 正式 Run.testcase_version_id 与批准版本一致",
+          "ok": true,
+          "detail": {
+            "run.testcase_version_id": "tcase_1795576462905a6038d543b3a@1",
+            "expected": "tcase_1795576462905a6038d543b3a@1"
+          }
+        },
+        {
+          "name": "T1 失败 Run.testcase_id 与主 TestCase 一致",
+          "ok": true,
+          "detail": {
+            "run.testcase_id(derived)": "tcase_1795576462905a6038d543b3a",
+            "expected": "tcase_1795576462905a6038d543b3a"
+          }
+        },
+        {
+          "name": "T2 失败 Run.testcase_version_id 与批准版本一致",
+          "ok": true,
+          "detail": {
+            "run.testcase_version_id": "tcase_1795576462905a6038d543b3a@1",
+            "expected": "tcase_1795576462905a6038d543b3a@1"
+          }
+        },
+        {
+          "name": "T3 Diagnosis.run_id 与失败 Run 一致",
+          "ok": true,
+          "detail": {
+            "diag.run_id": "run_17955764721925f11e3fce7b6",
+            "expected": "run_17955764721925f11e3fce7b6"
+          }
+        },
+        {
+          "name": "T4 Diagnosis.testcase_id 与主 TestCase 一致",
+          "ok": true,
+          "detail": {
+            "diag.testcase_id": "tcase_1795576462905a6038d543b3a",
+            "expected": "tcase_1795576462905a6038d543b3a"
+          }
+        },
+        {
+          "name": "T5 诊断支持/反驳证据引用均可读取且归属失败 Run（无跨 Run 误引）",
+          "ok": true,
+          "detail": {
+            "diag_evidence": [
+              "evd_1795576483769d5b9dc2749c1",
+              "evd_1795576483770d52703ea2f33",
+              "evd_17955764837716dfb71744e09",
+              "evd_1795576502948ed22f786993f",
+              "evd_179557650298188203e4cb9c2"
+            ],
+            "missing_or_foreign": [],
+            "run_evidence_count": 25
+          }
+        },
+        {
+          "name": "T6 每条诊断证据的 source_run_id 属于失败 Run（或明确标记的探针证据）",
+          "ok": true,
+          "detail": []
+        },
+        {
+          "name": "T7 Graph Evidence 节点引用真实 Evidence（不允许悬空引用）",
+          "ok": true,
+          "detail": {
+            "evidence_nodes": 25,
+            "foreign_refs": []
+          }
+        },
+        {
+          "name": "T8 Graph 边端点都存在于节点集（引用关系可复核）",
+          "ok": true,
+          "detail": {
+            "edges": 62,
+            "dangling": []
+          }
+        },
+        {
+          "name": "T9 Repair.testcase_id 与主 TestCase 一致",
+          "ok": true,
+          "detail": {
+            "repair.testcase_id": "tcase_1795576462905a6038d543b3a",
+            "expected": "tcase_1795576462905a6038d543b3a"
+          }
+        },
+        {
+          "name": "T10 Repair.diagnosis_id 与 Diagnosis 一致",
+          "ok": true,
+          "detail": {
+            "repair.diagnosis_id": "diagnosis_1795576502919eff4037ad9cc",
+            "expected": "diagnosis_1795576502919eff4037ad9cc"
+          }
+        },
+        {
+          "name": "T11 Repair.source_run_id 与失败 Run 一致",
+          "ok": true,
+          "detail": {
+            "repair.source_run_id": "run_17955764721925f11e3fce7b6",
+            "expected": "run_17955764721925f11e3fce7b6"
+          }
+        },
+        {
+          "name": "T12 Repair.base_version 与失败用例版本一致",
+          "ok": true,
+          "detail": {
+            "repair.base_version": 1,
+            "expected": 1
+          }
+        },
+        {
+          "name": "T13 Repair.repair_source 如实标注（human:/rule:/llm:）",
+          "ok": true,
+          "detail": "rule:locator-fixture"
+        },
+        {
+          "name": "T14 Sandbox Run 使用候选副本（独立 testcase_id，绑定 repair）",
+          "ok": true,
+          "detail": {
+            "sandbox_run_id": "run_1795576503026dbb1c86cc713",
+            "sandbox_testcase_id": "tcase_1795576503022e0f3ee8221bb"
+          }
+        },
+        {
+          "name": "T15 Promotion 回执绑定正确的 Proposal 与版本关系",
+          "ok": true,
+          "detail": {
+            "idempotency_key": "run011r1-repair_1795576503017aa0234f9836b",
+            "target_version": 2,
+            "promoted_version": 2
+          }
+        },
+        {
+          "name": "T16 Regression Run 使用精确晋升版本",
+          "ok": true,
+          "detail": {
+            "reg.testcase_version_id": "tcase_1795576462905a6038d543b3a@2",
+            "expected": "tcase_1795576462905a6038d543b3a@2"
+          }
+        },
+        {
+          "name": "T17 Rollback 回执绑定正确的版本关系（target=晋升版本 → restored=恢复版本）",
+          "ok": true,
+          "detail": {
+            "record": {
+              "target_version": "tcase_1795576462905a6038d543b3a:v2",
+              "restored_version": 3,
+              "operator": "user:platform-admin",
+              "reason": "RUN-011-R1 闭环结束回滚",
+              "receipt_recovered": false,
+              "at": "2026-11-25T03:15:11.484309Z"
+            },
+            "promoted_version": 2,
+            "restored_version": 3
+          }
+        },
+        {
+          "name": "T18 回滚后验证 Run 使用恢复版本",
+          "ok": true,
+          "detail": {
+            "post.testcase_version_id": "tcase_1795576462905a6038d543b3a@3",
+            "expected": "tcase_1795576462905a6038d543b3a@3"
+          }
+        }
+      ],
+      "evidence_extract": {
+        "from_hypotheses_supporting": [
+          "evd_1795576483769d5b9dc2749c1",
+          "evd_1795576483770d52703ea2f33",
+          "evd_17955764837716dfb71744e09",
+          "evd_179557650298188203e4cb9c2"
+        ],
+        "from_hypotheses_contradicting": [
+          "evd_1795576502948ed22f786993f"
+        ],
+        "from_doc_evidence_refs": [
+          "evd_1795576483769d5b9dc2749c1",
+          "evd_1795576483770d52703ea2f33",
+          "evd_17955764837716dfb71744e09",
+          "evd_1795576502948ed22f786993f",
+          "evd_179557650298188203e4cb9c2"
+        ],
+        "union": [
+          "evd_1795576483769d5b9dc2749c1",
+          "evd_1795576483770d52703ea2f33",
+          "evd_17955764837716dfb71744e09",
+          "evd_1795576502948ed22f786993f",
+          "evd_179557650298188203e4cb9c2"
+        ]
+      },
+      "graph": {
+        "nodes": 48,
+        "edges": 62,
+        "evidence_nodes": 25
+      }
+    },
+    "audit": {
+      "entries": 16,
+      "broken": [],
+      "intact": true,
+      "ordering": "seq ASC（v12 后单调分配；历史行按 timestamp, audit_id 回填）"
+    }
+  },
+  "env": {
+    "health": {
+      "status": "ok",
+      "app": "TraceGuard",
+      "environment": "test",
+      "database": {
+        "ok": true,
+        "dialect": "postgresql+psycopg",
+        "error": ""
+      },
+      "artifact_dir": ".traceguard/run011-r1/loop1/artifacts",
+      "worker": {
+        "id": "run011r1-api",
+        "inline_running": false
+      },
+      "counts": {
+        "intents": 5,
+        "testcases": 30,
+        "tasks": 0,
+        "runs": 0
+      }
+    },
+    "api_worker_id": "run011r1-api",
+    "auth_status": {
+      "auth_enabled": true,
+      "csrf_required": true
+    },
+    "browser": {
+      "available": true,
+      "running": true,
+      "channel": "bundled-chromium",
+      "config": {
+        "headless": true,
+        "channel": "bundled-chromium",
+        "viewport": "1280x800",
+        "default_timeout_ms": 8000,
+        "navigation_timeout_ms": 15000,
+        "locale": "zh-CN",
+        "timezone": "Asia/Shanghai",
+        "record_video": false,
+        "egress_enforced": true
+      },
+      "egress": {
+        "total": 0,
+        "allowed": 0,
+        "blocked": 0,
+        "blocked_targets": [],
+        "blocked_reasons": [],
+        "url": "http://127.0.0.1:50375",
+        "run_id": "",
+        "worker_id": "run011r1-api",
+        "enforced": true
+      },
+      "version": "159.0.8154.6",
+      "smoke": true
+    },
+    "teamflow_count": 1,
+    "declared_workers": [
+      "run011r1-w1",
+      "run011r1-w2",
+      "run011r1-w3"
+    ]
+  },
+  "label": "r1-1",
+  "run_kind": "RUN-011-R1-single-testcase-lineage",
+  "started_at": "2026-11-25T11:14:10+0800",
+  "api": "http://127.0.0.1:8110",
+  "teamflow": "http://127.0.0.1:8111",
+  "workspace": "ws-run011-r1-1",
+  "ended_at": "2026-11-25T11:15:20+0800",
+  "summary": {
+    "total": 86,
+    "passed": 86,
+    "failed": []
+  }
+}

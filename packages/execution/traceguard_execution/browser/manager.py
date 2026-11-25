@@ -135,14 +135,20 @@ class BrowserManager:
         """BrowserSession 在构造时同步其 TargetPolicy（单一授权事实源）。
 
         保证 Explorer 与正式 Runner 的代理授权规则一致：代理的评估结果与
-        会话层 route guard 使用同一个策略对象。代理已在运行时更新其策略引用
-        （代理侧使用 scheme 对偶变体，见 egress.scheme_dual_policy）。
+        会话层 route guard 使用同一个策略对象。代理侧使用 scheme 对偶变体
+        （见 egress.scheme_dual_policy）。
+
+        RUN-011-R1 WP5（OPEN-RISK-01 根因修复）：必须通过 `set_policy()`
+        同时更新 EgressProxy 实例的 policy 引用——只给 controller.policy
+        重新赋值不会到达代理评估路径（dataclass 按值持有），共享 Worker 上
+        先跑 Run 的旧策略会持续生效，导致授权目标 HTTPS 变体偶发
+        PORT_NOT_ALLOWED。
         """
         self._egress_policy = policy
         if self._egress is not None:
             from .egress import scheme_dual_policy
 
-            self._egress.policy = scheme_dual_policy(policy)
+            self._egress.set_policy(scheme_dual_policy(policy))
 
     def egress_audit(self) -> dict[str, Any]:
         """当前代理审计摘要（含 run/worker 关联与被拒目标清单）。"""
@@ -174,6 +180,48 @@ class BrowserManager:
         if self._pending_run_context:
             controller.set_run_context(**self._pending_run_context)
             self._pending_run_context = {}
+        # RUN-011-R1 WP5（建议 2）：启动后安全预热——对每个授权 origin 发一次
+        # 经代理的探测请求，确认代理策略确实放行授权目标（http/https 双变体）。
+        # 被拦即 fail-closed 报错：把「策略不含该 origin」的配置错误在启动期暴露，
+        # 而不是让业务 Run 偶发失败（OPEN-RISK-01 的症状形态）。
+        self._warmup_egress(policy)
+
+    def _warmup_egress(self, policy: Any) -> None:
+        """安全预热：授权 origin（含 scheme 对偶）经代理探测必须不被 BLOCK。"""
+        import urllib.error
+        import urllib.request
+
+        if self._egress is None:
+            return
+        proxy_url = self._egress.url
+        opener = urllib.request.build_opener(
+            urllib.request.ProxyHandler({"http": proxy_url, "https": proxy_url})
+        )
+        warmup_failures: list[str] = []
+        for origin in sorted(policy.origins, key=lambda o: (o.host, o.port, o.scheme)):
+            url = f"{origin.scheme}://{origin.host}:{origin.port}/"
+            try:
+                opener.open(urllib.request.Request(url, method="GET"), timeout=3.0)  # noqa: S310
+            except Exception:  # noqa: BLE001 - 连接失败可接受（目标可能无监听）
+                pass
+            # 判定以代理审计为准：授权 origin 不允许出现 BLOCK
+            entries = [
+                e
+                for e in self._egress.audit_entries()
+                if f"{e['scheme']}://{e['host']}:{e['port']}" == url.rstrip("/")
+            ]
+            blocked = [e for e in entries if e.get("decision") == "BLOCK"]
+            if blocked:
+                warmup_failures.append(
+                    f"{url} 被代理拦截: {blocked[-1].get('reason')}（policy_origins="
+                    f"{self._egress.audit_summary().get('policy_origins')}）"
+                )
+        if warmup_failures:
+            raise BrowserUnavailableError(
+                "EGRESS_WARMUP_BLOCKED: 授权目标在代理预热中被拦截（fail-closed，"
+                "不允许带病进入业务执行）：" + "；".join(warmup_failures)
+            )
+        logger.info("egress_warmup_ok", origins=len(policy.origins), proxy=proxy_url)
 
     def start(self, base_url: str = "") -> None:
         with self._lock:

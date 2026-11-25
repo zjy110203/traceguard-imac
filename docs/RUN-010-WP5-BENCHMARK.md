@@ -95,3 +95,38 @@ probe_feedback_rate[F]>0（回灌率真实非零）、conflict_detection_count=0
 3. Graph 裁决层首次产生真实诊断差异（2/14），但尚无对错增益；
 4. 时间对齐实现"防错反驳"，尚未实现"时序纠错"（需延迟复测探针）；
 5. 两轮独立数据完全一致（注入与规则确定性），未宣称统计显著（n=14）。
+
+---
+
+## ERRATA（RUN-011-R1 追加，2026-11-25；不覆盖以上原始实验记录）
+
+> 依据：RUN-011-R1 WP0 审计（`docs/RUN-011-R1-BASELINE.md` §5）与指令13 §十.2。
+> 本节**只追加更正**，上文原始数字与结论保持原样存档。
+
+### E1：`probes_per_sample` 数字口径更正
+
+| 指标 | 上文/ CLOSEOUT 表述 | 归档 `benchmark-v4.json` 实际 | 更正 |
+|---|---|---|---|
+| `probes_per_sample[A/C/D]` | 0 | 0.0000（0/14） | 一致 |
+| `probes_per_sample[E/F/G]` | 「所有臂=0」 | **0.9286（13/14）** | ❌ 「所有臂=0」为报告笔误，以归档 JSON 为准 |
+| `probe_feedback_rate[F/G]` | 未列 | 0.4615（6/13） | 补录 |
+
+### E2：语义口径更正（更关键）
+
+`probes_per_sample[E/F/G]=0.9286` **不是真实探针执行数**：该值来自
+`_probe_signals_from_replays()` 对**已落库 Run 证据**的二次解读（重建 ProbeSignal），
+不产生新执行、不产生新证据。真实探针执行数（`probes_used_service`）在 14 个样本中为 0–1。
+
+**因此 v4 的 Probe 臂（E/F/G）消融测量无效**，`primary_cause_correct[F_minus_G]=0/14`
+**不得**解释为"时间对齐无价值"——该比较根本没有真实探针输入。
+RUN-011-R1 WP4 以真实探针执行（54/54 全 ID 绑定）重建测量口径，见
+`docs/RUN-011-R1-WP4-BENCHMARK-PILOT.md`（v5 两轮 23 场景：F 臂主因准确率 0.7027
+vs C 臂 0.6486）。
+
+### E3：受影响表述清单
+
+- RUN-010-FINAL-REPORT §WP5 行「各臂 `probes_per_sample=0`（探针未参与评测）」——
+  「探针未参与评测」结论正确，括号内数字口径按 E1 更正；
+- RUN-010-CLOSEOUT §6「`probes_per_sample`（所有臂）= 0」——按 E1 更正；
+- 上文 §5「probe_feedback_rate[F]>0（回灌率真实非零）」——该值来自重建信号的
+  回灌计算，不是真实探针回灌率；按 E2 更正为「重建信号回灌率（非真实探针执行）」。

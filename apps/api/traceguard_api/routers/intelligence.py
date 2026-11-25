@@ -356,6 +356,11 @@ class RepairProposeReq(BaseModel):
     changes: list[ChangeReq]
     reason: str = ""
     created_by: str = "agent:repair-planner"
+    # RUN-011-R1 WP1 §1.3：Diagnosis→Repair 血缘（可选，向后兼容）
+    diagnosis_id: str | None = None
+    source_run_id: str | None = None
+    #: 修复方案来源：human:* / rule:* / llm:*（三类不得混淆）
+    repair_source: str = ""
 
 
 class RepairLLMReq(BaseModel):
@@ -391,6 +396,9 @@ async def propose_repair(req: RepairProposeReq) -> dict[str, Any]:
             changes=[c.model_dump() for c in req.changes],
             reason=req.reason,
             created_by=req.created_by,
+            diagnosis_id=req.diagnosis_id,
+            source_run_id=req.source_run_id,
+            repair_source=req.repair_source,
         )
     except AppError as exc:
         raise _http(exc) from exc

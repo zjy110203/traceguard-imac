@@ -324,14 +324,25 @@ async def state_project(project_key: str) -> dict[str, Any]:
 # ---------------- 测试数据重置 ----------------
 @router.post("/api/test/reset")
 async def reset_test_data() -> dict[str, Any]:
-    """可重复的测试数据初始化/清理。仅清空 TeamFlow 测试表。"""
+    """可重复的测试数据初始化/清理。仅清空 TeamFlow 测试表。
+
+    RUN-011-R1 WP1：故障清理只清瞬时故障；显式声明 sticky 的外部注入故障保留
+    （语义：Run 的 RESET_DATA 预清理清的是测试数据与瞬时状态，不应吞掉
+    「同一 TestCase 注入故障后再次执行」的注入）。sticky 故障走 /api/faults/{id}/clear。
+    """
     session = get_session()
     try:
         n = session.query(Project).delete()
         session.query(Workspace).delete()
         session.commit()
         FAULT_STATE.clear()
-        return {"ok": True, "cleared_projects": n, "faults_cleared": True}
+        state = FAULT_STATE.snapshot()
+        return {
+            "ok": True,
+            "cleared_projects": n,
+            "faults_cleared": True,
+            "sticky_kept": state.get("sticky") or [],
+        }
     finally:
         session.close()
 
@@ -363,14 +374,16 @@ async def activate_fault(fault_id: str, params: dict[str, Any] | None = None) ->
     if fault_id not in FAULT_IDS:
         raise HTTPException(status_code=404, detail="unknown fault")
     FAULT_STATE.activate(fault_id, params or {})
-    # 复合故障：同时激活底层机制（各自保持独立语义，便于证据归属）
+    # 复合故障：同时激活底层机制（各自保持独立语义，便于证据归属）；
+    # sticky 属性随复合故障传递到底层（否则底层会被 reset 清掉，复合语义破损）
     composite_map = {
         "TF-COMP-001": ["TF-API-001", "TF-UI-003"],  # API 失败 + 错误提示被误导
         "TF-COMP-002": ["TF-DB-001", "TF-TIME-001"],  # 持久化回滚 + 列表延迟
         "TF-COMP-003": ["TF-LOC-001", "TF-UI-002"],  # 定位器失效 + 静默忽略
     }
+    underlying_params = {"sticky": True} if (params or {}).get("sticky") else None
     for underlying in composite_map.get(fault_id, []):
-        FAULT_STATE.activate(underlying)
+        FAULT_STATE.activate(underlying, underlying_params)
     return {"ok": True, "activated": fault_id, "state": FAULT_STATE.snapshot()}
 
 

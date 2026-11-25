@@ -1,12 +1,15 @@
 """E2E fixture：启动真实 TeamFlow HTTP 服务（子进程）。
 
 - 不 Mock：所有请求打到真实 uvicorn 服务与 SQLite。
-- 端口 8011；会话结束自动终止。
+- RUN-011-R1 WP6：端口改为**动态空闲端口**（原固定 8011 在并行 pytest 进程下
+  互相抢绑/串话，是 OPEN-RISK-04 用例互扰的来源之一）；TeamFlow 库由根
+  conftest 按进程隔离（TG_TEAMFLOW_DB）。
 """
 
 from __future__ import annotations
 
 import os
+import socket
 import subprocess
 import sys
 import time
@@ -14,6 +17,14 @@ import urllib.request
 from collections.abc import Generator
 
 import pytest
+
+
+def _free_port() -> int:
+    s = socket.socket()
+    s.bind(("127.0.0.1", 0))
+    port = s.getsockname()[1]
+    s.close()
+    return port
 
 
 def _wait_health(url: str, timeout: float = 20.0) -> bool:
@@ -38,6 +49,7 @@ def teamflow_server() -> Generator[str, None, None]:
             os.path.abspath("apps/teamflow"),
         ]
     )
+    port = _free_port()
     proc = subprocess.Popen(
         [
             sys.executable,
@@ -47,16 +59,17 @@ def teamflow_server() -> Generator[str, None, None]:
             "--host",
             "127.0.0.1",
             "--port",
-            "8011",
+            str(port),
         ],
         env=env,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
     try:
-        if not _wait_health("http://127.0.0.1:8011/health"):
+        base = f"http://127.0.0.1:{port}"
+        if not _wait_health(f"{base}/health"):
             pytest.fail("TeamFlow 服务未能启动")
-        yield "http://127.0.0.1:8011"
+        yield base
     finally:
         proc.terminate()
         try:

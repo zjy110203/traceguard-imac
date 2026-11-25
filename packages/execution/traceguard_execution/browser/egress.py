@@ -193,6 +193,19 @@ class EgressProxyController:
     def clear_run_context(self) -> None:
         self._run_context = {}
 
+    def set_policy(self, policy: TargetPolicy) -> None:
+        """更新代理策略（RUN-011-R1 WP5，OPEN-RISK-01 根因修复）。
+
+        必须同时更新 controller 与 EgressProxy 实例的 policy 引用——
+        EgressProxy 是 dataclass，`start()` 时按值持有策略对象；只改
+        `controller.policy` 不会到达代理评估路径，导致共享 Worker 上
+        「先跑的 Run 的策略」持续生效，后跑 Run 的授权 origin 被误拦
+        （授权目标 HTTPS 变体偶发 PORT_NOT_ALLOWED 的根因）。
+        """
+        self.policy = policy
+        if self._proxy is not None:
+            self._proxy.policy = policy
+
     # ------------------------------------------------------------ 审计导出
     def audit_entries(self) -> list[dict[str, Any]]:
         if self._proxy is None:
@@ -228,6 +241,11 @@ class EgressProxyController:
             "blocked_reasons": sorted(
                 {f"{e['host']}:{e['port']} {e['scheme']} {e['reason']}" for e in blocked}
             )[:20],
+            # RUN-011-R1 WP5：审计保存当前 policy_origins（授权事实源快照），
+            # 用于对账「误拦是不是策略不含该 origin」（OPEN-RISK-01 排查必需）。
+            "policy_origins": sorted(
+                f"{o.scheme}://{o.host}:{o.port}" for o in (self.policy.origins if self._proxy else ())
+            ),
             "url": self.url if self._proxy is not None else "",
             "run_id": self._run_context.get("run_id", ""),
             "worker_id": self._run_context.get("worker_id", self.worker_id),

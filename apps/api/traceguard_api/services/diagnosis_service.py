@@ -170,8 +170,12 @@ class DiagnosisService:
         state_ids = [e.evidence_id for e in state_evidence]
         biz_failed_detail = self._business_detail(failed_biz)
 
-        # ---- 持久化失败（UI 成功但业务未落库）→ 权威状态证据直接确认
+        # ---- 持久化失败（UI 成功但业务未落库）→ 权威状态证据支持（候选级）
         # 若存在 5xx，则"未落库"是接口失败的后果，不作为独立根因（避免症状冒充根因）
+        # RUN-011-R1 WP2/WP4（决策 R1-04 扩展）：业务断言失败背后也是同一次状态查询——
+        # 「不能因为单次 count=0 就直接确认永久性持久化故障」（指令 §4.1）。
+        # TF-DB-004（查询滞后）与 TF-DB-001（永久回滚）的 Run 时签名完全相同，
+        # 单查询无法区分：确认须延迟复测（探针）后仍持续缺失的多点一致证据。
         if failed_biz and not failed_ui and not http_5xx:
             hypotheses.append(
                 Hypothesis(
@@ -179,7 +183,7 @@ class DiagnosisService:
                     description="界面操作成功但业务状态未持久化（False Pass 风险）",
                     failure_domain=DOMAIN_UI,
                     failure_mechanism=FailureMechanism.PERSISTENCE,
-                    supporting=refs(state_ids, confirming=True),
+                    supporting=refs(state_ids, confirming=False),
                     contributing_factors=[biz_failed_detail] if biz_failed_detail else [],
                 )
             )
@@ -332,6 +336,13 @@ class DiagnosisService:
                 hypotheses=hypotheses,
             )
 
+        # ---- RUN-011-R1 WP3：假设去重（OPEN-RISK-03）
+        # 规则与 LLM 候选合并后按机制 + 描述相似度消重，
+        # 避免重复候选携带同一 Evidence 产生虚假的独立支持数量。
+        from traceguard_evidence.diagnosis.dedup import dedup_hypotheses
+
+        hypotheses, dedup_audit = dedup_hypotheses(hypotheses)
+
         # ---- RUN-010 WP4：Evidence Graph 裁决层参与主因裁决
         # （图不再只用于可视化：时间窗口/来源独立/重复消重/完整性全部进入裁决）
         evidence_rows = [
@@ -376,6 +387,7 @@ class DiagnosisService:
                 dict.fromkeys([r["id"] for h in hypotheses for r in h.to_dict()["supporting"]])
             ),
             "graph_adjudication": result.graph_adjudication,
+            "hypothesis_dedup": dedup_audit,
             "flaky_characteristic": flaky,
             "engine": (
                 "rule-v2+graph-adjudication+llm-advisor"
@@ -432,6 +444,10 @@ class DiagnosisService:
         )
         # RUN-010 WP4：探针生成的 TIMING 新假设（写入延迟/查询滞后）进入假设列表
         hypotheses = [_hypothesis_from_dict(h) for h in merged]
+        # RUN-011-R1 WP3：重诊断同样去重（探针新假设可能与既有候选近似重复）
+        from traceguard_evidence.diagnosis.dedup import dedup_hypotheses
+
+        hypotheses, reassess_dedup_audit = dedup_hypotheses(hypotheses)
 
         # RUN-010 WP4：裁决层参与重诊断（与首诊同一裁决口径）
         evidence_rows = [
@@ -465,6 +481,7 @@ class DiagnosisService:
         doc["root_causes"] = result.root_causes
         doc["unresolved_conflicts"] = result.unresolved_conflicts
         doc["graph_adjudication"] = result.graph_adjudication
+        doc["hypothesis_dedup"] = reassess_dedup_audit
         doc["probe_feedback"] = [r.to_dict() for r in results]
         doc["probe_evidence_ids"] = list(
             dict.fromkeys(eid for r in results for u in r.updates for eid in u.evidence_ids)

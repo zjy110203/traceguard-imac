@@ -1,3 +1,22 @@
+# 进度（RUN-011-R1，2026-11-25）
+
+| WP | 内容 | 状态 | 产出 |
+|---|---|---|---|
+| WP0 | 源码与证据审计 | ✅ | `docs/RUN-011-R1-BASELINE.md` |
+| WP1 | 单一 TestCase 血缘闭环（18 步 ×2 轮） | ✅ | `docs/RUN-011-R1-WP1-LINEAGE.md` + `docs/assets/run011-r1/lineage/` |
+| WP2 | 时间三态 + TF-DB-004 延迟复测四场景 | ✅ | `docs/RUN-011-R1-WP2-TIMING.md` + `docs/assets/run011-r1/timing/` |
+| WP3 | LLM 假设去重（5 场景） | ✅ | `docs/RUN-011-R1-WP3-HYPOTHESIS.md` |
+| WP4 | Benchmark Pilot + v5 两轮 | ✅ | `docs/RUN-011-R1-WP4-BENCHMARK-PILOT.md` + `docs/assets/run011-r1/benchmark/` |
+| WP5 | Egress 误拦根因修复与复验 | ✅ | `docs/RUN-011-R1-WP5-EGRESS.md` + `docs/assets/run011-r1/egress/` |
+| WP6 | PG 并行稳定性 | ✅（1 项 flake 限制保留） | `docs/RUN-011-R1-WP6-PG-STABILITY.md` |
+| WP7 | B-17 安全批准申请材料 | ⛔ BLOCKED（保持） | `docs/RUN-011-R1-WP7-B17-SECURITY-REQUEST.md` |
+| WP8 | 交付修订（7 项）+ R1 专项报告 | ✅ | `docs/RUN-011-R1-FINAL-REPORT.md`、RUN-010 v4 ERRATA、RUN-011 修订注记 |
+
+关键修复：Repair↔Diagnosis 契约扩展；evidence run_id 暴露；三态时间对齐；单查询降权；
+假设去重；egress 策略双引用同步 + 安全预热；TeamFlow sticky 故障；并行测试隔离
+（basetemp/TeamFlow 库/动态端口）。
+
+---
 # TraceGuard 自主开发进度
 
 > **RUN-010 进度（2026-11-24 22:45 CST）**：WP0~WP9 全部完成并推送（HEAD 与 origin 同步）。

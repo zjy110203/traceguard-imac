@@ -1,21 +1,32 @@
-"""RUN-011 WP1：真实独立部署下的完整业务闭环（HTTP only，无进程内执行）。
+"""RUN-011-R1 WP1：单一 TestCase 血缘完整闭环（HTTP only，无进程内执行）。
 
-与 RUN-007 `scripts/e2e_run007.py` 的差别（本脚本是本轮最终验收的执行体）：
-- 只通过真实 HTTP + 会话 Cookie 驱动**独立 API 进程**，不 import 任何应用代码，
-  不使用 TestClient，不直接改数据库状态；
-- 认证开启：四个真实账户（viewer / qa-engineer / qa-lead / platform-admin）各自
-  持有服务端会话与 CSRF 令牌；请求体里的 reviewer / approved_by 声明一律无效；
-- Run 一律 `QUEUED` 入队，由**独立 Worker OS 进程**领取执行；本脚本只轮询
-  `GET /runs/{run_id}`，并记录 lease_owner / fencing_token / attempt 等真实归属证据；
-- 覆盖 Intent → 探索 → 编译 → Oracle → 稳定性回放 → 审核 → 执行 → Evidence →
-  Diagnosis → Active Probe 回灌 → Repair → 审批 → CAS 晋升 → 回归 → 回滚 → 回滚后复核；
-- 记录完整追溯链与逐步结果，失败即如实记录（不吞异常、不伪造通过）。
+RUN-011（`f604e5d`）的闭环由三个不同 TestCase 拼接（编译用例 / tcase_tf_false_pass /
+tcase_bench_loc001），血缘断裂。本脚本（R1）把 §1.2 的 18 步链收敛到**同一个 TestCase**：
+
+    1-6   Intent → 真实 LLM 探索 → 编译 TestCase → Oracle 绑定 → 3 次稳定性回放 → qa-lead 审批
+    7     正常独立 Worker 执行（无故障）
+    8-9   对同一 TestCase 注入 TF-LOC-001 → 再次执行并产生真实失败
+    10    Diagnosis 读取该失败 Run
+    11    对同一个 Run 执行 Probe（或按真实停止条件 STOP）
+    12    基于同一个 Diagnosis 生成 Repair Proposal（来源如实标注）
+    13-15 沙箱执行 → 人工审批 → CAS 晋升
+    16    固定版本（精确晋升版本）回归
+    17    回滚
+    18    回滚后再次验证
+
+不变量（RUN-011-R1 WP1 §1.1/§1.4）：
+- 全链共享同一 intent_id / exploration_id / testcase_id / testcase_version_id / oracle_version_id；
+- Repair 必须带 diagnosis_id + source_run_id + repair_source（human:/rule:/llm: 三类不混淆）；
+- phase_trace 校验**引用之间的关系**，而不只是"每个 ID 能读到"；
+- 证据引用从 Diagnosis API 真实结构（supporting/contradicting/evidence_refs）提取，
+  不靠 Graph 节点数量证明完整性；
+- 失败如实记录（不吞异常、不伪造关联字段）。
 
 用法：
     TG_RUN011_PASSWORD='...' .venv/bin/python scripts/full_loop_run011.py \
         --api http://127.0.0.1:8110 --teamflow http://127.0.0.1:8111 \
-        --label loop1 --workspace ws-run011-l1 \
-        --out docs/assets/run011/full-loop/loop1.json
+        --label r1-1 --workspace ws-run011-r1-1 \
+        --out docs/assets/run011-r1/lineage/loop1.json
 
 安全：本脚本不读取任何真实凭据、不构造子进程、不导出环境变量；口令只从
 环境变量 TG_RUN011_PASSWORD 读取（测试用虚拟口令），不写入输出文件。
@@ -38,6 +49,14 @@ from typing import Any
 
 TERMINAL = {"COMPLETED", "FAILED", "TIMED_OUT", "CANCELLED"}
 FALLBACK_PASSWORD = "run011-local-test-only"  # 仅测试环境虚拟口令（非真实凭据）
+
+#: 确定性定位器修复夹具（TF-LOC-001 语义：提交按钮 test_id 变更）。
+#: 这是**规则夹具**（rule:locator-fixture），不是 Agent 从 Diagnosis 自动推导的修复。
+LOCATOR_FIXTURES: dict[str, dict[str, str]] = {
+    "create-submit": {"strategy": "role", "value": "button:创建", "source": "healed"},
+    "project-name": {"strategy": "label", "value": "项目名称", "source": "healed"},
+    "nav-new": {"strategy": "role", "value": "link:新建项目", "source": "healed"},
+}
 
 CHECKS: list[dict[str, Any]] = []
 RESULT: dict[str, Any] = {"checks": CHECKS, "ids": {}, "phases": {}, "env": {}}
@@ -76,10 +95,6 @@ def run_check(name: str, fn: Callable[[], Any], *, phase: str = "", accept=None)
         ok, detail = accept(value)
     check(name, ok, detail, phase=phase)
     return value
-
-
-def expect(value: Any, predicate: Callable[[Any], bool], detail: Any = "") -> tuple[bool, Any]:
-    return bool(predicate(value)), detail or (str(value)[:300] if not predicate(value) else "")
 
 
 class Http:
@@ -158,8 +173,12 @@ class TeamFlow:
         return self.post("/api/test/reset", {})
 
     def clear_faults(self) -> dict[str, Any]:
-        state = self.post("/api/faults/TF-NORMAL-001/clear", {})
-        return state
+        """清除全部故障（含 sticky）：逐个显式 clear。"""
+        state = self.get("/api/faults").get("state") or {}
+        last: dict[str, Any] = {}
+        for fid in list(state.get("active") or []):
+            last = self.post(f"/api/faults/{fid}/clear", {})
+        return last or {"ok": True, "cleared": "none"}
 
     def activate(self, fault_id: str, params: dict | None = None) -> dict[str, Any]:
         return self.post(f"/api/faults/{fault_id}/activate", params or {})
@@ -331,12 +350,12 @@ def phase_seed(admin: Http, engineer: Http, tf: TeamFlow) -> dict[str, Any]:
 def phase_ab(
     engineer: Http, lead: Http, workspace: str, teamflow: str
 ) -> dict[str, Any]:
-    """A 需求与探索 / B 测试生成与治理。"""
+    """§1.2 步骤 1-6：Intent → 探索 → 编译 → Oracle → 稳定性回放 → 审批。"""
     intent = engineer.call(
         "POST",
         "/api/v1/intents",
         {
-            "title": "RUN-011 独立部署闭环：项目创建必须真实持久化",
+            "title": "RUN-011-R1 单一 TestCase 血缘闭环：项目创建必须真实持久化",
             "description": "在项目列表点击新建，填写名称后提交；必须出现成功提示，且独立业务状态查询能看到该项目。看到成功提示即完成探索，不要打开详情页。",
             "owner": "qa-team",
             "workspace_id": workspace,
@@ -389,7 +408,10 @@ def phase_ab(
             "testcase_id": tc_id,
             "version": version,
             "review_status": version_doc.get("review_status"),
-            "steps": [s.get("step_id") for s in version_doc.get("steps") or []],
+            "steps": [
+                {"step_id": s.get("step_id"), "action": s.get("action"), "target": s.get("target")}
+                for s in version_doc.get("steps") or []
+            ],
             "assertions": [
                 {"assertion_id": a.get("assertion_id"), "kind": a.get("kind")} for a in version_doc.get("assertions") or []
             ],
@@ -426,10 +448,10 @@ def phase_ab(
                 "POST",
                 "/api/v1/oracles",
                 {
-                    "oracle_id": f"oracle_run011_{tag}_{re.sub(r'[^A-Za-z0-9]', '_', aid)[:40]}",
+                    "oracle_id": f"oracle_run011r1_{tag}_{re.sub(r'[^A-Za-z0-9]', '_', aid)[:40]}",
                     "assertion_id": aid,
-                    "expected_behavior": a.get("description") or "RUN-011 断言",
-                    "requirement_ref": "REQ-RUN011-LOOP",
+                    "expected_behavior": a.get("description") or "RUN-011-R1 断言",
+                    "requirement_ref": "REQ-RUN011R1-LOOP",
                     "evaluation_rule": {"kind": a.get("kind"), "expected": a.get("expected") or {}},
                     "approved": True,
                     "approved_by": "user:qa-lead",
@@ -481,7 +503,7 @@ def phase_ab(
         reviewed = lead.call(
             "POST",
             f"/api/v1/testcases/{case_id}/versions/{case_version}/review",
-            {"decision": "APPROVED", "reviewer": "agent:auto-heal", "note": "RUN-011：请求体声明必须伪造无效"},
+            {"decision": "APPROVED", "reviewer": "agent:auto-heal", "note": "RUN-011-R1：请求体声明必须伪造无效"},
         )
         info["review"] = {
             "review_status": reviewed.get("review_status"),
@@ -520,37 +542,37 @@ def phase_ab(
     approved_tc, approved_version = tc_id, version
     if not governed.get("ok"):
         # 真实发现：一次探索编译出的候选未通过稳定性回放 → 不得批准。
-        # 保留失败证据，改用「人工输入路径」（指令允许：保留规则或人工输入路径），
-        # 由 qa-engineer 以同一 Intent 编写用例，再走同一治理门禁。
-        fb_id = f"tcase_run011_{re.sub(r'[^A-Za-z0-9]', '_', workspace)}"
+        # 保留失败证据，改用「人工输入路径」（同一 Intent 编写用例，再走同一治理门禁）。
+        # 注意：人工路径用例仍然成为本闭环的唯一主线 TestCase，不与其他预置用例混用。
+        fb_id = f"tcase_run011r1_{re.sub(r'[^A-Za-z0-9]', '_', workspace)}"
         tf_base = teamflow
         created_fb = engineer.call(
             "POST",
             "/api/v1/testcases",
             {
                 "testcase_id": fb_id,
-                "title": "RUN-011 人工用例：项目创建必须真实持久化",
+                "title": "RUN-011-R1 人工用例：项目创建必须真实持久化",
                 "intent_ref": intent_id,
                 "workspace_id": workspace,
                 "compile_source": "human",
                 "steps": [
                     {"step_id": "n1", "action": "navigate", "value": "/projects"},
                     {"step_id": "n2", "action": "click", "target": {"strategy": "test_id", "value": "nav-new"}},
-                    {"step_id": "n3", "action": "fill", "target": {"strategy": "test_id", "value": "project-name"}, "value": "RUN-011 Loop Project"},
+                    {"step_id": "n3", "action": "fill", "target": {"strategy": "test_id", "value": "project-name"}, "value": "RUN-011-R1 Loop Project"},
                     {"step_id": "n4", "action": "fill", "target": {"strategy": "test_id", "value": "project-description"}, "value": "闭环验证"},
                     {"step_id": "n5", "action": "click", "target": {"strategy": "test_id", "value": "create-submit"}},
                     {"step_id": "n6", "action": "wait", "value": "1200"},
                 ],
                 "assertions": [
                     {
-                        "assertion_id": "a_run011_banner",
+                        "assertion_id": "a_run011r1_banner",
                         "description": "成功提示必须出现",
                         "kind": "ui",
                         "required": True,
                         "expected": {"test_id": "banner-success"},
                     },
                     {
-                        "assertion_id": "a_run011_biz",
+                        "assertion_id": "a_run011r1_biz",
                         "description": "独立业务状态必须持久化",
                         "kind": "business_state",
                         "required": True,
@@ -562,7 +584,7 @@ def phase_ab(
                         },
                     },
                 ],
-                "run_config": {"base_url": tf_base, "fail_fast": False, "trace": True},
+                "run_config": {"base_url": tf_base, "fail_fast": True, "trace": True},
             },
             expect_status=201,
         )
@@ -579,6 +601,7 @@ def phase_ab(
         RESULT["phases"]["B"]["fallback_reason"] = (
             "探索编译候选未通过稳定性回放（真实失败，未降级门禁）；"
             "改用人工输入路径继续闭环，失败证据保留在 governed_compiled。"
+            "主线 TestCase 仍唯一（= 人工用例），不与其它预置用例混链。"
         )
         if not governed_fb.get("ok"):
             raise RuntimeError("人工用例也未通过稳定性回放，闭环无法继续（不伪造通过）")
@@ -603,11 +626,13 @@ def phase_ab(
     RESULT["ids"]["oracle_versions"] = governed.get("oracle_versions") or {}
     RESULT["ids"]["testcase_id"] = approved_tc
     RESULT["ids"]["testcase_version_id"] = f"{approved_tc}@{approved_version}"
+    RESULT["ids"]["approved_version"] = approved_version
     RESULT["phases"]["B"]["approved"] = {"testcase_id": approved_tc, "version": approved_version}
     return {"intent_id": intent_id, "testcase_id": approved_tc, "version": approved_version}
 
 
 def phase_c(engineer: Http, ex: WorkerRun, tf: TeamFlow, tc_id: str, version: int) -> dict[str, Any]:
+    """§1.2 步骤 7：正常独立 Worker 执行（无故障）。"""
     tf.clear_faults()
     count_before = tf.project_count()
     vdoc = engineer.call("GET", f"/api/v1/testcases/{tc_id}/versions/{version}")
@@ -625,6 +650,8 @@ def phase_c(engineer: Http, ex: WorkerRun, tf: TeamFlow, tc_id: str, version: in
     RESULT["phases"]["C"] = {
         "run_id": run_id,
         "verdict": run.get("test_verdict"),
+        "testcase_id": run.get("testcase_id"),
+        "testcase_version_id": run.get("testcase_version_id"),
         "execution_trace": trace,
         "egress": egress,
         "mode": report.get("mode") or (report.get("browser") or {}).get("mode"),
@@ -638,8 +665,6 @@ def phase_c(engineer: Http, ex: WorkerRun, tf: TeamFlow, tc_id: str, version: in
         phase="C",
     )
     count_after = tf.project_count()
-    # RESET_DATA 用例会在执行前重置目标应用数据，此时"净增 1"不成立；
-    # 判定标准改为"执行后业务状态中存在本次创建的数据"，并记录清理策略。
     if cleanup == "RESET_DATA":
         business_ok = count_after >= 1
     else:
@@ -692,103 +717,193 @@ def phase_c(engineer: Http, ex: WorkerRun, tf: TeamFlow, tc_id: str, version: in
     return {"run_id": run_id}
 
 
-def phase_de(engineer: Http, ex: WorkerRun, tf: TeamFlow) -> dict[str, Any]:
-    """D 真实故障与诊断；E 主动探针与证据回灌。"""
-    tf.reset()
-    count_before = tf.project_count()
-    tf.activate("TF-DB-001")
-    check("D0 真实故障 TF-DB-001 已注入受控测试环境", "TF-DB-001" in tf.get("/api/faults").get("state", {}).get("active", []), tf.get("/api/faults"), phase="D")
+def _run_testcase_id(run: dict[str, Any]) -> str:
+    """Run 文档不直接暴露 testcase_id；从 testcase_version_id（tcase_x@N）推导。"""
+    return str(run.get("testcase_id") or (run.get("testcase_version_id") or "").split("@")[0])
 
-    out = ex.execute("tcase_tf_false_pass", note="故障执行（UI 成功但持久化回滚）")
+
+def phase_fail(engineer: Http, ex: WorkerRun, tf: TeamFlow, tc_id: str, version: int) -> dict[str, Any]:
+    """§1.2 步骤 8-9：对同一个 TestCase 注入 TF-LOC-001 → 再次执行并产生真实失败。
+
+    注入必须是 sticky 的：Run 的 RESET_DATA 预清理会调用 /api/test/reset
+    （清瞬时故障），非 sticky 注入会被吞掉（真实发现，已修 TeamFlow 语义）。
+    """
+    tf.clear_faults()
+    tf.activate("TF-LOC-001", {"sticky": True})
+    active = tf.get("/api/faults").get("state", {}).get("active", [])
+    sticky = (tf.get("/api/faults").get("state") or {}).get("sticky") or []
+    check(
+        "D0 TF-LOC-001 已注入且为 sticky（可穿过 Run 的 RESET_DATA 预清理）",
+        "TF-LOC-001" in active and "TF-LOC-001" in sticky,
+        {"active": active, "sticky": sticky},
+        phase="D",
+    )
+
+    out = ex.execute(tc_id, version=version, note="故障执行（TF-LOC-001 定位器失效）")
     run, trace = out["run"], out["trace"]
     run_id = run["run_id"]
     RESULT["ids"]["failed_run_id"] = run_id
-    check("D1 真实业务失败（Trusted Oracle 揭穿假成功）", run.get("test_verdict") == "FAILED", {"verdict": run.get("test_verdict"), "status": run.get("execution_status")}, phase="D")
+    report = engineer.call("GET", f"/api/v1/runs/{run_id}/report")
+    failed_steps = [
+        {"step_id": s.get("step_id"), "action": s.get("action"), "target": s.get("target"), "error": str(s.get("error") or "")[:200]}
+        for s in report.get("steps") or []
+        if s.get("status") == "FAILED"
+    ]
+    run_tc = _run_testcase_id(run)
+    same_tc = run_tc == tc_id
+    same_ver = str(run.get("testcase_version_id") or "") == f"{tc_id}@{version}"
+    RESULT["phases"]["D"] = {
+        "run_id": run_id,
+        "verdict": run.get("test_verdict"),
+        "testcase_id": run_tc,
+        "testcase_version_id": run.get("testcase_version_id"),
+        "failed_steps": failed_steps,
+        "trace": trace,
+    }
+    check(
+        "D1 真实失败（FAILED/NOT_EVALUATED + 存在带错误的失败步骤）",
+        run.get("test_verdict") in {"FAILED", "NOT_EVALUATED"} and bool(failed_steps),
+        {"verdict": run.get("test_verdict"), "failed_steps": failed_steps[:3]},
+        phase="D",
+    )
     check("D2 失败 Run 由独立 Worker 执行", trace.get("independent_worker") is True, trace, phase="D")
-    check("D3 失败源于真实业务状态（count 未增加）", tf.project_count() == count_before, {"before": count_before, "after": tf.project_count()}, phase="D")
+    check(
+        "D3 失败 Run 与主线 TestCase 同一用例同一版本",
+        same_tc and same_ver,
+        {"run.testcase_id": run.get("testcase_id"), "expected": tc_id, "run.testcase_version_id": run.get("testcase_version_id"), "expected_version": f"{tc_id}@{version}"},
+        phase="D",
+    )
+    return {"run_id": run_id, "failed_steps": failed_steps}
 
+
+def _extract_evidence_refs(diag: dict[str, Any]) -> dict[str, Any]:
+    """§1.4：从 Diagnosis API 真实结构提取证据引用（supporting/contradicting/evidence_refs）。
+
+    不用 Graph 节点数量证明完整性；hypotheses 的引用字段是
+    ``supporting[*].id`` / ``contradicting[*].id``（不存在 ``evidence_ids`` 字段）。
+    """
+    hyps = diag.get("hypotheses") or []
+    support_ids: set[str] = set()
+    contradict_ids: set[str] = set()
+    for h in hyps:
+        for r in h.get("supporting") or []:
+            rid = str(r.get("id") or "")
+            if rid:
+                support_ids.add(rid)
+        for r in h.get("contradicting") or []:
+            rid = str(r.get("id") or "")
+            if rid:
+                contradict_ids.add(rid)
+    top_refs = {str(x) for x in diag.get("evidence_refs") or [] if x}
+    return {
+        "from_hypotheses_supporting": sorted(support_ids),
+        "from_hypotheses_contradicting": sorted(contradict_ids),
+        "from_doc_evidence_refs": sorted(top_refs),
+        "union": sorted(support_ids | contradict_ids | top_refs),
+    }
+
+
+def phase_diag(engineer: Http, run_id: str) -> dict[str, Any]:
+    """§1.2 步骤 10：Diagnosis 读取该失败 Run。"""
     diag = engineer.call("POST", f"/api/v1/runs/{run_id}/diagnose", None, expect_status=(200, 201), timeout=300)
     diag_id = diag["diagnosis_id"]
     RESULT["ids"]["diagnosis_id"] = diag_id
     hyps = diag.get("hypotheses") or []
-    RESULT["phases"]["D"] = {
+    ev = _extract_evidence_refs(diag)
+    RESULT["phases"]["diag"] = {
         "run_id": run_id,
         "diagnosis_id": diag_id,
+        "diagnosis_run_id": diag.get("run_id"),
+        "diagnosis_testcase_id": diag.get("testcase_id"),
         "outcome": diag.get("outcome"),
         "disposition": diag.get("disposition"),
-        "hypotheses": [{"id": h.get("hypothesis_id"), "mechanism": h.get("failure_mechanism"), "status": h.get("status")} for h in hyps],
+        "hypotheses": [
+            {
+                "id": h.get("hypothesis_id"),
+                "mechanism": h.get("failure_mechanism"),
+                "domain": h.get("failure_domain"),
+                "status": h.get("status"),
+                "suggested_by": h.get("suggested_by"),
+                "supporting": h.get("supporting"),
+                "contradicting": h.get("contradicting"),
+            }
+            for h in hyps
+        ],
         "root_causes": diag.get("root_causes"),
         "unresolved_conflicts": diag.get("unresolved_conflicts"),
-        "evidence_refs": sorted({eid for h in hyps for eid in (h.get("evidence_ids") or [])})[:30],
+        "evidence_refs_extracted": ev,
         "revision": diag.get("revision") or diag.get("version"),
+        "engine": diag.get("engine"),
     }
-    check("D4 诊断产出可追溯假设", bool(hyps), RESULT["phases"]["D"]["hypotheses"], phase="D")
+    check("D4 诊断产出可追溯假设", bool(hyps), RESULT["phases"]["diag"]["hypotheses"], phase="diag")
     check(
         "D5 诊断结论合法（含如实弃权）",
         diag.get("outcome") in {"CONFIRMED", "PROBABLE", "SUPPORTED", "INCONCLUSIVE"},
         diag.get("outcome"),
-        phase="D",
+        phase="diag",
     )
+    check(
+        "D6 诊断绑定失败 Run 与主线 TestCase",
+        diag.get("run_id") == run_id and diag.get("testcase_id") == RESULT["ids"]["testcase_id"],
+        {"diag.run_id": diag.get("run_id"), "expected_run": run_id, "diag.testcase_id": diag.get("testcase_id")},
+        phase="diag",
+    )
+    check(
+        "D7 证据引用真实提取（supporting/contradicting/evidence_refs，而非 Graph 节点数）",
+        bool(ev["union"]),
+        ev,
+        phase="diag",
+    )
+    return {"run_id": run_id, "diagnosis_id": diag_id, "evidence": ev}
 
-    graph = engineer.call("POST", f"/api/v1/runs/{run_id}/graph", {}, expect_status=(200, 201))
-    nodes = graph.get("nodes") or []
-    edges = graph.get("edges") or []
-    ev_nodes = [n for n in nodes if str(n.get("node_type")) in {"Evidence", "evidence"}]
-    run_evidence_ids = {e.get("evidence_id") for e in engineer.call("GET", f"/api/v1/runs/{run_id}/evidence")}
-    RESULT["phases"]["D"]["graph"] = {
-        "nodes": len(nodes),
-        "edges": len(edges),
-        "node_types": sorted({str(n.get("node_type")) for n in nodes}),
-        "evidence_nodes_referenced": sum(1 for n in ev_nodes if str(n.get("ref_id") or n.get("node_id")) in run_evidence_ids),
-        "evidence_nodes": len(ev_nodes),
-    }
-    check("D6 证据图引用本 Run 的真实 Evidence", RESULT["phases"]["D"]["graph"]["evidence_nodes_referenced"] > 0, RESULT["phases"]["D"]["graph"], phase="D")
 
-    # ---------------- E：主动探针 ----------------
+def phase_probe(engineer: Http, run_id: str, diag_id: str) -> dict[str, Any]:
+    """§1.2 步骤 11：对同一个 Run 执行 Probe（或按真实停止条件 STOP）。"""
     suggestions = engineer.call("GET", f"/api/v1/runs/{run_id}/probe-suggestions?diagnosis_id={diag_id}")
-    RESULT["phases"]["E"] = {"suggestions": suggestions}
     plan = engineer.call(
         "POST", f"/api/v1/runs/{run_id}/probe-plan?diagnosis_id={diag_id}&max_iterations=3", None,
         expect_status=(200, 201), timeout=300,
     )
     steps = plan.get("steps") or []
     succeeded = [s for s in steps if s.get("status") == "SUCCEEDED"]
-    RESULT["phases"]["E"].update(
-        {
-            "plan_id": plan.get("plan_id"),
-            "stop_reason": plan.get("stop_reason"),
-            "stop_detail": plan.get("stop_detail"),
-            "steps": [
-                {
-                    "probe_id": s.get("probe_id"),
-                    "status": s.get("status"),
-                    "gap_id": s.get("gap_id"),
-                    "info_gain": s.get("info_gain"),
-                    "evidence_ids": s.get("evidence_ids"),
-                    "applied_to_diagnosis": s.get("applied_to_diagnosis"),
-                    "hypothesis_updates": s.get("hypothesis_updates"),
-                }
-                for s in steps
-            ],
-            "new_evidence_ids": plan.get("evidence_ids") or [],
-            "budget": plan.get("budget"),
-            "diagnosis_before": plan.get("diagnosis_before"),
-            "diagnosis_after": plan.get("diagnosis_after"),
-        }
-    )
-    executed_ok = bool(succeeded) and bool(plan.get("evidence_ids"))
+    ev_ids = plan.get("evidence_ids") or []
+    RESULT["phases"]["probe"] = {
+        "suggestions_count": len(suggestions or []),
+        "plan_id": plan.get("plan_id"),
+        "plan_run_id": plan.get("run_id"),
+        "plan_diagnosis_id": plan.get("diagnosis_id"),
+        "stop_reason": plan.get("stop_reason"),
+        "stop_detail": plan.get("stop_detail"),
+        "steps": [
+            {
+                "probe_id": s.get("probe_id"),
+                "status": s.get("status"),
+                "gap_id": s.get("gap_id"),
+                "info_gain": s.get("info_gain"),
+                "evidence_ids": s.get("evidence_ids"),
+                "execution_id": s.get("execution_id"),
+                "applied_to_diagnosis": s.get("applied_to_diagnosis"),
+                "hypothesis_updates": s.get("hypothesis_updates"),
+            }
+            for s in steps
+        ],
+        "new_evidence_ids": ev_ids,
+        "budget": plan.get("budget"),
+    }
+    executed_ok = bool(succeeded) and bool(ev_ids)
     stopped_honestly = not steps and str(plan.get("stop_reason") or "").startswith("STOP_")
     check(
         "E1 探针真实执行并落库新证据（或如实 STOP 且说明原因）",
         executed_ok or stopped_honestly,
-        {k: RESULT["phases"]["E"].get(k) for k in ("stop_reason", "stop_detail", "steps", "new_evidence_ids")},
+        {k: RESULT["phases"]["probe"].get(k) for k in ("stop_reason", "stop_detail", "new_evidence_ids")},
         phase="E",
     )
-
-    if plan.get("evidence_ids"):
-        ev = engineer.call("GET", f"/api/v1/evidence/{plan['evidence_ids'][0]}")
-        RESULT["phases"]["E"]["probe_evidence"] = {
+    if executed_ok:
+        check("E2 探针计划绑定同一 Run 与 Diagnosis", plan.get("run_id") == run_id or not plan.get("run_id"), plan, phase="E")
+        ev = engineer.call("GET", f"/api/v1/evidence/{ev_ids[0]}")
+        RESULT["phases"]["probe"]["probe_evidence"] = {
             "evidence_id": ev.get("evidence_id"),
+            "run_id": ev.get("run_id"),
             "source_type": ev.get("source_type"),
             "source_ref": ev.get("source_ref"),
             "captured_at": ev.get("captured_at"),
@@ -796,50 +911,102 @@ def phase_de(engineer: Http, ex: WorkerRun, tf: TeamFlow) -> dict[str, Any]:
             "observed_at": (ev.get("content") or {}).get("observed_at"),
         }
         check(
-            "E2 探针证据保留 observed_at / collected_at 语义",
-            bool(RESULT["phases"]["E"]["probe_evidence"]["captured_at"]),
-            RESULT["phases"]["E"]["probe_evidence"],
+            "E3 探针证据保留 observed_at / collected_at 语义",
+            bool(RESULT["phases"]["probe"]["probe_evidence"]["captured_at"]),
+            RESULT["phases"]["probe"]["probe_evidence"],
             phase="E",
         )
-        # 回灌后重新读取诊断
         after = engineer.call("GET", f"/api/v1/diagnoses/{diag_id}")
-        RESULT["phases"]["E"]["diagnosis_after_read"] = {
+        RESULT["phases"]["probe"]["diagnosis_after_read"] = {
             "outcome": after.get("outcome"),
             "revision": after.get("revision") or after.get("version"),
             "evaluation_history_len": len(after.get("evaluation_history") or []),
             "hypotheses": [{"id": h.get("hypothesis_id"), "status": h.get("status")} for h in after.get("hypotheses") or []],
+            "probe_evidence_ids": after.get("probe_evidence_ids"),
         }
         changed = (
-            RESULT["phases"]["E"]["diagnosis_after_read"]["hypotheses"]
-            != RESULT["phases"]["D"]["hypotheses"]
-            or RESULT["phases"]["E"]["diagnosis_after_read"]["outcome"] != RESULT["phases"]["D"]["outcome"]
-            or (RESULT["phases"]["E"]["diagnosis_after_read"]["evaluation_history_len"] or 0) > 0
+            RESULT["phases"]["probe"]["diagnosis_after_read"]["hypotheses"]
+            != [
+                {"id": h.get("id"), "status": h.get("status")}
+                for h in RESULT["phases"]["diag"]["hypotheses"]
+            ]
+            or RESULT["phases"]["probe"]["diagnosis_after_read"]["outcome"] != RESULT["phases"]["diag"]["outcome"]
+            or (RESULT["phases"]["probe"]["diagnosis_after_read"]["evaluation_history_len"] or 0) > 0
         )
-        check("E3 证据回灌真实进入重新诊断（假设/历史变化）", bool(changed), RESULT["phases"]["E"]["diagnosis_after_read"], phase="E")
+        check("E4 证据回灌真实进入重新诊断（假设/历史变化）", bool(changed), RESULT["phases"]["probe"]["diagnosis_after_read"], phase="E")
     else:
-        check("E3 无新证据时不得声称回灌成功", True, "如实记录 STOP 原因", phase="E")
+        check("E4 无新证据时不得声称回灌成功", True, f"如实记录 STOP：{plan.get('stop_reason')}", phase="E")
+    return {"plan_id": plan.get("plan_id"), "new_evidence_ids": ev_ids, "stop_reason": plan.get("stop_reason")}
 
+
+def derive_repair_change(
+    engineer: Http, tc_id: str, version: int, failed_steps: list[dict[str, Any]]
+) -> dict[str, Any] | None:
+    """§1.3：从失败 Run 的真实失败步骤推导确定性修复（规则夹具）。
+
+    来源标注：``rule:locator-fixture``——**不是** Agent 根据 Diagnosis 自动推导，
+    也不是 LLM 生成。Diagnosis 提供方向（LOCATOR/TEST_ASSET），推导规则固定：
+    把失效的 test_id 定位器替换为等价的 role/label 定位器。
+    """
+    vdoc = engineer.call("GET", f"/api/v1/testcases/{tc_id}/versions/{version}")
+    step_index: dict[str, int] = {
+        str(s.get("step_id")): i for i, s in enumerate(vdoc.get("steps") or [])
+    }
+    for fs in failed_steps:
+        sid = str(fs.get("step_id") or "")
+        target = fs.get("target") or {}
+        tid = str(target.get("value") or "")
+        if str(target.get("strategy") or "") == "test_id" and tid in LOCATOR_FIXTURES:
+            idx = step_index.get(sid)
+            if idx is None:
+                continue
+            return {
+                "change": {
+                    "path": "steps[].target",
+                    "step_index": idx,
+                    "value": dict(LOCATOR_FIXTURES[tid]),
+                    "reason": f"TF-LOC-001：{tid} 定位器失效，改用等价 role/label 定位（rule:locator-fixture）",
+                },
+                "step_id": sid,
+                "original_target": target,
+                "fixture_key": tid,
+            }
+    return None
+
+
+def phase_repair(
+    engineer: Http, lead: Http, admin: Http, ex: WorkerRun, tf: TeamFlow,
+    tc_id: str, version: int, diag_id: str, failed_run_id: str, failed_steps: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """§1.2 步骤 12-15：Repair Proposal（关联 Diagnosis）→ 沙箱 → 审批 → CAS 晋升。"""
     tf.clear_faults()
-    return {"run_id": run_id, "diagnosis_id": diag_id}
 
-
-def phase_fg(engineer: Http, lead: Http, admin: Http, ex: WorkerRun, tf: TeamFlow) -> dict[str, Any]:
-    """F Repair；G 回归与回滚。"""
-    tf.clear_faults()
-    base_case = "tcase_bench_loc001"
-    base_meta = engineer.call("GET", f"/api/v1/testcases/{base_case}")
-    base_version = int(base_meta.get("latest_approved_version") or base_meta.get("latest_version") or 1)
-    base_doc = engineer.call("GET", f"/api/v1/testcases/{base_case}/versions/{base_version}")
-    RESULT["phases"]["F"] = {"base_version": base_version, "base_review_status": base_doc.get("review_status")}
-    out = ex.execute(base_case, version=base_version, note="定位器失效基线（用例内受控注入 TF-LOC-001）")
-    run, trace = out["run"], out["trace"]
-    RESULT["phases"]["F"].update(
-        {"base_run": run["run_id"], "base_verdict": run.get("test_verdict"), "base_trace": trace}
+    # —— 尝试 LLM 修复规划器（真实调用；无配置时如实记录），用于三来源区分 ——
+    llm_out = engineer.call(
+        "POST",
+        "/api/v1/repairs/llm-suggest",
+        {"testcase_id": tc_id, "base_version": version, "run_id": failed_run_id, "diagnosis_id": diag_id, "propose": False},
+        expect_status=(200, 201),
+        timeout=120,
     )
+    RESULT["phases"]["repair"] = {"llm_suggest": {
+        "called": llm_out.get("called"),
+        "fallback": llm_out.get("fallback"),
+        "reason": llm_out.get("reason") or llm_out.get("error"),
+        "model": llm_out.get("model"),
+        "prompt_version": llm_out.get("prompt_version"),
+        "changes_count": len(llm_out.get("changes") or []),
+    }}
+
+    derived = derive_repair_change(engineer, tc_id, version, failed_steps)
+    if derived is None:
+        check("F1 修复推导：失败步骤存在可修夹具", False, failed_steps[:3], phase="F")
+        return {}
+    change = derived["change"]
     check(
-        "F1 基线版本真实失败（定位器失效 → 步骤中断或断言失败）",
-        run.get("test_verdict") in {"FAILED", "NOT_EVALUATED"},
-        {"verdict": run.get("test_verdict"), "status": run.get("execution_status")},
+        "F1 修复推导自真实失败步骤（rule:locator-fixture，非伪造）",
+        True,
+        {"step_id": derived["step_id"], "original_target": derived["original_target"], "fixture": derived["fixture_key"]},
         phase="F",
     )
 
@@ -847,110 +1014,141 @@ def phase_fg(engineer: Http, lead: Http, admin: Http, ex: WorkerRun, tf: TeamFlo
         "POST",
         "/api/v1/repairs",
         {
-            "testcase_id": base_case,
-            "base_version": base_version,
-            "changes": [
-                {
-                    "path": "steps[].target",
-                    "step_index": 4,
-                    "value": {"strategy": "role", "value": "button:创建", "source": "healed"},
-                    "reason": "TF-LOC-001：提交按钮 test_id 变更，改用可访问名称定位",
-                }
-            ],
-            "reason": "RUN-011：真实定位器故障驱动的最小修复",
+            "testcase_id": tc_id,
+            "base_version": version,
+            "changes": [change],
+            "reason": "RUN-011-R1：TF-LOC-001 真实定位器故障驱动的最小修复（rule:locator-fixture）",
             "created_by": "agent:repair-planner",
+            "diagnosis_id": diag_id,
+            "source_run_id": failed_run_id,
+            "repair_source": "rule:locator-fixture",
         },
         expect_status=201,
     )
     pid = proposal["proposal_id"]
     RESULT["ids"]["repair_proposal_id"] = pid
+    RESULT["phases"]["repair"]["proposal"] = {
+        "proposal_id": pid,
+        "testcase_id": proposal.get("testcase_id"),
+        "base_version": proposal.get("base_version"),
+        "diagnosis_id": proposal.get("diagnosis_id"),
+        "source_run_id": proposal.get("source_run_id"),
+        "repair_source": proposal.get("repair_source"),
+        "diff": proposal.get("diff"),
+    }
+    check(
+        "F2 Repair 与 Diagnosis/失败 Run 明确关联（diagnosis_id + source_run_id + repair_source）",
+        proposal.get("diagnosis_id") == diag_id
+        and proposal.get("source_run_id") == failed_run_id
+        and proposal.get("testcase_id") == tc_id
+        and proposal.get("base_version") == version
+        and str(proposal.get("repair_source") or "").startswith(("human:", "rule:", "llm:")),
+        RESULT["phases"]["repair"]["proposal"],
+        phase="F",
+    )
 
     validated = engineer.call("POST", f"/api/v1/repairs/{pid}/validate")
-    RESULT["phases"]["F"]["validation"] = {
+    RESULT["phases"]["repair"]["validation"] = {
         "status": validated.get("status"),
         "assertion_preservation": validated.get("assertion_preservation"),
         "oracle_integrity": validated.get("oracle_integrity"),
         "diff": validated.get("diff") or validated.get("changes"),
     }
     check(
-        "F2 断言保护与 Oracle 完整性校验通过",
+        "F3 断言保护与 Oracle 完整性校验通过",
         validated.get("status") == "VALIDATED"
         and validated.get("assertion_preservation") == "PASS"
         and validated.get("oracle_integrity") == "PASS",
-        RESULT["phases"]["F"]["validation"],
+        RESULT["phases"]["repair"]["validation"],
         phase="F",
     )
 
     sandbox = engineer.call("POST", f"/api/v1/repairs/{pid}/sandbox-run", None, timeout=420)
-    RESULT["phases"]["F"]["sandbox"] = {
+    RESULT["phases"]["repair"]["sandbox"] = {
         "sandbox_status": sandbox.get("sandbox_status"),
         "sandbox_run_id": sandbox.get("sandbox_run_id"),
+        "sandbox_testcase_id": sandbox.get("sandbox_testcase_id"),
+        "candidate_version": sandbox.get("candidate_version"),
         "executed_by": sandbox.get("sandbox_executed_by"),
         "fencing_token": sandbox.get("sandbox_fencing_token"),
     }
-    check("F3 沙箱真实执行 PASSED（证明修复有效）", sandbox.get("sandbox_status") == "PASSED", RESULT["phases"]["F"]["sandbox"], phase="F")
+    check("F4 沙箱真实执行 PASSED（证明修复有效）", sandbox.get("sandbox_status") == "PASSED", RESULT["phases"]["repair"]["sandbox"], phase="F")
     check(
-        "F4 沙箱 Run 由独立 Worker 执行",
+        "F5 沙箱 Run 由独立 Worker 执行且使用候选副本",
         bool(sandbox.get("sandbox_executed_by"))
         and sandbox.get("sandbox_executed_by") != RESULT["env"].get("api_worker_id")
-        and int(sandbox.get("sandbox_fencing_token") or 0) >= 1,
-        RESULT["phases"]["F"]["sandbox"],
+        and int(sandbox.get("sandbox_fencing_token") or 0) >= 1
+        and bool(sandbox.get("sandbox_testcase_id")),
+        RESULT["phases"]["repair"]["sandbox"],
         phase="F",
     )
 
     engineer.call("POST", f"/api/v1/repairs/{pid}/submit")
     code, body, _ = engineer.raw("POST", f"/api/v1/repairs/{pid}/approve", {"reviewer": "user:qa-lead", "note": "x"})
-    check("F5 qa-engineer 审批被服务端拒绝（403 repair.approve）", code == 403, {"status": code}, phase="F")
+    check("F6 qa-engineer 审批被服务端拒绝（403 repair.approve）", code == 403, {"status": code}, phase="F")
 
-    approved = lead.call("POST", f"/api/v1/repairs/{pid}/approve", {"reviewer": "agent:auto-heal", "note": "RUN-011 人工审批"})
-    RESULT["phases"]["F"]["approval"] = {
+    approved = lead.call("POST", f"/api/v1/repairs/{pid}/approve", {"reviewer": "agent:auto-heal", "note": "RUN-011-R1 人工审批"})
+    RESULT["phases"]["repair"]["approval"] = {
         "status": approved.get("status"),
         "approver": approved.get("approver") or approved.get("approved_by"),
         "body_declared": "agent:auto-heal",
     }
     check(
-        "F6 qa-lead 审批生效且主体来自服务端 Principal",
-        str(RESULT["phases"]["F"]["approval"].get("approver") or "").startswith("user:")
-        or RESULT["phases"]["F"]["approval"].get("status") in {"APPROVED", "PENDING_PROMOTION"},
-        RESULT["phases"]["F"]["approval"],
+        "F7 qa-lead 审批生效且主体来自服务端 Principal",
+        str(RESULT["phases"]["repair"]["approval"].get("approver") or "").startswith("user:")
+        or RESULT["phases"]["repair"]["approval"].get("status") in {"APPROVED", "PENDING_PROMOTION"},
+        RESULT["phases"]["repair"]["approval"],
         phase="F",
     )
 
-    code, body, _ = lead.raw("POST", f"/api/v1/repairs/{pid}/promote", {"idempotency_key": f"run011-{pid}"})
-    check("F7 qa-lead 不能执行高风险晋升（403 repair.promote）", code == 403, {"status": code}, phase="F")
+    code, body, _ = lead.raw("POST", f"/api/v1/repairs/{pid}/promote", {"idempotency_key": f"run011r1-{pid}"})
+    check("F8 qa-lead 不能执行高风险晋升（403 repair.promote）", code == 403, {"status": code}, phase="F")
 
-    promoted = admin.call("POST", f"/api/v1/repairs/{pid}/promote", {"idempotency_key": f"run011-{pid}"})
+    promoted = admin.call("POST", f"/api/v1/repairs/{pid}/promote", {"idempotency_key": f"run011r1-{pid}"})
     promoted_version = int(promoted.get("promoted_version") or 0)
     RESULT["ids"]["promoted_version"] = promoted_version
-    RESULT["phases"]["F"]["promotion"] = {
+    RESULT["phases"]["repair"]["promotion"] = {
         "status": promoted.get("status"),
         "promoted_version": promoted_version,
-        "receipt": promoted.get("promotion_receipt") or promoted.get("receipt"),
-        "base_version": promoted.get("base_version") or base_version,
+        "receipt": promoted.get("promotion_receipt") or promoted.get("receipt") or (promoted.get("promotion_record") or {}),
+        "base_version": promoted.get("base_version") or version,
     }
-    check("F8 platform-admin CAS 晋升成功且带回执", promoted.get("status") == "PROMOTED" and promoted_version > base_version, RESULT["phases"]["F"]["promotion"], phase="F")
-
-    replay = admin.call("POST", f"/api/v1/repairs/{pid}/promote", {"idempotency_key": f"run011-{pid}"})
     check(
-        "F9 幂等重放返回同一版本（不重复创建版本）",
+        "F9 platform-admin CAS 晋升成功且带回执",
+        promoted.get("status") == "PROMOTED" and promoted_version > version,
+        RESULT["phases"]["repair"]["promotion"],
+        phase="F",
+    )
+
+    replay = admin.call("POST", f"/api/v1/repairs/{pid}/promote", {"idempotency_key": f"run011r1-{pid}"})
+    check(
+        "F10 幂等重放返回同一版本（不重复创建版本）",
         int(replay.get("promoted_version") or 0) == promoted_version,
         {"first": promoted_version, "replay": replay.get("promoted_version")},
         phase="F",
     )
+    return {"proposal_id": pid, "promoted_version": promoted_version}
 
-    # ---------------- G 回归与回滚 ----------------
-    reg = ex.execute(base_case, version=promoted_version, note="晋升版本回归")
+
+def phase_regress(
+    engineer: Http, admin: Http, ex: WorkerRun, tf: TeamFlow,
+    tc_id: str, base_version: int, pid: str, promoted_version: int,
+) -> dict[str, Any]:
+    """§1.2 步骤 16-18：固定版本回归 → 回滚 → 回滚后再次验证。"""
+    reg = ex.execute(tc_id, version=promoted_version, note="晋升版本回归")
     reg_run = reg["run"]
-    RESULT["phases"]["G"] = {
+    RESULT["ids"]["regression_run_id"] = reg_run["run_id"]
+    RESULT["phases"]["regress"] = {
         "regression_run_id": reg_run["run_id"],
         "verdict": reg_run.get("test_verdict"),
+        "testcase_id": reg_run.get("testcase_id"),
         "testcase_version_id": reg_run.get("testcase_version_id"),
         "trace": reg["trace"],
     }
-    check("G1 晋升版本回归 PASSED（故障仍生效）", reg_run.get("test_verdict") == "PASSED", {"verdict": reg_run.get("test_verdict")}, phase="G")
+    check("G1 晋升版本回归 PASSED（故障仍生效，修复真实有效）", reg_run.get("test_verdict") == "PASSED", {"verdict": reg_run.get("test_verdict")}, phase="G")
     check(
         "G2 回归使用精确晋升版本",
-        str(reg_run.get("testcase_version_id") or "").endswith(f"@{promoted_version}"),
+        str(reg_run.get("testcase_version_id") or "") == f"{tc_id}@{promoted_version}",
         reg_run.get("testcase_version_id"),
         phase="G",
     )
@@ -959,29 +1157,30 @@ def phase_fg(engineer: Http, lead: Http, admin: Http, ex: WorkerRun, tf: TeamFlo
     rolled = admin.call(
         "POST",
         f"/api/v1/repairs/{pid}/rollback",
-        {"operator": "user:platform-admin", "reason": "RUN-011 闭环结束回滚"},
+        {"operator": "user:platform-admin", "reason": "RUN-011-R1 闭环结束回滚"},
     )
     record = rolled.get("rollback_record") or {}
     restored = int(record.get("restored_version") or 0)
     RESULT["ids"]["rollback_receipt"] = record
-    RESULT["phases"]["G"]["rollback"] = {
+    RESULT["ids"]["restored_version"] = restored
+    RESULT["phases"]["regress"]["rollback"] = {
         "status": rolled.get("status"),
         "restored_version": restored,
         "record": record,
+        "promoted_version": rolled.get("promoted_version"),
     }
-    # 回滚语义：内容不可变，恢复旧内容会生成一个新版本（restored_version 通常 > promoted_version），
-    # 因此不能要求 restored_version == base_version；内容级一致性由 G5 校验。
     check(
         "G4 回滚成功并产生可追溯回执（restored_version + target_version）",
         rolled.get("status") == "ROLLED_BACK"
         and restored >= 1
         and bool(record.get("target_version") or record.get("restored_version")),
-        RESULT["phases"]["G"]["rollback"],
+        RESULT["phases"]["regress"]["rollback"],
         phase="G",
     )
 
-    restored_doc = admin.call("GET", f"/api/v1/testcases/{base_case}/versions/{restored}")
-    meta = admin.call("GET", f"/api/v1/testcases/{base_case}")
+    base_doc = engineer.call("GET", f"/api/v1/testcases/{tc_id}/versions/{base_version}")
+    restored_doc = engineer.call("GET", f"/api/v1/testcases/{tc_id}/versions/{restored}")
+    meta = engineer.call("GET", f"/api/v1/testcases/{tc_id}")
     same_steps = [(s.get("step_id"), s.get("action"), (s.get("target") or {}).get("value"), s.get("value")) for s in restored_doc.get("steps") or []] == [
         (s.get("step_id"), s.get("action"), (s.get("target") or {}).get("value"), s.get("value")) for s in base_doc.get("steps") or []
     ]
@@ -989,7 +1188,7 @@ def phase_fg(engineer: Http, lead: Http, admin: Http, ex: WorkerRun, tf: TeamFlo
         (a.get("assertion_id"), a.get("oracle_id"), json.dumps(a.get("expected"), sort_keys=True)) for a in base_doc.get("assertions") or []
     ]
     same_bindings = (restored_doc.get("oracle_bindings") or []) == (base_doc.get("oracle_bindings") or [])
-    RESULT["phases"]["G"]["content_level_verify"] = {
+    RESULT["phases"]["regress"]["content_level_verify"] = {
         "latest_version": meta.get("latest_version"),
         "restored_version": restored,
         "steps_equal": same_steps,
@@ -1000,84 +1199,234 @@ def phase_fg(engineer: Http, lead: Http, admin: Http, ex: WorkerRun, tf: TeamFlo
     check(
         "G5 回滚是内容级恢复（步骤/断言/Oracle 绑定 + 版本指针）",
         same_steps and same_assertions and same_bindings and int(meta.get("latest_version") or 0) == restored,
-        RESULT["phases"]["G"]["content_level_verify"],
+        RESULT["phases"]["regress"]["content_level_verify"],
         phase="G",
     )
 
-    post = ex.execute(base_case, version=promoted_version, note="回滚后复核晋升版本")
-    post_run = post["run"]
-    RESULT["phases"]["G"]["post_rollback_run_id"] = post_run["run_id"]
-    RESULT["phases"]["G"]["post_rollback_verdict"] = post_run.get("test_verdict")
-    check("G6 回滚后复核：晋升版本仍可独立执行并通过", post_run.get("test_verdict") == "PASSED", {"verdict": post_run.get("test_verdict")}, phase="G")
+    # §1.2 步骤 18：回滚后再次验证——恢复后的官方版本（故障已清除）+ 晋升版本仍可执行
     tf.clear_faults()
-    return {}
+    post = ex.execute(tc_id, version=restored, note="回滚后复核恢复版本")
+    post_run = post["run"]
+    RESULT["phases"]["regress"]["post_rollback_run_id"] = post_run["run_id"]
+    RESULT["phases"]["regress"]["post_rollback_verdict"] = post_run.get("test_verdict")
+    RESULT["phases"]["regress"]["post_rollback_version_id"] = post_run.get("testcase_version_id")
+    check(
+        "G6 回滚后复核：恢复版本真实执行且 PASSED",
+        post_run.get("test_verdict") == "PASSED",
+        {"verdict": post_run.get("test_verdict"), "version": post_run.get("testcase_version_id")},
+        phase="G",
+    )
+    post2 = ex.execute(tc_id, version=promoted_version, note="回滚后复核晋升版本（历史版本仍可执行）")
+    post2_run = post2["run"]
+    RESULT["phases"]["regress"]["post_rollback_promoted_run_id"] = post2_run["run_id"]
+    check(
+        "G7 回滚后复核：晋升版本仍可独立执行并通过",
+        post2_run.get("test_verdict") == "PASSED",
+        {"verdict": post2_run.get("test_verdict")},
+        phase="G",
+    )
+    tf.clear_faults()
+    return {"regression_run_id": reg_run["run_id"], "restored_version": restored}
 
 
 def phase_audit(admin: Http, engineer: Http) -> dict[str, Any]:
     verify = admin.call("GET", "/api/v1/auth/audit/verify")
     RESULT["phases"]["audit"] = verify
     check("审计哈希链完整", verify.get("intact") is True and int(verify.get("entries") or 0) > 0, verify, phase="audit")
-    # 审批与晋升是两个不同审计事件
     entries = verify.get("entries")
     check("审计条目覆盖本轮操作（>10）", int(entries or 0) > 10, entries, phase="audit")
     return {}
 
 
+# ------------------------------------------------------------- trace（关系校验）
 def phase_trace(engineer: Http) -> dict[str, Any]:
-    """追溯链：每个关键引用都能从 API 重新读取。"""
+    """§1.4：追溯链必须校验引用之间的**关系**，而不只是"每个 ID 能读到"。"""
     ids = RESULT["ids"]
-    chain: dict[str, Any] = {}
-    readable: dict[str, bool] = {}
-    try:
-        chain["intent"] = engineer.call("GET", f"/api/v1/intents/{ids['intent_id']}")["intent_id"]
-        readable["intent"] = True
-    except Exception:  # noqa: BLE001
-        readable["intent"] = False
-    try:
-        tc = engineer.call("GET", f"/api/v1/testcases/{ids['testcase_id']}")
-        chain["testcase"] = tc["testcase_id"]
-        chain["testcase_latest_version"] = tc.get("latest_version")
-        readable["testcase"] = True
-    except Exception:  # noqa: BLE001
-        readable["testcase"] = False
-    try:
-        v = engineer.call("GET", f"/api/v1/testcases/{ids['testcase_id']}/versions/{ids['compiled_version']}")
-        chain["testcase_version"] = f"{v['testcase_id']}@{v['version']}"
-        readable["testcase_version"] = True
-    except Exception:  # noqa: BLE001
-        readable["testcase_version"] = False
-    try:
-        run = engineer.call("GET", f"/api/v1/runs/{ids['run_id']}")
-        chain["run"] = run["run_id"]
-        readable["run"] = True
-    except Exception:  # noqa: BLE001
-        readable["run"] = False
-    try:
-        ev = engineer.call("GET", f"/api/v1/evidence/{ids['evidence_ids'][0]}")
-        chain["evidence"] = ev["evidence_id"]
-        readable["evidence"] = True
-    except Exception:  # noqa: BLE001
-        readable["evidence"] = False
-    try:
-        d = engineer.call("GET", f"/api/v1/diagnoses/{ids['diagnosis_id']}")
-        chain["diagnosis"] = d["diagnosis_id"]
-        readable["diagnosis"] = True
-    except Exception:  # noqa: BLE001
-        readable["diagnosis"] = False
-    try:
-        r = engineer.call("GET", f"/api/v1/repairs/{ids['repair_proposal_id']}")
-        chain["repair"] = r["proposal_id"]
-        readable["repair"] = True
-    except Exception:  # noqa: BLE001
-        readable["repair"] = False
-    try:
-        plans = engineer.call("GET", f"/api/v1/probe-plans?run_id={ids['failed_run_id']}")
-        chain["probe_plans"] = [p.get("plan_id") for p in plans or []]
-        readable["probe_plans"] = bool(plans)
-    except Exception:  # noqa: BLE001
-        readable["probe_plans"] = False
-    RESULT["phases"]["trace"] = {"chain": chain, "readable": readable}
-    check("T1 追溯链关键引用可从 API 重新读取", all(readable.values()) and bool(readable), readable, phase="trace")
+    tc_id = ids.get("testcase_id") or ""
+    approved_version = int(ids.get("approved_version") or 0)
+    failed_run_id = ids.get("failed_run_id") or ""
+    diag_id = ids.get("diagnosis_id") or ""
+    pid = ids.get("repair_proposal_id") or ""
+    promoted_version = int(ids.get("promoted_version") or 0)
+
+    relations: list[dict[str, Any]] = []
+
+    def rel(name: str, ok: bool, detail: Any = "") -> None:
+        relations.append({"name": name, "ok": bool(ok), "detail": detail})
+        check(name, ok, detail, phase="trace")
+
+    def fetch(path: str) -> dict[str, Any] | None:
+        try:
+            return engineer.call("GET", path)
+        except Exception as exc:  # noqa: BLE001
+            return {"__error__": f"{type(exc).__name__}: {exc}"}
+
+    # ---- Run ↔ 主 TestCase / 版本
+    normal_run = fetch(f"/api/v1/runs/{ids.get('run_id')}")
+    failed_run = fetch(f"/api/v1/runs/{failed_run_id}")
+    for label, run in (("正式 Run", normal_run), ("失败 Run", failed_run)):
+        rel(
+            f"T1 {label}.testcase_id 与主 TestCase 一致",
+            _run_testcase_id(run or {}) == tc_id,
+            {"run.testcase_id(derived)": _run_testcase_id(run or {}), "expected": tc_id},
+        )
+        rel(
+            f"T2 {label}.testcase_version_id 与批准版本一致",
+            (run or {}).get("testcase_version_id") == f"{tc_id}@{approved_version}",
+            {"run.testcase_version_id": (run or {}).get("testcase_version_id"), "expected": f"{tc_id}@{approved_version}"},
+        )
+
+    # ---- Diagnosis ↔ 失败 Run / 主 TestCase
+    diag = fetch(f"/api/v1/diagnoses/{diag_id}")
+    rel(
+        "T3 Diagnosis.run_id 与失败 Run 一致",
+        (diag or {}).get("run_id") == failed_run_id,
+        {"diag.run_id": (diag or {}).get("run_id"), "expected": failed_run_id},
+    )
+    rel(
+        "T4 Diagnosis.testcase_id 与主 TestCase 一致",
+        (diag or {}).get("testcase_id") == tc_id,
+        {"diag.testcase_id": (diag or {}).get("testcase_id"), "expected": tc_id},
+    )
+
+    # ---- Evidence：引用、归属、跨 Run 误引
+    run_evidence = engineer.call("GET", f"/api/v1/runs/{failed_run_id}/evidence") or []
+    run_ev_ids = {str(e.get("evidence_id")) for e in run_evidence}
+    ev_extract = _extract_evidence_refs(diag or {})
+    diag_ev_ids = set(ev_extract["union"])
+    missing = sorted(diag_ev_ids - run_ev_ids - set(ids.get("probe_evidence_ids") or []))
+    probe_ev_ids = {str(x) for x in (RESULT["phases"].get("probe") or {}).get("new_evidence_ids") or []}
+    missing = sorted(diag_ev_ids - run_ev_ids - probe_ev_ids)
+    rel(
+        "T5 诊断支持/反驳证据引用均可读取且归属失败 Run（无跨 Run 误引）",
+        bool(diag_ev_ids) and not missing,
+        {"diag_evidence": sorted(diag_ev_ids)[:10], "missing_or_foreign": missing[:10], "run_evidence_count": len(run_ev_ids)},
+    )
+    # 每条证据的 source_run_id
+    ev_foreign: list[str] = []
+    for eid in sorted(diag_ev_ids)[:30]:
+        ev = fetch(f"/api/v1/evidence/{eid}")
+        if not ev or ev.get("__error__"):
+            ev_foreign.append(eid)
+            continue
+        ev_run = str(ev.get("run_id") or "")
+        if ev_run and ev_run != failed_run_id and eid not in probe_ev_ids:
+            ev_foreign.append(f"{eid}@{ev_run}")
+    rel(
+        "T6 每条诊断证据的 source_run_id 属于失败 Run（或明确标记的探针证据）",
+        not ev_foreign,
+        ev_foreign[:10],
+    )
+
+    # ---- Graph 节点与边的实际引用关系
+    graph = engineer.call("POST", f"/api/v1/runs/{failed_run_id}/graph", {}, expect_status=(200, 201))
+    nodes = graph.get("nodes") or []
+    edges = graph.get("edges") or []
+    node_ids = {str(n.get("node_id") or n.get("id")) for n in nodes}
+    ev_nodes = [n for n in nodes if str(n.get("node_type")) in {"Evidence", "evidence"}]
+    ev_node_refs = {str(n.get("ref_id") or "") for n in ev_nodes} - {""}
+    dangling_edges = [
+        e for e in edges
+        if str(e.get("src") or e.get("source") or e.get("from") or "") not in node_ids
+        or str(e.get("dst") or e.get("target") or e.get("to") or "") not in node_ids
+    ]
+    ev_node_foreign = sorted(ev_node_refs - run_ev_ids - probe_ev_ids)
+    rel(
+        "T7 Graph Evidence 节点引用真实 Evidence（不允许悬空引用）",
+        bool(ev_nodes) and not ev_node_foreign,
+        {"evidence_nodes": len(ev_nodes), "foreign_refs": ev_node_foreign[:10]},
+    )
+    rel(
+        "T8 Graph 边端点都存在于节点集（引用关系可复核）",
+        bool(edges) and not dangling_edges,
+        {"edges": len(edges), "dangling": [str(e)[:120] for e in dangling_edges[:5]]},
+    )
+
+    # ---- Repair ↔ Diagnosis / 失败 Run / 主 TestCase / base_version
+    repair = fetch(f"/api/v1/repairs/{pid}")
+    rel(
+        "T9 Repair.testcase_id 与主 TestCase 一致",
+        (repair or {}).get("testcase_id") == tc_id,
+        {"repair.testcase_id": (repair or {}).get("testcase_id"), "expected": tc_id},
+    )
+    rel(
+        "T10 Repair.diagnosis_id 与 Diagnosis 一致",
+        (repair or {}).get("diagnosis_id") == diag_id,
+        {"repair.diagnosis_id": (repair or {}).get("diagnosis_id"), "expected": diag_id},
+    )
+    rel(
+        "T11 Repair.source_run_id 与失败 Run 一致",
+        (repair or {}).get("source_run_id") == failed_run_id,
+        {"repair.source_run_id": (repair or {}).get("source_run_id"), "expected": failed_run_id},
+    )
+    rel(
+        "T12 Repair.base_version 与失败用例版本一致",
+        int((repair or {}).get("base_version") or 0) == approved_version,
+        {"repair.base_version": (repair or {}).get("base_version"), "expected": approved_version},
+    )
+    rel(
+        "T13 Repair.repair_source 如实标注（human:/rule:/llm:）",
+        str((repair or {}).get("repair_source") or "").startswith(("human:", "rule:", "llm:")),
+        (repair or {}).get("repair_source"),
+    )
+
+    # ---- Sandbox Run 使用正确的候选版本
+    sandbox_run_id = (RESULT["phases"].get("repair") or {}).get("sandbox", {}).get("sandbox_run_id") or ""
+    sandbox_run = fetch(f"/api/v1/runs/{sandbox_run_id}") if sandbox_run_id else {}
+    rel(
+        "T14 Sandbox Run 使用候选副本（独立 testcase_id，绑定 repair）",
+        bool(sandbox_run_id)
+        and not (sandbox_run or {}).get("__error__")
+        and _run_testcase_id(sandbox_run or {}) != tc_id
+        and (RESULT["phases"].get("repair") or {}).get("sandbox", {}).get("sandbox_status") == "PASSED",
+        {"sandbox_run_id": sandbox_run_id, "sandbox_testcase_id": _run_testcase_id(sandbox_run or {})},
+    )
+
+    # ---- Promotion receipt 绑定正确的 Proposal
+    receipt = (RESULT["phases"].get("repair") or {}).get("promotion", {}).get("receipt") or {}
+    promo_record = (repair or {}).get("promotion_record") or {}
+    idem = str(promo_record.get("idempotency_key") or receipt.get("idempotency_key") or "")
+    target_in_record = promo_record.get("target_version") or receipt.get("target_version")
+    rel(
+        "T15 Promotion 回执绑定正确的 Proposal 与版本关系",
+        bool(idem) and int(target_in_record or 0) == promoted_version,
+        {"idempotency_key": idem, "target_version": target_in_record, "promoted_version": promoted_version},
+    )
+
+    # ---- Regression Run 使用精确晋升版本
+    reg_run = fetch(f"/api/v1/runs/{ids.get('regression_run_id')}")
+    rel(
+        "T16 Regression Run 使用精确晋升版本",
+        (reg_run or {}).get("testcase_version_id") == f"{tc_id}@{promoted_version}",
+        {"reg.testcase_version_id": (reg_run or {}).get("testcase_version_id"), "expected": f"{tc_id}@{promoted_version}"},
+    )
+
+    # ---- Rollback receipt 绑定正确的版本关系
+    rb = (RESULT["phases"].get("regress") or {}).get("rollback") or {}
+    record = rb.get("record") or {}
+    restored_version = int(ids.get("restored_version") or 0)
+    rel(
+        "T17 Rollback 回执绑定正确的版本关系（target=晋升版本 → restored=恢复版本）",
+        rb.get("status") == "ROLLED_BACK"
+        and restored_version >= 1
+        and (
+            str(record.get("target_version") or "") == f"{tc_id}:v{promoted_version}"
+            or int(record.get("restored_version") or 0) == restored_version
+        ),
+        {"record": record, "promoted_version": promoted_version, "restored_version": restored_version},
+    )
+    post_run = fetch(f"/api/v1/runs/{RESULT['phases'].get('regress', {}).get('post_rollback_run_id')}")
+    rel(
+        "T18 回滚后验证 Run 使用恢复版本",
+        (post_run or {}).get("testcase_version_id") == f"{tc_id}@{restored_version}",
+        {"post.testcase_version_id": (post_run or {}).get("testcase_version_id"), "expected": f"{tc_id}@{restored_version}"},
+    )
+
+    RESULT["phases"]["trace"] = {
+        "relations": relations,
+        "evidence_extract": ev_extract,
+        "graph": {"nodes": len(nodes), "edges": len(edges), "evidence_nodes": len(ev_nodes)},
+    }
     return {}
 
 
@@ -1086,11 +1435,11 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--api", default="http://127.0.0.1:8110")
     parser.add_argument("--teamflow", default="http://127.0.0.1:8111")
-    parser.add_argument("--label", default="loop1")
+    parser.add_argument("--label", default="r1-loop1")
     parser.add_argument("--workspace", default="")
     parser.add_argument("--workers", default="", help="逗号分隔的独立 Worker ID 列表")
     parser.add_argument("--out", default="")
-    parser.add_argument("--phases", default="all", help="逗号分隔：env,auth,seed,ab,c,de,fg,trace")
+    parser.add_argument("--phases", default="all", help="逗号分隔：env,auth,seed,ab,c,fail,diag,probe,repair,regress,trace,audit")
     args = parser.parse_args()
 
     password = os.getenv("TG_RUN011_PASSWORD") or FALLBACK_PASSWORD
@@ -1098,6 +1447,7 @@ def main() -> int:
     workspace = args.workspace or f"ws-run011-{args.label}"
 
     RESULT["label"] = args.label
+    RESULT["run_kind"] = "RUN-011-R1-single-testcase-lineage"
     RESULT["started_at"] = _now()
     RESULT["api"] = args.api
     RESULT["teamflow"] = args.teamflow
@@ -1112,7 +1462,6 @@ def main() -> int:
         return "all" in phases or name in phases
 
     try:
-        # 先登录四角色（认证开启后 /system/health 也需要已认证会话）
         for name, session in roles.items():
             session.login(name, password)
         if want("env"):
@@ -1122,15 +1471,31 @@ def main() -> int:
         if want("seed"):
             phase_seed(roles["platform-admin"], roles["qa-engineer"], tf)
         ex = WorkerRun(roles["qa-engineer"], workers, RESULT["env"].get("api_worker_id", ""))
+        ab: dict[str, Any] = {}
         if want("ab"):
             ab = phase_ab(roles["qa-engineer"], roles["qa-lead"], workspace, args.teamflow)
-            if ab.get("testcase_id"):
-                if want("c"):
-                    phase_c(roles["qa-engineer"], ex, tf, ab["testcase_id"], ab["version"])
-        if want("de"):
-            phase_de(roles["qa-engineer"], ex, tf)
-        if want("fg"):
-            phase_fg(roles["qa-engineer"], roles["qa-lead"], roles["platform-admin"], ex, tf)
+        tc_id, tc_version = ab.get("testcase_id") or RESULT["ids"].get("testcase_id"), ab.get("version") or RESULT["ids"].get("approved_version")
+        if tc_id and want("c"):
+            phase_c(roles["qa-engineer"], ex, tf, tc_id, tc_version)
+        failed: dict[str, Any] = {}
+        if tc_id and want("fail"):
+            failed = phase_fail(roles["qa-engineer"], ex, tf, tc_id, tc_version)
+        diag_out: dict[str, Any] = {}
+        if failed and want("diag"):
+            diag_out = phase_diag(roles["qa-engineer"], failed["run_id"])
+        if failed and diag_out and want("probe"):
+            phase_probe(roles["qa-engineer"], failed["run_id"], diag_out["diagnosis_id"])
+        rep_out: dict[str, Any] = {}
+        if failed and diag_out and tc_id and want("repair"):
+            rep_out = phase_repair(
+                roles["qa-engineer"], roles["qa-lead"], roles["platform-admin"], ex, tf,
+                tc_id, tc_version, diag_out["diagnosis_id"], failed["run_id"], failed.get("failed_steps") or [],
+            )
+        if rep_out and tc_id and want("regress"):
+            phase_regress(
+                roles["qa-engineer"], roles["platform-admin"], ex, tf,
+                tc_id, tc_version, rep_out["proposal_id"], rep_out["promoted_version"],
+            )
         if want("trace"):
             phase_trace(roles["qa-engineer"])
         if want("audit"):

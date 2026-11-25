@@ -19,21 +19,33 @@ from typing import Any
 class FaultState:
     active: set[str] = field(default_factory=set)
     params: dict[str, Any] = field(default_factory=dict)
+    #: sticky 故障（RUN-011-R1 WP1）：外部注入并显式声明 sticky 的故障
+    #: 不被 /api/test/reset 清除（Run 的 RESET_DATA 预清理只清瞬时故障），
+    #: 保证「同一 TestCase 注入故障后再次执行」的语义成立；
+    #: 仍可通过 /api/faults/{id}/clear 显式清除。非 sticky 行为不变。
+    sticky: set[str] = field(default_factory=set)
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
     def activate(self, fault_id: str, params: dict[str, Any] | None = None) -> None:
         with self._lock:
             self.active.add(fault_id)
             if params:
-                self.params[fault_id] = params
+                self.params[fault_id] = dict(params)
+                if params.get("sticky"):
+                    self.sticky.add(fault_id)
 
     def clear(self, fault_id: str | None = None) -> None:
+        """清除故障。fault_id 为空 = 清除全部瞬时故障（保留 sticky）；
+        指定 fault_id = 清除该故障（含 sticky）。"""
         with self._lock:
             if fault_id is None:
-                self.active.clear()
-                self.params.clear()
+                transient = self.active - self.sticky
+                for fid in transient:
+                    self.params.pop(fid, None)
+                self.active -= transient
             else:
                 self.active.discard(fault_id)
+                self.sticky.discard(fault_id)
                 self.params.pop(fault_id, None)
 
     def is_active(self, fault_id: str) -> bool:
@@ -46,7 +58,11 @@ class FaultState:
 
     def snapshot(self) -> dict[str, Any]:
         with self._lock:
-            return {"active": sorted(self.active), "params": dict(self.params)}
+            return {
+                "active": sorted(self.active),
+                "params": dict(self.params),
+                "sticky": sorted(self.sticky),
+            }
 
 
 FAULT_STATE = FaultState()

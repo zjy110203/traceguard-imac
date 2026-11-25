@@ -2,9 +2,42 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    """RUN-011-R1 WP6（OPEN-RISK-04 根因修复）：并行进程隔离。
+
+    根因 A（错误级联）：`--basetemp=.pytest-tmp/run` 是固定路径；多个 pytest
+    进程并行时（真实复现：3 并发全量 → 每进程 7-8 errors），pytest 在会话开始
+    会**清空 basetemp**——进程 A 删掉进程 B 正在使用的临时目录 →
+    FileNotFoundError / OSError 级联。修复：进程启动时 basetemp 后缀 PID
+    （xdist worker 场景用 worker_id），并行进程各自持有独立目录。
+
+    根因 B（用例互扰）：TeamFlow 默认库 `sqlite:///./.traceguard/teamflow.db`
+    是固定共享文件（TeamFlow models 在 import 时读 `TG_TEAMFLOW_DB`）——
+    并行进程并发 seed 触发 `UNIQUE constraint failed: tf_workspace.slug`，
+    ASGI 异常使浏览器断言连锁失败。修复：进程级隔离 TeamFlow 库
+    （`.traceguard/test-tmp/teamflow-e2e-<pid>.db`），必须在任何
+    `traceguard_teamflow` import 之前设置。
+    """
+    bt = getattr(config.option, "basetemp", None)
+    if bt:
+        bt_path = str(bt)
+        if bt_path.startswith(".pytest-tmp"):
+            worker = os.getenv("PYTEST_XDIST_WORKER", "")
+            suffix = worker if worker else f"p{os.getpid()}"
+            if not bt_path.rstrip("/").endswith(suffix):
+                config.option.basetemp = f"{bt_path.rstrip('/')}-{suffix}"
+    # 根因 B：TeamFlow 测试库按进程隔离（import 前设置，models 模块级读取）
+    if not os.environ.get("TG_TEAMFLOW_DB"):
+        Path(".traceguard/test-tmp").mkdir(parents=True, exist_ok=True)
+        os.environ["TG_TEAMFLOW_DB"] = (
+            f"sqlite:///./.traceguard/test-tmp/teamflow-e2e-{os.getpid()}.db"
+        )
 
 
 @pytest.fixture(scope="session", autouse=True)

@@ -1,3 +1,17 @@
+> **RUN-011-R1 阻塞状态（2026-11-25）**：
+> - B-01 B-17（Worker 四真实故障场景）：**仍 BLOCKED**（安全拦截未解除；本轮零次触碰被拦操作，
+>   正式安全批准申请材料已备：`docs/RUN-011-R1-WP7-B17-SECURITY-REQUEST.md`）。
+> - B-02 宿主级网络隔离：**仍 BLOCKED**（无 pf 权限）。
+> - B-03 Benchmark LLM 臂（统计级使用）：**仍 BLOCKED**（无计费授权；LMP 记录性对照已含 model/prompt_version）。
+> - B-04 人工基线：**仍 BLOCKED**（无真人）。
+> - B-05 LICENSE：**NEEDS_DECISION**（不变）。
+> - B-06 CI 触发 / 增量 PR：**仍 BLOCKED**（无 gh/凭据，不读取凭据）。
+> - **R1 解除/修复**：OPEN-RISK-01（Egress 误拦，根因修复+复验 6/6）、OPEN-RISK-02（时序误确认，
+>   三态+单查询降权+四场景复测）、OPEN-RISK-03（LLM 候选未去重，dedup 合并+5 场景回归）、
+>   OPEN-RISK-04（PG 并行，双根因修复；保留 1 项 SQLite 并发 DDL 锁 flake 限制）。
+> - NOT RUN（保持）：UI 全链路点击验收、多 API/DB 断连/长事务、生产部署验收、pytest-xdist 形态。
+> 以下历史记录保留不覆盖。
+
 # 阻塞项（RUN-002）
 
 > **RUN-011 阻塞状态（2026-11-25 02:25 CST）**：

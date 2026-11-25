@@ -1,0 +1,124 @@
+{
+  "scenarios": [
+    {
+      "name": "S1_cold_control",
+      "run_id": "run_1795580180812f92200d9aa27",
+      "verdict": "PASSED",
+      "status": "COMPLETED",
+      "worker": "run011r1-w3",
+      "independent": true,
+      "egress": {
+        "total": 4,
+        "allowed": 4,
+        "blocked": 0,
+        "blocked_targets": [],
+        "blocked_reasons": [],
+        "policy_origins": [
+          "http://127.0.0.1:8111",
+          "https://127.0.0.1:8111"
+        ],
+        "url": "http://127.0.0.1:62085",
+        "run_id": "run_1795580180812f92200d9aa27",
+        "worker_id": "run011r1-w3",
+        "enforced": true
+      }
+    },
+    {
+      "name": "S2_denybase_first",
+      "run_id": "run_179558018327448dd30fdee45",
+      "verdict": "NOT_EVALUATED",
+      "status": "FAILED",
+      "worker": "run011r1-w1",
+      "independent": true,
+      "egress": {
+        "total": 2,
+        "allowed": 2,
+        "blocked": 0,
+        "blocked_targets": [],
+        "blocked_reasons": [],
+        "policy_origins": [
+          "http://127.0.0.1:9555",
+          "https://127.0.0.1:9555"
+        ],
+        "url": "http://127.0.0.1:62061",
+        "run_id": "run_179558018327448dd30fdee45",
+        "worker_id": "run011r1-w1",
+        "enforced": true
+      }
+    },
+    {
+      "name": "S2_control_after",
+      "run_id": "run_179558018389989b6b13060b8",
+      "verdict": "PASSED",
+      "status": "COMPLETED",
+      "worker": "run011r1-w2",
+      "independent": true,
+      "egress": {
+        "total": 10,
+        "allowed": 10,
+        "blocked": 0,
+        "blocked_targets": [],
+        "blocked_reasons": [],
+        "policy_origins": [
+          "http://127.0.0.1:8111",
+          "https://127.0.0.1:8111"
+        ],
+        "url": "http://127.0.0.1:62098",
+        "run_id": "run_179558018389989b6b13060b8",
+        "worker_id": "run011r1-w2",
+        "enforced": true
+      }
+    },
+    {
+      "name": "S3_deny_abs",
+      "run_id": "run_1795580186352b289da3097af",
+      "verdict": "NOT_EVALUATED",
+      "status": "FAILED",
+      "worker": "run011r1-w1",
+      "independent": true,
+      "egress": {
+        "total": 2,
+        "allowed": 2,
+        "blocked": 0,
+        "blocked_targets": [],
+        "blocked_reasons": [],
+        "policy_origins": [
+          "http://127.0.0.1:8111",
+          "https://127.0.0.1:8111"
+        ],
+        "url": "http://127.0.0.1:62061",
+        "run_id": "run_1795580186352b289da3097af",
+        "worker_id": "run011r1-w1",
+        "enforced": true
+      }
+    },
+    {
+      "name": "S4_cold_control_2",
+      "run_id": "run_1795580186985b518064750da",
+      "verdict": "PASSED",
+      "status": "COMPLETED",
+      "worker": "run011r1-w1",
+      "independent": true,
+      "egress": {
+        "total": 4,
+        "allowed": 4,
+        "blocked": 0,
+        "blocked_targets": [],
+        "blocked_reasons": [],
+        "policy_origins": [
+          "http://127.0.0.1:8111",
+          "https://127.0.0.1:8111"
+        ],
+        "url": "http://127.0.0.1:62061",
+        "run_id": "run_1795580186985b518064750da",
+        "worker_id": "run011r1-w1",
+        "enforced": true
+      }
+    }
+  ],
+  "summary": {
+    "total": 6,
+    "passed": 6,
+    "failed": []
+  }
+}

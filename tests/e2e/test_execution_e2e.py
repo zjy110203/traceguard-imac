@@ -35,6 +35,9 @@ def oracle_manager() -> OracleManager:
 
 def _exec(tc_file: str, mgr: OracleManager, teamflow_server: str, run_id: str):
     tc = load_testcase_version(f"{FIXTURES}/testcases/{tc_file}")
+    # RUN-011-R1 WP6：目标地址以 fixture 的动态端口为准（夹具文件内的
+    # 8011 是历史固定端口默认值；动态端口并行隔离后必须覆盖）。
+    tc.run_config = {**(tc.run_config or {}), "base_url": teamflow_server}
     observer = HttpObserver()
     executor = LocalExecutor(observer, mgr)
     return executor.run(tc, run_id)

@@ -1,0 +1,381 @@
+{
+  "dsn_scheme": "postgresql+psycopg",
+  "workspace": "ws-run011-r1-2",
+  "checks": [
+    {
+      "name": "所有 Run 的 lease_owner 均非 API 进程",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "终态 Run 均有 Evidence（无孤儿 Run）",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "Event (producer_instance_id, sequence) 全局唯一",
+      "ok": true,
+      "detail": 0
+    },
+    {
+      "name": "Event 均可追溯到 Run",
+      "ok": true,
+      "detail": 0
+    },
+    {
+      "name": "审计 seq 唯一且连续（1..N）",
+      "ok": true,
+      "detail": {
+        "entries": 16,
+        "min_seq": 1,
+        "max_seq": 16,
+        "distinct_seq": 16
+      }
+    },
+    {
+      "name": "主线用例 tcase_1795576688704b1b1a7f08064 存在多个版本（晋升 + 回滚留痕）",
+      "ok": true,
+      "detail": [
+        {
+          "testcase_id": "tcase_1795576688704b1b1a7f08064",
+          "version": 1,
+          "review_status": "APPROVED",
+          "compile_source": "compiler"
+        },
+        {
+          "testcase_id": "tcase_1795576688704b1b1a7f08064",
+          "version": 2,
+          "review_status": "APPROVED",
+          "compile_source": "healed"
+        },
+        {
+          "testcase_id": "tcase_1795576688704b1b1a7f08064",
+          "version": 3,
+          "review_status": "APPROVED",
+          "compile_source": "compiler"
+        }
+      ]
+    },
+    {
+      "name": "CAS 晋升回执与回滚回执均已落库",
+      "ok": true,
+      "detail": [
+        {
+          "idempotency_key": "run011r1-repair_179557672537557cb4ee671b8",
+          "kind": "PROMOTE",
+          "proposal_id": "repair_179557672537557cb4ee671b8",
+          "testcase_id": "tcase_1795576688704b1b1a7f08064",
+          "base_version": 1,
+          "target_version": 2,
+          "created_at": "2026-11-25T03:18:49.587071Z"
+        },
+        {
+          "idempotency_key": "rollback:repair_179557672537557cb4ee671b8:v2",
+          "kind": "ROLLBACK",
+          "proposal_id": "repair_179557672537557cb4ee671b8",
+          "testcase_id": "tcase_1795576688704b1b1a7f08064",
+          "base_version": 2,
+          "target_version": 3,
+          "created_at": "2026-11-25T03:18:53.879646Z"
+        }
+      ]
+    },
+    {
+      "name": "每条回执都绑定 base_version 与 target_version",
+      "ok": true,
+      "detail": [
+        {
+          "idempotency_key": "run011r1-repair_179557672537557cb4ee671b8",
+          "kind": "PROMOTE",
+          "proposal_id": "repair_179557672537557cb4ee671b8",
+          "testcase_id": "tcase_1795576688704b1b1a7f08064",
+          "base_version": 1,
+          "target_version": 2,
+          "created_at": "2026-11-25T03:18:49.587071Z"
+        },
+        {
+          "idempotency_key": "rollback:repair_179557672537557cb4ee671b8:v2",
+          "kind": "ROLLBACK",
+          "proposal_id": "repair_179557672537557cb4ee671b8",
+          "testcase_id": "tcase_1795576688704b1b1a7f08064",
+          "base_version": 2,
+          "target_version": 3,
+          "created_at": "2026-11-25T03:18:53.879646Z"
+        }
+      ]
+    },
+    {
+      "name": "DB: 正式/失败/回归 Run 均存在且同一 testcase_id",
+      "ok": true,
+      "detail": {
+        "run_179557669385449c1fc43eae5": {
+          "testcase_id": "tcase_1795576688704b1b1a7f08064",
+          "testcase_version_id": "tcase_1795576688704b1b1a7f08064@1",
+          "verdict": "PASSED"
+        },
+        "run_1795576698218fce1edb2efb3": {
+          "testcase_id": "tcase_1795576688704b1b1a7f08064",
+          "testcase_version_id": "tcase_1795576688704b1b1a7f08064@1",
+          "verdict": "NOT_EVALUATED"
+        },
+        "run_1795576729602b001367339a9": {
+          "testcase_id": "tcase_1795576688704b1b1a7f08064",
+          "testcase_version_id": "tcase_1795576688704b1b1a7f08064@2",
+          "verdict": "PASSED"
+        }
+      }
+    },
+    {
+      "name": "DB: 正式 Run 与失败 Run 使用批准版本",
+      "ok": true,
+      "detail": {
+        "run_179557669385449c1fc43eae5": "tcase_1795576688704b1b1a7f08064@1",
+        "run_1795576698218fce1edb2efb3": "tcase_1795576688704b1b1a7f08064@1",
+        "run_1795576729602b001367339a9": "tcase_1795576688704b1b1a7f08064@2"
+      }
+    },
+    {
+      "name": "DB: 回归 Run 使用精确晋升版本",
+      "ok": true,
+      "detail": {
+        "testcase_id": "tcase_1795576688704b1b1a7f08064",
+        "testcase_version_id": "tcase_1795576688704b1b1a7f08064@2",
+        "verdict": "PASSED"
+      }
+    },
+    {
+      "name": "DB: Diagnosis.run_id 与失败 Run 一致且绑定主 TestCase",
+      "ok": true,
+      "detail": [
+        {
+          "diagnosis_id": "diagnosis_17955767252765843791e8340",
+          "run_id": "run_1795576698218fce1edb2efb3",
+          "testcase_id": "tcase_1795576688704b1b1a7f08064"
+        }
+      ]
+    },
+    {
+      "name": "DB: Repair 绑定主 TestCase + Diagnosis + 失败 Run + base_version",
+      "ok": true,
+      "detail": [
+        {
+          "proposal_id": "repair_179557672537557cb4ee671b8",
+          "testcase_id": "tcase_1795576688704b1b1a7f08064",
+          "base_version": 1,
+          "diagnosis_id": "diagnosis_17955767252765843791e8340",
+          "source_run_id": "run_1795576698218fce1edb2efb3",
+          "repair_source": "rule:locator-fixture",
+          "promoted_version": 2
+        }
+      ]
+    },
+    {
+      "name": "DB: Repair.repair_source 如实标注（human:/rule:/llm:）",
+      "ok": true,
+      "detail": "rule:locator-fixture"
+    },
+    {
+      "name": "DB: PROMOTE 回执绑定 Proposal/TestCase 且 base=批准版本 → target=晋升版本",
+      "ok": true,
+      "detail": [
+        {
+          "idempotency_key": "run011r1-repair_179557672537557cb4ee671b8",
+          "kind": "PROMOTE",
+          "proposal_id": "repair_179557672537557cb4ee671b8",
+          "testcase_id": "tcase_1795576688704b1b1a7f08064",
+          "base_version": 1,
+          "target_version": 2
+        }
+      ]
+    },
+    {
+      "name": "DB: ROLLBACK 回执绑定 Proposal 且 base=晋升版本",
+      "ok": true,
+      "detail": [
+        {
+          "idempotency_key": "rollback:repair_179557672537557cb4ee671b8:v2",
+          "kind": "ROLLBACK",
+          "proposal_id": "repair_179557672537557cb4ee671b8",
+          "testcase_id": "tcase_1795576688704b1b1a7f08064",
+          "base_version": 2,
+          "target_version": 3
+        }
+      ]
+    },
+    {
+      "name": "DB: 诊断证据引用均属于失败 Run（无跨 Run 误引）",
+      "ok": true,
+      "detail": {
+        "run_evidence_count": 25,
+        "diagnosis_evidence_count": 6,
+        "foreign": []
+      }
+    }
+  ],
+  "facts": {
+    "server_version": "16.16 (Postgres.app)",
+    "migration_versions": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ],
+    "migration_count": 12,
+    "row_counts": {
+      "tg_intent": 6,
+      "tg_testcase": 32,
+      "tg_testcase_version": 34,
+      "tg_oracle": 9,
+      "tg_task": 9,
+      "tg_run": 9,
+      "tg_event": 81,
+      "tg_evidence": 209,
+      "tg_audit_log": 16,
+      "tg_doc": 11
+    },
+    "workspace_counts": {
+      "intents": 1,
+      "testcases": 2,
+      "runs": 3
+    },
+    "verdicts": {
+      "PASSED": 3
+    },
+    "run_lease_owners": [
+      {
+        "lease_owner": "run011r1-w1",
+        "n": 1
+      },
+      {
+        "lease_owner": "run011r1-w2",
+        "n": 1
+      },
+      {
+        "lease_owner": "run011r1-w3",
+        "n": 1
+      }
+    ],
+    "event_seq_duplicates": 0,
+    "events_without_run_ref": 0,
+    "audit": {
+      "entries": 16,
+      "min_seq": 1,
+      "max_seq": 16,
+      "distinct_seq": 16
+    },
+    "main_testcase_versions": [
+      {
+        "testcase_id": "tcase_1795576688704b1b1a7f08064",
+        "version": 1,
+        "review_status": "APPROVED",
+        "compile_source": "compiler"
+      },
+      {
+        "testcase_id": "tcase_1795576688704b1b1a7f08064",
+        "version": 2,
+        "review_status": "APPROVED",
+        "compile_source": "healed"
+      },
+      {
+        "testcase_id": "tcase_1795576688704b1b1a7f08064",
+        "version": 3,
+        "review_status": "APPROVED",
+        "compile_source": "compiler"
+      }
+    ],
+    "promotion_receipts": [
+      {
+        "idempotency_key": "run011r1-repair_179557672537557cb4ee671b8",
+        "kind": "PROMOTE",
+        "proposal_id": "repair_179557672537557cb4ee671b8",
+        "testcase_id": "tcase_1795576688704b1b1a7f08064",
+        "base_version": 1,
+        "target_version": 2,
+        "created_at": "2026-11-25T03:18:49.587071Z"
+      },
+      {
+        "idempotency_key": "rollback:repair_179557672537557cb4ee671b8:v2",
+        "kind": "ROLLBACK",
+        "proposal_id": "repair_179557672537557cb4ee671b8",
+        "testcase_id": "tcase_1795576688704b1b1a7f08064",
+        "base_version": 2,
+        "target_version": 3,
+        "created_at": "2026-11-25T03:18:53.879646Z"
+      }
+    ],
+    "probe_plans": 1,
+    "diagnoses": 1,
+    "replay_docs": 1,
+    "lineage_runs": {
+      "run_179557669385449c1fc43eae5": {
+        "testcase_id": "tcase_1795576688704b1b1a7f08064",
+        "testcase_version_id": "tcase_1795576688704b1b1a7f08064@1",
+        "verdict": "PASSED"
+      },
+      "run_1795576698218fce1edb2efb3": {
+        "testcase_id": "tcase_1795576688704b1b1a7f08064",
+        "testcase_version_id": "tcase_1795576688704b1b1a7f08064@1",
+        "verdict": "NOT_EVALUATED"
+      },
+      "run_1795576729602b001367339a9": {
+        "testcase_id": "tcase_1795576688704b1b1a7f08064",
+        "testcase_version_id": "tcase_1795576688704b1b1a7f08064@2",
+        "verdict": "PASSED"
+      }
+    },
+    "lineage_diagnosis": [
+      {
+        "diagnosis_id": "diagnosis_17955767252765843791e8340",
+        "run_id": "run_1795576698218fce1edb2efb3",
+        "testcase_id": "tcase_1795576688704b1b1a7f08064"
+      }
+    ],
+    "lineage_repair": [
+      {
+        "proposal_id": "repair_179557672537557cb4ee671b8",
+        "testcase_id": "tcase_1795576688704b1b1a7f08064",
+        "base_version": 1,
+        "diagnosis_id": "diagnosis_17955767252765843791e8340",
+        "source_run_id": "run_1795576698218fce1edb2efb3",
+        "repair_source": "rule:locator-fixture",
+        "promoted_version": 2
+      }
+    ],
+    "lineage_receipts": [
+      {
+        "idempotency_key": "run011r1-repair_179557672537557cb4ee671b8",
+        "kind": "PROMOTE",
+        "proposal_id": "repair_179557672537557cb4ee671b8",
+        "testcase_id": "tcase_1795576688704b1b1a7f08064",
+        "base_version": 1,
+        "target_version": 2
+      },
+      {
+        "idempotency_key": "rollback:repair_179557672537557cb4ee671b8:v2",
+        "kind": "ROLLBACK",
+        "proposal_id": "repair_179557672537557cb4ee671b8",
+        "testcase_id": "tcase_1795576688704b1b1a7f08064",
+        "base_version": 2,
+        "target_version": 3
+      }
+    ],
+    "lineage_evidence": {
+      "run_evidence_count": 25,
+      "diagnosis_evidence_count": 6,
+      "foreign": []
+    }
+  },
+  "summary": {
+    "total": 17,
+    "passed": 17,
+    "failed": []
+  }
+}

@@ -65,6 +65,9 @@ class EvidenceRecord:
             "source_trust": self.source_trust,
             "redacted": self.redacted,
             "captured_at": self.captured_at,
+            # RUN-011-R1 WP1 §1.4：暴露证据来源 Run（DB 列 run_id），
+            # 供血缘校验「source_run_id 属于失败 Run」；向后兼容的新增字段。
+            "run_id": getattr(self, "run_id", "") or "",
         }
 
 

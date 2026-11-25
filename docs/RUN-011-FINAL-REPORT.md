@@ -178,3 +178,33 @@ TG_RUN011_PASSWORD='***' .venv/bin/python scripts/full_loop_run011.py \
 （Active Probe 真正执行、真正回灌、时间语义可验证），并修复了 7 个在真实链路中暴露的缺陷。
 第三目标（多进程/PG/异常恢复）只完成了正常路径与备份恢复；异常路径仍缺证据。
 **没有为了让报告好看而降低门禁、伪造证据或宣称未验证的能力。**
+
+---
+
+## RUN-011-R1 修订注记（2026-11-25 追加，不覆盖以上原始记录）
+
+> 以下为 RUN-011-R1（指令13）对本报告表述的**追加更正**；原始记录保持存档。
+> 权威交付：`docs/RUN-011-R1-FINAL-REPORT.md`。
+
+1. **执行时间统计**：本报告时间窗（01:10–02:25 CST）与各 WP 报告自洽；
+   曾出现的 UTC/CST 混列按 WP 报告换算统一，R1 时间独立计算不混计。
+2. **Benchmark v4 口径**：`RUN-010-WP5-BENCHMARK.md` 已追加 ERRATA——
+   「所有臂 probes_per_sample=0」为报告笔误（归档 JSON：E/F/G=0.9286），
+   且该值是**重建信号数而非真实探针执行数**，Probe 臂测量无效；详见 ERRATA E1–E3。
+3. **闭环性质描述更正**：本文 Q1 的「完整业务闭环 62/62」是**多 TestCase 集成演示**
+   （编译用例 + `tcase_tf_false_pass` + `tcase_bench_loc001` 三用例拼接，
+   ID 级证据见 `RUN-011-R1-BASELINE.md` §2）；**单 TestCase 完整血缘闭环**由
+   R1 WP1 实现（`RUN-011-R1-WP1-LINEAGE.md`，18 步同用例、API 86/86 + DB 17/17 ×2）。
+   两者分开描述，不混引。
+4. **修复来源区分**：本文「Repair 2/2」中的修复 changes 为脚本预写死的确定性夹具
+   （`test_id=create-submit → role=button:创建`）——属**规则/人工夹具**，
+   不是 Agent 从 Diagnosis 自动推导；R1 起 `repair_source` 强制三分标注
+   （human:/rule:/llm:），R1 实测为 `rule:locator-fixture`。
+5. **POST_HOC 证据**：本文「探针 3/3」实验中的事后观测证据一律为 POST_HOC
+   （非 Run 内证据）；R1 WP2 起三态语义逐条留痕（ALIGNED/POST_HOC/UNKNOWN），
+   不把事后观测描述为 Run 内证据、不改写 Run 时结论。
+6. **Benchmark 状态**：本文「Benchmark NOT RUN（v4 测量无效）」保持成立；
+   R1 WP4 的 v5 两轮为**新实测**（23 场景 ×2、真实探针 54/54），见
+   `RUN-011-R1-WP4-BENCHMARK-PILOT.md`，不回溯改写本轮 NOT RUN 表述。
+7. **B-17 状态**：本文「BLOCKED」保持；R1 零次触碰被拦截操作，仅整理
+   安全批准申请材料（`RUN-011-R1-WP7-B17-SECURITY-REQUEST.md`），无批准不实施。

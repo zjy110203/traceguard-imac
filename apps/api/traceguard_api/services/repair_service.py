@@ -47,12 +47,29 @@ class RepairService:
         reason: str = "",
         created_by: str = "agent:repair-planner",
         workspace_id: str | None = None,
+        diagnosis_id: str | None = None,
+        source_run_id: str | None = None,
+        repair_source: str = "",
     ) -> dict[str, Any]:
+        """创建修复提案。
+
+        RUN-011-R1 WP1 §1.3（向后兼容扩展）：新增可选血缘字段——
+        - diagnosis_id：本提案所依据的 Diagnosis（可空 = 老调用方行为不变）；
+        - source_run_id：触发修复的失败 Run（可空）；
+        - repair_source：修复方案来源，必须如实标注三类之一：
+          ``human:*``（人工提供）/ ``rule:*``（规则生成）/ ``llm:*``（LLM 生成）。
+        三者不得混淆；确定性夹具也必须标注为 human/rule，不得冒充 Agent 推导。
+        """
         base = self.rt.catalog.get_version(testcase_id, base_version)
         if not base:
             raise AppError(ErrorCode.NOT_FOUND, "base testcase version not found")
         if not changes:
             raise AppError(ErrorCode.VALIDATION_ERROR, "changes 不能为空")
+        if repair_source and not repair_source.startswith(("human:", "rule:", "llm:")):
+            raise AppError(
+                ErrorCode.VALIDATION_ERROR,
+                "repair_source 必须以 human:/rule:/llm: 开头（如实标注修复方案来源）",
+            )
 
         candidate = _apply_changes(base, changes)
         diff = _build_diff(changes)
@@ -78,6 +95,10 @@ class RepairService:
             "diff": diff,
             "reason": reason,
             "created_by": created_by,
+            # RUN-011-R1 WP1 §1.3：Diagnosis→Repair 血缘（可空，向后兼容）
+            "diagnosis_id": diagnosis_id or None,
+            "source_run_id": source_run_id or None,
+            "repair_source": repair_source or "",
             "created_at": utc_now_iso(),
             "approval_ref": None,
             "sandbox_run_id": None,
@@ -163,6 +184,9 @@ class RepairService:
                 changes=advice.changes,
                 reason=f"LLM 修复候选（{advice.model}）",
                 created_by="agent:llm-repair-planner",
+                diagnosis_id=diagnosis_id,
+                source_run_id=run_id,
+                repair_source=f"llm:{advice.model or 'unknown'}",
             )
         return out
 
@@ -687,4 +711,7 @@ def _summary(doc: dict[str, Any]) -> dict[str, Any]:
         "promoted_version": doc.get("promoted_version"),
         "created_at": doc.get("created_at"),
         "reason": doc.get("reason", ""),
+        "diagnosis_id": doc.get("diagnosis_id"),
+        "source_run_id": doc.get("source_run_id"),
+        "repair_source": doc.get("repair_source", ""),
     }

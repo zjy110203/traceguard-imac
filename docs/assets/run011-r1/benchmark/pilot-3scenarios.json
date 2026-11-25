@@ -1,0 +1,632 @@
+{
+  "scenarios": [
+    {
+      "scenario": "LOCATOR",
+      "testcase": "tcase_bench_loc001",
+      "gt_mechanism": "LOCATOR",
+      "fault": "TF-LOC-001",
+      "run_id": "run_1795578979085444851d66e98",
+      "verdict": "NOT_EVALUATED",
+      "exec_ms": 12872.2,
+      "independent_worker": true,
+      "arms": {
+        "A_raw_report": {
+          "mechanism": null,
+          "conclusive": false,
+          "outcome": "VERDICT_ONLY",
+          "verdict": "NOT_EVALUATED",
+          "note": "A 臂：只有执行 verdict，无诊断"
+        },
+        "C_rule": {
+          "mechanism": "LOCATOR",
+          "conclusive": false,
+          "outcome": "PROBABLE",
+          "root_causes": [],
+          "disposition": "NEEDS_MORE_EVIDENCE"
+        },
+        "D_graph_ablation": {
+          "mechanism": "LOCATOR",
+          "conclusive": false,
+          "outcome": "PROBABLE",
+          "root_causes": [],
+          "disposition": "NEEDS_MORE_EVIDENCE"
+        },
+        "E_probe_no_feedback": {
+          "mechanism": "LOCATOR",
+          "conclusive": false,
+          "outcome": "PROBABLE",
+          "root_causes": [],
+          "disposition": "NEEDS_MORE_EVIDENCE",
+          "probes_used": 3,
+          "feedback": "NOT_APPLIED",
+          "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+        },
+        "F_probe_aligned": {
+          "mechanism": "LOCATOR",
+          "conclusive": false,
+          "outcome": "PROBABLE",
+          "root_causes": [],
+          "disposition": "NEEDS_MORE_EVIDENCE",
+          "probes_used": 3,
+          "feedback_rate": 0.6667,
+          "time_alignments": [
+            "POST_HOC",
+            "POST_HOC",
+            "POST_HOC"
+          ]
+        },
+        "G_probe_no_alignment": {
+          "mechanism": "LOCATOR",
+          "conclusive": false,
+          "outcome": "PROBABLE",
+          "root_causes": [],
+          "disposition": "NEEDS_MORE_EVIDENCE",
+          "probes_used": 3,
+          "feedback_rate": 0.6667,
+          "time_alignments": [
+            "UNKNOWN",
+            "UNKNOWN",
+            "UNKNOWN"
+          ]
+        },
+        "H_llm_advisor": {
+          "mechanism": "API",
+          "conclusive": false,
+          "outcome": "PROBABLE",
+          "root_causes": [],
+          "disposition": "NEEDS_MORE_EVIDENCE"
+        }
+      },
+      "diagnosis_id": "diagnosis_1795578991961da756c71f7bc",
+      "diagnosis_latency_ms": 15.2,
+      "diagnosis_outcome": "PROBABLE",
+      "probe_plan_id": "probeplan_1795578991971a1cc5ad29dcf",
+      "probe_stop_reason": "STOP_ITERATION_LIMIT",
+      "probe_latency_ms": 56.7,
+      "real_probe_count": 3,
+      "probe_execution_success_rate": 1.0,
+      "probe_feedback_success_rate": 1.0,
+      "llm_arm": {
+        "called": true,
+        "skipped": null,
+        "model": "deepseek-flash",
+        "prompt_version": "diagnosis_advisor@v1",
+        "added": 3,
+        "engine": "rule-v2+graph-adjudication+llm-advisor",
+        "llm_diagnosis_id": "diagnosis_17955790057237f5c2e7a15ba"
+      },
+      "gt_match": {
+        "C_rule": true,
+        "F_probe_aligned": true
+      }
+    },
+    {
+      "scenario": "NETWORK",
+      "testcase": "tcase_bench_net002",
+      "gt_mechanism": "NETWORK",
+      "fault": "TF-NET-002",
+      "run_id": "run_1795579005743c92a2cad6c4e",
+      "verdict": "FAILED",
+      "exec_ms": 15282.5,
+      "independent_worker": true,
+      "arms": {
+        "A_raw_report": {
+          "mechanism": null,
+          "conclusive": false,
+          "outcome": "VERDICT_ONLY",
+          "verdict": "FAILED",
+          "note": "A 臂：只有执行 verdict，无诊断"
+        },
+        "C_rule": {
+          "mechanism": null,
+          "conclusive": false,
+          "outcome": "INCONCLUSIVE",
+          "root_causes": [],
+          "disposition": "NEEDS_MORE_EVIDENCE"
+        },
+        "D_graph_ablation": {
+          "mechanism": null,
+          "conclusive": false,
+          "outcome": "INCONCLUSIVE",
+          "root_causes": [],
+          "disposition": "NEEDS_MORE_EVIDENCE"
+        },
+        "E_probe_no_feedback": {
+          "mechanism": null,
+          "conclusive": false,
+          "outcome": "INCONCLUSIVE",
+          "root_causes": [],
+          "disposition": "NEEDS_MORE_EVIDENCE",
+          "probes_used": 3,
+          "feedback": "NOT_APPLIED",
+          "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+        },
+        "F_probe_aligned": {
+          "mechanism": null,
+          "conclusive": false,
+          "outcome": "INCONCLUSIVE",
+          "root_causes": [],
+          "disposition": "NEEDS_MORE_EVIDENCE",
+          "probes_used": 3,
+          "feedback_rate": 0.0,
+          "time_alignments": [
+            "POST_HOC",
+            "POST_HOC",
+            "POST_HOC"
+          ]
+        },
+        "G_probe_no_alignment": {
+          "mechanism": null,
+          "conclusive": false,
+          "outcome": "INCONCLUSIVE",
+          "root_causes": [],
+          "disposition": "NEEDS_MORE_EVIDENCE",
+          "probes_used": 3,
+          "feedback_rate": 0.0,
+          "time_alignments": [
+            "UNKNOWN",
+            "UNKNOWN",
+            "UNKNOWN"
+          ]
+        },
+        "H_llm_advisor": {
+          "mechanism": null,
+          "conclusive": false,
+          "outcome": "INCONCLUSIVE",
+          "root_causes": [],
+          "disposition": "NEEDS_MORE_EVIDENCE"
+        }
+      },
+      "diagnosis_id": "diagnosis_179557902105841610a6dd4c8",
+      "diagnosis_latency_ms": 47.2,
+      "diagnosis_outcome": "INCONCLUSIVE",
+      "probe_plan_id": "probeplan_17955790210662dd43a031584",
+      "probe_stop_reason": "STOP_ITERATION_LIMIT",
+      "probe_latency_ms": 45.6,
+      "real_probe_count": 3,
+      "probe_execution_success_rate": 1.0,
+      "probe_feedback_success_rate": 1.0,
+      "llm_arm": {
+        "called": false,
+        "skipped": "llm_error:invalid_json",
+        "model": null,
+        "prompt_version": "diagnosis_advisor@v1",
+        "added": 0,
+        "engine": "rule-v2+graph-adjudication",
+        "llm_diagnosis_id": "diagnosis_1795579033966311ba1d7126a"
+      },
+      "gt_match": {
+        "C_rule": false,
+        "F_probe_aligned": false
+      }
+    },
+    {
+      "scenario": "TIMING",
+      "testcase": "tcase_bench_db004",
+      "gt_mechanism": "TIMING",
+      "fault": "TF-DB-004",
+      "run_id": "run_1795579033987f3f64fc6eeb6",
+      "verdict": "FAILED",
+      "exec_ms": 5508.6,
+      "independent_worker": true,
+      "arms": {
+        "A_raw_report": {
+          "mechanism": null,
+          "conclusive": false,
+          "outcome": "VERDICT_ONLY",
+          "verdict": "FAILED",
+          "note": "A 臂：只有执行 verdict，无诊断"
+        },
+        "C_rule": {
+          "mechanism": "PERSISTENCE",
+          "conclusive": false,
+          "outcome": "PROBABLE",
+          "root_causes": [],
+          "disposition": "NEEDS_MORE_EVIDENCE"
+        },
+        "D_graph_ablation": {
+          "mechanism": "PERSISTENCE",
+          "conclusive": false,
+          "outcome": "PROBABLE",
+          "root_causes": [],
+          "disposition": "NEEDS_MORE_EVIDENCE"
+        },
+        "E_probe_no_feedback": {
+          "mechanism": "PERSISTENCE",
+          "conclusive": false,
+          "outcome": "PROBABLE",
+          "root_causes": [],
+          "disposition": "NEEDS_MORE_EVIDENCE",
+          "probes_used": 2,
+          "feedback": "NOT_APPLIED",
+          "note": "E 臂：探针真实执行、证据真实落库，但不回灌诊断"
+        },
+        "F_probe_aligned": {
+          "mechanism": "PERSISTENCE",
+          "conclusive": false,
+          "outcome": "PROBABLE",
+          "root_causes": [],
+          "disposition": "NEEDS_MORE_EVIDENCE",
+          "probes_used": 2,
+          "feedback_rate": 0.5,
+          "time_alignments": [
+            "POST_HOC",
+            "POST_HOC"
+          ]
+        },
+        "G_probe_no_alignment": {
+          "mechanism": "PERSISTENCE",
+          "conclusive": false,
+          "outcome": "PROBABLE",
+          "root_causes": [],
+          "disposition": "NEEDS_MORE_EVIDENCE",
+          "probes_used": 2,
+          "feedback_rate": 0.5,
+          "time_alignments": [
+            "UNKNOWN",
+            "UNKNOWN"
+          ]
+        },
+        "H_llm_advisor": {
+          "mechanism": "PERSISTENCE",
+          "conclusive": false,
+          "outcome": "PROBABLE",
+          "root_causes": [],
+          "disposition": "NEEDS_MORE_EVIDENCE"
+        }
+      },
+      "diagnosis_id": "diagnosis_179557903949881b6f426b4e1",
+      "diagnosis_latency_ms": 18.2,
+      "diagnosis_outcome": "PROBABLE",
+      "probe_plan_id": "probeplan_179557903950885a131adf1d2",
+      "probe_stop_reason": "STOP_NO_HIGH_VALUE_PROBE",
+      "probe_latency_ms": 35.9,
+      "real_probe_count": 2,
+      "probe_execution_success_rate": 1.0,
+      "probe_feedback_success_rate": 1.0,
+      "llm_arm": {
+        "called": true,
+        "skipped": null,
+        "model": "deepseek-flash",
+        "prompt_version": "diagnosis_advisor@v1",
+        "added": 3,
+        "engine": "rule-v2+graph-adjudication+llm-advisor",
+        "llm_diagnosis_id": "diagnosis_17955790499188d663668a5cc"
+      },
+      "gt_match": {
+        "C_rule": false,
+        "F_probe_aligned": false
+      }
+    }
+  ],
+  "probe_executions": [
+    {
+      "run_id": "run_1795578979085444851d66e98",
+      "diagnosis_id": "diagnosis_1795578991961da756c71f7bc",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_1795578991973d2551c8f7b07",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_17955789919736c1aa0873f26"
+      ],
+      "observed_at": 1795578991.973334,
+      "collected_at": 1795578991.973356,
+      "ingested_at": "2026-11-25T03:56:31.973357Z"
+    },
+    {
+      "run_id": "run_1795578979085444851d66e98",
+      "diagnosis_id": "diagnosis_1795578991961da756c71f7bc",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795578991983b9ea44ea681d",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_17955789919831c189688541c"
+      ],
+      "observed_at": 1795578991.983335,
+      "collected_at": 1795578991.983351,
+      "ingested_at": "2026-11-25T03:56:31.983352Z"
+    },
+    {
+      "run_id": "run_1795578979085444851d66e98",
+      "diagnosis_id": "diagnosis_1795578991961da756c71f7bc",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_179557899200073831c1d0e87",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_17955789920008640ed299b6d"
+      ],
+      "observed_at": 1795578992.000886,
+      "collected_at": 1795578992.000905,
+      "ingested_at": "2026-11-25T03:56:32.000907Z"
+    },
+    {
+      "run_id": "run_1795579005743c92a2cad6c4e",
+      "diagnosis_id": "diagnosis_179557902105841610a6dd4c8",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579021069bbd6f41794c5",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579021069dc3d96bfab70"
+      ],
+      "observed_at": 1795579021.069029,
+      "collected_at": 1795579021.06904,
+      "ingested_at": "2026-11-25T03:57:01.069041Z"
+    },
+    {
+      "run_id": "run_1795579005743c92a2cad6c4e",
+      "diagnosis_id": "diagnosis_179557902105841610a6dd4c8",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_17955790210768cca5f756f60",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_1795579021076eaf19608ee34"
+      ],
+      "observed_at": 1795579021.075998,
+      "collected_at": 1795579021.076006,
+      "ingested_at": "2026-11-25T03:57:01.076006Z"
+    },
+    {
+      "run_id": "run_1795579005743c92a2cad6c4e",
+      "diagnosis_id": "diagnosis_179557902105841610a6dd4c8",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_179557902109149c8161c9f73",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_17955790210910fe93197585d"
+      ],
+      "observed_at": 1795579021.091556,
+      "collected_at": 1795579021.09157,
+      "ingested_at": "2026-11-25T03:57:01.091571Z"
+    },
+    {
+      "run_id": "run_1795579033987f3f64fc6eeb6",
+      "diagnosis_id": "diagnosis_179557903949881b6f426b4e1",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579039511502b5cb7adb2",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_17955790395119534426359ae"
+      ],
+      "observed_at": 1795579039.51174,
+      "collected_at": 1795579039.511764,
+      "ingested_at": "2026-11-25T03:57:19.511766Z"
+    },
+    {
+      "run_id": "run_1795579033987f3f64fc6eeb6",
+      "diagnosis_id": "diagnosis_179557903949881b6f426b4e1",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_1795579039520e63ffb1de0f3",
+      "status": "SUCCEEDED",
+      "evidence_ids": [
+        "evd_17955790395208dcb173f506d"
+      ],
+      "observed_at": 1795579039.5204852,
+      "collected_at": 1795579039.5204961,
+      "ingested_at": "2026-11-25T03:57:19.520496Z"
+    }
+  ],
+  "probe_evidence_new": [
+    {
+      "evidence_id": "evd_17955789919736c1aa0873f26",
+      "run_id": "run_1795578979085444851d66e98",
+      "diagnosis_id": "diagnosis_1795578991961da756c71f7bc",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_1795578991973d2551c8f7b07",
+      "source_type": "probe",
+      "observed_at": 1795578991.973334,
+      "collected_at": 1795578991.973356,
+      "ingested_at": "2026-11-25T03:56:31.973357Z",
+      "captured_at": "2026-11-25T03:56:31.973585Z"
+    },
+    {
+      "evidence_id": "evd_17955789919831c189688541c",
+      "run_id": "run_1795578979085444851d66e98",
+      "diagnosis_id": "diagnosis_1795578991961da756c71f7bc",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795578991983b9ea44ea681d",
+      "source_type": "probe",
+      "observed_at": 1795578991.983335,
+      "collected_at": 1795578991.983351,
+      "ingested_at": "2026-11-25T03:56:31.983352Z",
+      "captured_at": "2026-11-25T03:56:31.983517Z"
+    },
+    {
+      "evidence_id": "evd_17955789920008640ed299b6d",
+      "run_id": "run_1795578979085444851d66e98",
+      "diagnosis_id": "diagnosis_1795578991961da756c71f7bc",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_179557899200073831c1d0e87",
+      "source_type": "probe",
+      "observed_at": 1795578992.000886,
+      "collected_at": 1795578992.000905,
+      "ingested_at": "2026-11-25T03:56:32.000907Z",
+      "captured_at": "2026-11-25T03:56:32.001302Z"
+    },
+    {
+      "evidence_id": "evd_1795579021069dc3d96bfab70",
+      "run_id": "run_1795579005743c92a2cad6c4e",
+      "diagnosis_id": "diagnosis_179557902105841610a6dd4c8",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579021069bbd6f41794c5",
+      "source_type": "probe",
+      "observed_at": 1795579021.069029,
+      "collected_at": 1795579021.06904,
+      "ingested_at": "2026-11-25T03:57:01.069041Z",
+      "captured_at": "2026-11-25T03:57:01.069191Z"
+    },
+    {
+      "evidence_id": "evd_1795579021076eaf19608ee34",
+      "run_id": "run_1795579005743c92a2cad6c4e",
+      "diagnosis_id": "diagnosis_179557902105841610a6dd4c8",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_17955790210768cca5f756f60",
+      "source_type": "probe",
+      "observed_at": 1795579021.075998,
+      "collected_at": 1795579021.076006,
+      "ingested_at": "2026-11-25T03:57:01.076006Z",
+      "captured_at": "2026-11-25T03:57:01.076183Z"
+    },
+    {
+      "evidence_id": "evd_17955790210910fe93197585d",
+      "run_id": "run_1795579005743c92a2cad6c4e",
+      "diagnosis_id": "diagnosis_179557902105841610a6dd4c8",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_179557902109149c8161c9f73",
+      "source_type": "probe",
+      "observed_at": 1795579021.091556,
+      "collected_at": 1795579021.09157,
+      "ingested_at": "2026-11-25T03:57:01.091571Z",
+      "captured_at": "2026-11-25T03:57:01.091942Z"
+    },
+    {
+      "evidence_id": "evd_17955790395119534426359ae",
+      "run_id": "run_1795579033987f3f64fc6eeb6",
+      "diagnosis_id": "diagnosis_179557903949881b6f426b4e1",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579039511502b5cb7adb2",
+      "source_type": "probe",
+      "observed_at": 1795579039.51174,
+      "collected_at": 1795579039.511764,
+      "ingested_at": "2026-11-25T03:57:19.511766Z",
+      "captured_at": "2026-11-25T03:57:19.512000Z"
+    },
+    {
+      "evidence_id": "evd_17955790395208dcb173f506d",
+      "run_id": "run_1795579033987f3f64fc6eeb6",
+      "diagnosis_id": "diagnosis_179557903949881b6f426b4e1",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_1795579039520e63ffb1de0f3",
+      "source_type": "probe",
+      "observed_at": 1795579039.5204852,
+      "collected_at": 1795579039.5204961,
+      "ingested_at": "2026-11-25T03:57:19.520496Z",
+      "captured_at": "2026-11-25T03:57:19.520771Z"
+    }
+  ],
+  "probe_feedback_applied": [
+    {
+      "run_id": "run_1795578979085444851d66e98",
+      "diagnosis_id": "diagnosis_1795578991961da756c71f7bc",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_1795578991973d2551c8f7b07",
+      "updates": 1,
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_1795578991956bc8c49422972",
+          "relation": "CONTRADICT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_17955789919736c1aa0873f26"
+          ],
+          "exclude": false,
+          "reason": "[POST_HOC] 网络观测无失败请求，网络层问题假设不成立",
+          "time_alignment": "POST_HOC"
+        }
+      ]
+    },
+    {
+      "run_id": "run_1795578979085444851d66e98",
+      "diagnosis_id": "diagnosis_1795578991961da756c71f7bc",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795578991983b9ea44ea681d",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_1795578979085444851d66e98",
+      "diagnosis_id": "diagnosis_1795578991961da756c71f7bc",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_179557899200073831c1d0e87",
+      "updates": 1,
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_1795578991956a97713dc220f",
+          "relation": "SUPPORT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_17955789920008640ed299b6d"
+          ],
+          "exclude": false,
+          "reason": "[POST_HOC] 失败步骤的目标元素 ['create-submit'] 不在 DOM 中：定位器无法解析，属于用例资产/定位策略问题",
+          "time_alignment": "POST_HOC"
+        }
+      ]
+    },
+    {
+      "run_id": "run_1795579005743c92a2cad6c4e",
+      "diagnosis_id": "diagnosis_179557902105841610a6dd4c8",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579021069bbd6f41794c5",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_1795579005743c92a2cad6c4e",
+      "diagnosis_id": "diagnosis_179557902105841610a6dd4c8",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_17955790210768cca5f756f60",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_1795579005743c92a2cad6c4e",
+      "diagnosis_id": "diagnosis_179557902105841610a6dd4c8",
+      "probe_id": "dom_snapshot",
+      "execution_id": "probeexec_179557902109149c8161c9f73",
+      "updates": 0,
+      "hypothesis_updates": []
+    },
+    {
+      "run_id": "run_1795579033987f3f64fc6eeb6",
+      "diagnosis_id": "diagnosis_179557903949881b6f426b4e1",
+      "probe_id": "http_state",
+      "execution_id": "probeexec_1795579039511502b5cb7adb2",
+      "updates": 1,
+      "hypothesis_updates": [
+        {
+          "hypothesis_id": "hyp_179557903948942fad90e5cc6",
+          "relation": "SUPPORT",
+          "confirming": false,
+          "evidence_ids": [
+            "evd_17955790395119534426359ae"
+          ],
+          "exclude": false,
+          "reason": "[POST_HOC] 独立状态查询 count=0：业务数据未见持久化（单查询仅支持，不直接确认永久性故障；延迟复测后再评估 PERSISTENCE/TIMING）",
+          "time_alignment": "POST_HOC"
+        }
+      ]
+    },
+    {
+      "run_id": "run_1795579033987f3f64fc6eeb6",
+      "diagnosis_id": "diagnosis_179557903949881b6f426b4e1",
+      "probe_id": "network_trace",
+      "execution_id": "probeexec_1795579039520e63ffb1de0f3",
+      "updates": 0,
+      "hypothesis_updates": []
+    }
+  ],
+  "api": "http://127.0.0.1:8110",
+  "started_at": 1795578979.051172,
+  "pilot_statistics": {
+    "sample_size": 3,
+    "note": "三场景试验样本：不宣称统计显著；Macro-F1/Selective Accuracy/False Pass Rate 等需 19+ 场景两轮后计算",
+    "primary_cause_accuracy": {
+      "C_rule": 0.3333,
+      "F_probe_aligned": 0.3333,
+      "G_no_alignment": 0.3333
+    },
+    "probe_execution_success_rate": 1.0,
+    "probe_feedback_success_rate": 1.0,
+    "diagnosis_latency_ms": [
+      15.2,
+      47.2,
+      18.2
+    ]
+  },
+  "ended_at": 1795579049.928025,
+  "summary": {
+    "total": 15,
+    "passed": 15,
+    "failed": []
+  }
+}
