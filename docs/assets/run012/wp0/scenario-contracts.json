@@ -1,0 +1,232 @@
+{
+  "API-500": {
+    "scenario": "API-500",
+    "testcase": "tcase_tf_api_error",
+    "fault": "TF-API-001",
+    "gt_mechanism": "API",
+    "expected_run_outcome": "FAILED",
+    "control_kind": "NEGATIVE_FIXTURE",
+    "fault_trigger_condition": "用例 api 步骤激活 TF-API-001；创建接口 500 → 断言失败",
+    "deterministic_activation": true
+  },
+  "API-503": {
+    "scenario": "API-503",
+    "testcase": "tcase_bench_api002",
+    "fault": "TF-API-002",
+    "gt_mechanism": "API",
+    "expected_run_outcome": "FAILED",
+    "control_kind": "NEGATIVE_FIXTURE",
+    "fault_trigger_condition": "用例 api 步骤激活 TF-API-002；创建接口 503 → 断言失败",
+    "deterministic_activation": true
+  },
+  "API-EDIT-500": {
+    "scenario": "API-EDIT-500",
+    "testcase": "tcase_bench_api003",
+    "fault": "TF-API-003",
+    "gt_mechanism": "API",
+    "expected_run_outcome": "PASSED",
+    "control_kind": "POSITIVE_CONTROL_TOLERANT_FAULT",
+    "fault_trigger_condition": "edit_flow 激活 TF-API-003；PUT 返回 500，断言读取 edit-error，预期 PASSED",
+    "deterministic_activation": true
+  },
+  "API-EDIT-503": {
+    "scenario": "API-EDIT-503",
+    "testcase": "tcase_bench_api004",
+    "fault": "TF-API-004",
+    "gt_mechanism": "API",
+    "expected_run_outcome": "PASSED",
+    "control_kind": "POSITIVE_CONTROL_TOLERANT_FAULT",
+    "fault_trigger_condition": "edit_flow 激活 TF-API-004；PUT 返回 503，断言读取 edit-error，预期 PASSED",
+    "deterministic_activation": true
+  },
+  "COMP-API-UI": {
+    "scenario": "COMP-API-UI",
+    "testcase": "tcase_bench_comp001",
+    "fault": "TF-COMP-001",
+    "gt_mechanism": "API",
+    "expected_run_outcome": "FAILED",
+    "control_kind": "NEGATIVE_FIXTURE",
+    "fault_trigger_condition": "复合故障激活 TF-API-001 + TF-UI-003 → 断言失败",
+    "deterministic_activation": true
+  },
+  "COMP-DB-TIME": {
+    "scenario": "COMP-DB-TIME",
+    "testcase": "tcase_bench_comp002",
+    "fault": "TF-COMP-002",
+    "gt_mechanism": "PERSISTENCE",
+    "expected_run_outcome": "FAILED",
+    "control_kind": "NEGATIVE_FIXTURE",
+    "fault_trigger_condition": "复合故障激活 TF-DB-001 + TF-TIME-001 → 断言失败",
+    "deterministic_activation": true
+  },
+  "COMP-LOC-UI": {
+    "scenario": "COMP-LOC-UI",
+    "testcase": "tcase_bench_comp003",
+    "fault": "TF-COMP-003",
+    "gt_mechanism": "LOCATOR",
+    "expected_run_outcome": "FAILED",
+    "control_kind": "NEGATIVE_FIXTURE",
+    "fault_trigger_condition": "复合故障激活 TF-LOC-001 + TF-UI-002 → 断言失败",
+    "deterministic_activation": true
+  },
+  "DB-DUP": {
+    "scenario": "DB-DUP",
+    "testcase": "tcase_bench_db002",
+    "fault": "TF-DB-002",
+    "gt_mechanism": "PERSISTENCE",
+    "expected_run_outcome": "FAILED",
+    "control_kind": "NEGATIVE_FIXTURE",
+    "fault_trigger_condition": "首轮正常创建后激活 TF-DB-002；同名写入谎报成功 → biz 断言失败",
+    "deterministic_activation": true
+  },
+  "DB-LAG-9S": {
+    "scenario": "DB-LAG-9S",
+    "testcase": "tcase_bench_db004",
+    "fault": "TF-DB-004",
+    "gt_mechanism": "TIMING",
+    "expected_run_outcome": "FAILED",
+    "control_kind": "NEGATIVE_FIXTURE",
+    "fault_trigger_condition": "用例 api 步骤激活 TF-DB-004；权威状态查询滞后 9000ms → 断言失败",
+    "deterministic_activation": true
+  },
+  "FALSE-PASS": {
+    "scenario": "FALSE-PASS",
+    "testcase": "tcase_tf_false_pass",
+    "fault": "TF-DB-001",
+    "gt_mechanism": "PERSISTENCE",
+    "expected_run_outcome": "FAILED",
+    "control_kind": "NEGATIVE_FIXTURE",
+    "fault_trigger_condition": "用例 api 步骤激活 TF-DB-001；独立状态查询发现未持久化 → biz 断言失败",
+    "deterministic_activation": true
+  },
+  "FLAKY-API": {
+    "scenario": "FLAKY-API",
+    "testcase": "tcase_bench_flaky002",
+    "fault": "TF-FLAKY-002",
+    "gt_mechanism": "API",
+    "expected_run_outcome": "FAILED",
+    "control_kind": "FLAKY_NEGATIVE_FIXTURE",
+    "fault_trigger_condition": "TF-FLAKY-002 以概率触发 API 500；未生效时 Run PASSED 不能算 False Pass",
+    "deterministic_activation": false
+  },
+  "FLAKY-DB": {
+    "scenario": "FLAKY-DB",
+    "testcase": "tcase_bench_flaky001",
+    "fault": "TF-FLAKY-001",
+    "gt_mechanism": "PERSISTENCE",
+    "expected_run_outcome": "FAILED",
+    "control_kind": "FLAKY_NEGATIVE_FIXTURE",
+    "fault_trigger_condition": "TF-FLAKY-001 以 50% 概率跳过持久化；未生效时 Run PASSED 不能算 False Pass",
+    "deterministic_activation": false
+  },
+  "LOC-NAME": {
+    "scenario": "LOC-NAME",
+    "testcase": "tcase_bench_loc002",
+    "fault": "TF-LOC-002",
+    "gt_mechanism": "LOCATOR",
+    "expected_run_outcome": "FAILED",
+    "control_kind": "NEGATIVE_FIXTURE",
+    "fault_trigger_condition": "用例 api 步骤激活 TF-LOC-002；名称输入框 test_id 变更 → 步骤失败/NOT_EVALUATED",
+    "deterministic_activation": true
+  },
+  "LOC-SUBMIT": {
+    "scenario": "LOC-SUBMIT",
+    "testcase": "tcase_bench_loc001",
+    "fault": "TF-LOC-001",
+    "gt_mechanism": "LOCATOR",
+    "expected_run_outcome": "FAILED",
+    "control_kind": "NEGATIVE_FIXTURE",
+    "fault_trigger_condition": "用例 api 步骤激活 TF-LOC-001；提交按钮 test_id 变更 → 步骤失败/NOT_EVALUATED",
+    "deterministic_activation": true
+  },
+  "NET-TIMEOUT": {
+    "scenario": "NET-TIMEOUT",
+    "testcase": "tcase_bench_net002",
+    "fault": "TF-NET-002",
+    "gt_mechanism": "NETWORK",
+    "expected_run_outcome": "FAILED",
+    "control_kind": "NEGATIVE_FIXTURE",
+    "fault_trigger_condition": "用例 api 步骤激活 TF-NET-002；9000ms 延迟超过等待窗口 → 断言失败",
+    "deterministic_activation": true
+  },
+  "SEC-CREATE-403": {
+    "scenario": "SEC-CREATE-403",
+    "testcase": "tcase_bench_sec001",
+    "fault": "TF-SEC-001",
+    "gt_mechanism": "AUTHORIZATION",
+    "expected_run_outcome": "FAILED",
+    "control_kind": "NEGATIVE_FIXTURE",
+    "fault_trigger_condition": "用例 api 步骤激活 TF-SEC-001；创建接口 403 → 断言失败",
+    "deterministic_activation": true
+  },
+  "SEC-LIST-403": {
+    "scenario": "SEC-LIST-403",
+    "testcase": "tcase_bench_sec002",
+    "fault": "TF-SEC-002",
+    "gt_mechanism": "AUTHORIZATION",
+    "expected_run_outcome": "FAILED",
+    "control_kind": "NEGATIVE_FIXTURE",
+    "fault_trigger_condition": "用例 api 步骤激活 TF-SEC-002；列表接口 403 → 断言失败",
+    "deterministic_activation": true
+  },
+  "TIME-RACE": {
+    "scenario": "TIME-RACE",
+    "testcase": "tcase_bench_time003",
+    "fault": "TF-TIME-003",
+    "gt_mechanism": "TIMING",
+    "expected_run_outcome": "FAILED",
+    "control_kind": "NEGATIVE_FIXTURE",
+    "fault_trigger_condition": "double_submit_flow 触发 300ms 双提交竞态 → 断言失败",
+    "deterministic_activation": true
+  },
+  "TIME-STRONG": {
+    "scenario": "TIME-STRONG",
+    "testcase": "tcase_bench_time002",
+    "fault": "TF-TIME-002",
+    "gt_mechanism": "TIMING",
+    "expected_run_outcome": "PASSED",
+    "control_kind": "POSITIVE_CONTROL_TOLERANT_FAULT",
+    "fault_trigger_condition": "用例 api 步骤激活 TF-TIME-002（列表延迟 5000ms）；seed 标题明确写「预期通过」",
+    "deterministic_activation": true
+  },
+  "UI-DELAYED": {
+    "scenario": "UI-DELAYED",
+    "testcase": "tcase_bench_ui004",
+    "fault": "TF-UI-004",
+    "gt_mechanism": "UI_RENDERING",
+    "expected_run_outcome": "PASSED",
+    "control_kind": "POSITIVE_CONTROL_TOLERANT_FAULT",
+    "fault_trigger_condition": "用例 api 步骤激活 TF-UI-004（成功提示延迟 3000ms）；等待 4000ms 后读取提示，预期仍 PASSED",
+    "deterministic_activation": true
+  },
+  "UI-MISLEAD": {
+    "scenario": "UI-MISLEAD",
+    "testcase": "tcase_bench_ui003",
+    "fault": "TF-UI-003",
+    "gt_mechanism": "UI_RENDERING",
+    "expected_run_outcome": "FAILED",
+    "control_kind": "NEGATIVE_FIXTURE",
+    "fault_trigger_condition": "用例 api 步骤激活 TF-UI-003；错误文案误导 → 断言失败",
+    "deterministic_activation": true
+  },
+  "UI-MISSING": {
+    "scenario": "UI-MISSING",
+    "testcase": "tcase_tf_ui_missing",
+    "fault": "TF-UI-001",
+    "gt_mechanism": "UI_RENDERING",
+    "expected_run_outcome": "FAILED",
+    "control_kind": "NEGATIVE_FIXTURE",
+    "fault_trigger_condition": "用例 api 步骤激活 TF-UI-001；banner-success 缺失 → 断言失败",
+    "deterministic_activation": true
+  },
+  "UI-SILENT": {
+    "scenario": "UI-SILENT",
+    "testcase": "tcase_bench_ui002",
+    "fault": "TF-UI-002",
+    "gt_mechanism": "UI_RENDERING",
+    "expected_run_outcome": "FAILED",
+    "control_kind": "NEGATIVE_FIXTURE",
+    "fault_trigger_condition": "用例 api 步骤激活 TF-UI-002；提交被静默忽略 → 断言失败",
+    "deterministic_activation": true
+  }
+}

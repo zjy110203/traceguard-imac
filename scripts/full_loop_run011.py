@@ -172,6 +172,10 @@ class TeamFlow:
     def reset(self) -> dict[str, Any]:
         return self.post("/api/test/reset", {})
 
+    def fault_state(self) -> dict[str, Any]:
+        """读取当前故障注入状态（用于 Benchmark 记录真实激活证据）。"""
+        return (self.get("/api/faults").get("state") or {})
+
     def clear_faults(self) -> dict[str, Any]:
         """清除全部故障（含 sticky）：逐个显式 clear。"""
         state = self.get("/api/faults").get("state") or {}

@@ -24,7 +24,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 import sys
 import time
 from pathlib import Path
@@ -39,60 +38,88 @@ from bench_pilot_run011_r1 import (  # noqa: E402
 from bench_pilot_run011_r1 import (  # noqa: E402
     run_scenario,
 )
+from bench_scenario_contract import (  # noqa: E402
+    RecordClass,
+    TriState,
+    classify_record,
+    contract_of,
+    is_confirmed_failing_sample,
+    scenario_from_contract,
+    validate_contracts,
+)
 from full_loop_run011 import CHECKS, Http, TeamFlow, WorkerRun, check  # noqa: E402
 
-#: ≥19 场景：testcase → GT 主因机制（来自故障机制定义；复合取首要机制）
+#: ≥19 场景：期望结果、控制类别与故障触发条件全部由场景契约显式声明。
+#: 历史归档里「412 + Run PASSED」的 9 条记录不再靠异常字符串反推正向控制。
 V5_SCENARIOS: list[dict[str, Any]] = [
-    {"scenario": "FALSE-PASS", "testcase": "tcase_tf_false_pass", "gt_mechanism": "PERSISTENCE", "fault": "TF-DB-001"},
-    {"scenario": "UI-MISSING", "testcase": "tcase_tf_ui_missing", "gt_mechanism": "UI_RENDERING", "fault": "TF-UI-001"},
-    {"scenario": "API-500", "testcase": "tcase_tf_api_error", "gt_mechanism": "API", "fault": "TF-API-001"},
-    {"scenario": "DB-DUP", "testcase": "tcase_bench_db002", "gt_mechanism": "PERSISTENCE", "fault": "TF-DB-002"},
-    {"scenario": "DB-LAG-9S", "testcase": "tcase_bench_db004", "gt_mechanism": "TIMING", "fault": "TF-DB-004"},
-    {"scenario": "UI-SILENT", "testcase": "tcase_bench_ui002", "gt_mechanism": "UI_RENDERING", "fault": "TF-UI-002"},
-    {"scenario": "UI-MISLEAD", "testcase": "tcase_bench_ui003", "gt_mechanism": "UI_RENDERING", "fault": "TF-UI-003"},
-    {"scenario": "UI-DELAYED", "testcase": "tcase_bench_ui004", "gt_mechanism": "UI_RENDERING", "fault": "TF-UI-004"},
-    {"scenario": "API-503", "testcase": "tcase_bench_api002", "gt_mechanism": "API", "fault": "TF-API-002"},
-    {"scenario": "API-EDIT-500", "testcase": "tcase_bench_api003", "gt_mechanism": "API", "fault": "TF-API-003"},
-    {"scenario": "API-EDIT-503", "testcase": "tcase_bench_api004", "gt_mechanism": "API", "fault": "TF-API-004"},
-    {"scenario": "NET-TIMEOUT", "testcase": "tcase_bench_net002", "gt_mechanism": "NETWORK", "fault": "TF-NET-002"},
-    {"scenario": "LOC-SUBMIT", "testcase": "tcase_bench_loc001", "gt_mechanism": "LOCATOR", "fault": "TF-LOC-001"},
-    {"scenario": "LOC-NAME", "testcase": "tcase_bench_loc002", "gt_mechanism": "LOCATOR", "fault": "TF-LOC-002"},
-    {"scenario": "TIME-STRONG", "testcase": "tcase_bench_time002", "gt_mechanism": "TIMING", "fault": "TF-TIME-002"},
-    {"scenario": "TIME-RACE", "testcase": "tcase_bench_time003", "gt_mechanism": "TIMING", "fault": "TF-TIME-003"},
-    {"scenario": "SEC-CREATE-403", "testcase": "tcase_bench_sec001", "gt_mechanism": "AUTHORIZATION", "fault": "TF-SEC-001"},
-    {"scenario": "SEC-LIST-403", "testcase": "tcase_bench_sec002", "gt_mechanism": "AUTHORIZATION", "fault": "TF-SEC-002"},
-    {"scenario": "COMP-API-UI", "testcase": "tcase_bench_comp001", "gt_mechanism": "API", "fault": "TF-COMP-001"},
-    {"scenario": "COMP-DB-TIME", "testcase": "tcase_bench_comp002", "gt_mechanism": "PERSISTENCE", "fault": "TF-COMP-002"},
-    {"scenario": "COMP-LOC-UI", "testcase": "tcase_bench_comp003", "gt_mechanism": "LOCATOR", "fault": "TF-COMP-003"},
-    {"scenario": "FLAKY-DB", "testcase": "tcase_bench_flaky001", "gt_mechanism": "PERSISTENCE", "fault": "TF-FLAKY-001"},
-    {"scenario": "FLAKY-API", "testcase": "tcase_bench_flaky002", "gt_mechanism": "API", "fault": "TF-FLAKY-002"},
+    scenario_from_contract(name)
+    for name in (
+        "FALSE-PASS", "UI-MISSING", "API-500", "DB-DUP", "DB-LAG-9S", "UI-SILENT",
+        "UI-MISLEAD", "UI-DELAYED", "API-503", "API-EDIT-500", "API-EDIT-503",
+        "NET-TIMEOUT", "LOC-SUBMIT", "LOC-NAME", "TIME-STRONG", "TIME-RACE",
+        "SEC-CREATE-403", "SEC-LIST-403", "COMP-API-UI", "COMP-DB-TIME",
+        "COMP-LOC-UI", "FLAKY-DB", "FLAKY-API",
+    )
 ]
+
+CONTRACT_PROBLEMS = validate_contracts(V5_SCENARIOS)
 
 
 def _mechanism_of(arm: dict[str, Any]) -> str | None:
     return arm.get("mechanism")
 
 
-#: RUN-011-R1.2：历史归档只留下异常字符串，正向控制必须严格满足
-#: "HTTP 412 且 run PASSED（诊断正确地被跳过）"；其它异常一律保留为普通执行异常。
-_POSITIVE_CONTROL_STATUS_RE = re.compile(r"\b412\b")
-_POSITIVE_CONTROL_RUN_PASSED_RE = re.compile(r"run\s+PASSED", re.IGNORECASE)
-
-
 def is_positive_control(sample: dict[str, Any]) -> bool:
-    """判定正向控制记录：注入未触发故障，Run PASSED → 诊断正确跳过。
+    """判断是否属于 R1.2 的「非诊断记录」兼容桶（必须从诊断分母排除）。
 
-    未来运行应写入结构化字段 `positive_control`，避免继续依赖异常字符串识别；
-    结构化字段存在时优先采用，历史归档再回退到严格的异常文本匹配。
+    包括两类：预期通过的正向控制，以及 Flaky 故障未触发的样本。
+    RUN-012 起二者分别记录在 `expected_pass_controls` 与
+    `flaky_fault_not_triggered`，不再混为一个类别；本函数仅为兼容历史字段。
     """
-    flag = sample.get("positive_control")
-    if isinstance(flag, bool):
-        return flag
-    error = str(sample.get("error") or "")
-    return bool(
-        _POSITIVE_CONTROL_STATUS_RE.search(error)
-        and _POSITIVE_CONTROL_RUN_PASSED_RE.search(error)
-    )
+    classified = classify_record(sample)
+    if classified["classification_confidence"] == "LEGACY_412_HEURISTIC_NOT_CONFIRMED":
+        return True
+    return classified["record_class"] in {
+        RecordClass.NORMAL_POSITIVE_CONTROL.value,
+        RecordClass.FAULT_NOT_TRIGGERED.value,
+    }
+
+
+def enrich_record(sample: dict[str, Any]) -> dict[str, Any]:
+    """给执行记录补齐分类与完整上下文；不修改原始字节，只新增/覆盖派生字段。"""
+    classified = classify_record(sample)
+    contract = contract_of(sample)
+    merged = dict(sample)
+    merged.update(classified)
+    merged["classification"] = classified["record_class"]
+    if contract is not None and "fault_trigger_condition" not in merged:
+        merged["fault_trigger_condition"] = contract.fault_trigger_condition
+    return merged
+
+
+def _exception_record(plan_def: dict[str, Any], round_no: int, exc: BaseException) -> dict[str, Any]:
+    """异常记录保留 GT / 故障 / TestCase / 诊断上下文，不再只留三个字段。"""
+    error_type = type(exc).__name__
+    partial = getattr(exc, "sample", None)
+    if isinstance(partial, dict):
+        record = dict(partial)
+        record.setdefault("round", round_no)
+        record.setdefault("error", f"{error_type}: {exc}")
+        return enrich_record(record)
+    record: dict[str, Any] = {
+        "scenario": plan_def.get("scenario"),
+        "round": round_no,
+        "error": f"{error_type}: {exc}",
+        "error_type": error_type,
+        "error_message": str(exc)[:1000],
+    }
+    for key in (
+        "testcase", "fault", "gt_mechanism", "expected_run_outcome",
+        "control_kind", "fault_trigger_condition",
+    ):
+        if key in plan_def:
+            record[key] = plan_def[key]
+    return enrich_record(record)
 
 
 def compute_statistics(rounds: list[dict[str, Any]], probe_executions: list[dict[str, Any]] | None = None, probe_feedback: list[dict[str, Any]] | None = None) -> dict[str, Any]:
@@ -103,12 +130,37 @@ def compute_statistics(rounds: list[dict[str, Any]], probe_executions: list[dict
     普通执行异常不会被误归类为正向控制。
     """
     execution_records = [s for r in rounds for s in r.get("samples", [])]
+    classified_records = [classify_record(s) for s in execution_records]
+    class_counts = {
+        kind.value: sum(1 for c in classified_records if c["record_class"] == kind.value)
+        for kind in RecordClass
+    }
     positive_controls = [s for s in execution_records if is_positive_control(s)]
     unclassified_errors = [
         s for s in execution_records if s.get("error") and not is_positive_control(s)
     ]
     diagnosis_samples = [
         s for s in execution_records if not s.get("error") and not is_positive_control(s)
+    ]
+    # R1.2 兼容桶与 RUN-012 五分类的交叉核对：历史 9 条异常中，
+    # 8 条是契约声明的预期通过控制，1 条是 Flaky 故障未触发，不能混为一类。
+    legacy_control_keys = {
+        (s.get("scenario"), s.get("round")) for s in positive_controls
+    }
+    contract_controls = [
+        c for c in classified_records
+        if c["record_class"] == RecordClass.NORMAL_POSITIVE_CONTROL.value
+    ]
+    flaky_not_triggered = [
+        c for c in classified_records
+        if c["record_class"] == RecordClass.FAULT_NOT_TRIGGERED.value
+    ]
+    false_pass_records = [
+        c for c in classified_records if c["record_class"] == RecordClass.FALSE_PASS.value
+    ]
+    unknown_activation = [
+        c for c in classified_records
+        if c["record_class"] == RecordClass.UNKNOWN_FAULT_ACTIVATION.value
     ]
     failed_runs = [s for s in diagnosis_samples if s.get("verdict") in {"FAILED", "NOT_EVALUATED"}]
     n = len(failed_runs)
@@ -163,11 +215,10 @@ def compute_statistics(rounds: list[dict[str, Any]], probe_executions: list[dict
         return round(hits / len(preds), 4)
 
     def _false_pass() -> tuple[int, int, float | None]:
-        """Evaluator 级 False Pass：GT 期望失败，但实际 Run Verdict=PASSED。
+        """R1.2 兼容口径：有 GT 的诊断样本中 Run Verdict=PASSED 的数量。
 
-        只统计实际注入故障且有有效 GT 的诊断样本；正向控制（本应 PASSED）
-        与 F 臂预测机制均不参与计算。口径与 `DiagnosisEvaluator.false_pass_rate()`
-        一致：GT 未持久化却判 PASSED 才是 False Pass。
+        RUN-012 的严格口径见下方 false_pass_evaluation：额外要求故障触发证据。
+        两者并列保留，避免悄悄改变历史数字；新报告以严格口径为准。
         """
         gt_samples = [
             s for s in diagnosis_samples if str(s.get("gt_mechanism") or "").strip()
@@ -179,6 +230,49 @@ def compute_statistics(rounds: list[dict[str, Any]], probe_executions: list[dict
         return count, denominator, round(count / denominator, 4) if denominator else None
 
     false_pass_count, false_pass_denominator, false_pass_rate = _false_pass()
+
+    # ---- RUN-012 WP0：与 Evaluator 业务语义一致的严格 False Pass 口径 ----
+    # 分子：有有效 GT + 场景预期失败 + 确认故障已触发 + 实际 Run Verdict=PASSED；
+    # 分母：有有效 GT + 场景预期失败 + 确认故障已触发的全部样本。
+    # 412 不自动排除；故障未触发的 Flaky 样本与正向控制都不进分母。
+    confirmed_failing = [c for c in classified_records if is_confirmed_failing_sample(c)]
+    strict_fp_count = sum(
+        1 for c in confirmed_failing
+        if c["actual_verdict"] == "PASSED"
+        and c["record_class"] == RecordClass.FALSE_PASS.value
+    )
+    strict_denominator = len(confirmed_failing)
+    inferred_only = [
+        c for c in confirmed_failing if c["fault_effect_status"] == TriState.INFERRED_FROM_VERDICT.value
+    ]
+    strict_evidence_level = (
+        "NOT_MEASURED" if not confirmed_failing
+        else "INFERRED_ONLY" if len(inferred_only) == len(confirmed_failing)
+        else "MIXED"
+    )
+    false_pass_evaluation = {
+        "definition": (
+            "GT 有效 + 场景预期失败 + 故障触发已确认（CONFIRMED 或由失败 Verdict 推断）"
+            " + Run Verdict=PASSED；诊断接口 412 不排除记录"
+        ),
+        "numerator": strict_fp_count,
+        "denominator": strict_denominator,
+        "rate": round(strict_fp_count / strict_denominator, 4) if strict_denominator else None,
+        "excluded_positive_controls": len(contract_controls),
+        "excluded_flaky_not_triggered": len(flaky_not_triggered),
+        "excluded_unknown_activation": len(unknown_activation),
+        "evidence_level": strict_evidence_level,
+        "status": (
+            "NOT_MEASURED" if not confirmed_failing
+            else "PARTIAL" if strict_evidence_level == "INFERRED_ONLY"
+            else "VERIFIED"
+        ),
+        "note": (
+            "历史归档未记录 fault_state 快照，37 条负样本的故障生效只能由 Verdict 推断，"
+            "因此历史指标只能标 PARTIAL；未来运行写入 fault_activation_status / "
+            "fault_effect_status 后方可升级为 VERIFIED"
+        ),
+    }
 
     def _abstention_accuracy(arm: str) -> float | None:
         """弃权准确率：弃权（无机制/INCONCLUSIVE）时 GT 是否确实不可判定（此处以
@@ -242,6 +336,17 @@ def compute_statistics(rounds: list[dict[str, Any]], probe_executions: list[dict
         "positive_control_records": len(positive_controls),
         "failure_scenario_coverage": failure_scenario_coverage,
         "unclassified_error_records": len(unclassified_errors),
+        # RUN-012 WP0：五分类 + 严格 False Pass；旧字段含义不变以便历史对照。
+        "record_classification_counts": class_counts,
+        "expected_pass_controls": len(contract_controls),
+        "flaky_fault_not_triggered": len(flaky_not_triggered),
+        "false_pass_candidates": len(false_pass_records),
+        "unknown_fault_activation": len(unknown_activation),
+        "legacy_positive_control_keys": sorted(
+            f"{s}:{r}" for s, r in legacy_control_keys if s is not None
+        ),
+        "false_pass_evaluation": false_pass_evaluation,
+        "contract_problems": list(CONTRACT_PROBLEMS),
         "primary_cause_accuracy": {arm: _accuracy(arm) for arm in ("A_raw_report", "C_rule", "D_graph_ablation", "E_probe_no_feedback", "F_probe_post_hoc_aware", "G_probe_unknown_time", "H_llm_advisor")},
         "macro_f1": {arm: _macro_f1(arm) for arm in ("C_rule", "F_probe_post_hoc_aware")},
         "selective_accuracy": {arm: _selective_accuracy(arm) for arm in ("C_rule", "F_probe_post_hoc_aware")},
@@ -346,8 +451,12 @@ def main() -> int:
                 PILOT_RESULT["probe_feedback_applied"].clear()
                 sample = run_scenario(engineer, ex, tf, plan_def)
                 sample["round"] = rnd
+                # 补齐场景契约、故障激活证据与诊断状态，不允许上下文在执行后才丢失。
+                sample = enrich_record(sample)
             except Exception as exc:  # noqa: BLE001
-                sample = {"scenario": plan_def["scenario"], "round": rnd, "error": f"{type(exc).__name__}: {exc}"}
+                # 412 是「Run PASSED → 诊断正确跳过」的可记录业务结果，
+                # 但因异常路径截断而丢失的上下文必须在这里补回。
+                sample = _exception_record(plan_def, rnd, exc)
             round_rec["samples"].append(sample)
             out["probe_executions"].extend(PILOT_RESULT["probe_executions"])
             out["probe_feedback_applied"].extend(PILOT_RESULT["probe_feedback_applied"])
@@ -361,6 +470,22 @@ def main() -> int:
 
     out["statistics"] = compute_statistics(out["rounds"], out["probe_executions"], out["probe_feedback_applied"])
     out["ended_at"] = time.time()
+    check(
+        "V5 场景契约完整（期望/控制类别/故障触发条件）",
+        not CONTRACT_PROBLEMS,
+        CONTRACT_PROBLEMS,
+        phase="v5",
+    )
+    check(
+        "V5 无未知故障触发状态记录",
+        out["statistics"]["unknown_fault_activation"] == 0
+        and out["statistics"]["unclassified_error_records"] == 0,
+        {
+            "unknown": out["statistics"]["unknown_fault_activation"],
+            "unclassified_errors": out["statistics"]["unclassified_error_records"],
+        },
+        phase="v5",
+    )
     check(
         "V5 样本量 ≥ 19 场景",
         len(V5_SCENARIOS) >= 19

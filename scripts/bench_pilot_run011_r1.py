@@ -49,6 +49,14 @@ PILOT_SCENARIOS: list[dict[str, Any]] = [
 RESULT: dict[str, Any] = {"scenarios": [], "probe_executions": [], "probe_evidence_new": [], "probe_feedback_applied": []}
 
 
+class ScenarioExecutionError(RuntimeError):
+    """保留场景上下文的执行异常；诊断 412 是可记录业务结果，不是丢弃上下文的理由。"""
+
+    def __init__(self, message: str, sample: dict[str, Any]) -> None:
+        super().__init__(message)
+        self.sample = sample
+
+
 def _login(api: str, password: str) -> dict[str, Http]:
     roles = {name: Http(api, name) for name in ("viewer", "qa-engineer", "qa-lead", "platform-admin")}
     for name, s in roles.items():
@@ -160,13 +168,45 @@ def run_scenario(
         "independent_worker": out["trace"].get("independent_worker"),
         "arms": {},
     }
+    for key in (
+        "expected_run_outcome", "control_kind", "fault_trigger_condition",
+    ):
+        if key in plan_def:
+            sample[key] = plan_def[key]
+
+    # ---- 故障激活证据（真实快照，不用异常字符串反推）----
+    try:
+        state = tf.fault_state()
+        active = list(state.get("active") or [])
+        fault_ids = {plan_def["fault"]}
+        # 复合故障的底层机制也算触发证据。
+        fault_ids.update({
+            "TF-API-001": {"TF-COMP-001"},
+            "TF-UI-003": {"TF-COMP-001"},
+            "TF-DB-001": {"TF-COMP-002"},
+            "TF-TIME-001": {"TF-COMP-002"},
+            "TF-LOC-001": {"TF-COMP-003"},
+            "TF-UI-002": {"TF-COMP-003"},
+        }.get(plan_def["fault"], set()))
+        sample["fault_state_snapshot"] = state
+        sample["fault_activation_status"] = (
+            "CONFIRMED" if fault_ids.intersection(active) else "UNKNOWN"
+        )
+    except Exception as exc:  # noqa: BLE001 - 快照失败只降低证据等级，不伪造成功
+        sample["fault_state_snapshot"] = {"error": f"{type(exc).__name__}: {exc}"}
+        sample["fault_activation_status"] = "UNKNOWN"
 
     # ---- 规则诊断（LLM 固定关闭，对照组口径纯净）----
     diag_t0 = time.perf_counter()
-    diag = engineer.call(
-        "POST", f"/api/v1/runs/{run_id}/diagnose?use_llm=false", None,
-        expect_status=(200, 201), timeout=300,
-    )
+    try:
+        diag = engineer.call(
+            "POST", f"/api/v1/runs/{run_id}/diagnose?use_llm=false", None,
+            expect_status=(200, 201), timeout=300,
+        )
+    except Exception as exc:  # noqa: BLE001
+        sample["diagnosis_status"] = "ERROR"
+        sample["error"] = f"{type(exc).__name__}: {exc}"
+        raise ScenarioExecutionError(sample["error"], sample) from exc
     diag_latency_ms = round((time.perf_counter() - diag_t0) * 1000, 1)
     diag_id = diag["diagnosis_id"]
     sample["diagnosis_id"] = diag_id
