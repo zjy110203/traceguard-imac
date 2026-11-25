@@ -301,9 +301,9 @@ class RunPipeline:
         started: float,
         heartbeat: LeaseHeartbeat | None = None,
     ) -> dict[str, Any]:
-        default_base = (
-            "http://127.0.0.1:8001" if task.get("application") == "teamflow" else base_url_default()
-        )
+        # RUN-012 WP4：默认目标地址一律取服务端配置（TG_TEAMFLOW_BASE_URL），
+        # 不再按 application 硬编码 8001——否则自定义端口的被测目标永远打不到。
+        default_base = base_url_default()
         base_url = str(tc.run_config.get("base_url", default_base)).rstrip("/")
         run_config = dict(tc.run_config or {})
         run_config.setdefault("base_url", base_url)

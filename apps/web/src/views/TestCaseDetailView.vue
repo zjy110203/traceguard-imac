@@ -2,11 +2,20 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, fmtDuration, fmtTime } from '../api'
+import { currentWorkspaceId, wsPath } from '../workspace'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import PageHeader from '../components/PageHeader.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import { notify, notifyError } from '../toast'
 import type { Run, TestCaseDetail, TestCaseVersion } from '../types'
+
+interface OracleOption {
+  oracle_id: string
+  version: number
+  assertion_id: string
+  approved: boolean
+  expected_behavior: string
+}
 
 const route = useRoute()
 const router = useRouter()
@@ -14,33 +23,88 @@ const id = String(route.params.id)
 const detail = ref<TestCaseDetail | null>(null)
 const versions = ref<(TestCaseVersion & { immutable: boolean })[]>([])
 const runs = ref<Run[]>([])
+const oracles = ref<OracleOption[]>([])
+const bindingDraft = ref<Record<string, string>>({})
 const loading = ref(true)
 const error = ref('')
 const busy = ref('')
 const activeVersion = ref<number | null>(null)
 
 const current = computed<TestCaseVersion | null>(() => {
-  if (!activeVersion.value) return detail.value?.latest ?? null
-  return versions.value.find((v) => v.version === activeVersion.value) ?? detail.value?.latest ?? null
+  const latest = detail.value?.latest ?? null
+  if (!activeVersion.value) return latest
+  const found = versions.value.find((v) => v.version === activeVersion.value)
+  if (found) return found
+  // 列表里没有该版本时回退到服务端返回的最新版本（结构一致：断言/步骤在顶层）
+  return latest
 })
 
 async function load() {
   loading.value = true
   try {
-    const [d, v, r] = await Promise.all([
+    const [d, v, r, o] = await Promise.all([
       api.get<TestCaseDetail>(`/testcases/${id}`),
       api.get<(TestCaseVersion & { immutable: boolean })[]>(`/testcases/${id}/versions`),
       api.get<Run[]>('/runs?limit=200'),
+      api.get<OracleOption[]>(wsPath('/oracles')).catch(() => [] as OracleOption[]),
     ])
     detail.value = d
-    versions.value = v
+    // 版本列表接口返回 {testcase_id, version, review_status, immutable, doc:{...}}，
+    // 断言/步骤在 doc 内；不展开的话断言表格与 Oracle 绑定控件全部不渲染。
+    versions.value = v.map((row) => {
+      const doc = (row as unknown as { doc?: Partial<TestCaseVersion> }).doc ?? {}
+      return { ...doc, ...row } as TestCaseVersion & { immutable: boolean }
+    })
     runs.value = r.filter((x) => String(x.testcase_version_id).split('@')[0] === id)
+    oracles.value = o
     if (!activeVersion.value) activeVersion.value = d.latest_version
+    initBindingDraft()
     error.value = ''
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
   } finally {
     loading.value = false
+  }
+}
+
+function initBindingDraft() {
+  const cur = current.value
+  if (!cur) return
+  const draft: Record<string, string> = {}
+  for (const a of cur.assertions || []) {
+    draft[a.assertion_id] = a.oracle_id || ''
+  }
+  bindingDraft.value = draft
+}
+
+function oracleOptionsFor(assertionId: string): OracleOption[] {
+  return oracles.value.filter((o) => o.assertion_id === assertionId)
+}
+
+async function saveBindings() {
+  const cur = current.value
+  if (!cur) return
+  const bindings: Record<string, { oracle_id: string }> = {}
+  for (const a of cur.assertions || []) {
+    const chosen = bindingDraft.value[a.assertion_id]
+    if (chosen) bindings[a.assertion_id] = { oracle_id: chosen }
+  }
+  if (!Object.keys(bindings).length) {
+    notify('请先为必需断言选择 Oracle', true)
+    return
+  }
+  busy.value = 'bind'
+  try {
+    await api.post(`/testcases/${id}/versions/${cur.version}/oracle-bindings`, {
+      bindings,
+      actor: 'role:qa-lead',
+    })
+    notify('Oracle 绑定已保存')
+    await load()
+  } catch (e) {
+    notifyError(e)
+  } finally {
+    busy.value = ''
   }
 }
 
@@ -50,6 +114,22 @@ async function execute() {
     const r = await api.post<{ run_id: string }>(`/testcases/${id}/execute`, { sync: false })
     notify('已入队执行')
     router.push(`/runs/${r.run_id}`)
+  } catch (e) {
+    notifyError(e)
+  } finally {
+    busy.value = ''
+  }
+}
+
+async function startStabilityReplay() {
+  const v = current.value
+  if (!v) return
+  busy.value = 'replay'
+  try {
+    const r = await api.post<{ replay_id: string; status: string }>(
+      `/testcases/${id}/versions/${v.version}/stability-replay?repeats=3`,
+    )
+    notify(`稳定性回放已启动：${r.replay_id}`)
   } catch (e) {
     notifyError(e)
   } finally {
@@ -155,7 +235,14 @@ onMounted(load)
             </div>
 
             <div v-if="current" class="card">
-              <div class="card-head"><h2>断言与 Oracle 绑定</h2></div>
+              <div class="card-head">
+                <h2>断言与 Oracle 绑定</h2>
+                <div class="actions">
+                  <button class="sm primary"
+                    :disabled="busy === 'bind' || current.review_status === 'APPROVED'"
+                    @click="saveBindings">保存绑定</button>
+                </div>
+              </div>
               <div class="card-body tight scroll-x">
                 <table>
                   <thead><tr><th>断言</th><th>类型</th><th>必需</th><th>期望</th><th>Oracle</th></tr></thead>
@@ -168,10 +255,23 @@ onMounted(load)
                       <td><span class="badge neutral">{{ a.kind }}</span></td>
                       <td class="small">{{ a.required ? '是' : '否' }}</td>
                       <td class="mono small">{{ JSON.stringify(a.expected) }}</td>
-                      <td class="mono small">{{ a.oracle_id || '—' }}</td>
+                      <td>
+                        <select v-if="current.review_status !== 'APPROVED'"
+                          v-model="bindingDraft[a.assertion_id]" class="sm" style="max-width: 220px">
+                          <option value="">未绑定</option>
+                          <option v-for="o in oracleOptionsFor(a.assertion_id)" :key="o.oracle_id + '@' + o.version"
+                            :value="o.oracle_id">
+                            {{ o.oracle_id }}@v{{ o.version }}{{ o.approved ? '' : '（未审批）' }}
+                          </option>
+                        </select>
+                        <span v-else class="mono small">{{ a.oracle_id || '—' }}</span>
+                      </td>
                     </tr>
                   </tbody>
                 </table>
+                <p v-if="current.review_status !== 'APPROVED'" class="small muted" style="margin-top: 8px">
+                  审核通过前必须为必需断言绑定<b>已审批</b> Oracle（门禁：ORACLE_BINDING_INCOMPLETE）。已 APPROVED 的版本内容不可变，需新建版本再改绑定。
+                </p>
               </div>
             </div>
           </div>
@@ -190,7 +290,11 @@ onMounted(load)
                 <div class="flex" style="margin-top: 10px">
                   <button class="sm primary" :disabled="busy === 'review'" @click="review('APPROVED')">审核通过</button>
                   <button class="sm danger" :disabled="busy === 'review'" @click="review('REJECTED')">拒绝</button>
+                  <button class="sm" :disabled="busy === 'replay'" @click="startStabilityReplay">启动稳定性回放</button>
                 </div>
+                <p class="small muted" style="margin-top: 6px">
+                  编译来源为 compiler/healed 的版本，审核通过前必须有「同版本、STABLE_PASS、Oracle 完整」的稳定性回放记录。
+                </p>
               </div>
             </div>
 

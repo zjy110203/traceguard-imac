@@ -29,6 +29,13 @@ logger = get_logger("traceguard.observer.playwright")
 ArtifactSink = Callable[[bytes, str, str], dict[str, Any]]
 
 
+def _default_base_url() -> str:
+    """默认目标地址取服务端配置（TG_TEAMFLOW_BASE_URL），不硬编码端口。"""
+    from traceguard_core.config import get_settings
+
+    return str(get_settings().teamflow_base_url or "http://127.0.0.1:8001")
+
+
 class PlaywrightObserver(Observer):
     mode = "playwright"
 
@@ -49,14 +56,14 @@ class PlaywrightObserver(Observer):
         self._capture_aria = capture_aria
         self._config = config
         self.session: BrowserSession | None = None
-        self._base_url = "http://127.0.0.1:8001"
+        self._base_url = _default_base_url()
         self.policy = TargetPolicy.from_base_url(self._base_url)
         self._trace_data: bytes | None = None
         self.browser_info: dict[str, Any] = {}
 
     # ------------------------------------------------------------------ setup
     def setup(self, run_config: dict[str, Any]) -> None:
-        self._base_url = str(run_config.get("base_url", "http://127.0.0.1:8001")).rstrip("/")
+        self._base_url = str(run_config.get("base_url") or _default_base_url()).rstrip("/")
         extra = run_config.get("allowed_origins") or []
         self.policy = TargetPolicy.from_origins(
             [self._base_url, *[str(o) for o in extra if o]],

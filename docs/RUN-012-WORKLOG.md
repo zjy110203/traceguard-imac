@@ -104,3 +104,30 @@
 
 - `/inbox/stats`、`/probes/audit`、`/events/conflicts` 维持 RUN-011-R1.2 的 `system.observe` admin 专属口径；`/benchmark/*` 无 Workspace 归属实体，未改。
 - 下一项：WP4 — 核心业务 UI 闭环（Intent→TestCase→Oracle→Run→Diagnosis→Repair→Rollback 全链操作入口与状态反馈）。
+
+---
+
+## WP4：核心业务 UI 闭环
+
+- **开始时间**：2026-11-25 18:10 CST
+- **完成时间**：2026-11-25 20:44 CST
+
+### 修改内容
+
+1. `apps/web/src/views/TestCaseDetailView.vue`：新增 Oracle 绑定控件与保存绑定（补齐审核门禁的前置 UI 入口）；修正版本列表 `doc` 未展开导致断言表格整体不渲染的缺陷；新增「启动稳定性回放」入口。
+2. `apps/web/src/views/TestCasesView.vue`：创建用例不再硬编码 `base_url`，改从 `/system/config` 读取服务端配置的目标地址。
+3. `apps/web/src/views/RepairsView.vue`：提案弹窗内新增「LLM 建议」入口（未配凭据时如实提示，不伪造成功）。
+4. `packages/execution/traceguard_execution/runtime/pipeline.py` 与 `playwright_observer.py`：默认目标地址统一取 `Settings.teamflow_base_url`，不再按 application/端口硬编码。
+5. 新增 `scripts/business_loop_ui_acceptance_run012.py` 与 `docs/RUN-012-WP4-BUSINESS-LOOP-UI.md`。
+
+### 测试结果
+
+- **真实浏览器闭环验收：29 passed / 0 failed**（真实 Chromium + 真实 API + 真实 TeamFlow + 真实 Worker + 真实浏览器执行），
+  覆盖 Intent→TestCase→Oracle→绑定→审核→执行→故障注入→诊断→修复→沙箱→审批→晋升→回滚全链，每步均服务端回读。
+- 全量：**738 passed, 16 skipped**；`ruff check`/`format` 通过；`npm run build` 通过。
+- 一次 `test_migration_v8` 并发迁移用例偶发失败（Barrier 时序敏感），单独复跑与后续两次全量均通过，判定为基线时序敏感。
+
+### 剩余问题 / 下一项
+
+- compiler/healed 用例的「稳定性回放→审核」完整成功路径需多轮真实浏览器执行，本轮只验证入口可用；真实 LLM 模型输出路径待 WP5 覆盖。
+- 下一项：WP5 — AI 可靠性升级（Diagnosis Advisor JSON 解析、Schema、重试/Fallback、追踪与离线测试）。

@@ -19,6 +19,8 @@ const filter = ref('')
 const keyword = ref('')
 const busy = ref('')
 const showCreate = ref(false)
+/** 被测目标地址来自服务端配置（TG_TEAMFLOW_BASE_URL），不再前端硬编码端口。 */
+const targetBaseUrl = ref('')
 
 const form = ref({
   title: '新建项目并校验持久化',
@@ -46,9 +48,14 @@ const filtered = computed(() =>
 async function load() {
   loading.value = true
   try {
-    const [t, i] = await Promise.all([api.get<TestCaseSummary[]>(wsPath('/testcases')), api.get<Intent[]>(wsPath('/intents'))])
+    const [t, i, cfg] = await Promise.all([
+      api.get<TestCaseSummary[]>(wsPath('/testcases')),
+      api.get<Intent[]>(wsPath('/intents')),
+      api.get<{ teamflow_base_url?: string }>('/system/config').catch(() => ({}) as { teamflow_base_url?: string }),
+    ])
     items.value = t
     intents.value = i
+    targetBaseUrl.value = cfg.teamflow_base_url || ''
     error.value = ''
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
@@ -99,13 +106,16 @@ async function create() {
       notify('步骤/断言 JSON 解析失败', true)
       return
     }
+    // base_url 省略时由服务端按 TG_TEAMFLOW_BASE_URL 解析；前端只在明确知道配置时写入。
+    const runConfig: Record<string, unknown> = { fail_fast: false, trace: true }
+    if (targetBaseUrl.value) runConfig.base_url = targetBaseUrl.value
     await api.post('/testcases', {
       workspace_id: currentWorkspaceId.value,
       title: form.value.title,
       intent_ref: form.value.intent_ref || null,
       steps,
       assertions,
-      run_config: { base_url: 'http://127.0.0.1:8001', fail_fast: false, trace: true },
+      run_config: runConfig,
       cleanup_policy: 'RESET_DATA',
     })
     notify('用例已创建（待审核）')

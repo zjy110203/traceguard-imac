@@ -133,6 +133,48 @@ async function propose() {
   }
 }
 
+async function llmSuggest() {
+  if (!form.value.testcase_id) {
+    notify('请先选择测试用例', true)
+    return
+  }
+  busy.value = 'llm'
+  try {
+    const r = await api.post<{ called: boolean; fallback: boolean; reason?: string; changes: Record<string, unknown>[]; warnings: string[] }>(
+      '/repairs/llm-suggest',
+      {
+        testcase_id: form.value.testcase_id,
+        base_version: form.value.base_version,
+        propose: false,
+      },
+    )
+    if (!r.called && r.reason === 'not_configured') {
+      notify('LLM 未配置（缺凭据），无法生成建议；可手动填写修复提案', true)
+      return
+    }
+    if (!r.called && r.reason === 'disabled') {
+      notify('修复规划器已禁用，无法生成 LLM 建议', true)
+      return
+    }
+    const first = (r.changes || [])[0] as { step_index?: number; value?: { strategy?: string; value?: string }; reason?: string } | undefined
+    if (first) {
+      if (typeof first.step_index === 'number') form.value.step_index = first.step_index
+      if (first.value?.strategy) form.value.strategy = first.value.strategy
+      if (first.value?.value) form.value.value = String(first.value.value)
+      if (first.reason) form.value.reason = first.reason
+      showCreate.value = true
+      notify(`LLM 建议${r.fallback ? '（规则兜底）' : ''}：已填入首个候选，仍需人工确认后创建提案`)
+    } else {
+      notify('LLM 未给出可用候选，请手动填写', true)
+    }
+    if (r.warnings?.length) notify(r.warnings[0], true)
+  } catch (e) {
+    notifyError(e)
+  } finally {
+    busy.value = ''
+  }
+}
+
 async function action(path: string, body?: Record<string, unknown>, label = '') {
   if (!selected.value) return
   busy.value = path
@@ -370,6 +412,7 @@ onMounted(load)
       <p class="small muted">仅允许修改步骤定位/值/等待/数据引用；任何涉及断言、Oracle、业务语义的变更会被直接拒绝。</p>
       <template #footer>
         <button @click="showCreate = false">取消</button>
+        <button :disabled="busy === 'llm' || !form.testcase_id" @click="llmSuggest">LLM 建议</button>
         <button class="primary" :disabled="busy === 'create' || !form.testcase_id || !form.value" @click="propose">创建提案</button>
       </template>
     </ModalShell>
