@@ -1,0 +1,25 @@
+{"ts": "2026-11-25T15:13:00.557993+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "worker_started", "worker": "r13-w3", "once": false, "poll": 0.4}
+{"ts": "2026-11-25T15:14:44.298995+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "worker_shutdown_requested", "signal": 15}
+{"ts": "2026-11-25T15:14:44.440133+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "worker_stopped", "executed": 0}
+{"ts": "2026-11-25T15:17:08.778009+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "worker_started", "worker": "r13-w3", "once": false, "poll": 0.4}
+{"ts": "2026-11-25T15:17:08.781910+00:00", "level": "WARNING", "logger": "traceguard.worker", "message": "expired_leases_reaped", "count": 1}
+{"ts": "2026-11-25T15:17:08.785617+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_claimed", "run_id": "run_1795619819273d414744f75fa", "attempt": 1}
+{"ts": "2026-11-25T15:17:08.791607+00:00", "level": "INFO", "logger": "traceguard.browser.egress", "message": "egress_proxy_started", "url": "http://127.0.0.1:56965", "worker_id": "r13-w3"}
+{"ts": "2026-11-25T15:17:08.802329+00:00", "level": "INFO", "logger": "traceguard.browser", "message": "egress_warmup_ok", "origins": 1, "proxy": "http://127.0.0.1:56965"}
+{"ts": "2026-11-25T15:17:09.185427+00:00", "level": "INFO", "logger": "traceguard.browser", "message": "browser_launched", "channel": "bundled-chromium", "egress": true, "proxy": "http://127.0.0.1:56965"}
+{"ts": "2026-11-25T15:17:11.955327+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_finished", "run_id": "run_1795619819273d414744f75fa", "verdict": "PASSED", "status": "COMPLETED"}
+{"ts": "2026-11-25T15:17:20.280907+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "worker_shutdown_requested", "signal": 15}
+{"ts": "2026-11-25T15:17:20.543612+00:00", "level": "WARNING", "logger": "traceguard.browser", "message": "browser_disconnected"}
+{"ts": "2026-11-25T15:17:20.591316+00:00", "level": "INFO", "logger": "traceguard.browser.egress", "message": "egress_proxy_stopped", "worker_id": "r13-w3"}
+{"ts": "2026-11-25T15:17:20.591434+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "worker_stopped", "executed": 1}
+{"ts": "2026-11-25T15:20:38.527211+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "worker_started", "worker": "r13-w3", "once": false, "poll": 0.4}
+{"ts": "2026-11-25T15:20:38.530279+00:00", "level": "WARNING", "logger": "traceguard.worker", "message": "expired_leases_reaped", "count": 1}
+{"ts": "2026-11-25T15:20:38.533173+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_claimed", "run_id": "run_1795620028908f72b77c4c2ba", "attempt": 1}
+{"ts": "2026-11-25T15:20:38.537596+00:00", "level": "INFO", "logger": "traceguard.browser.egress", "message": "egress_proxy_started", "url": "http://127.0.0.1:58148", "worker_id": "r13-w3"}
+{"ts": "2026-11-25T15:20:38.548292+00:00", "level": "INFO", "logger": "traceguard.browser", "message": "egress_warmup_ok", "origins": 1, "proxy": "http://127.0.0.1:58148"}
+{"ts": "2026-11-25T15:20:38.984851+00:00", "level": "INFO", "logger": "traceguard.browser", "message": "browser_launched", "channel": "bundled-chromium", "egress": true, "proxy": "http://127.0.0.1:58148"}
+{"ts": "2026-11-25T15:20:41.719745+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_finished", "run_id": "run_1795620028908f72b77c4c2ba", "verdict": "PASSED", "status": "COMPLETED"}
+{"ts": "2026-11-25T15:20:49.902281+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "worker_shutdown_requested", "signal": 15}
+{"ts": "2026-11-25T15:20:50.290399+00:00", "level": "WARNING", "logger": "traceguard.browser", "message": "browser_disconnected"}
+{"ts": "2026-11-25T15:20:50.329949+00:00", "level": "INFO", "logger": "traceguard.browser.egress", "message": "egress_proxy_stopped", "worker_id": "r13-w3"}
+{"ts": "2026-11-25T15:20:50.330063+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "worker_stopped", "executed": 1}

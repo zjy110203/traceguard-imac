@@ -135,6 +135,42 @@ def test_renew_lease_fails_after_losing_ownership() -> None:
     assert svc.renew_lease(rid, "worker-A", lease["fencing_token"]) is False
 
 
+def test_lease_valid_is_synchronous_guard_for_stale_worker() -> None:
+    """RUN-013 WP1：步骤/证据写入前的同步租约校验。
+
+    异步心跳可能最多 ttl/3 才标记 lost；旧 Worker 被 SIGSTOP 后恢复时，
+    必须在写证据前用同步查询确认 lease_owner + fencing_token 仍然匹配。
+    """
+    svc = _svc()
+    tid = _mk_task(svc, "idem-unique-lease-valid")
+    rid = svc.create_run(tid, "tcase_create001@1")["run_id"]
+    lease_a = svc.acquire_lease(rid, "worker-A", ttl_seconds=0.1)
+    assert svc.lease_valid(rid, "worker-A", lease_a["fencing_token"]) is True
+    assert svc.lease_valid(rid, "worker-B", lease_a["fencing_token"]) is False
+
+    time.sleep(0.15)
+    lease_b = svc.acquire_lease(rid, "worker-B", ttl_seconds=30)
+    assert svc.lease_valid(rid, "worker-A", lease_a["fencing_token"]) is False
+    assert svc.lease_valid(rid, "worker-B", lease_b["fencing_token"]) is True
+
+    # 终态后旧租约一律无效
+    svc.submit_result(
+        rid,
+        "worker-B",
+        lease_b["fencing_token"],
+        execution_status="RUNNING",
+        test_verdict="NOT_EVALUATED",
+    )
+    svc.submit_result(
+        rid,
+        "worker-B",
+        lease_b["fencing_token"],
+        execution_status="FINALIZING",
+        test_verdict="PASSED",
+    )
+    assert svc.lease_valid(rid, "worker-B", lease_b["fencing_token"]) is False
+
+
 def test_execution_status_and_verdict_independent() -> None:
     """Run 的 execution_status 与 test_verdict 是独立字段。"""
     svc = _svc()

@@ -120,6 +120,7 @@ class RunPipeline:
         started = time.time()
         report: dict[str, Any] = {}
         observer_mode = ""
+        observer: Observer | None = None
         try:
             tc = self._load_testcase(run)
             if tc is None:
@@ -142,6 +143,25 @@ class RunPipeline:
             verdict = report["test_verdict"]
             execution_status = report["execution_status"]
         except AppError as exc:
+            if self._is_lease_lost(exc):
+                # RUN-013 WP1：租约已被接管 → 旧 Worker 不得发事件、不得提交结果。
+                # 该 Run 的最终状态由新 Worker 负责；这里只记录并退出。
+                if observer is not None:
+                    try:
+                        observer.teardown()
+                    except Exception:  # noqa: BLE001
+                        pass
+                heartbeat.stop()
+                logger.warning(
+                    "lease_lost_abandon", run_id=run_id, worker=self.worker_id, token=token
+                )
+                return RunOutcome(
+                    run_id=run_id,
+                    execution_status="LEASE_LOST",
+                    test_verdict="NOT_EVALUATED",
+                    observer_mode=observer_mode,
+                    report={"error": "LEASE_LOST"},
+                )
             execution_status, verdict, observer_mode = "FAILED", "NOT_EVALUATED", observer_mode
             report = self._failure_report(run, str(exc.message), started, observer_mode)
             self._emit(
@@ -164,16 +184,29 @@ class RunPipeline:
             )
 
         heartbeat.stop()
-        self.tasks.submit_result(
-            run_id,
-            self.worker_id,
-            token,
-            execution_status=execution_status,
-            test_verdict=verdict,
-            report=report,
-            observer_mode=observer_mode or None,
-            error=report.get("error"),
-        )
+        try:
+            self.tasks.submit_result(
+                run_id,
+                self.worker_id,
+                token,
+                execution_status=execution_status,
+                test_verdict=verdict,
+                report=report,
+                observer_mode=observer_mode or None,
+                error=report.get("error"),
+            )
+        except AppError as exc:
+            if self._is_lease_lost(exc):
+                # 最后一步被新 Worker 接管：提交被 Fencing 拒绝，旧 Worker 不得再发完成事件。
+                logger.warning("submit_rejected_stale", run_id=run_id, worker=self.worker_id)
+                return RunOutcome(
+                    run_id=run_id,
+                    execution_status="LEASE_LOST",
+                    test_verdict="NOT_EVALUATED",
+                    observer_mode=observer_mode,
+                    report={"error": "LEASE_LOST"},
+                )
+            raise
         self._emit(
             "run.completed",
             workspace_id,
@@ -212,6 +245,16 @@ class RunPipeline:
         # 契约模型是 extra=forbid，必须按模型字段过滤而不是只删一个键
         allowed = set(TestCaseVersion.model_fields)
         return TestCaseVersion(**{k: v for k, v in doc.items() if k in allowed})
+
+    def _ensure_lease(self, run_id: str, token: int) -> None:
+        """写证据前的同步租约校验（异步心跳之外的强约束）。"""
+        if not self.tasks.lease_valid(run_id, self.worker_id, token):
+            raise AppError(ErrorCode.CONFLICT, "LEASE_LOST: 租约已被回收，停止写入证据")
+
+    @staticmethod
+    def _is_lease_lost(exc: AppError) -> bool:
+        text = str(getattr(exc, "message", "") or "")
+        return "LEASE_LOST" in text or "STALE_FENCING_TOKEN" in text
 
     def _guard_reviewed(self, tc: TestCaseVersion, task: dict[str, Any] | None = None) -> None:
         # 沙箱验证允许执行 PENDING 候选版本（显式 sandbox 标记，不是普通入口）
@@ -331,6 +374,7 @@ class RunPipeline:
         for idx, step in enumerate(tc.steps):
             if heartbeat is not None and heartbeat.lost:
                 raise AppError(ErrorCode.CONFLICT, "LEASE_LOST: 租约已被回收，停止写入证据")
+            self._ensure_lease(run["run_id"], token)
             if step.action == "api":
                 rec = ObservationRecord(
                     step_id=step.step_id, action="api", observation={"preset": True}
@@ -354,6 +398,9 @@ class RunPipeline:
                 break
 
             rec = observer.observe(step, {"index": idx})
+            # 观测期间可能已被新 Worker 接管：写步骤/证据前必须同步复核租约，
+            # 否则旧 Worker 恢复后会向已完成的 Run 追加重复证据。
+            self._ensure_lease(run["run_id"], token)
             records.append(rec)
             status = "FAILED" if rec.error else "PASSED"
             self.tasks.record_step(
@@ -407,7 +454,9 @@ class RunPipeline:
                 trace_ref = None
 
         # Trusted Oracle：独立业务状态查询（页面文本不算业务事实）
+        self._ensure_lease(run["run_id"], token)
         state_ctx = self._query_states(tc, base_url)
+        self._ensure_lease(run["run_id"], token)
         state_evidence = self._record_state_evidence(
             workspace_id, run["run_id"], tc, base_url, state_ctx
         )

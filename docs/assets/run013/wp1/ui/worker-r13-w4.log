@@ -1,0 +1,30 @@
+{"ts": "2026-11-25T15:14:50.140813+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "worker_started", "worker": "r13-w4", "once": false, "poll": 0.4}
+{"ts": "2026-11-25T15:14:50.145753+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_claimed", "run_id": "run_17956196892425c09207abeb2", "attempt": 1}
+{"ts": "2026-11-25T15:14:50.154066+00:00", "level": "INFO", "logger": "traceguard.browser.egress", "message": "egress_proxy_started", "url": "http://127.0.0.1:56128", "worker_id": "r13-w4"}
+{"ts": "2026-11-25T15:14:50.166939+00:00", "level": "INFO", "logger": "traceguard.browser", "message": "egress_warmup_ok", "origins": 1, "proxy": "http://127.0.0.1:56128"}
+{"ts": "2026-11-25T15:14:50.601752+00:00", "level": "INFO", "logger": "traceguard.browser", "message": "browser_launched", "channel": "bundled-chromium", "egress": true, "proxy": "http://127.0.0.1:56128"}
+{"ts": "2026-11-25T15:14:53.376332+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_finished", "run_id": "run_17956196892425c09207abeb2", "verdict": "PASSED", "status": "COMPLETED"}
+{"ts": "2026-11-25T15:14:55.147302+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "worker_shutdown_requested", "signal": 15}
+{"ts": "2026-11-25T15:14:55.413744+00:00", "level": "WARNING", "logger": "traceguard.browser", "message": "browser_disconnected"}
+{"ts": "2026-11-25T15:14:55.460313+00:00", "level": "INFO", "logger": "traceguard.browser.egress", "message": "egress_proxy_stopped", "worker_id": "r13-w4"}
+{"ts": "2026-11-25T15:14:55.460470+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "worker_stopped", "executed": 1}
+{"ts": "2026-11-25T15:17:26.679868+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "worker_started", "worker": "r13-w4", "once": false, "poll": 0.4}
+{"ts": "2026-11-25T15:17:26.685990+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_claimed", "run_id": "run_17956198454022406aa536578", "attempt": 1}
+{"ts": "2026-11-25T15:17:26.691467+00:00", "level": "INFO", "logger": "traceguard.browser.egress", "message": "egress_proxy_started", "url": "http://127.0.0.1:57413", "worker_id": "r13-w4"}
+{"ts": "2026-11-25T15:17:26.702604+00:00", "level": "INFO", "logger": "traceguard.browser", "message": "egress_warmup_ok", "origins": 1, "proxy": "http://127.0.0.1:57413"}
+{"ts": "2026-11-25T15:17:27.139899+00:00", "level": "INFO", "logger": "traceguard.browser", "message": "browser_launched", "channel": "bundled-chromium", "egress": true, "proxy": "http://127.0.0.1:57413"}
+{"ts": "2026-11-25T15:17:29.925881+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_finished", "run_id": "run_17956198454022406aa536578", "verdict": "PASSED", "status": "COMPLETED"}
+{"ts": "2026-11-25T15:17:32.487420+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "worker_shutdown_requested", "signal": 15}
+{"ts": "2026-11-25T15:17:32.770058+00:00", "level": "WARNING", "logger": "traceguard.browser", "message": "browser_disconnected"}
+{"ts": "2026-11-25T15:17:32.838649+00:00", "level": "INFO", "logger": "traceguard.browser.egress", "message": "egress_proxy_stopped", "worker_id": "r13-w4"}
+{"ts": "2026-11-25T15:17:32.838748+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "worker_stopped", "executed": 1}
+{"ts": "2026-11-25T15:20:56.130192+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "worker_started", "worker": "r13-w4", "once": false, "poll": 0.4}
+{"ts": "2026-11-25T15:20:56.142592+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_claimed", "run_id": "run_17956200552081967f8d7a341", "attempt": 1}
+{"ts": "2026-11-25T15:20:56.156331+00:00", "level": "INFO", "logger": "traceguard.browser.egress", "message": "egress_proxy_started", "url": "http://127.0.0.1:58259", "worker_id": "r13-w4"}
+{"ts": "2026-11-25T15:20:56.168083+00:00", "level": "INFO", "logger": "traceguard.browser", "message": "egress_warmup_ok", "origins": 1, "proxy": "http://127.0.0.1:58259"}
+{"ts": "2026-11-25T15:20:56.514997+00:00", "level": "INFO", "logger": "traceguard.browser", "message": "browser_launched", "channel": "bundled-chromium", "egress": true, "proxy": "http://127.0.0.1:58259"}
+{"ts": "2026-11-25T15:20:59.862132+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_finished", "run_id": "run_17956200552081967f8d7a341", "verdict": "PASSED", "status": "COMPLETED"}
+{"ts": "2026-11-25T15:21:03.229135+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "worker_shutdown_requested", "signal": 15}
+{"ts": "2026-11-25T15:21:03.526683+00:00", "level": "WARNING", "logger": "traceguard.browser", "message": "browser_disconnected"}
+{"ts": "2026-11-25T15:21:03.688820+00:00", "level": "INFO", "logger": "traceguard.browser.egress", "message": "egress_proxy_stopped", "worker_id": "r13-w4"}
+{"ts": "2026-11-25T15:21:03.688978+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "worker_stopped", "executed": 1}

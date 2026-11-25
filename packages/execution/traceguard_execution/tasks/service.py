@@ -350,6 +350,23 @@ class TaskService:
             r.lease_expires_at = time.time() + ttl_seconds
             return True
 
+    def lease_valid(self, run_id: str, worker_id: str, fencing_token: int) -> bool:
+        """同步租约校验（RUN-013 WP1）。
+
+        异步心跳只能"事后"发现租约丢失；步骤边界/写证据前必须再做一次同步校验，
+        否则被 SIGSTOP 后恢复的旧 Worker 可能在被接管后继续写步骤与证据。
+        """
+        with self.db.session() as s:
+            r = s.get(RunRow, run_id)
+            if not r:
+                return False
+            return (
+                r.lease_owner == worker_id
+                and int(r.fencing_token) == int(fencing_token)
+                and r.execution_status not in FINAL_RUN_STATES
+                and r.execution_status != "FINALIZING"
+            )
+
     def claim_next_run(self, worker_id: str, ttl_seconds: float = 120.0) -> dict[str, Any] | None:
         """Worker 领取：取最早排队的 Run；租约过期未提交的 Run 也会被回收领取。
 

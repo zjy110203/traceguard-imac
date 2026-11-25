@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import http.cookiejar
 import json
+import signal
 import subprocess
 import sys
 import time
@@ -55,8 +56,20 @@ _PATHS = [
 ]
 
 
-def _child_env(db: str, api_port: int, teamflow_port: int, teamflow_db: str) -> dict[str, str]:
-    """显式白名单：不读取任何宿主机环境变量，只放非敏感字面量。"""
+def _child_env(
+    db: str,
+    api_port: int,
+    teamflow_port: int,
+    teamflow_db: str,
+    *,
+    inline_worker: bool = True,
+    lease_ttl_s: float = 120.0,
+) -> dict[str, str]:
+    """显式白名单：不读取任何宿主机环境变量，只放非敏感字面量。
+
+    RUN-013 WP1：`inline_worker=False` 时 API 不启动内嵌 Worker，
+    Run 必须由独立 `traceguard_worker.main` 进程消费（生产部署形态）。
+    """
     return {
         "PATH": "/usr/bin:/bin:/usr/local/bin",
         "HOME": str(Path.home()),
@@ -69,8 +82,9 @@ def _child_env(db: str, api_port: int, teamflow_port: int, teamflow_db: str) -> 
         "TG_ENVIRONMENT": "development",
         "TG_DATABASE_URL": db,
         "TG_LLM_PROVIDER": "",
-        # 真实 Worker 必须消费队列：沙箱验证依赖独立执行，不能由 API 线程冒充。
-        "TG_INLINE_WORKER": "true",
+        # RUN-013 WP1：false = 不启动内嵌 Worker，必须由独立进程消费队列。
+        "TG_INLINE_WORKER": "true" if inline_worker else "false",
+        "TG_WORKER_LEASE_TTL_S": str(lease_ttl_s),
         "TG_API_PORT": str(api_port),
         "TG_TEAMFLOW_DB": teamflow_db,
         "TG_TEAMFLOW_BASE_URL": f"http://127.0.0.1:{teamflow_port}",
@@ -206,19 +220,465 @@ def _wait_terminal_run(api: Http, run_id: str, timeout_s: float = 180.0) -> dict
     last: dict[str, Any] = {}
     while time.time() < deadline:
         last = api.get(f"/api/v1/runs/{run_id}")
-        if str(last.get("execution_status")) in {"COMPLETED", "FAILED", "CANCELLED"}:
+        if str(last.get("execution_status")) in {
+            "COMPLETED",
+            "FAILED",
+            "TIMED_OUT",
+            "CANCELLED",
+        }:
             return last
         time.sleep(1.0)
     return last
 
 
-def main() -> int:
+def _wait_until(fn: Any, timeout_s: float, interval: float = 0.5) -> Any:
+    """轮询直到 fn 返回真值；超时返回最后一次结果。"""
+    deadline = time.time() + timeout_s
+    last: Any = None
+    while time.time() < deadline:
+        last = fn()
+        if last:
+            return last
+        time.sleep(interval)
+    return last
+
+
+class WorkerFleet:
+    """独立 Worker 进程池（RUN-013 WP1）。
+
+    所有 Worker 共用同一数据库与 Artifact 目录，仅 `TG_WORKER_ID` 不同；
+    支持优雅退出（SIGTERM）、强制终止（SIGKILL）、暂停/恢复（SIGSTOP/SIGCONT），
+    用于真实验证租约到期、接管与旧 Worker 越权提交。
+    """
+
+    def __init__(self, env: dict[str, str], out: Path, lease_ttl_s: float) -> None:
+        self.env = dict(env)
+        self.out = out
+        self.lease_ttl_s = lease_ttl_s
+        self.procs: dict[str, subprocess.Popen[bytes]] = {}
+        self.logs: dict[str, Any] = {}
+
+    def start(self, name: str, *, lease_ttl_s: float | None = None) -> subprocess.Popen[bytes]:
+        # 幂等：同名 Worker 已存活时直接复用，避免同一 worker_id 出现两个进程
+        # （会让“杀掉一个”后仍有同 id 进程继续提交，污染租约接管验收）。
+        existing = self.procs.get(name)
+        if existing and existing.poll() is None:
+            return existing
+        env = dict(self.env)
+        env["TG_WORKER_ID"] = name
+        env["TG_WORKER_LEASE_TTL_S"] = str(lease_ttl_s or self.lease_ttl_s)
+        env["TG_WORKER_POLL_INTERVAL_S"] = "0.4"
+        log = open(self.out / f"worker-{name}.log", "ab")  # noqa: SIM115
+        self.logs[name] = log
+        proc = subprocess.Popen(
+            [sys.executable, "-m", "traceguard_worker.main"],
+            cwd=str(ROOT),
+            env=env,
+            stdout=log,
+            stderr=subprocess.STDOUT,
+        )
+        self.procs[name] = proc
+        return proc
+
+    def alive(self, name: str) -> bool:
+        proc = self.procs.get(name)
+        return bool(proc and proc.poll() is None)
+
+    def send(self, name: str, sig: int) -> None:
+        proc = self.procs.get(name)
+        if proc and proc.poll() is None:
+            proc.send_signal(sig)
+
+    def stop(self, name: str, *, timeout: float = 20.0) -> int | None:
+        """SIGTERM 优雅退出；超时则 SIGKILL。返回退出码。"""
+        proc = self.procs.get(name)
+        if not proc:
+            return None
+        if proc.poll() is None:
+            proc.terminate()
+        try:
+            return proc.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            return proc.wait(timeout=10)
+
+    def kill(self, name: str) -> int | None:
+        proc = self.procs.get(name)
+        if not proc:
+            return None
+        if proc.poll() is None:
+            proc.kill()
+        return proc.wait(timeout=10)
+
+    def close(self) -> None:
+        for name in list(self.procs):
+            try:
+                self.stop(name, timeout=8)
+            except Exception:  # noqa: BLE001
+                pass
+        for log in self.logs.values():
+            try:
+                log.close()
+            except Exception:  # noqa: BLE001
+                pass
+
+
+def _start_api(env: dict[str, str], port: int) -> subprocess.Popen[bytes]:
+    return subprocess.Popen(
+        [
+            sys.executable,
+            "-m",
+            "uvicorn",
+            "traceguard_api.main:app",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            str(port),
+        ],
+        cwd=str(ROOT),
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+
+def _run_worker_faults(
+    rep: Reporter,
+    base: str,
+    teamflow: str,
+    tc_id: str,
+    lead: Http,
+    fleet: WorkerFleet,
+    env: dict[str, str],
+    api_port: int,
+    api_holder: dict[str, Any],
+    *,
+    run_timeout: float = 180.0,
+) -> None:
+    """RUN-013 WP1 §3.4：独立 Worker 故障场景（真实进程 + 真实租约 + 真实提交）。"""
+    ttl = fleet.lease_ttl_s
+    worker1, worker2 = "r13-w1", "r13-w2"
+
+    # ---------------------------------------------------------- 1. 启动失败
+    bad_env = dict(env)
+    bad_env["TG_DATABASE_URL"] = "postgresql+psycopg://bad@127.0.0.1:1/absent"
+    bad_env["TG_WORKER_ID"] = "r13-bad"
+    bad = subprocess.run(
+        [sys.executable, "-m", "traceguard_worker.main", "--once"],
+        cwd=str(ROOT),
+        env=bad_env,
+        capture_output=True,
+        text=True,
+        timeout=40,
+    )
+    rep.check(
+        "W1-① Worker 启动失败（数据库不可达）→ 进程非零退出且不消费任务",
+        bad.returncode != 0,
+        f"exit={bad.returncode} err={(bad.stderr or '')[-160:]!r}",
+    )
+    rep.check(
+        "W1-② Worker 启动失败不影响 API 与既有队列",
+        bool(_wait_until(lambda: _health_ok(base + "/health"), 10)),
+        "API 仍健康",
+    )
+
+    # ---------------------------------------------------------- 2. 正常退出
+    fleet.start(worker1)
+    rep.check(
+        "W1-③ 独立 Worker-1 启动并注册",
+        bool(_wait_until(lambda: fleet.alive(worker1), 15)),
+        f"pid={fleet.procs[worker1].pid}",
+    )
+    code = fleet.stop(worker2, timeout=15)
+    rep.check(
+        "W1-④ Worker-2 正常退出（SIGTERM）→ 退出码 0",
+        code == 0,
+        f"exit={code}",
+    )
+    fleet.start(worker2)
+    rep.check(
+        "W1-⑤ Worker-2 可重新启动并继续消费",
+        bool(_wait_until(lambda: fleet.alive(worker2), 15)),
+        f"pid={fleet.procs[worker2].pid}",
+    )
+
+    # ------------------------------------------- 3. 执行中强杀 + 租约接管
+    fleet.stop(worker2, timeout=15)
+    run1 = lead.post(
+        f"/api/v1/testcases/{tc_id}/execute", {"sync": False}, expect_status=(200, 201)
+    )
+    run1_id = str(run1.get("run_id") or "")
+    claimed = _wait_until(
+        lambda: (
+            lambda d: (
+                d
+                if str(d.get("lease_owner") or "").startswith(worker1)
+                and d.get("execution_status") in {"PREPARING", "RUNNING"}
+                else None
+            )
+        )(lead.get(f"/api/v1/runs/{run1_id}")),
+        60,
+    )
+    rep.check(
+        "W1-⑥ 队列由独立 Worker-1 领取（API 不执行）",
+        bool(claimed),
+        f"run={run1_id} owner={(claimed or {}).get('lease_owner')} fencing={(claimed or {}).get('fencing_token')}",
+        server_verified=True,
+    )
+    token_before = int((claimed or {}).get("fencing_token") or 0)
+    fleet.kill(worker1)
+    rep.check(
+        "W1-⑦ Worker 执行中被 SIGKILL → 进程非零退出",
+        fleet.procs[worker1].returncode not in (0, None),
+        f"exit={fleet.procs[worker1].returncode}",
+    )
+    after_kill = lead.get(f"/api/v1/runs/{run1_id}")
+    rep.check(
+        "W1-⑧ Worker 死亡后 API 不假报执行成功",
+        after_kill.get("execution_status") not in {"COMPLETED"},
+        f"status={after_kill.get('execution_status')} verdict={after_kill.get('test_verdict')}",
+        server_verified=True,
+    )
+    fleet.start(worker2)
+    takeover = _wait_until(
+        lambda: (
+            lambda d: (
+                d
+                if str(d.get("lease_owner") or "").startswith(worker2)
+                and int(d.get("fencing_token") or 0) > token_before
+                else None
+            )
+        )(lead.get(f"/api/v1/runs/{run1_id}")),
+        ttl + 60,
+    )
+    rep.check(
+        "W1-⑨ 租约到期后新 Worker 接管（fencing_token 递增）",
+        bool(takeover),
+        f"owner={(takeover or {}).get('lease_owner')} fencing={(takeover or {}).get('fencing_token')} before={token_before}",
+        server_verified=True,
+    )
+    final1 = _wait_terminal_run(lead, run1_id, timeout_s=run_timeout)
+    rep.check(
+        "W1-⑩ 接管后任务真实执行到终态且仅一份业务结果",
+        final1.get("execution_status") in {"COMPLETED", "FAILED"},
+        f"status={final1.get('execution_status')} verdict={final1.get('test_verdict')}",
+        server_verified=True,
+    )
+    steps1 = lead.get(f"/api/v1/runs/{run1_id}/steps")
+    step_ids = [str(s.get("step_id")) for s in steps1 or []]
+    rep.check(
+        "W1-⑪ 接管重跑不产生重复步骤（step_id 唯一）",
+        len(step_ids) == len(set(step_ids)),
+        f"steps={len(step_ids)} unique={len(set(step_ids))}",
+        server_verified=True,
+    )
+
+    # ---------------------------------- 4. 旧 Worker 恢复后尝试提交（fencing）
+    fleet.kill(worker1)
+    fleet.stop(worker2, timeout=15)
+    fleet.start(worker1)
+    _wait_until(lambda: fleet.alive(worker1), 15)
+    run2_id = ""
+    token2 = 0
+    claimed2: dict[str, Any] | None = None
+    paused = False
+    # 真实 Run 只有 ~3 秒；若检测/暂停晚于执行结束则重试一次，避免把“跑完了”误判为接管。
+    for attempt in range(1, 3):
+        run2 = lead.post(
+            f"/api/v1/testcases/{tc_id}/execute", {"sync": False}, expect_status=(200, 201)
+        )
+        run2_id = str(run2.get("run_id") or "")
+        rid = run2_id
+        claimed2 = _wait_until(
+            lambda rid=rid: (
+                lambda d: (
+                    d
+                    if str(d.get("lease_owner") or "").startswith(worker1)
+                    and d.get("execution_status") in {"PREPARING", "RUNNING"}
+                    else None
+                )
+            )(lead.get(f"/api/v1/runs/{rid}")),
+            60,
+        )
+        token2 = int((claimed2 or {}).get("fencing_token") or 0)
+        if not claimed2:
+            continue
+        fleet.send(worker1, signal.SIGSTOP)
+        time.sleep(0.4)
+        paused_doc = lead.get(f"/api/v1/runs/{run2_id}")
+        if paused_doc.get("execution_status") not in {"COMPLETED", "FAILED", "CANCELLED"}:
+            paused = True
+            break
+        fleet.send(worker1, signal.SIGCONT)
+        rep.note(
+            f"W1-⑫ 暂停时机重试（第 {attempt} 次）",
+            f"Run 在暂停前已到终态 {paused_doc.get('execution_status')}，换新 Run 重试",
+        )
+        _wait_terminal_run(lead, run2_id, timeout_s=run_timeout)
+    rep.check(
+        "W1-⑫ 旧 Worker 已持有租约并成功暂停（另有新 Worker 待接管）",
+        paused,
+        f"run={run2_id} owner={(claimed2 or {}).get('lease_owner')} fencing={token2}",
+        server_verified=True,
+    )
+    if paused:
+        time.sleep(ttl + 1.5)
+        fleet.start("r13-w3")
+        takeover2 = _wait_until(
+            lambda: (
+                lambda d: (
+                    d
+                    if str(d.get("lease_owner") or "").startswith("r13-w3")
+                    and int(d.get("fencing_token") or 0) > token2
+                    else None
+                )
+            )(lead.get(f"/api/v1/runs/{run2_id}")),
+            ttl + 90,
+        )
+        rep.check(
+            "W1-⑬ 暂停 Worker 租约过期 → 第三个 Worker 接管",
+            bool(takeover2),
+            f"owner={(takeover2 or {}).get('lease_owner')} fencing={(takeover2 or {}).get('fencing_token')}",
+            server_verified=True,
+        )
+        final2 = _wait_terminal_run(lead, run2_id, timeout_s=run_timeout)
+        snapshot_status = final2.get("execution_status")
+        snapshot_verdict = final2.get("test_verdict")
+        steps2 = lead.get(f"/api/v1/runs/{run2_id}/steps")
+        step_ids_before = [str(s.get("step_id")) for s in steps2 or []]
+        before_evi = len(lead.get(f"/api/v1/runs/{run2_id}/evidence") or [])
+
+        fleet.send(worker1, signal.SIGCONT)
+        time.sleep(8)
+        after_resume = lead.get(f"/api/v1/runs/{run2_id}")
+        steps3 = lead.get(f"/api/v1/runs/{run2_id}/steps")
+        step_ids3 = [str(s.get("step_id")) for s in steps3 or []]
+        after_evi = len(lead.get(f"/api/v1/runs/{run2_id}/evidence") or [])
+        rep.check(
+            "W1-⑭ 旧 Worker 恢复后不能覆盖已接管任务的状态",
+            after_resume.get("execution_status") == snapshot_status
+            and after_resume.get("test_verdict") == snapshot_verdict,
+            f"before={snapshot_status}/{snapshot_verdict} after={after_resume.get('execution_status')}/{after_resume.get('test_verdict')}",
+            server_verified=True,
+        )
+        rep.check(
+            "W1-⑮ 旧 Worker 恢复后不产生重复步骤/证据",
+            len(step_ids3) == len(set(step_ids3)) and after_evi == before_evi,
+            f"steps={len(step_ids3)} (before={len(step_ids_before)}) evidence={before_evi}->{after_evi}",
+            server_verified=True,
+        )
+        rep.check(
+            "W1-⑯ 旧 Worker 的过期提交被 Fencing 拒绝（进程仍存活）",
+            fleet.alive(worker1),
+            f"alive={fleet.alive(worker1)}",
+        )
+    else:
+        fleet.send(worker1, signal.SIGCONT)
+        rep.note(
+            "W1-⑬-⑯ 租约接管与旧 Worker 恢复",
+            "两次暂停都晚于 Run 终态，未形成可观测的租约接管窗口；不伪造接管结果。",
+        )
+
+    # ---------------------------------------------- 5. API 重启 + 客户端断连
+    fleet.stop("r13-w3", timeout=15)
+    fleet.start(worker2)
+    run3 = lead.post(
+        f"/api/v1/testcases/{tc_id}/execute", {"sync": False}, expect_status=(200, 201)
+    )
+    run3_id = str(run3.get("run_id") or "")
+    api_proc = api_holder["proc"]
+    api_proc.kill()
+    api_proc.wait(timeout=10)
+    rep.check(
+        "W1-⑰ API 进程被强制终止（模拟客户端未收到响应）",
+        not _health_ok(base + "/health", timeout=2),
+        "API 不可达",
+    )
+    # Worker 不依赖 API，继续消费队列
+    time.sleep(3)
+    api_holder["proc"] = _start_api(env, api_port)
+    rep.check(
+        "W1-⑱ API 重启后恢复健康",
+        bool(_wait_until(lambda: _health_ok(base + "/health"), 30)),
+        base,
+    )
+    lead2 = Http(base, "lead-restarted")
+    lead2.login("r12-lead", PASSWORD)
+    run3_doc = _wait_terminal_run(lead2, run3_id, timeout_s=run_timeout)
+    rep.check(
+        "W1-⑲ API 重启期间 Worker 继续消费，重启后可回读终态",
+        run3_doc.get("execution_status") in {"COMPLETED", "FAILED"},
+        f"status={run3_doc.get('execution_status')} verdict={run3_doc.get('test_verdict')}",
+        server_verified=True,
+    )
+    rep.check(
+        "W1-⑳ 已完成任务在 API 重启后不重复产生业务结果",
+        len([s for s in (lead2.get(f"/api/v1/runs/{run3_id}/steps") or [])]) >= 1
+        and len({str(s.get("step_id")) for s in (lead2.get(f"/api/v1/runs/{run3_id}/steps") or [])})
+        == len(lead2.get(f"/api/v1/runs/{run3_id}/steps") or []),
+        f"run={run3_id}",
+        server_verified=True,
+    )
+
+    # ------------------------------------------------ 6. 双 Worker 并发幂等
+    fleet.start("r13-w4")
+    _wait_until(lambda: fleet.alive("r13-w4"), 15)
+    concurrent = [
+        str(
+            lead2.post(
+                f"/api/v1/testcases/{tc_id}/execute", {"sync": False}, expect_status=(200, 201)
+            ).get("run_id")
+            or ""
+        )
+        for _ in range(4)
+    ]
+    finals = [_wait_terminal_run(lead2, rid, timeout_s=run_timeout) for rid in concurrent]
+    rep.check(
+        "W1-㉑ 双 Worker 并发消费 4 个 Run 全部到终态",
+        all(f.get("execution_status") in {"COMPLETED", "FAILED"} for f in finals),
+        f"statuses={[f.get('execution_status') for f in finals]}",
+        server_verified=True,
+    )
+    dup = []
+    for rid in concurrent:
+        sids = [str(s.get("step_id")) for s in lead2.get(f"/api/v1/runs/{rid}/steps") or []]
+        if len(sids) != len(set(sids)):
+            dup.append(rid)
+    rep.check(
+        "W1-㉒ 并发消费未出现重复步骤/双重提交",
+        not dup,
+        f"duplicates={dup}",
+        server_verified=True,
+    )
+
+
+def _health_ok(url: str, timeout: float = 2.0) -> bool:
+    try:
+        req = urllib.request.Request(url, method="GET")
+        with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
+            return resp.status == 200
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="docs/assets/run012/wp4/ui")
-    args = ap.parse_args()
+    ap.add_argument("--workpackage", default="RUN-012 WP4")
+    ap.add_argument("--label", default="loop-acceptance")
+    ap.add_argument(
+        "--independent-workers",
+        type=int,
+        default=0,
+        help=">0 时关闭 API 内嵌 Worker，启动 N 个独立 Worker 进程（RUN-013 WP1）",
+    )
+    ap.add_argument("--lease-ttl", type=float, default=6.0, help="独立 Worker 租约 TTL（秒）")
+    ap.add_argument("--faults", action="store_true", help="执行独立 Worker 故障场景")
+    args = ap.parse_args(argv)
     out = (ROOT / args.out).resolve()
     out.mkdir(parents=True, exist_ok=True)
     rep = Reporter(out)
+    independent = args.independent_workers > 0
 
     from playwright.sync_api import sync_playwright
 
@@ -226,14 +686,23 @@ def main() -> int:
     teamflow_port = _free_port()
     work = out / "_runtime"
     work.mkdir(parents=True, exist_ok=True)
-    db_file = work / "loop.db"
-    tf_db_file = work / "teamflow.db"
+    db_file = work / f"{args.label}.db"
+    tf_db_file = work / f"{args.label}-teamflow.db"
     for f in (db_file, tf_db_file):
         if f.exists():
             f.unlink()
     db = f"sqlite:///{db_file}"
     tf_db = f"sqlite:///{tf_db_file}"
-    env = _child_env(db, api_port, teamflow_port, tf_db)
+    env = _child_env(
+        db,
+        api_port,
+        teamflow_port,
+        tf_db,
+        inline_worker=not independent,
+        lease_ttl_s=args.lease_ttl,
+    )
+    fleet = WorkerFleet(env, out, args.lease_ttl) if independent else None
+    api_holder: dict[str, Any] = {"proc": None}
 
     # TeamFlow：真实被测目标（独立进程 + 独立库）
     tf_proc = subprocess.Popen(
@@ -252,22 +721,8 @@ def main() -> int:
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
-    api_proc = subprocess.Popen(
-        [
-            sys.executable,
-            "-m",
-            "uvicorn",
-            "traceguard_api.main:app",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            str(api_port),
-        ],
-        cwd=str(ROOT),
-        env=env,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    api_proc = _start_api(env, api_port)
+    api_holder["proc"] = api_proc
     base = f"http://127.0.0.1:{api_port}"
     teamflow = f"http://127.0.0.1:{teamflow_port}"
 
@@ -280,6 +735,20 @@ def main() -> int:
             rep.check("环境：真实 API 可启动", False, "API 未就绪")
             return 3
         rep.check("环境：真实 API 可启动", True, base)
+        if fleet:
+            for i in range(1, max(2, args.independent_workers) + 1):
+                fleet.start(f"r13-w{i}")
+            started = _wait_until(
+                lambda: all(
+                    fleet.alive(f"r13-w{i}") for i in range(1, max(2, args.independent_workers) + 1)
+                ),
+                20,
+            )
+            rep.check(
+                "环境：独立 Worker 进程已启动（API 内嵌 Worker 关闭）",
+                bool(started),
+                ", ".join(f"{n}:{p.pid}" for n, p in fleet.procs.items()),
+            )
 
         users = [
             ("r12-eng", "qa-engineer", '["default"]'),
@@ -329,6 +798,13 @@ def main() -> int:
             f"teamflow_base_url={cfg.get('teamflow_base_url')}",
             server_verified=True,
         )
+        if independent:
+            rep.check(
+                "API 不启动内嵌 Worker（TG_INLINE_WORKER=false）",
+                bool((cfg.get("worker") or {}).get("inline")) is False,
+                f"worker={cfg.get('worker')}",
+                server_verified=True,
+            )
 
         with sync_playwright() as pw:
             browser = pw.chromium.launch(headless=True)
@@ -533,6 +1009,14 @@ def main() -> int:
                     f"observer_mode={final.get('observer_mode')}",
                     server_verified=True,
                 )
+                if independent:
+                    owner = str(final.get("lease_owner") or "")
+                    rep.check(
+                        "⑨a Run 由独立 Worker 进程领取并持有租约（Fencing Token > 0）",
+                        owner.startswith("r13-w") and int(final.get("fencing_token") or 0) > 0,
+                        f"lease_owner={owner} fencing={final.get('fencing_token')}",
+                        server_verified=True,
+                    )
                 steps = lead.get(f"/api/v1/runs/{run_id}/steps")
                 evi = lead.get(f"/api/v1/runs/{run_id}/evidence")
                 rep.check(
@@ -753,10 +1237,39 @@ def main() -> int:
                 except Exception:  # noqa: BLE001
                     pass
                 browser.close()
+
+        if fleet and args.faults:
+            tc_ref = locals().get("tc_id") or ""
+            if tc_ref:
+                rep.check(
+                    "环境：开始独立 Worker 故障注入（真实进程 / 真实租约）",
+                    True,
+                    f"lease_ttl={args.lease_ttl}s",
+                )
+                _run_worker_faults(
+                    rep,
+                    base,
+                    teamflow,
+                    str(tc_ref),
+                    lead,
+                    fleet,
+                    env,
+                    api_port,
+                    api_holder,
+                )
+            else:
+                rep.note(
+                    "独立 Worker 故障注入",
+                    "业务闭环未产出 TestCase，无法创建真实 Run；不伪造故障结果。",
+                )
     except Exception as exc:  # noqa: BLE001
         rep.check("闭环验收脚本执行", False, f"{type(exc).__name__}: {exc}")
     finally:
-        for proc in (api_proc, tf_proc):
+        if fleet:
+            fleet.close()
+        for proc in (api_holder.get("proc"), tf_proc):
+            if not proc:
+                continue
             proc.terminate()
             try:
                 proc.wait(timeout=10)
@@ -764,20 +1277,27 @@ def main() -> int:
                 proc.kill()
 
     summary = {
-        "workpackage": "RUN-012 WP4",
-        "engine": "Playwright Chromium + real API (auth+CSRF) + real TeamFlow + real Worker",
+        "workpackage": args.workpackage,
+        "engine": (
+            "Playwright Chromium + real API (auth+CSRF) + real TeamFlow + "
+            + ("independent Worker processes" if independent else "inline Worker")
+            + (" + worker fault injection" if args.faults else "")
+        ),
+        "deployment": {
+            "inline_worker": not independent,
+            "independent_workers": max(2, args.independent_workers) if independent else 0,
+            "lease_ttl_s": args.lease_ttl if independent else None,
+            "database": "sqlite",
+        },
         "total": len(rep.results),
         "passed": sum(1 for r in rep.results if r["status"] == "PASS"),
         "failed": len(rep.failed),
         "screenshots": rep.screens,
         "results": rep.results,
     }
-    (out / "loop-acceptance.json").write_text(
-        json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
-    print(
-        f"\n[out] {out / 'loop-acceptance.json'}  passed={summary['passed']} failed={summary['failed']}"
-    )
+    result_path = out / f"{args.label}.json"
+    result_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"\n[out] {result_path}  passed={summary['passed']} failed={summary['failed']}")
     return 1 if rep.failed else 0
 
 
