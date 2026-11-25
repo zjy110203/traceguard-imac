@@ -242,3 +242,53 @@ def test_replay_oracle_integrity_uses_testcase_workspace(rt: Runtime) -> None:
     doc = StabilityReplayService(rt).start(tc_id, 1, repeats=1, requested_by="role:qa-lead")
     assert doc["workspace_id"] == workspace
     assert doc["oracle_complete"] is True, doc.get("oracle_problems")
+
+
+def test_oracle_version_changed_after_replay_blocks_approval(rt: Runtime) -> None:
+    """RUN-013 WP3：回放固定 Oracle v1，审核前改绑 v2 → 必须重跑回放。
+
+    缺少该校验时，旧回放的 STABLE_PASS 会被用来批准"用新业务预期写的断言"。
+    """
+    testcase_id, version = _candidate(rt)
+    _run_replay(rt, testcase_id, version, ["PASSED", "PASSED", "PASSED"])
+    oracle_id = rt.catalog.get_version(testcase_id, version)["assertions"][0]["oracle_id"]
+
+    rt.catalog.create_oracle(
+        {
+            "oracle_id": oracle_id,
+            "assertion_id": "a1",
+            "expected_behavior": "成功提示必须出现（v2 语义已变化）",
+            "requirement_ref": "REQ-GATE-1",
+            "version": 2,
+        },
+        approved=True,
+        approved_by="role:qa-lead",
+    )
+    rt.catalog.bind_oracles(
+        testcase_id,
+        version,
+        {"a1": {"oracle_id": oracle_id, "oracle_version": 2}},
+        actor="role:qa-lead",
+    )
+    with pytest.raises(AppError) as exc:
+        _approve(rt, testcase_id, version)
+    assert exc.value.code == ErrorCode.PRECONDITION_FAILED
+    assert "STABILITY_ORACLE_VERSION_CHANGED" in exc.value.message
+    assert rt.catalog.get_version(testcase_id, version)["review_status"] == "PENDING"
+
+
+def test_oracle_revoked_after_replay_blocks_approval(rt: Runtime) -> None:
+    """回放后 Oracle 审批被撤销：不得沿用旧回放结论批准。"""
+    from traceguard_persistence.models import OracleRow
+
+    testcase_id, version = _candidate(rt)
+    _run_replay(rt, testcase_id, version, ["PASSED", "PASSED", "PASSED"])
+    oracle_id = rt.catalog.get_version(testcase_id, version)["assertions"][0]["oracle_id"]
+    with rt.db.session() as s:
+        row = s.get(OracleRow, f"{oracle_id}@1")
+        assert row is not None
+        row.approved = False
+    with pytest.raises(AppError) as exc:
+        _approve(rt, testcase_id, version)
+    # Oracle 绑定门禁会先拦截（更早的防线）；回放重核验是第二道防线。
+    assert "ORACLE_NOT_APPROVED" in exc.value.message

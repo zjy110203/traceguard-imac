@@ -682,6 +682,109 @@ class CatalogService:
             return dict(row.doc or {})
 
     # ------------------------------------------------------- stability gate (F08)
+    def _replay_oracle_problems(
+        self,
+        s: Any,
+        version_doc: dict[str, Any],
+        replay_doc: dict[str, Any],
+        *,
+        workspace_id: str,
+    ) -> list[str]:
+        """审核时重新核验：回放固定的 Oracle 版本必须与本次审核绑定的版本一致。
+
+        缺少这一步时，"回放使用 Oracle v1 → 审核前 Oracle 升到 v2" 会沿用
+        v1 的 STABLE_PASS 结论，等于用旧业务预期批准新断言。
+        """
+        pinned_at_replay = dict(replay_doc.get("oracle_versions") or {})
+        problems: list[str] = []
+        for a in version_doc.get("assertions") or []:
+            if not a.get("required", True):
+                continue
+            aid = str(a.get("assertion_id") or "")
+            oracle_id = a.get("oracle_id")
+            version = a.get("oracle_version")
+            if not oracle_id or version is None:
+                problems.append(f"ORACLE_NOT_PINNED_AT_REVIEW: {aid}")
+                continue
+            expected = f"{oracle_id}@{int(version)}"
+            actual = str(pinned_at_replay.get(aid) or "")
+            if actual != expected:
+                problems.append(
+                    f"STABILITY_ORACLE_VERSION_CHANGED: {aid} replay={actual or 'MISSING'} "
+                    f"review={expected}"
+                )
+                continue
+            row = s.get(OracleRow, expected)
+            if row is None:
+                problems.append(f"STABILITY_ORACLE_VERSION_MISSING: {expected}")
+            elif not row.approved:
+                problems.append(f"STABILITY_ORACLE_NOT_APPROVED: {expected}")
+            elif str(row.workspace_id) != str(workspace_id or ""):
+                problems.append(f"STABILITY_ORACLE_WORKSPACE_MISMATCH: {expected}")
+        return problems
+
+    def _best_replay(
+        self,
+        s: Any,
+        testcase_id: str,
+        version: int,
+        doc: dict[str, Any],
+        *,
+        workspace_id: str,
+    ) -> tuple[list[str], dict[str, Any] | None]:
+        """从同版本回放中选出问题最少的一条；返回 (problems, replay_doc)。"""
+        version_ref = f"{testcase_id}@{version}"
+        rows = s.scalars(
+            select(DocRow)
+            .where(DocRow.kind == stability_gate.REPLAY_KIND, DocRow.ref_id == version_ref)
+            .order_by(DocRow.created_at.desc())
+            .limit(20)
+        ).all()
+        if not rows:
+            return (
+                [
+                    f"STABILITY_REPLAY_REQUIRED: {version_ref} 没有任何稳定性回放记录"
+                    f"（compile_source={doc.get('compile_source') or 'human'}）"
+                ],
+                None,
+            )
+
+        best: list[str] | None = None
+        best_doc: dict[str, Any] | None = None
+        for row in rows:
+            replay = row.doc or {}
+            problems = stability_gate.replay_problems(replay, version_ref)
+            # RUN-013 WP3：回放结论只对"当时固定的 Oracle 版本"有效。
+            # 审核时若绑定/审批到了不同版本，必须重跑回放，不能沿用旧结论。
+            problems = problems + self._replay_oracle_problems(
+                s, doc, replay, workspace_id=workspace_id
+            )
+            if not problems:
+                return [], replay
+            if best is None or len(problems) < len(best):
+                best, best_doc = problems, replay
+        return best or ["STABILITY_REPLAY_INVALID"], best_doc
+
+    def stability_gate_preview(
+        self, testcase_id: str, version: int, *, workspace_id: str | None = None
+    ) -> tuple[list[str], dict[str, Any] | None]:
+        """只读预检：与审核事务使用同一套规则（含 Oracle 版本重核验）。"""
+        with self.db.session() as s:
+            v = s.get(TestCaseVersionRow, f"{testcase_id}@{version}")
+            if not v:
+                raise AppError(ErrorCode.NOT_FOUND, "testcase version not found")
+            doc = dict(v.doc or {})
+            wsid = workspace_id or v.workspace_id or DEFAULT_WORKSPACE
+            if str(doc.get("compile_source") or "human") == "human":
+                return [], None
+            try:
+                doc = self._pin_oracle_versions(s, doc, workspace_id=wsid)
+            except AppError:
+                # 绑定不完整时由审核路径给出更精确的 ORACLE_BINDING_INCOMPLETE；
+                # 预检不吞掉问题，继续用未固定的 doc 计算回放问题。
+                pass
+            return self._best_replay(s, testcase_id, version, doc, workspace_id=wsid)
+
     def _stability_gate(
         self,
         s: Any,
@@ -708,32 +811,16 @@ class CatalogService:
             return None, "EXEMPT_HUMAN_AUTHORED"
 
         version_ref = f"{testcase_id}@{version}"
-        rows = s.scalars(
-            select(DocRow)
-            .where(DocRow.kind == stability_gate.REPLAY_KIND, DocRow.ref_id == version_ref)
-            .order_by(DocRow.created_at.desc())
-            .limit(20)
-        ).all()
-        if not rows:
-            raise AppError(
-                ErrorCode.PRECONDITION_FAILED,
-                f"STABILITY_REPLAY_REQUIRED: {version_ref} 没有任何稳定性回放记录"
-                f"（compile_source={compile_source}）",
-                details={"testcase_version_ref": version_ref, "compile_source": compile_source},
-            )
-
-        best: list[str] | None = None
-        for row in rows:
-            problems = stability_gate.replay_problems(row.doc or {}, version_ref)
-            if not problems:
-                return stability_gate.gate_evidence(row.doc or {}), "ENFORCED"
-            if best is None or len(problems) < len(best):
-                best = problems
+        problems, replay_doc = self._best_replay(
+            s, testcase_id, version, doc, workspace_id=workspace_id
+        )
+        if not problems and replay_doc is not None:
+            return stability_gate.gate_evidence(replay_doc), "ENFORCED"
         raise AppError(
             ErrorCode.PRECONDITION_FAILED,
-            "STABILITY_REPLAY_GATE_FAILED: " + "; ".join((best or [])[:6]),
+            "STABILITY_REPLAY_GATE_FAILED: " + "; ".join((problems or [])[:6]),
             details={
-                "problems": best or [],
+                "problems": problems or [],
                 "testcase_version_ref": version_ref,
                 "compile_source": compile_source,
             },

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, fmtDuration, fmtTime } from '../api'
 import { currentWorkspaceId, wsPath } from '../workspace'
@@ -17,6 +17,40 @@ interface OracleOption {
   expected_behavior: string
 }
 
+interface ReplaySample {
+  run_id: string
+  execution_status: string
+  test_verdict: string
+  failure_class?: string
+  browser_version?: string
+}
+
+interface StabilityReplay {
+  replay_id: string
+  testcase_version_ref: string
+  status: string
+  samples_recorded?: number
+  samples_expected?: number
+  records?: ReplaySample[]
+  conclusion?: string | null
+  classification?: { classification?: string; pass_count?: number; fail_count?: number } | null
+  promotable?: boolean
+  oracle_complete?: boolean
+  oracle_problems?: string[]
+  oracle_versions?: Record<string, string>
+  browser_versions?: string[]
+  blocked_reason?: string
+  created_at?: string
+  completed_at?: string | null
+  requires_human_review?: boolean
+}
+
+interface GatePreview {
+  satisfied: boolean
+  problems: string[]
+  evidence?: { replay_id?: string } | null
+}
+
 const route = useRoute()
 const router = useRouter()
 const id = String(route.params.id)
@@ -29,6 +63,63 @@ const loading = ref(true)
 const error = ref('')
 const busy = ref('')
 const activeVersion = ref<number | null>(null)
+// RUN-013 WP3：稳定性回放状态面板（状态/进度/样本/结论/Oracle/审核条件）
+const replay = ref<StabilityReplay | null>(null)
+const replayGate = ref<GatePreview | null>(null)
+const replayLoading = ref(false)
+let replayTimer: number | undefined
+
+const replayCounts = computed(() => {
+  const records = replay.value?.records ?? []
+  return {
+    passed: records.filter((r) => r.test_verdict === 'PASSED').length,
+    failed: records.filter((r) => r.test_verdict === 'FAILED').length,
+    pending: records.filter(
+      (r) => !['COMPLETED', 'FAILED', 'TIMED_OUT', 'CANCELLED'].includes(r.execution_status),
+    ).length,
+  }
+})
+
+async function loadReplay(): Promise<void> {
+  const v = current.value
+  if (!v) {
+    replay.value = null
+    replayGate.value = null
+    return
+  }
+  if (replayTimer !== undefined) {
+    window.clearTimeout(replayTimer)
+    replayTimer = undefined
+  }
+  replayLoading.value = true
+  try {
+    const rows = await api.get<{ replay_id: string; testcase_ref: string }[]>(
+      `/stability-replays?testcase_id=${encodeURIComponent(id)}&limit=20`,
+    )
+    const mine = rows.find((r) => r.testcase_ref === `${id}@${v.version}`)
+    if (!mine) {
+      replay.value = null
+      replayGate.value = null
+      return
+    }
+    replay.value = await api.get<StabilityReplay>(
+      `/stability-replays/${mine.replay_id}?refresh=true`,
+    )
+    replayGate.value = await api
+      .get<GatePreview>(`/testcases/${id}/versions/${v.version}/stability-gate`)
+      .catch(() => null)
+    // 回放运行中：每 2 秒吸收一次真实 Run 状态（服务端 refresh 后再判定）。
+    if (replay.value?.status === 'RUNNING') {
+      replayTimer = window.setTimeout(() => void loadReplay(), 2000)
+    }
+  } catch {
+    // 回放是辅助信息，不阻断页面主体；错误由审核条件显示为"未满足"。
+    replay.value = null
+    replayGate.value = null
+  } finally {
+    replayLoading.value = false
+  }
+}
 
 const current = computed<TestCaseVersion | null>(() => {
   const latest = detail.value?.latest ?? null
@@ -59,6 +150,7 @@ async function load() {
     oracles.value = o
     if (!activeVersion.value) activeVersion.value = d.latest_version
     initBindingDraft()
+    await loadReplay()
     error.value = ''
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
@@ -130,6 +222,7 @@ async function startStabilityReplay() {
       `/testcases/${id}/versions/${v.version}/stability-replay?repeats=3`,
     )
     notify(`稳定性回放已启动：${r.replay_id}`)
+    await loadReplay()
   } catch (e) {
     notifyError(e)
   } finally {
@@ -162,6 +255,9 @@ function targetText(t: any): string {
 }
 
 onMounted(load)
+onUnmounted(() => {
+  if (replayTimer !== undefined) window.clearTimeout(replayTimer)
+})
 </script>
 
 <template>
@@ -295,6 +391,76 @@ onMounted(load)
                 <p class="small muted" style="margin-top: 6px">
                   编译来源为 compiler/healed 的版本，审核通过前必须有「同版本、STABLE_PASS、Oracle 完整」的稳定性回放记录。
                 </p>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-head">
+                <h2>稳定性回放</h2>
+                <div class="actions">
+                  <button class="sm ghost" :disabled="replayLoading" @click="loadReplay">刷新</button>
+                </div>
+              </div>
+              <div class="card-body">
+                <p v-if="!replay" class="small muted">
+                  当前版本尚无稳定性回放。compiler/healed 候选必须先完成同版本回放，才能通过审核门禁。
+                </p>
+                <template v-else>
+                  <div class="kv">
+                    <dt>回放状态</dt>
+                    <dd><StatusBadge :value="replay.status" /></dd>
+                    <dt>样本进度</dt>
+                    <dd>{{ replay.samples_recorded ?? 0 }} / {{ replay.samples_expected ?? 0 }}</dd>
+                    <dt>成功 / 失败</dt>
+                    <dd>
+                      通过 {{ replayCounts.passed }} · 失败 {{ replayCounts.failed }} ·
+                      未完成 {{ replayCounts.pending }}
+                    </dd>
+                    <dt>稳定性结论</dt>
+                    <dd>
+                      {{ replay.classification?.classification || replay.conclusion || '尚未形成' }}
+                    </dd>
+                    <dt>可晋升</dt>
+                    <dd>{{ replay.promotable ? '是（仍需人工审核）' : '否' }}</dd>
+                    <dt>关联 Oracle</dt>
+                    <dd class="mono small">
+                      {{ Object.keys(replay.oracle_versions || {}).length
+                        ? JSON.stringify(replay.oracle_versions)
+                        : '—' }}
+                    </dd>
+                    <dt>Oracle 完整性</dt>
+                    <dd>
+                      {{ replay.oracle_complete ? '完整' : '不完整' }}
+                      <span v-if="replay.oracle_problems?.length" class="small muted">
+                        （{{ replay.oracle_problems.join('；') }}）
+                      </span>
+                    </dd>
+                    <dt>浏览器</dt>
+                    <dd class="small">{{ (replay.browser_versions || []).join('、') || '—' }}</dd>
+                    <dt>报告来源</dt>
+                    <dd class="mono small">
+                      {{ replay.replay_id }} · {{ fmtTime(replay.created_at) }}
+                    </dd>
+                    <dt>完成时间</dt>
+                    <dd class="small">{{ fmtTime(replay.completed_at) }}</dd>
+                    <dt>审核条件</dt>
+                    <dd>
+                      <span class="badge" :class="replayGate?.satisfied ? 'pass' : 'warn'">
+                        {{ replayGate?.satisfied ? '满足' : '未满足' }}
+                      </span>
+                      <span v-if="replay.blocked_reason" class="small muted">
+                        （{{ replay.blocked_reason }}）
+                      </span>
+                    </dd>
+                  </div>
+                  <ul
+                    v-if="replayGate && !replayGate.satisfied"
+                    class="small muted"
+                    style="margin: 8px 0 0 18px"
+                  >
+                    <li v-for="p in replayGate.problems" :key="p">{{ p }}</li>
+                  </ul>
+                </template>
               </div>
             </div>
 

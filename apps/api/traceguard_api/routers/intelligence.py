@@ -196,6 +196,48 @@ async def get_stability_replay(
         raise _http(exc) from exc
 
 
+@router.get("/testcases/{testcase_id}/versions/{version}/stability-gate")
+async def preview_stability_gate(
+    testcase_id: str, version: int, request: Request
+) -> dict[str, Any]:
+    """RUN-013 WP3：审核条件只读预检（与审核事务同一套规则）。
+
+    返回 `satisfied` + `problems`，供用例详情页展示"当前是否满足审核条件"，
+    不产生放行效力；真正放行仍以审核事务内的门禁为准。
+    """
+    from ..routers.catalog import _testcase_or_404
+
+    doc = _testcase_or_404(testcase_id, request)
+    ws = str(doc.get("workspace_id") or "default")
+    try:
+        problems, replay = get_services().rt.catalog.stability_gate_preview(
+            testcase_id, version, workspace_id=ws
+        )
+    except AppError as exc:
+        raise _http(exc) from exc
+    return {
+        "testcase_id": testcase_id,
+        "version": version,
+        "satisfied": not problems,
+        "problems": problems,
+        "evidence": (
+            {
+                "replay_id": (replay or {}).get("replay_id"),
+                "testcase_version_ref": (replay or {}).get("testcase_version_ref"),
+                "repeats": (replay or {}).get("repeats"),
+                "classification": ((replay or {}).get("classification") or {}).get(
+                    "classification"
+                ),
+                "oracle_versions": (replay or {}).get("oracle_versions"),
+                "promotable": (replay or {}).get("promotable"),
+                "completed_at": (replay or {}).get("completed_at"),
+            }
+            if replay
+            else None
+        ),
+    }
+
+
 # ------------------------------------------------------------------ diagnosis
 @router.post("/runs/{run_id}/diagnose", status_code=201)
 async def diagnose(run_id: str, request: Request, use_llm: bool | None = None) -> dict[str, Any]:
