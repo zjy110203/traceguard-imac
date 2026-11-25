@@ -309,8 +309,8 @@
 | Benchmark v5 False Pass 修正 | **VERIFIED** | evaluator 级真实 Verdict 判定，0/37=0；F 臂预测机制不再参与；F/G 别名兼容 |
 | 原始归档证据保护 | **VERIFIED** | 两个 JSON SHA-256 修复前后一致，并写入离线测试断言 |
 | 全量回归 | **VERIFIED** | `pytest -q` 713 passed / 13 skipped（基线 690，新增 23 项，无新增 skip）；`ruff check .`、`git diff --check` 均通过 |
-| PostgreSQL 16 专项 | **BLOCKED** | 本机无 PG URL / 服务 / 容器工具；13 项显式 skip，不标记为通过 |
-| GitHub Actions 门禁 | **NOT_RUN** | 本轮未触发，不作 PASS 声明 |
+| PostgreSQL 16 专项 | **VERIFIED（RUN-012 WP1）** | 本机本地 PostgreSQL 16.16 上真实跑通：平台 + 一致性 + Workspace 专项 **16/16**（此前因无 PG 环境显式 skip） |
+| GitHub Actions 门禁 | **VERIFIED（RUN-012 WP1）** | PR Gate 分支推送后**真实触发并成功**：run `45578101070`（head SHA `57a5ea7`）；最终交付 HEAD 再次真实成功：run `45621143973`（head SHA `7aa3ba5`，`conclusion=success`） |
 | `/api/v1/system/metrics` 是否纳入全局观测权限 | **VERIFIED（RUN-012 WP3）** | 已接入 Workspace 过滤：显式 workspace_id 越权 403 `WORKSPACE_FORBIDDEN`；不传时普通用户只统计授权空间并集，仅 platform-admin 得全局汇总；计数改 SQL `COUNT(*)`/`GROUP BY`（旧 `limit=500` 长度推断已移除，522 条回归验证）；`/queue/stats` 同批修复。专项 11/11 |
 | RUN-012 准入 | **具备（附条件）** | 安全与 Benchmark 验收完成；进入前需补 PG16 与真实 Actions 结果 |
 
@@ -346,7 +346,7 @@
 | 全量回归 | **VERIFIED** | `pytest -q` **760 passed / 16 skipped**（16 skip 均为 PG 专项，已在真实 PG16 单独跑通）；`ruff check`/`format` 通过 |
 | 前端类型检查与构建 | **VERIFIED** | `npm run build`（vue-tsc + vite）通过 |
 | 长稳（soak） | **VERIFIED** | 6.14 分钟 / **20/20 周期** / 2 独立 Worker；20 Run 全 PASSED；0 API 错误 / 0 孤儿步骤 / 0 重复事件 / 0 未回收租约；DB `quick_check=ok`；SSE 20 周期全有事件 |
-| Nightly / Release Gate 真实触发 | **NOT_RUN** | 需 `workflow_dispatch` 与凭据，本机无；不作 PASS 声明 |
+| Nightly / Release Gate 真实触发 | **NOT_RUN** | 需 `workflow_dispatch` 与凭据，本机无；不作 PASS 声明（PR Gate 已在最终 HEAD 真实成功：run `45621143973`） |
 | 23×2 真实 Benchmark 重跑 | **NOT_RUN** | 独立部署环境与成本约束；口径已修正并以 Errata 记录历史状态 |
 | 真实 LLM 模型输出路径 | **NOT_RUN** | 本环境无凭据；契约与边界由离线 FakeProvider 覆盖 22 例 |
 | compiler/healed「回放→审核」成功路径 | **PARTIAL** | 入口已接入且可点击；完整多轮回放成功路径未纳入本轮 |

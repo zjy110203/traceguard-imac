@@ -192,8 +192,15 @@
 - 更新 `docs/FEATURE-STATUS.md`：新增 RUN-012 状态头 + 追加 RUN-012 功能状态段（不改写历史条目），
   并把 `/api/v1/system/metrics` 从 `NEEDS_DECISION` 改为 `VERIFIED`。
 
+### 最终 CI 证据
+
+分支已推送至 `7aa3ba5`，PR Gate **真实触发并成功** ——
+run `45621143973`，head SHA `7aa3ba59827638ed6f40d6d41de9cdd2f393095c`，
+2026-11-25 13:12:01Z → 13:13:08Z，`conclusion=success`。
+（此前 WP1 推送后另有一次真实成功：run `45578101070`，head SHA `57a5ea7`。）
+
 ### 剩余问题 / 下一项
 
 - Nightly / Release Gate 真实触发、23×2 Benchmark 重跑、真实 LLM 模型输出路径、真实人工基线：
   **均为 NOT_RUN / BLOCKED，不标 PASS**（原因见最终报告 §4）。
-- 本轮到此收口；分支 `workbuddy/run012-product-completion` 待推送评审。
+- 本轮 RUN-012 全部工作包（WP0~WP6）完成并交付。

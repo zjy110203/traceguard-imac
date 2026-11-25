@@ -39,7 +39,9 @@
 
 - **问题**：PR Gate 的分支触发规则不含本轮分支 → 分支推送不会触发 CI；Ruff 格式门禁有大量未格式化文件 → CI 必红。
 - **修复**：分支触发规则补齐；安全专项纳入门禁；格式化全仓。
-- **真实验证**：推送后 PR Gate **真实触发**（run `45578101070`，head SHA `57a5ea7`，`conclusion=success`）。
+- **真实验证**：推送后 PR Gate **两次真实触发并成功** ——
+  WP1 推送后 run `45578101070`（head SHA `57a5ea7`，`conclusion=success`）；
+  **最终交付 HEAD** run `45621143973`（head SHA `7aa3ba5`，2026-11-25 13:12:01Z → 13:13:08Z，`conclusion=success`）。
 - **PG16 验收**：本地 PostgreSQL 16.16 上跑通平台/一致性/Workspace 专项 **16 passed**。
 
 ### 1.3 多 Workspace 产品化（WP2）
@@ -132,7 +134,7 @@
 
 | 项 | 状态 | 原因 |
 |---|---|---|
-| Nightly / Release Gate 真实触发 | **NOT_RUN** | 需 `workflow_dispatch` 与凭据，本机无；PR Gate 已真实成功（run `45578101070`） |
+| Nightly / Release Gate 真实触发 | **NOT_RUN** | 需 `workflow_dispatch` 与凭据，本机无；**PR Gate 已在最终 HEAD 真实成功**（run `45621143973`，head SHA `7aa3ba5`） |
 | 23×2 真实 Benchmark 重跑 | **NOT_RUN** | 独立部署环境与成本约束；WP0 已修正口径并以 Errata 记录历史状态 |
 | 真实 LLM 模型输出路径 | **NOT_RUN** | 本环境无凭据；契约与边界已由离线 FakeProvider 覆盖 22 例 |
 | 真实用户/人工基线对比 | **BLOCKED** | 需要人工评审资源 |
@@ -145,6 +147,7 @@
 ## 5. 提交序列
 
 ```
+7aa3ba5 RUN-012 WP6: 质量门禁、长稳验收与最终报告交付
 f64f0d7 RUN-012 WP5: 诊断顾问 Schema 校验、重试/Fallback 与追踪，补充离线测试
 04b83c9 RUN-012 WP4: 打通核心业务 UI 闭环（Oracle 绑定/回放/LLM 建议 + 目标地址配置化）
 b49116c RUN-012 WP3: 全局统计 Workspace 过滤与 SQL 真实聚合计数
@@ -155,3 +158,7 @@ b49116c RUN-012 WP3: 全局统计 Workspace 过滤与 SQL 真实聚合计数
 
 基线 `0ca128f` 未被改写；未使用 `reset --hard` / `clean` / 强制推送；历史证据文件哈希保持不变；
 未读取或导出任何真实凭据。
+
+**最终 CI 证据**：分支 `workbuddy/run012-product-completion` 已推送至 `7aa3ba5`，
+PR Gate **真实触发并成功** —— run `45621143973`，`conclusion=success`
+（https://github.com/zjy110203/traceguard-imac/actions/runs/45621143973）。
