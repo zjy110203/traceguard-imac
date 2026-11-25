@@ -136,8 +136,13 @@ class Runtime:
             self._inline_thread = None
 
     # ------------------------------------------------------------------ health
-    def health(self) -> dict[str, Any]:
-        from sqlalchemy import text
+    def health(self, *, workspace_ids: list[str] | None = None) -> dict[str, Any]:
+        import os
+        import resource
+        import sys
+
+        from sqlalchemy import func, select, text
+        from traceguard_persistence.models import IntentRow, RunRow, TaskRow, TestCaseRow
 
         db_ok = True
         db_error = ""
@@ -146,19 +151,41 @@ class Runtime:
                 s.execute(text("SELECT 1"))
         except Exception as exc:  # noqa: BLE001
             db_ok, db_error = False, str(exc)
+        usage = resource.getrusage(resource.RUSAGE_SELF)
+        rss = int(usage.ru_maxrss)
+        if sys.platform != "darwin":
+            rss *= 1024  # Linux: KiB → bytes
+
+        # RUN-013 WP6：健康计数与 /system/metrics 同口径——普通用户只统计授权
+        # Workspace 并集，且使用 SQL COUNT 避免 list(limit=1000) 的截断失真。
+        counts: dict[str, int] = {"intents": 0, "testcases": 0, "tasks": 0, "runs": 0}
+        if db_ok:
+            with self.db.session() as s:
+                for label, model in (
+                    ("intents", IntentRow),
+                    ("testcases", TestCaseRow),
+                    ("tasks", TaskRow),
+                    ("runs", RunRow),
+                ):
+                    q = select(func.count()).select_from(model)
+                    if workspace_ids is not None:
+                        q = q.where(model.workspace_id.in_(list(workspace_ids)))
+                    counts[label] = int(s.scalar(q) or 0)
+
         return {
             "database": {"ok": db_ok, "dialect": self.db.url.split(":")[0], "error": db_error},
             "artifact_dir": str(self.artifacts.root),
+            "process": {
+                "pid": os.getpid(),
+                "rss_bytes": rss,
+                "cpu_user_s": round(float(usage.ru_utime), 3),
+                "cpu_sys_s": round(float(usage.ru_stime), 3),
+            },
             "worker": {
                 "id": self.worker_id,
                 "inline_running": bool(self._inline_thread and self._inline_thread.is_alive()),
             },
-            "counts": {
-                "intents": len(self.catalog.list_intents()),
-                "testcases": len(self.catalog.list_testcases()),
-                "tasks": len(self.tasks.list_tasks(limit=1000)),
-                "runs": len(self.tasks.list_runs(limit=1000)),
-            },
+            "counts": counts,
         }
 
 

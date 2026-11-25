@@ -1,0 +1,364 @@
+{
+  "workpackage": "RUN-013 WP1",
+  "engine": "Playwright Chromium + real API (auth+CSRF) + real TeamFlow + independent Worker processes + worker fault injection",
+  "deployment": {
+    "inline_worker": false,
+    "independent_workers": 2,
+    "lease_ttl_s": 6.0,
+    "database": "sqlite"
+  },
+  "total": 56,
+  "passed": 53,
+  "failed": 2,
+  "screenshots": [
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run013/wp1/ui/01-intent-created.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run013/wp1/ui/02-testcase-pending.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run013/wp1/ui/03-oracle-approved.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run013/wp1/ui/04-oracle-bound.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run013/wp1/ui/05-approved.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run013/wp1/ui/06-run-detail.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run013/wp1/ui/07-run-failed.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run013/wp1/ui/08-diagnosis.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run013/wp1/ui/09-repair-created.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run013/wp1/ui/10-repair-sandbox.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run013/wp1/ui/11-repair-promoted.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run013/wp1/ui/12-repair-rolled-back.png"
+  ],
+  "results": [
+    {
+      "check": "环境：真实 TeamFlow 可启动",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "http://127.0.0.1:54750"
+    },
+    {
+      "check": "环境：真实 API 可启动",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "http://127.0.0.1:54749"
+    },
+    {
+      "check": "环境：独立 Worker 进程已启动（API 内嵌 Worker 关闭）",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "r13-w1:59935, r13-w2:59936"
+    },
+    {
+      "check": "环境：三个角色已初始化",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "r12-eng, r12-lead, r12-admin"
+    },
+    {
+      "check": "三个角色身份来自服务端",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "['qa-engineer']/['qa-lead']/['platform-admin']"
+    },
+    {
+      "check": "服务端配置暴露真实被测目标地址",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "teamflow_base_url=http://127.0.0.1:54750"
+    },
+    {
+      "check": "API 不启动内嵌 Worker（TG_INLINE_WORKER=false）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "worker={'id': '204deiMac.local-59921', 'inline': False}"
+    },
+    {
+      "check": "① UI 创建需求 → 服务端真实落库",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "匹配 1 条"
+    },
+    {
+      "check": "② UI 新建用例 → 服务端 PENDING",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "匹配 1 条 status=PENDING"
+    },
+    {
+      "check": "③ UI 新建已审批 Oracle → 服务端落库",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "匹配 1 条 approved=True"
+    },
+    {
+      "check": "④ 用例详情页提供 Oracle 绑定控件",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "select 数量=1"
+    },
+    {
+      "check": "⑤ UI 保存绑定 → 服务端 oracle_bindings 落库",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "bindings=['a_wp4_banner']"
+    },
+    {
+      "check": "⑥ UI 审核通过 → 服务端 APPROVED（Oracle 门禁未绕过）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=APPROVED"
+    },
+    {
+      "check": "⑦ UI 执行 → 产生真实 Run",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "run_id=run_1795619466426a0df32e68af9"
+    },
+    {
+      "check": "⑧ Run 由真实 Worker 执行到终态",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=COMPLETED verdict=PASSED observer=playwright"
+    },
+    {
+      "check": "⑨ 执行使用真实浏览器（playwright）而非降级",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "observer_mode=playwright"
+    },
+    {
+      "check": "⑨a Run 由独立 Worker 进程领取并持有租约（Fencing Token > 0）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "lease_owner=r13-w1 fencing=1"
+    },
+    {
+      "check": "⑩ Run 产出真实步骤轨迹与证据",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "steps=5 evidence=19"
+    },
+    {
+      "check": "⑪ 已向真实被测目标注入故障 TF-UI-002（提交静默忽略）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "TF-UI-002 activated"
+    },
+    {
+      "check": "⑫ 故障注入后真实 Run 失败（verdict=FAILED）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "verdict=FAILED status=COMPLETED"
+    },
+    {
+      "check": "⑬ 失败 Run 的诊断入口可用",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "enabled=True"
+    },
+    {
+      "check": "⑭ UI 诊断 → 服务端生成 Diagnosis",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "diagnoses=1"
+    },
+    {
+      "check": "诊断 ID",
+      "status": "NOTE",
+      "detail": "diagnosis_179561947429404a6fc6e6c1d"
+    },
+    {
+      "check": "⑮ 修复中心提供 LLM 建议入口",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "提案入口存在（LLM 建议位于提案弹窗内）"
+    },
+    {
+      "check": "⑯ 未配置 LLM 凭据时如实提示，不伪造成功",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "toast='修复规划器已禁用，无法生成 LLM 建议'"
+    },
+    {
+      "check": "⑰ UI 新建修复提案 → 服务端落库",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "proposals=1"
+    },
+    {
+      "check": "⑱ 提案初始状态为 VALIDATED（规则校验通过）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=VALIDATED"
+    },
+    {
+      "check": "⑲a 已清除故障（sticky 语义），目标恢复真实行为",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "TF-UI-002 cleared"
+    },
+    {
+      "check": "⑲ UI 沙箱验证 → 服务端真实执行并落库结果",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "sandbox_status=PASSED run=run_1795619484421c42dd64001d5 reason="
+    },
+    {
+      "check": "⑳ UI 提交审批 → 服务端 PENDING_APPROVAL",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=PENDING_APPROVAL"
+    },
+    {
+      "check": "㉑ UI 审批 → 服务端 APPROVED",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=APPROVED"
+    },
+    {
+      "check": "㉒ UI 晋升 → 服务端 PROMOTED 且版本号有效",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=PROMOTED promoted_version=2"
+    },
+    {
+      "check": "㉓ UI 回滚 → 服务端 ROLLED_BACK 且留痕",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=ROLLED_BACK record=True"
+    },
+    {
+      "check": "环境：开始独立 Worker 故障注入（真实进程 / 真实租约）",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "lease_ttl=6.0s"
+    },
+    {
+      "check": "W1-① Worker 启动失败（数据库不可达）→ 进程非零退出且不消费任务",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "exit=1 err='on to server at \"127.0.0.1\", port 1 failed: could not receive data from server: Connection refused\\n(Background on this error at: https://sqlalche.me/e/21/e3q8)\\n'"
+    },
+    {
+      "check": "W1-② Worker 启动失败不影响 API 与既有队列",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "API 仍健康"
+    },
+    {
+      "check": "W1-③ 独立 Worker-1 启动并注册",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "pid=61463"
+    },
+    {
+      "check": "W1-④ Worker-2 正常退出（SIGTERM）→ 退出码 0",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "exit=0"
+    },
+    {
+      "check": "W1-⑤ Worker-2 可重新启动并继续消费",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "pid=61499"
+    },
+    {
+      "check": "W1-⑥ 队列由独立 Worker-1 领取（API 不执行）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "run=run_1795619504366095ee1a878fb owner=r13-w1 fencing=1"
+    },
+    {
+      "check": "W1-⑦ Worker 执行中被 SIGKILL → 进程非零退出",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "exit=-9"
+    },
+    {
+      "check": "W1-⑧ Worker 死亡后 API 不假报执行成功",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=RUNNING verdict=NOT_EVALUATED"
+    },
+    {
+      "check": "W1-⑨ 租约到期后新 Worker 接管（fencing_token 递增）",
+      "status": "FAIL",
+      "server_verified": true,
+      "detail": "owner=None fencing=None before=1"
+    },
+    {
+      "check": "W1-⑩ 接管后任务真实执行到终态且仅一份业务结果",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=COMPLETED verdict=PASSED"
+    },
+    {
+      "check": "W1-⑪ 接管重跑不产生重复步骤（step_id 唯一）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "steps=5 unique=5"
+    },
+    {
+      "check": "W1-⑫ 旧 Worker 已持有租约（准备暂停）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "owner=r13-w1 fencing=1"
+    },
+    {
+      "check": "W1-⑬ 暂停 Worker 租约过期 → 第三个 Worker 接管",
+      "status": "FAIL",
+      "server_verified": true,
+      "detail": "owner=None fencing=None"
+    },
+    {
+      "check": "W1-⑭ 旧 Worker 恢复后不能覆盖已接管任务的状态",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "before=COMPLETED/PASSED after=COMPLETED/PASSED"
+    },
+    {
+      "check": "W1-⑮ 旧 Worker 恢复后不产生重复步骤/证据",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "steps=5 (before=5) evidence=19->19"
+    },
+    {
+      "check": "W1-⑯ 旧 Worker 的过期提交被 Fencing 拒绝（进程仍存活）",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "alive=True"
+    },
+    {
+      "check": "W1-⑰ API 进程被强制终止（模拟客户端未收到响应）",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "API 不可达"
+    },
+    {
+      "check": "W1-⑱ API 重启后恢复健康",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "http://127.0.0.1:54749"
+    },
+    {
+      "check": "W1-⑲ API 重启期间 Worker 继续消费，重启后可回读终态",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=COMPLETED verdict=PASSED"
+    },
+    {
+      "check": "W1-⑳ 已完成任务在 API 重启后不重复产生业务结果",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "run=run_179561968456478ce1877a96c"
+    },
+    {
+      "check": "W1-㉑ 双 Worker 并发消费 4 个 Run 全部到终态",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "statuses=['COMPLETED', 'COMPLETED', 'COMPLETED', 'COMPLETED']"
+    },
+    {
+      "check": "W1-㉒ 并发消费未出现重复步骤/双重提交",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "duplicates=[]"
+    }
+  ]
+}

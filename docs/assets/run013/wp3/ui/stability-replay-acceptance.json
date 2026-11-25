@@ -1,0 +1,99 @@
+{
+  "workpackage": "RUN-013 WP3",
+  "engine": "Playwright Chromium + real API + real TeamFlow + independent Workers",
+  "total": 15,
+  "passed": 15,
+  "failed": 0,
+  "results": [
+    {
+      "check": "环境：API 独立进程 + 内嵌 Worker 关闭",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "http://127.0.0.1:60791"
+    },
+    {
+      "check": "环境：qa-lead/platform-admin 就绪",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "auth+CSRF"
+    },
+    {
+      "check": "UI：已登录并可进入用例详情",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "http://127.0.0.1:60791"
+    },
+    {
+      "check": "负向：无回放 → 审核被服务端拒绝（STABILITY_REPLAY_REQUIRED）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=412 body={\"detail\":{\"code\":\"PRECONDITION_FAILED\",\"message\":\"STABILITY_REPLAY_GATE_FAILED: STABILITY_REPLAY_REQUIRED: tcase_17956207738813277012cfcf6@1 没有任何稳定性回放记录（compile_source=compiler）\"}}"
+    },
+    {
+      "check": "UI：无回放时显示真实空状态",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "稳定性回放\n刷新\n\n当前版本尚无稳定性回放。compiler/healed 候选必须先完成同版本回放，才能通过审核门禁。"
+    },
+    {
+      "check": "UI：回放完成后显示 3/3 样本 + STABLE_PASS",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "稳定性回放\n刷新\n回放状态\n已完成\n样本进度\n3 / 3\n成功 / 失败\n通过 3 · 失败 0 · 未完成 0\n稳定性结论\nSTABLE_PASS\n可晋升\n是（仍需人工审核）\n关联 Oracle\n{\"a_wp3_banner\":\"oracle_wp3_compiler@1\"}\nOracle 完整性\n完整\n浏览器\n—\n报告来源\nreplay_1795620774036993dc5b8ce91 · 2026/11/25 23:32:54\n完成时间\n2026/11/25 23:33:00\n审核条件\n满足"
+    },
+    {
+      "check": "UI：显示成功/失败数量与 Oracle 版本",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "稳定性回放\n刷新\n回放状态\n已完成\n样本进度\n3 / 3\n成功 / 失败\n通过 3 · 失败 0 · 未完成 0\n稳定性结论\nSTABLE_PASS\n可晋升\n是（仍需人工审核）\n关联 Oracle\n{\"a_wp3_banner\":\"oracle_wp3_compiler@1\"}\nOracle 完整性\n完整\n浏览器\n—\n报告来源\nreplay_1795620774036993dc5b8ce91 · 2026/11/25 23:32:54\n完成时间\n2026/11/25 23:33:00\n审核条件\n满足"
+    },
+    {
+      "check": "UI：显示审核条件满足",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "稳定性回放\n刷新\n回放状态\n已完成\n样本进度\n3 / 3\n成功 / 失败\n通过 3 · 失败 0 · 未完成 0\n稳定性结论\nSTABLE_PASS\n可晋升\n是（仍需人工审核）\n关联 Oracle\n{\"a_wp3_banner\":\"oracle_wp3_compiler@1\"}\nOracle 完整性\n完整\n浏览器\n—\n报告来源\nreplay_1795620774036993dc5b8ce91 · 2026/11/25 23:32:54\n完成时间\n2026/11/25 23:33:00\n审核条件\n满足"
+    },
+    {
+      "check": "compiler：UI 审核通过且留痕 stability_policy=ENFORCED",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=APPROVED enforced=True"
+    },
+    {
+      "check": "UI：healed 候选回放 3/3 + STABLE_PASS",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "稳定性回放\n刷新\n回放状态\n已完成\n样本进度\n3 / 3\n成功 / 失败\n通过 3 · 失败 0 · 未完成 0\n稳定性结论\nSTABLE_PASS\n可晋升\n是（仍需人工审核）\n关联 Oracle\n{\"a_wp3_banner\":\"oracle_wp3_healed@1\"}\nOracle 完整性\n完整\n浏览器\n—\n报告来源\nreplay_179562078468533bb04012921 · 2026/11/25 23:33:04\n完成时间\n2026/11/25 23:33:11\n审核条件\n满足"
+    },
+    {
+      "check": "UI：healed 候选审核条件满足",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "稳定性回放\n刷新\n回放状态\n已完成\n样本进度\n3 / 3\n成功 / 失败\n通过 3 · 失败 0 · 未完成 0\n稳定性结论\nSTABLE_PASS\n可晋升\n是（仍需人工审核）\n关联 Oracle\n{\"a_wp3_banner\":\"oracle_wp3_healed@1\"}\nOracle 完整性\n完整\n浏览器\n—\n报告来源\nreplay_179562078468533bb04012921 · 2026/11/25 23:33:04\n完成时间\n2026/11/25 23:33:11\n审核条件\n满足"
+    },
+    {
+      "check": "healed：UI 审核通过",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=APPROVED"
+    },
+    {
+      "check": "负向：真实故障下回放非 STABLE_PASS",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=COMPLETED class=DETERMINISTIC_FAILURE"
+    },
+    {
+      "check": "负向：失败回放 → 审核被拒（STABILITY_NOT_STABLE_PASS）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=412 body={\"detail\":{\"code\":\"PRECONDITION_FAILED\",\"message\":\"STABILITY_REPLAY_GATE_FAILED: STABILITY_NOT_STABLE_PASS: 实际为 DETERMINISTIC_FAILURE; STABILITY_REPLAY_NOT_PROMOTABLE\"}}"
+    },
+    {
+      "check": "负向：回放未完成 → 审核被拒（STABILITY_REPLAY_NOT_COMPLETED）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=412 body={\"detail\":{\"code\":\"PRECONDITION_FAILED\",\"message\":\"STABILITY_REPLAY_GATE_FAILED: STABILITY_REPLAY_NOT_COMPLETED: 当前状态 RUNNING; STABILITY_REPLAY_HAS_PENDING_RUN: run_17956208017268d8590848826,run_1795620801727492ca1979a91"
+    }
+  ]
+}

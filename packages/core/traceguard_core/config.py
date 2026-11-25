@@ -75,6 +75,8 @@ class Settings(BaseSettings):
     worker_id: str = ""  # 空则自动生成 host-pid
     worker_poll_interval_s: float = 1.0
     worker_lease_ttl_s: float = 120.0
+    # RUN-013 WP4：Worker 资源观测目录（空=不写；长稳实验用它采集 RSS/CPU）。
+    worker_metrics_dir: str = ""
     inline_worker: bool = True  # 单机模式：API 内嵌后台执行器（生产可关掉并独立部署 Worker）
 
     # LLM ModelGateway（RUN-003-G）

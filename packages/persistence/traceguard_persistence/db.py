@@ -40,6 +40,10 @@ class Database:
             connect_args["timeout"] = 30.0
             if ":memory:" in self.url:
                 kwargs["poolclass"] = StaticPool
+        else:
+            # RUN-013 WP4：数据库重启/连接被终止后，池中死连接不应让首个请求 500。
+            # pre_ping 在 checkout 时探测并透明重连（代价是一次轻量 round-trip）。
+            kwargs["pool_pre_ping"] = True
         self.engine: Engine = create_engine(
             self.url, echo=echo, future=True, connect_args=connect_args, **kwargs
         )

@@ -65,3 +65,8 @@ tests/reports/*
 
 # ===== pytest 临时产物（测试夹具垃圾，不入库） =====
 .pytest-tmp/
+
+# ===== RUN-013 验收运行时产物（只保留 JSON/截图/日志证据） =====
+docs/assets/run013/**/_runtime/
+docs/assets/run013/**/_attempt*/
+docs/assets/run013/soak-smoke/

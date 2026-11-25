@@ -15,10 +15,14 @@
 from __future__ import annotations
 
 import argparse
+import json
+import os
+import resource
 import signal
 import socket
 import sys
 import time
+from pathlib import Path
 from types import FrameType
 
 from traceguard_core.config import get_settings
@@ -38,6 +42,40 @@ def _handle_signal(signum: int, _frame: FrameType | None) -> None:
     global _stop
     _stop = True
     logger.info("worker_shutdown_requested", signal=signum)
+
+
+def _write_metrics(worker_id: str, metrics_dir: str) -> None:
+    """RUN-013 WP4：把 Worker 自身 RSS/CPU 写成快照文件，供长稳脚本采集。
+
+    宿主机限制 `ps` 时仍可观测；失败静默（观测不得影响执行）。
+    """
+    if not metrics_dir:
+        return
+    try:
+        usage = resource.getrusage(resource.RUSAGE_SELF)
+        rss = int(usage.ru_maxrss)
+        if sys.platform != "darwin":
+            rss *= 1024  # Linux: KiB → bytes
+        safe = "".join(c if c.isalnum() or c in "-_." else "_" for c in worker_id)
+        target = Path(metrics_dir) / f"worker-{safe}.json"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        tmp = target.with_suffix(".tmp")
+        tmp.write_text(
+            json.dumps(
+                {
+                    "worker_id": worker_id,
+                    "pid": os.getpid(),
+                    "rss_bytes": rss,
+                    "cpu_user_s": round(float(usage.ru_utime), 3),
+                    "cpu_sys_s": round(float(usage.ru_stime), 3),
+                    "at": time.time(),
+                }
+            ),
+            encoding="utf-8",
+        )
+        tmp.replace(target)
+    except Exception:  # noqa: BLE001 - 资源观测不得影响 Worker 主循环
+        return
 
 
 def build_worker(worker_id: str) -> tuple[TaskService, RunPipeline]:
@@ -68,6 +106,7 @@ def run(once: bool = False, poll_interval: float | None = None) -> int:
     executed = 0
     try:
         while not _stop:
+            _write_metrics(worker_id, settings.worker_metrics_dir)
             try:
                 reaped = tasks.reap_expired_runs()
                 if reaped:
@@ -82,6 +121,7 @@ def run(once: bool = False, poll_interval: float | None = None) -> int:
                 logger.info("run_claimed", run_id=claimed["run_id"], attempt=claimed["attempt"])
                 outcome = pipeline.execute(claimed["run_id"], lease=claimed)
                 executed += 1
+                _write_metrics(worker_id, settings.worker_metrics_dir)
                 logger.info(
                     "run_finished",
                     run_id=outcome.run_id,

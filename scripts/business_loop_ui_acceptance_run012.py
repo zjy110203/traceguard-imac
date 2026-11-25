@@ -117,7 +117,12 @@ class Http:
         try:
             with self.opener.open(req, timeout=timeout or self.timeout) as resp:  # noqa: S310
                 raw = resp.read().decode()
-                return resp.status, (json.loads(raw) if raw.strip() else {}), raw
+                try:
+                    parsed = json.loads(raw) if raw.strip() else {}
+                except json.JSONDecodeError:
+                    # SSE 等非 JSON 成功响应：保留原始文本，不能因解析失败丢掉状态。
+                    parsed = {"raw": raw[:2000]}
+                return resp.status, parsed, raw
         except urllib.error.HTTPError as exc:
             raw = exc.read().decode(errors="replace")
             try:
