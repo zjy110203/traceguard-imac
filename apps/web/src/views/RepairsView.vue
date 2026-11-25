@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { api, fmtTime } from '../api'
+import { currentWorkspaceId, wsPath } from '../workspace'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import CodeDiff from '../components/CodeDiff.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
@@ -37,7 +38,10 @@ const form = ref({
 async function load() {
   loading.value = true
   try {
-    const [r, c] = await Promise.all([api.get<Repair[]>(`/repairs${includeBench.value ? '' : '?workspace_id=default'}`), api.get<TestCaseSummary[]>('/testcases')])
+    const [r, c] = await Promise.all([
+      api.get<Repair[]>(includeBench.value ? '/repairs' : wsPath('/repairs')),
+      api.get<TestCaseSummary[]>(wsPath('/testcases')),
+    ])
     items.value = r
     cases.value = c
     const keep = selected.value?.proposal_id

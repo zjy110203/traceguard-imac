@@ -17,6 +17,10 @@ import {
 import ToastHost from './components/ToastHost.vue'
 import { notify, notifyError } from './toast'
 import type { LLMUsageSummary, SystemHealth } from './types'
+import {
+  availableWorkspaces, currentWorkspaceId, loadWorkspaces, resetWorkspaceContext,
+  switchWorkspace, workspaceGeneration, workspaceState, wsPath,
+} from './workspace'
 
 interface NavItem { label: string; to: string; icon: Component; count?: number; adminOnly?: boolean }
 interface NavGroup { title: string; items: NavItem[] }
@@ -48,7 +52,7 @@ async function load() {
   const jobs = await Promise.allSettled([
     endpoints.systemHealth(),
     endpoints.llmSummary(),
-    api.get<Record<string, unknown>[]>('/repairs?workspace_id=default'),
+    api.get<Record<string, unknown>[]>(wsPath('/repairs')),
     endpoints.queueStats(),
   ])
   if (jobs[0].status === 'fulfilled') {
@@ -135,7 +139,17 @@ async function doLogout(): Promise<void> {
     const { logout } = await import('./auth')
     await logout()
   } catch { /* 会话可能已失效 */ }
+  resetWorkspaceContext()
   await router.replace({ name: 'login' })
+}
+
+async function onWorkspaceChange(e: Event): Promise<void> {
+  const id = (e.target as HTMLSelectElement).value
+  if (await switchWorkspace(id)) {
+    results.value = []
+    query.value = ''
+    await load()
+  }
 }
 
 function handleClickOutside(e: MouseEvent): void {
@@ -178,10 +192,10 @@ async function runSearch() {
   if (!q) return
   searching.value = true
   const jobs = await Promise.allSettled([
-    api.get<Record<string, unknown>[]>('/runs?limit=100'),
-    api.get<Record<string, unknown>[]>('/testcases?workspace_id=default'),
-    api.get<Record<string, unknown>[]>('/intents?workspace_id=default'),
-    api.get<Record<string, unknown>[]>('/diagnoses?limit=100&workspace_id=default'),
+    api.get<Record<string, unknown>[]>(wsPath('/runs', { limit: 100 })),
+    api.get<Record<string, unknown>[]>(wsPath('/testcases')),
+    api.get<Record<string, unknown>[]>(wsPath('/intents')),
+    api.get<Record<string, unknown>[]>(wsPath('/diagnoses', { limit: 100 })),
   ])
   const labels = ['run_id', 'testcase_id', 'intent_id', 'diagnosis_id']
   // 只有存在详情路由的实体才可下钻；Intents 无详情路由，改为列表页带 id 过滤参数。
@@ -222,9 +236,18 @@ function goto(to: string) {
   void to
 }
 watch(() => route.fullPath, () => { mobileOpen.value = false; searchOpen.value = false })
+// Workspace 切换后刷新导航统计与搜索缓存；视图本体由 :key 强制重挂载。
+watch(currentWorkspaceId, () => { results.value = []; load() })
+// 登录前 onMounted 的 /auth/me 会 401；登录成功后必须重新向服务端拉取可见空间。
+watch(() => authState.user?.user_id, async (id, previous) => {
+  if (!id || id === previous) return
+  await loadWorkspaces()
+  await load()
+})
 
-onMounted(() => {
+onMounted(async () => {
   document.documentElement.dataset.theme = theme.value
+  await loadWorkspaces()
   load()
   timer = window.setInterval(load, 20000)
   window.addEventListener('keydown', onKey)
@@ -293,6 +316,20 @@ onUnmounted(() => {
           <span class="crumb-current">{{ crumb }}</span>
         </div>
         <div class="topbar-spacer" />
+        <label class="workspace-picker" aria-label="当前工作空间">
+          <Database :size="13" aria-hidden="true" />
+          <select
+            :value="currentWorkspaceId"
+            :disabled="workspaceState.loading || availableWorkspaces.length === 0"
+            aria-label="切换工作空间"
+            @change="onWorkspaceChange"
+          >
+            <option v-if="availableWorkspaces.length === 0" value="">无可用空间</option>
+            <option v-for="w in availableWorkspaces" :key="w.workspace_id" :value="w.workspace_id">
+              {{ w.name || w.workspace_id }}
+            </option>
+          </select>
+        </label>
         <button class="search-trigger" type="button" @click="searchOpen = true; query = ''; runSearch()">
           <Search :size="14" /><span>搜索页面、Run、用例…</span><kbd><Command :size="10" />K</kbd>
         </button>
@@ -328,7 +365,14 @@ onUnmounted(() => {
           <Sun v-if="theme === 'light'" :size="16" /><Moon v-else :size="16" />
         </button>
       </header>
-      <main class="content"><router-view /></main>
+      <main class="content">
+        <div v-if="workspaceState.initialized && availableWorkspaces.length === 0" class="empty-workspace" role="status">
+          <Database :size="26" aria-hidden="true" />
+          <h2>暂无可访问的工作空间</h2>
+          <p>请联系平台管理员为当前账号配置工作空间权限。页面不会展示任何未经授权的数据。</p>
+        </div>
+        <router-view v-else :key="workspaceGeneration" />
+      </main>
     </div>
     <ToastHost />
 
@@ -411,4 +455,30 @@ onUnmounted(() => {
   border-radius: 8px; padding: 8px 12px; font-size: 12.5px;
 }
 .field { margin-bottom: 12px; }
+.workspace-picker {
+  display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2);
+  color: var(--text-2); max-width: 190px;
+}
+.workspace-picker select {
+  border: 0; background: transparent; color: var(--text); font-size: 12.5px;
+  max-width: 150px; outline: none; cursor: pointer;
+}
+.workspace-picker select:disabled { cursor: not-allowed; opacity: .6; }
+.empty-workspace {
+  display: grid; place-items: center; align-content: center; gap: 10px;
+  min-height: 60vh; text-align: center; color: var(--text-2);
+}
+.empty-workspace h2 { font-size: 18px; color: var(--text); margin: 0; }
+.empty-workspace p { max-width: 520px; font-size: 13px; margin: 0; line-height: 1.6; }
+@media (max-width: 768px) {
+  .workspace-picker { max-width: 120px; }
+  .workspace-picker select { max-width: 90px; }
+}
+@media (max-width: 560px) {
+  .topbar { gap: 4px; }
+  .breadcrumb, .env-pill, .top-status, .user-name, .user-chip .badge { display: none !important; }
+  .workspace-picker { max-width: 102px; padding: 3px 5px; }
+  .workspace-picker select { max-width: 72px; font-size: 11.5px; }
+}
 </style>

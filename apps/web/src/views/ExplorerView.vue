@@ -3,6 +3,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { Bot, ChevronRight, CircleAlert, Cpu, FileCode2, GitBranch, Play, RefreshCw, Search, ShieldCheck } from '@lucide/vue'
 import { api, fmtDuration, fmtTime } from '../api'
+import { wsPath } from '../workspace'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import JsonBlock from '../components/JsonBlock.vue'
 import MetricCard from '../components/MetricCard.vue'
@@ -41,8 +42,8 @@ const activeStep = ref(0)
 async function load() {
   try {
     const [e, i] = await Promise.all([
-      api.get<ExplorationRow[]>('/explorations?workspace_id=default'),
-      api.get<IntentRow[]>('/intents?workspace_id=default'),
+      api.get<ExplorationRow[]>(wsPath('/explorations')),
+      api.get<IntentRow[]>(wsPath('/intents')),
     ])
     rows.value = e
     intents.value = i

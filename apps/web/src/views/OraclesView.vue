@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { api, fmtTime } from '../api'
+import { currentWorkspaceId, wsPath } from '../workspace'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import PageHeader from '../components/PageHeader.vue'
 import ModalShell from '../components/ModalShell.vue'
@@ -42,7 +43,7 @@ const filtered = computed(() =>
 async function load() {
   loading.value = true
   try {
-    items.value = await api.get<OracleRow[]>('/oracles')
+    items.value = await api.get<OracleRow[]>(wsPath('/oracles'))
     error.value = ''
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
@@ -66,6 +67,7 @@ async function create() {
       return
     }
     await api.post('/oracles', {
+      workspace_id: currentWorkspaceId.value,
       oracle_id: form.value.oracle_id || undefined,
       assertion_id: form.value.assertion_id,
       expected_behavior: form.value.expected_behavior,

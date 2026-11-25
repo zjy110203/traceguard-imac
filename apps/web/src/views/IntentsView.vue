@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { api, fmtTime } from '../api'
+import { currentWorkspaceId, wsPath } from '../workspace'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import PageHeader from '../components/PageHeader.vue'
 import ModalShell from '../components/ModalShell.vue'
@@ -65,8 +66,8 @@ async function load() {
   loading.value = true
   try {
     const [intents, cases] = await Promise.all([
-      api.get<Intent[]>('/intents'),
-      api.get<TestCaseSummary[]>('/testcases?workspace_id=default'),
+      api.get<Intent[]>(wsPath('/intents')),
+      api.get<TestCaseSummary[]>(wsPath('/testcases')),
     ])
     items.value = intents
     const map: Record<string, string> = {}
@@ -95,6 +96,7 @@ async function create() {
   busy.value = 'create'
   try {
     await api.post('/intents', {
+      workspace_id: currentWorkspaceId.value,
       title: form.value.title,
       description: form.value.description,
       owner: form.value.owner,

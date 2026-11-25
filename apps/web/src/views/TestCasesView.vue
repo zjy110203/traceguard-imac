@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, fmtTime } from '../api'
+import { currentWorkspaceId, wsPath } from '../workspace'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import PageHeader from '../components/PageHeader.vue'
 import ModalShell from '../components/ModalShell.vue'
@@ -45,7 +46,7 @@ const filtered = computed(() =>
 async function load() {
   loading.value = true
   try {
-    const [t, i] = await Promise.all([api.get<TestCaseSummary[]>('/testcases?workspace_id=default'), api.get<Intent[]>('/intents')])
+    const [t, i] = await Promise.all([api.get<TestCaseSummary[]>(wsPath('/testcases')), api.get<Intent[]>(wsPath('/intents'))])
     items.value = t
     intents.value = i
     error.value = ''
@@ -99,6 +100,7 @@ async function create() {
       return
     }
     await api.post('/testcases', {
+      workspace_id: currentWorkspaceId.value,
       title: form.value.title,
       intent_ref: form.value.intent_ref || null,
       steps,

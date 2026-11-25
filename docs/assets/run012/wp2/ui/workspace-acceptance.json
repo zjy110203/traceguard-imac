@@ -1,0 +1,158 @@
+{
+  "workpackage": "RUN-012 WP2",
+  "total": 25,
+  "passed": 25,
+  "failed": [],
+  "results": [
+    {
+      "check": "环境：真实 API 创建两个 Workspace",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "ws_179559692526910d913ee140c, ws_17955969252715bfb482c6e08"
+    },
+    {
+      "check": "环境：7 个真实用户已初始化（A/B × 3 角色 + admin）",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "sqlite:////Users/dlp--test/Desktop/traceguard/docs/assets/run012/wp2/ui/_runtime/workspace.db"
+    },
+    {
+      "check": "环境：两空间各创建一条可回读 Intent",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "{\"ws_179559692526910d913ee140c\": \"intent_17955969309140cc4657ca058\", \"ws_17955969252715bfb482c6e08\": \"intent_17955969309162caa46783566\"}"
+    },
+    {
+      "check": "r12-a-viewer 切换控件只显示授权空间 ws_179559692526910d913ee140c",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "options=['ws_179559692526910d913ee140c']"
+    },
+    {
+      "check": "r12-a-viewer 列表只含本空间数据",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "rows=1"
+    },
+    {
+      "check": "普通用户伪造切换未授权空间被服务端拒绝",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "仍是授权空间"
+    },
+    {
+      "check": "篡改 localStorage 后刷新恢复合法空间",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "restored=authorized"
+    },
+    {
+      "check": "伪造请求其他空间 workspace_id 被服务端拒绝",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "HTTP 403"
+    },
+    {
+      "check": "r12-a-engineer 切换控件只显示授权空间 ws_179559692526910d913ee140c",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "options=['ws_179559692526910d913ee140c']"
+    },
+    {
+      "check": "r12-a-engineer 列表只含本空间数据",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "rows=1"
+    },
+    {
+      "check": "r12-a-lead 切换控件只显示授权空间 ws_179559692526910d913ee140c",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "options=['ws_179559692526910d913ee140c']"
+    },
+    {
+      "check": "r12-a-lead 列表只含本空间数据",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "rows=1"
+    },
+    {
+      "check": "r12-b-viewer 切换控件只显示授权空间 ws_17955969252715bfb482c6e08",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "options=['ws_17955969252715bfb482c6e08']"
+    },
+    {
+      "check": "r12-b-viewer 列表只含本空间数据",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "rows=1"
+    },
+    {
+      "check": "r12-b-engineer 切换控件只显示授权空间 ws_17955969252715bfb482c6e08",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "options=['ws_17955969252715bfb482c6e08']"
+    },
+    {
+      "check": "r12-b-engineer 列表只含本空间数据",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "rows=1"
+    },
+    {
+      "check": "r12-b-lead 切换控件只显示授权空间 ws_17955969252715bfb482c6e08",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "options=['ws_17955969252715bfb482c6e08']"
+    },
+    {
+      "check": "r12-b-lead 列表只含本空间数据",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "rows=1"
+    },
+    {
+      "check": "platform-admin 可见两个空间",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "['default', 'ws_179559692526910d913ee140c', 'ws_17955969252715bfb482c6e08']"
+    },
+    {
+      "check": "platform-admin 切换后列表刷新且无旧空间残留",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "A=1 B=1"
+    },
+    {
+      "check": "刷新后恢复上次选择",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "restored=ws_17955969252715bfb482c6e08"
+    },
+    {
+      "check": "390px 深色模式无横向溢出",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "{\"overflow\": 0, \"bg\": \"rgb(13, 18, 28)\", \"theme\": \"dark\"}"
+    },
+    {
+      "check": "768px 深色模式无横向溢出",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "{\"overflow\": 0, \"bg\": \"rgb(13, 18, 28)\", \"theme\": \"dark\"}"
+    },
+    {
+      "check": "1024px 深色模式无横向溢出",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "{\"overflow\": 0, \"bg\": \"rgb(13, 18, 28)\", \"theme\": \"dark\"}"
+    },
+    {
+      "check": "1440px 深色模式无横向溢出",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "{\"overflow\": 0, \"bg\": \"rgb(13, 18, 28)\", \"theme\": \"dark\"}"
+    }
+  ]
+}

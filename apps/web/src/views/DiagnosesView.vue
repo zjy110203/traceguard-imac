@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, fmtTime } from '../api'
+import { wsPath } from '../workspace'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import MetricCard from '../components/MetricCard.vue'
 import PageHeader from '../components/PageHeader.vue'
@@ -22,8 +23,8 @@ async function load() {
   loading.value = true
   try {
     const [d, p] = await Promise.all([
-      api.get<Diagnosis[]>(`/diagnoses?limit=200${includeBench.value ? '' : '&workspace_id=default'}`),
-      api.get<Disposition[]>('/dispositions?limit=200'),
+      api.get<Diagnosis[]>(includeBench.value ? '/diagnoses?limit=200' : wsPath('/diagnoses', { limit: 200 })),
+      api.get<Disposition[]>(wsPath('/dispositions', { limit: 200 })),
     ])
     items.value = d
     dispositions.value = p

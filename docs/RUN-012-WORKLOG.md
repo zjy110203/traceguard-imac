@@ -49,9 +49,33 @@
 
 - PG 16.16 隔离库 `traceguard_run012_wp1`：parity 5 + platform 8 + 新增 3 = **16 passed / 0 skipped**。
 - PR Gate 后端本地复现：**416 passed**；`ruff check` / `ruff format --check` 全绿。
-- GitHub Actions 真实运行：**NOT_RUN**（本机无 `gh` / Token，未触发，不伪造）。
+- GitHub Actions：分支推送后 PR Gate **真实触发并成功** — run `45578101070`，head SHA `57a5ea7c2affe36fb9647506d067f0acc08e8265`，`conclusion=success`（2026-11-25 08:39:45Z）；Nightly 需 `workflow_dispatch`，无凭据仍 NOT_RUN。
 
 ### 剩余问题 / 下一项
 
-- 待远端确认 PR Gate 是否随分支推送真实触发；拿到 run ID 后补入报告。
+- Nightly / Release Gate 仍未真实触发，保持 NOT_RUN。
 - 下一项：WP2 — 建立前端统一 Workspace 上下文并接入全部视图。
+
+---
+
+## WP2：多 Workspace 产品功能
+
+- **开始时间**：2026-11-25 16:39 CST
+- **完成时间**：2026-11-25 16:55 CST
+
+### 修改内容
+
+1. 新增 `apps/web/src/workspace.ts`：服务端授权列表、偏好校验、失效回落、空状态、generation 缓存清理。
+2. `App.vue`：工作空间切换控件、全局搜索/导航统计随空间刷新、`:key` 强制视图重挂载、390px 顶栏溢出修复。
+3. 8 个视图接入 `wsPath()` / 当前空间写入；清除全部 `workspace_id=default` 硬编码。
+4. 新增 `scripts/workspace_ui_acceptance_run012.py` 与 `docs/RUN-012-WP2-WORKSPACE-UI.md`。
+
+### 测试结果
+
+- 真实 Chromium + 真实 API + 真实 SQLite：**25 passed / 0 failed**（两空间 × 三角色 + admin、伪造切换、localStorage 篡改、伪造请求、四分辨率深色截图）。
+- `npm run build`（vue-tsc + vite）通过；390px 横向溢出 182px 缺陷已修复并复验为 0。
+
+### 剩余问题 / 下一项
+
+- 实体详情类视图依赖服务端对象级授权（已由 R1.1 覆盖），本轮未重复改造。
+- 下一项：WP3 — `/system/metrics` 全局统计的 Workspace 过滤与真实聚合计数。

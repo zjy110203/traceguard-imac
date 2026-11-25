@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, fmtDuration, fmtTime } from '../api'
+import { wsPath } from '../workspace'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import MetricCard from '../components/MetricCard.vue'
 import PageHeader from '../components/PageHeader.vue'
@@ -26,7 +27,7 @@ const active = computed(() => runs.value.some((r) => ['QUEUED', 'PREPARING', 'RU
 
 async function load() {
   try {
-    runs.value = await api.get<Run[]>(`/runs?limit=200${includeBench.value ? '' : '&workspace_id=default'}`)
+    runs.value = await api.get<Run[]>(includeBench.value ? '/runs?limit=200' : wsPath('/runs', { limit: 200 }))
     error.value = ''
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)

@@ -4,6 +4,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Activity, CircleAlert, Clock3, Play, RefreshCw, ShieldCheck, Users } from '@lucide/vue'
 import { api, fmtDuration, fmtPercent, fmtTime } from '../api'
+import { wsPath } from '../workspace'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import BarChart from '../components/BarChart.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
@@ -32,10 +33,10 @@ let timer: number | undefined
 async function load() {
   try {
     const [r, c, d, p, q, h] = await Promise.all([
-      api.get<Run[]>('/runs?limit=200&workspace_id=default'),
-      api.get<TestCaseSummary[]>('/testcases?workspace_id=default'),
-      api.get<Diagnosis[]>('/diagnoses?limit=100&workspace_id=default'),
-      api.get<Record<string, unknown>[]>('/repairs?workspace_id=default'),
+      api.get<Run[]>(wsPath('/runs', { limit: 200 })),
+      api.get<TestCaseSummary[]>(wsPath('/testcases')),
+      api.get<Diagnosis[]>(wsPath('/diagnoses', { limit: 100 })),
+      api.get<Record<string, unknown>[]>(wsPath('/repairs')),
       api.get<{ by_status: Record<string, number>; total: number; worker: { id: string; inline_running: boolean } }>('/queue/stats'),
       api.get<{ status?: string; database?: { ok: boolean; dialect: string }; worker?: { id: string; inline_running: boolean } }>('/system/health'),
     ])
