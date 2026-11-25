@@ -20,7 +20,8 @@
 
 ### 测试结果
 
-- Benchmark 专项（新增 14 + R1.2 原 9 + Evaluator 2）：**25 passed**。
+- Benchmark 专项（可复现命令）：`pytest tests/unit/test_benchmark_scenario_contract_run012.py tests/unit/test_benchmark_v5_statistics_run011_r1_2.py tests/unit/test_benchmark.py` → **39 passed**（新增 14 + R1.2 9 + 基线 benchmark 16）。
+  （旧记录「25 passed」为「14 + 9 + 2 条 evaluator 子集」的局部口径，已按 39 passed 统一。）
 - `ruff check` 改动文件：All checks passed；新增文件 `ruff format` 通过。
 - 原始归档 SHA-256 前后一致（`v5-2rounds.json` `d99bc2e…`、`pilot-3scenarios.json` `2e96e24…`）。
 - 历史 False Pass 指标如实标记 **PARTIAL**（0/37，证据等级 INFERRED_ONLY），未为维持 0/37 强行归类。
@@ -122,8 +123,9 @@
 
 ### 测试结果
 
-- **真实浏览器闭环验收：29 passed / 0 failed**（真实 Chromium + 真实 API + 真实 TeamFlow + 真实 Worker + 真实浏览器执行），
-  覆盖 Intent→TestCase→Oracle→绑定→审核→执行→故障注入→诊断→修复→沙箱→审批→晋升→回滚全链，每步均服务端回读。
+- **真实浏览器闭环验收：30 条记录 = 29 PASS / 0 FAIL / 1 NOTE**（真实 Chromium + 真实 API + 真实 TeamFlow + 真实 Worker + 真实浏览器执行），
+  NOTE 为「诊断 ID」记录项（非断言）；覆盖 Intent→TestCase→Oracle→绑定→审核→执行→故障注入→诊断→修复→沙箱→审批→晋升→回滚全链，每步均服务端回读。
+  原始 JSON：`docs/assets/run012/wp4/ui/loop-acceptance.json`（`total=30 / passed=29 / failed=0`）。
 - 全量：**738 passed, 16 skipped**；`ruff check`/`format` 通过；`npm run build` 通过。
 - 一次 `test_migration_v8` 并发迁移用例偶发失败（Barrier 时序敏感），单独复跑与后续两次全量均通过，判定为基线时序敏感。
 
@@ -194,10 +196,11 @@
 
 ### 最终 CI 证据
 
-分支已推送至 `7aa3ba5`，PR Gate **真实触发并成功** ——
-run `45621143973`，head SHA `7aa3ba59827638ed6f40d6d41de9cdd2f393095c`，
-2026-11-25 13:12:01Z → 13:13:08Z，`conclusion=success`。
-（此前 WP1 推送后另有一次真实成功：run `45578101070`，head SHA `57a5ea7`。）
+分支已推送至 `90f6f4e`，PR Gate **真实触发并成功** ——
+run `45621959909`，head SHA `90f6f4e9e2178db9bd087af56fb3d8cf8d543ffe`，
+`backend` 与 `frontend` 两个 Job 均 `completed successfully`。
+（历史证据：代码交付 HEAD `7aa3ba5` → run `45621143973`；WP1 推送 `57a5ea7` → run `45578101070`。）
+`90f6f4e` 仅记录 CI 证据，无代码变更。
 
 ### 剩余问题 / 下一项
 

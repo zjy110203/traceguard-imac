@@ -1,7 +1,8 @@
 # RUN-012 最终报告：产品可用性收口
 
 > 执行日期：2026-11-25（CST）｜ 分支：`workbuddy/run012-product-completion`
-> 基线：`0ca128f`（RUN-011-R1.2）｜ 本轮 HEAD：`f64f0d7`
+> 基线：`0ca128f`（RUN-011-R1.2）｜ 本轮 HEAD：`90f6f4e`（最终 CI 证据提交）
+> 代码交付 HEAD：`7aa3ba5`；`90f6f4e` 仅追加 CI 证据记录，无代码变更。
 > 范围：**不推翻既有功能、不改写历史证据**；聚焦「上一轮留下的产品可用性缺口」——
 > Benchmark 口径可信度、CI 可信度、多 Workspace 产品化、全局统计权限、
 > 核心业务 UI 闭环、AI 可靠性。
@@ -12,11 +13,11 @@
 
 | 工作包 | 主题 | 状态 | 核心证据 |
 |---|---|---|---|
-| WP0 | Benchmark 场景契约与 False Pass 口径 | ✅ 完成 | 专项 23 passed；原始归档哈希不变 + Errata |
-| WP1 | CI 触发规则与 PostgreSQL 16 验收 | ✅ 完成 | PR Gate **真实触发并成功**（run `45578101070`）；PG16 专项 16 passed |
+| WP0 | Benchmark 场景契约与 False Pass 口径 | ✅ 完成 | Benchmark 相关专项 **39 passed**（新增 14 + R1.2 9 + 基线 benchmark 16）；原始归档哈希不变 + Errata |
+| WP1 | CI 触发规则与 PostgreSQL 16 验收 | ✅ 完成 | PR Gate **真实触发并成功**（run `45578101070`，head `57a5ea7`）；PG16 专项 16 passed |
 | WP2 | 多 Workspace 前端上下文 | ✅ 完成 | 真实浏览器 **25/25**（2 空间 × 3 角色 + admin + 伪造攻击 + 4 分辨率深色） |
 | WP3 | 全局统计权限与真实聚合 | ✅ 完成 | 专项 **11 passed**（含 522 条 >500 截断阈值回归） |
-| WP4 | 核心业务 UI 全链闭环 | ✅ 完成 | 真实浏览器闭环 **29/29**（真实 Worker + 真实 TeamFlow + 真实故障注入） |
+| WP4 | 核心业务 UI 全链闭环 | ✅ 完成 | 真实浏览器 **30 条记录：29 PASS / 0 FAIL / 1 NOTE**（真实 Worker + 真实 TeamFlow + 真实故障注入） |
 | WP5 | AI 可靠性升级 | ✅ 完成 | 专项 **22 passed**（诊断顾问此前零覆盖） |
 | WP6 | 质量门禁与最终交付 | ✅ 完成 | 全量 **760 passed**；PR Gate 全绿；PG16 16 passed；长稳 20/20 周期 |
 
@@ -32,6 +33,10 @@
   23 个场景的 `expected_run_outcome` 无显式契约。
 - **修复**：新增 `scripts/bench_scenario_contract.py`（场景 → 期望结果 → 记录分类的显式契约），
   重构分类与 False Pass 口径，保留完整执行上下文；新增 14 例契约测试。
+- **可复现测试口径**：`pytest tests/unit/test_benchmark_scenario_contract_run012.py
+  tests/unit/test_benchmark_v5_statistics_run011_r1_2.py tests/unit/test_benchmark.py`
+  → **39 passed**（14 新增 + 9 R1.2 + 16 基线 benchmark）。历史工作日志中的「25 passed」只是
+  「14 新增 + 9 R1.2 + 2 条 evaluator 子集」的旧口径，已按可复现的 39 passed 统一。
 - **历史证据保护**：`docs/assets/run011-r1/benchmark/v5-2rounds.json` 哈希未变，
   口径变更以 `docs/RUN-012-WP0-BENCHMARK-ERRATA.md` 追加说明，不改写原始归档。
 
@@ -39,9 +44,10 @@
 
 - **问题**：PR Gate 的分支触发规则不含本轮分支 → 分支推送不会触发 CI；Ruff 格式门禁有大量未格式化文件 → CI 必红。
 - **修复**：分支触发规则补齐；安全专项纳入门禁；格式化全仓。
-- **真实验证**：推送后 PR Gate **两次真实触发并成功** ——
+- **真实验证**：推送后 PR Gate **三次真实触发并成功** ——
   WP1 推送后 run `45578101070`（head SHA `57a5ea7`，`conclusion=success`）；
-  **最终交付 HEAD** run `45621143973`（head SHA `7aa3ba5`，2026-11-25 13:12:01Z → 13:13:08Z，`conclusion=success`）。
+  代码交付 HEAD run `45621143973`（head SHA `7aa3ba5`，2026-11-25 13:12:01Z → 13:13:08Z，`conclusion=success`）；
+  **最终证据 HEAD** run `45621959909`（head SHA `90f6f4e`，`backend` / `frontend` 两个 Job 均 `completed successfully`）。
 - **PG16 验收**：本地 PostgreSQL 16.16 上跑通平台/一致性/Workspace 专项 **16 passed**。
 
 ### 1.3 多 Workspace 产品化（WP2）
@@ -75,9 +81,12 @@
 | 6 | **按钮不可达（UX）** | LLM 建议放页头但依赖弹窗内选择 → 被弹窗遮挡永远点不到（验收中发现，已移入弹窗） |
 
 - **修复**：逐项补齐（Oracle 绑定控件 + 稳定性回放 + LLM 建议；版本 `doc` 展开；目标地址配置化）。
-- **验收**：**29/29 真实浏览器闭环** —— Intent → TestCase → Oracle → 绑定 → 审核 → 执行 → 故障注入 → 诊断 →
+- **验收**：**30 条验收记录 = 29 PASS / 0 FAIL / 1 NOTE**（NOTE 为诊断 ID 记录项，非断言）——
+  Intent → TestCase → Oracle → 绑定 → 审核 → 执行 → 故障注入 → 诊断 →
   修复 → 沙箱 → 审批 → 晋升 → 回滚，每步服务端回读；真实 `observer_mode=playwright`、真实 Worker 消费队列、
   真实故障 TF-UI-002 产生 FAILED Run、真实沙箱复跑 PASSED、`promoted_version=2`、回滚留痕。
+  允许原文表述修正：`docs/assets/run012/wp4/ui/loop-acceptance.json` 中 `total=30 / passed=29 / failed=0`，
+  不得将 30 条记录写成「29 条全部通过」。
 
 ### 1.6 AI 可靠性（WP5）
 
@@ -134,7 +143,7 @@
 
 | 项 | 状态 | 原因 |
 |---|---|---|
-| Nightly / Release Gate 真实触发 | **NOT_RUN** | 需 `workflow_dispatch` 与凭据，本机无；**PR Gate 已在最终 HEAD 真实成功**（run `45621143973`，head SHA `7aa3ba5`） |
+| Nightly / Release Gate 真实触发 | **NOT_RUN** | 需 `workflow_dispatch` 与凭据，本机无；**PR Gate 已在最终证据 HEAD 真实成功**（run `45621959909`，head SHA `90f6f4e`，两个 Job 均成功） |
 | 23×2 真实 Benchmark 重跑 | **NOT_RUN** | 独立部署环境与成本约束；WP0 已修正口径并以 Errata 记录历史状态 |
 | 真实 LLM 模型输出路径 | **NOT_RUN** | 本环境无凭据；契约与边界已由离线 FakeProvider 覆盖 22 例 |
 | 真实用户/人工基线对比 | **BLOCKED** | 需要人工评审资源 |
@@ -147,6 +156,7 @@
 ## 5. 提交序列
 
 ```
+90f6f4e RUN-012: 记录最终 CI 真实成功证据（run 45621143973）
 7aa3ba5 RUN-012 WP6: 质量门禁、长稳验收与最终报告交付
 f64f0d7 RUN-012 WP5: 诊断顾问 Schema 校验、重试/Fallback 与追踪，补充离线测试
 04b83c9 RUN-012 WP4: 打通核心业务 UI 闭环（Oracle 绑定/回放/LLM 建议 + 目标地址配置化）
@@ -159,6 +169,8 @@ b49116c RUN-012 WP3: 全局统计 Workspace 过滤与 SQL 真实聚合计数
 基线 `0ca128f` 未被改写；未使用 `reset --hard` / `clean` / 强制推送；历史证据文件哈希保持不变；
 未读取或导出任何真实凭据。
 
-**最终 CI 证据**：分支 `workbuddy/run012-product-completion` 已推送至 `7aa3ba5`，
-PR Gate **真实触发并成功** —— run `45621143973`，`conclusion=success`
-（https://github.com/zjy110203/traceguard-imac/actions/runs/45621143973）。
+**最终 CI 证据**：分支 `workbuddy/run012-product-completion` 已推送至 `90f6f4e`，
+PR Gate **真实触发并成功** —— run `45621959909`，head SHA `90f6f4e9e2178db9bd087af56fb3d8cf8d543ffe`，
+`backend` 与 `frontend` 两个 Job 均 `completed successfully`
+（https://github.com/zjy110203/traceguard-imac/actions/runs/45621959909）。
+此前 `7aa3ba5` 上的 run `45621143973` 为代码交付 HEAD 的历史证据，二者一致、不互相替代。

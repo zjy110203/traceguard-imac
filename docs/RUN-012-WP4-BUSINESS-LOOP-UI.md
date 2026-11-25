@@ -52,7 +52,9 @@
 新增 `scripts/business_loop_ui_acceptance_run012.py`：
 **真实 Chromium + 真实 API（认证 + CSRF）+ 真实 TeamFlow（独立进程与独立库）+ 真实 Worker（消费队列）+ 真实浏览器执行**。
 
-**结果：29 passed / 0 failed**（`docs/assets/run012/wp4/ui/loop-acceptance.json`）。
+**结果：30 条记录 = 29 PASS / 0 FAIL / 1 NOTE**（`docs/assets/run012/wp4/ui/loop-acceptance.json`，
+`total=30 / passed=29 / failed=0`）。NOTE 为「诊断 ID」记录项（仅记录 `diagnosis_id`，非断言），
+不能表述为「29 条记录全部通过」。
 
 | # | 检查项 | 结果 |
 |---|---|---|
