@@ -182,9 +182,41 @@ def test_full_repair_chain() -> None:
 
 def test_full_task_run_chain() -> None:
     """Task → Run → 重试新 Run → 状态提交（执行平台闭环）。"""
+    from traceguard_persistence.catalog import CatalogService
+
     svc = TaskService()
-    tid = svc.create_task("tcase_x", "pipeline-idem-" + new_id("k"))["task_id"]
-    r1 = svc.create_run(tid, "tcase_x:v1")
+    # RUN-011-R1.1 WP1：Run 必须绑定真实存在且同 Workspace 的用例版本。
+    CatalogService(svc.db).create_testcase(
+        {
+            "testcase_id": "tcase_x",
+            "version": 1,
+            "workspace_id": "default",
+            "created_at": "2026-01-01T00:00:00Z",
+            "steps": [
+                {
+                    "step_id": "s1",
+                    "action": "navigate",
+                    "target": {"strategy": "css", "value": "body"},
+                }
+            ],
+            "assertions": [
+                {
+                    "assertion_id": "a1",
+                    "description": "页面可见",
+                    "kind": "ui",
+                    "required": True,
+                    "expected": {},
+                }
+            ],
+        },
+        title="tcase_x",
+        workspace_id="default",
+        review_status="DRAFT",
+    )
+    tid = svc.create_task(
+        "tcase_x", "pipeline-idem-" + new_id("k"), workspace_id="default"
+    )["task_id"]
+    r1 = svc.create_run(tid, "tcase_x@1")
     lease = svc.acquire_lease(r1["run_id"], "worker-1")
     svc.submit_result(
         r1["run_id"],
@@ -200,7 +232,7 @@ def test_full_task_run_chain() -> None:
         execution_status="FINALIZING",
         test_verdict="FAILED",
     )
-    r2 = svc.create_run(tid, "tcase_x:v1")  # 重试
+    r2 = svc.create_run(tid, "tcase_x@1")  # 重试
     assert r2["attempt"] == 2
     assert svc.get_run(r1["run_id"])["test_verdict"] == "FAILED"  # 历史保留
     assert svc.task_summary(tid)["run_count"] == 2

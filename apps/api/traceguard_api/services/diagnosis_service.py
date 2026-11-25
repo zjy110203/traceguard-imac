@@ -736,10 +736,19 @@ class DiagnosisService:
         return doc
 
     def list_diagnoses(
-        self, workspace_id: str | None = None, run_id: str | None = None, limit: int = 100
+        self,
+        workspace_id: str | None = None,
+        run_id: str | None = None,
+        limit: int = 100,
+        *,
+        workspace_ids: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         recs = self.rt.docs.list(
-            kind="diagnosis", workspace_id=workspace_id, ref_id=run_id, limit=limit
+            kind="diagnosis",
+            workspace_id=workspace_id,
+            ref_id=run_id,
+            limit=limit,
+            workspace_ids=workspace_ids,
         )
         return [r.to_dict() for r in recs]
 

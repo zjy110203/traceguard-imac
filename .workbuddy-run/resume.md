@@ -1,3 +1,15 @@
+# RESUME（RUN-011-R1.1，2026-11-25 追加；下方 R1 历史保留）
+
+- 状态：**交付完成**（除 BLOCKED 项）。先读 `docs/RUN-011-R1.1-FINAL-REPORT.md`（10 问）→
+  `RUN-011-R1.1-BASELINE.md` → 四份专题报告（WP1 安全 / WP2 Repair / WP3 Benchmark / WP6 UI）。
+- 证据：`docs/assets/run011-r1.1/lineage/loop{1,2}{,-db}.json`（各 86/86 + 24/24）、
+  `docs/assets/run011-r1.1/ui/ui-acceptance.json`（15/0 + 6 截图）。
+- 复现：隔离/血缘 23 passed；全量 `pytest -q` 690 passed；PG16 专项 13 passed；
+  `python scripts/ui_acceptance_run011_r1_1.py --out docs/assets/run011-r1.1/ui` 15/0（可重复运行，自动清库）。
+- 边界：前端无 workspace 切换控件（硬编码 default）；B-17 保持 BLOCKED；无真实 CI 证据不标 PASS；未合并 PR、未改 main。
+
+---
+
 # RESUME（RUN-011-R1，2026-11-25）
 
 - 状态：**交付完成**（除 BLOCKED 项）。从 `docs/RUN-011-R1-FINAL-REPORT.md` 九问与交付清单继续。

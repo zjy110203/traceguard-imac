@@ -247,8 +247,39 @@ def test_diagnosis_requires_failure_evidence(client) -> None:  # type: ignore[no
     from traceguard_api.services import get_services
 
     rt = get_services().rt
+    # RUN-011-R1.1 WP1：Run 版本血缘必须是数据库真实存在的用例版本。
+    rt.catalog.create_testcase(
+        {
+            "testcase_id": "tcase_fake",
+            "version": 1,
+            "workspace_id": "default",
+            "created_at": "2026-01-01T00:00:00Z",
+            "steps": [
+                {
+                    "step_id": "s1",
+                    "action": "navigate",
+                    "target": {"strategy": "css", "value": "body"},
+                }
+            ],
+            "assertions": [
+                {
+                    "assertion_id": "a1",
+                    "description": "页面可见",
+                    "kind": "ui",
+                    "required": True,
+                    "expected": {},
+                }
+            ],
+        },
+        title="tcase_fake",
+        workspace_id="default",
+        review_status="DRAFT",
+    )
     task = rt.tasks.create_task(
-        "tcase_fake", f"fake-{time.time_ns()}", testcase_version_id="tcase_fake@1"
+        "tcase_fake",
+        f"fake-{time.time_ns()}",
+        testcase_version_id="tcase_fake@1",
+        workspace_id="default",
     )
     run = rt.tasks.create_run(task["task_id"], "tcase_fake@1")
     lease = rt.tasks.acquire_lease(run["run_id"], "test-worker")

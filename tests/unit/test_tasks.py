@@ -17,19 +17,59 @@ def _clean_db():  # type: ignore[no-untyped-def]
 
 
 def _svc() -> TaskService:
-    return TaskService()
+    """RUN-011-R1.1 WP1：Run 绑定的版本必须在数据库真实存在且 Workspace 一致。"""
+    from traceguard_core.ids import utc_now_iso
+    from traceguard_persistence.catalog import CatalogService
+
+    svc = TaskService()
+    catalog = CatalogService(svc.db)
+    for tc_id in ("tcase_create001", "tcase_x", "tcase_tc"):
+        if catalog.get_version(tc_id, 1) is not None:
+            continue
+        catalog.create_testcase(
+            {
+                "testcase_id": tc_id,
+                "version": 1,
+                "workspace_id": "default",
+                "created_at": utc_now_iso(),
+                "steps": [
+                    {
+                        "step_id": "s1",
+                        "action": "navigate",
+                        "target": {"strategy": "css", "value": "body"},
+                    }
+                ],
+                "assertions": [
+                    {
+                        "assertion_id": "a1",
+                        "description": "页面可见",
+                        "kind": "ui",
+                        "required": True,
+                        "expected": {},
+                    }
+                ],
+            },
+            title=tc_id,
+            workspace_id="default",
+            review_status="DRAFT",
+        )
+    return svc
 
 
 def _mk_task(svc: TaskService, key: str) -> str:
     # 加随机后缀保证每次测试独立（execution.db 持久化，避免幂等命中旧数据）
-    return svc.create_task("tcase_create001", key + "-" + uuid.uuid4().hex[:8])["task_id"]
+    return svc.create_task(
+        "tcase_create001",
+        key + "-" + uuid.uuid4().hex[:8],
+        workspace_id="default",
+    )["task_id"]
 
 
 def test_task_creation_idempotent() -> None:
     svc = _svc()
     k = "idem-unique-001-" + uuid.uuid4().hex[:8]
-    a = svc.create_task("tcase_x", k)
-    b = svc.create_task("tcase_x", k)
+    a = svc.create_task("tcase_x", k, workspace_id="default")
+    b = svc.create_task("tcase_x", k, workspace_id="default")
     assert a["task_id"] == b["task_id"]
     assert b["idempotent_hit"] is True
 
@@ -54,8 +94,8 @@ def test_task_state_machine_happy_path() -> None:
 def test_retry_creates_new_run_not_overwrite() -> None:
     svc = _svc()
     tid = _mk_task(svc, "idem-unique-004")
-    r1 = svc.create_run(tid, "tcase_create001:v1")
-    r2 = svc.create_run(tid, "tcase_create001:v1")  # 重试
+    r1 = svc.create_run(tid, "tcase_create001@1")
+    r2 = svc.create_run(tid, "tcase_create001@1")  # 重试
     assert r1["run_id"] != r2["run_id"]
     assert r1["attempt"] == 1 and r2["attempt"] == 2
     runs = svc.list_runs(tid)
@@ -67,7 +107,7 @@ def test_lease_fencing_rejects_stale_worker() -> None:
     """F06：租约过期后新 worker 接管（代次+1），旧 worker 提交被拒绝。"""
     svc = _svc()
     tid = _mk_task(svc, "idem-unique-005")
-    rid = svc.create_run(tid, "tc:v1")["run_id"]
+    rid = svc.create_run(tid, "tcase_create001@1")["run_id"]
     lease1 = svc.acquire_lease(rid, "worker-A", ttl_seconds=0.1)
     assert lease1["fencing_token"] == 1
     time.sleep(0.15)  # 租约过期
@@ -88,7 +128,7 @@ def test_lease_fencing_rejects_stale_worker() -> None:
 def test_renew_lease_fails_after_losing_ownership() -> None:
     svc = _svc()
     tid = _mk_task(svc, "idem-unique-006")
-    rid = svc.create_run(tid, "tc:v1")["run_id"]
+    rid = svc.create_run(tid, "tcase_create001@1")["run_id"]
     lease = svc.acquire_lease(rid, "worker-A", ttl_seconds=0.1)
     time.sleep(0.15)
     svc.acquire_lease(rid, "worker-B", ttl_seconds=30)
@@ -99,7 +139,7 @@ def test_execution_status_and_verdict_independent() -> None:
     """Run 的 execution_status 与 test_verdict 是独立字段。"""
     svc = _svc()
     tid = _mk_task(svc, "idem-unique-007")
-    rid = svc.create_run(tid, "tc:v1")["run_id"]
+    rid = svc.create_run(tid, "tcase_create001@1")["run_id"]
     svc.acquire_lease(rid, "worker-A")
     # execution=FINALIZING 但 verdict=FAILED，两者独立写入（先经 RUNNING）
     svc.submit_result(rid, "worker-A", 1, execution_status="RUNNING", test_verdict="NOT_EVALUATED")
@@ -112,7 +152,7 @@ def test_execution_status_and_verdict_independent() -> None:
 def test_steps_recorded_and_listed() -> None:
     svc = _svc()
     tid = _mk_task(svc, "idem-unique-008")
-    rid = svc.create_run(tid, "tc:v1")["run_id"]
+    rid = svc.create_run(tid, "tcase_create001@1")["run_id"]
     s1 = "step_" + uuid.uuid4().hex[:8]
     s2 = "step_" + uuid.uuid4().hex[:8]
     svc.record_step(rid, s1, 0, "PASSED")
@@ -125,8 +165,8 @@ def test_steps_recorded_and_listed() -> None:
 def test_task_summary_is_display_only() -> None:
     svc = _svc()
     tid = _mk_task(svc, "idem-unique-009")
-    svc.create_run(tid, "tc:v1")
-    svc.create_run(tid, "tc:v1")
+    svc.create_run(tid, "tcase_create001@1")
+    svc.create_run(tid, "tcase_create001@1")
     summary = svc.task_summary(tid)
     assert summary["run_count"] == 2
     assert "展示汇总" in summary["note"]
@@ -140,7 +180,7 @@ def test_lease_heartbeat_renews_and_detects_loss() -> None:
 
     svc = _svc()
     tid = _mk_task(svc, "idem-heartbeat")
-    rid = svc.create_run(tid, "tc:v1")["run_id"]
+    rid = svc.create_run(tid, "tcase_create001@1")["run_id"]
     lease = svc.acquire_lease(rid, "worker-H", ttl_seconds=0.6)
     hb = LeaseHeartbeat(svc, rid, "worker-H", lease["fencing_token"], ttl_s=0.6).start()
     _t.sleep(1.1)

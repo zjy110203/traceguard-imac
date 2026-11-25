@@ -302,8 +302,16 @@ class ExplorationService:
         mode = str(getattr(s, "llm_compiler_mode", "rule_only")).strip().lower()
         return mode or "rule_only"
 
-    def list(self, workspace_id: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
-        recs = self.rt.docs.list(kind="exploration", workspace_id=workspace_id, limit=limit)
+    def list(
+        self,
+        workspace_id: str | None = None,
+        limit: int = 50,
+        *,
+        workspace_ids: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        recs = self.rt.docs.list(
+            kind="exploration", workspace_id=workspace_id, limit=limit, workspace_ids=workspace_ids
+        )
         return [
             {
                 "exploration_id": r.doc.get("exploration_id"),

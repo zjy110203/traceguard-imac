@@ -281,8 +281,16 @@ class GraphService:
             return rec.to_dict()
         return self.build_for_run(run_id)
 
-    def list_graphs(self, workspace_id: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
-        recs = self.rt.docs.list(kind="graph", workspace_id=workspace_id, limit=limit)
+    def list_graphs(
+        self,
+        workspace_id: str | None = None,
+        limit: int = 50,
+        *,
+        workspace_ids: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        recs = self.rt.docs.list(
+            kind="graph", workspace_id=workspace_id, limit=limit, workspace_ids=workspace_ids
+        )
         return [
             {
                 "run_id": r.ref_id,

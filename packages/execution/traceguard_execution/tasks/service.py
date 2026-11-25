@@ -17,7 +17,14 @@ from sqlalchemy import func, select, update
 from traceguard_core.errors import AppError, ErrorCode
 from traceguard_core.ids import new_id
 from traceguard_persistence.db import Database, get_database
-from traceguard_persistence.models import RunRow, RunSubmissionRow, StepRow, TaskRow
+from traceguard_persistence.models import (
+    RunRow,
+    RunSubmissionRow,
+    StepRow,
+    TaskRow,
+    TestCaseRow,
+    TestCaseVersionRow,
+)
 
 TASK_TRANSITIONS: dict[str, set[str]] = {
     "CREATED": {"QUEUED", "CANCELLED"},
@@ -100,17 +107,36 @@ class TaskService:
         *,
         testcase_version_id: str = "",
         mode: str = "playwright",
-        workspace_id: str = "default",
+        workspace_id: str | None = None,
     ) -> dict[str, Any]:
+        """创建 Task。
+
+        RUN-011-R1.1 WP1：`workspace_id` **必须显式提供**（由服务端从 TestCase /
+        TestCaseVersion 解析），不再有 `default` 默认值——旧默认值会让非 default
+        用例的 Task 静默落入 default，破坏 Workspace 隔离。
+        """
+        ws = (workspace_id or "").strip()
+        if not ws:
+            raise AppError(
+                ErrorCode.VALIDATION_ERROR,
+                "WORKSPACE_REQUIRED: Task 必须显式指定 workspace_id"
+                "（应继承 TestCase 的真实 Workspace，不得使用默认值）",
+            )
         with self.db.session() as s:
             existing = s.scalar(select(TaskRow).where(TaskRow.idempotency_key == idempotency_key))
             if existing:
+                if existing.workspace_id != ws:
+                    raise AppError(
+                        ErrorCode.CONFLICT,
+                        f"IDEMPOTENCY_KEY_REUSED: 幂等键已绑定 workspace "
+                        f"'{existing.workspace_id}'，与请求 '{ws}' 不一致",
+                    )
                 return {"task_id": existing.task_id, "idempotent_hit": True}
             task_id = new_id("task")
             s.add(
                 TaskRow(
                     task_id=task_id,
-                    workspace_id=workspace_id,
+                    workspace_id=ws,
                     testcase_ref=testcase_ref,
                     testcase_version_id=testcase_version_id,
                     application=application,
@@ -158,11 +184,15 @@ class TaskService:
         workspace_id: str | None = None,
         status: str | None = None,
         limit: int = 200,
+        *,
+        workspace_ids: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         with self.db.session() as s:
             q = select(TaskRow)
             if workspace_id:
                 q = q.where(TaskRow.workspace_id == workspace_id)
+            if workspace_ids is not None:
+                q = q.where(TaskRow.workspace_id.in_(list(workspace_ids)))
             if status:
                 q = q.where(TaskRow.status == status)
             rows = s.scalars(q.order_by(TaskRow.created_at.desc()).limit(limit)).all()
@@ -191,11 +221,25 @@ class TaskService:
         attempt: int | None = None,
         auto_queue: bool = True,
     ) -> dict[str, Any]:
-        """每次调用产生新 Run（重试语义），不覆盖历史。"""
+        """每次调用产生新 Run（重试语义），不覆盖历史。
+
+        RUN-011-R1.1 WP1 §1.2：Run 必须继承并**验证** Task 的 Workspace 与版本归属——
+        1) `testcase_version_id` 必须指向数据库中真实存在的 TestCaseVersion；
+        2) 该版本必须属于 Task.testcase_ref；
+        3) 该版本的 Workspace 必须等于 Task.workspace_id（禁止跨 Workspace 创建 Run）。
+        只校验字符串格式、不校验数据库归属一律拒绝。
+        """
         with self.db.session() as s:
             task = s.get(TaskRow, task_id)
             if not task:
                 raise AppError(ErrorCode.NOT_FOUND, f"task {task_id} not found")
+            version_ref = (testcase_version_id or task.testcase_version_id or "").strip()
+            if not version_ref:
+                raise AppError(
+                    ErrorCode.VALIDATION_ERROR,
+                    "TESTCASE_VERSION_REQUIRED: Run 必须绑定具体 TestCase 版本",
+                )
+            self._assert_version_lineage(s, task, version_ref)
             prev = s.scalar(
                 select(RunRow)
                 .where(RunRow.task_id == task_id)
@@ -210,7 +254,7 @@ class TaskService:
                     task_id=task_id,
                     workspace_id=task.workspace_id,
                     attempt=next_attempt,
-                    testcase_version_id=testcase_version_id or task.testcase_version_id,
+                    testcase_version_id=version_ref,
                     execution_status="QUEUED",
                     test_verdict="NOT_EVALUATED",
                     fencing_token=0,
@@ -225,6 +269,44 @@ class TaskService:
                 "execution_status": "QUEUED",
                 "observer_mode": task.mode,
             }
+
+    @staticmethod
+    def _assert_version_lineage(session: Any, task: TaskRow, version_ref: str) -> None:
+        """校验 Run 的版本血缘：存在、同用例、同 Workspace。"""
+        testcase_id, _, raw_version = version_ref.partition("@")
+        testcase_id = testcase_id.strip()
+        raw_version = raw_version.strip()
+        if not testcase_id or not raw_version.isdigit():
+            raise AppError(
+                ErrorCode.VALIDATION_ERROR,
+                f"INVALID_TESTCASE_VERSION_REF: {version_ref}（期望 形如 tcase_x@1）",
+            )
+        version = int(raw_version)
+        version_row = session.get(TestCaseVersionRow, f"{testcase_id}@{version}")
+        if version_row is None:
+            raise AppError(
+                ErrorCode.NOT_FOUND,
+                f"TESTCASE_VERSION_NOT_FOUND: {version_ref}",
+            )
+        if version_row.testcase_id != task.testcase_ref:
+            raise AppError(
+                ErrorCode.CONFLICT,
+                f"TESTCASE_VERSION_MISMATCH: 版本 {version_ref} 属于用例 "
+                f"{version_row.testcase_id}，与 Task 的 {task.testcase_ref} 不一致",
+            )
+        if version_row.workspace_id != task.workspace_id:
+            raise AppError(
+                ErrorCode.AUTHORIZATION_ERROR,
+                f"CROSS_WORKSPACE_RUN: 版本 {version_ref} 属于 workspace "
+                f"'{version_row.workspace_id}'，与 Task 的 '{task.workspace_id}' 不一致",
+            )
+        tc_row = session.get(TestCaseRow, task.testcase_ref)
+        if tc_row is not None and tc_row.workspace_id != task.workspace_id:
+            raise AppError(
+                ErrorCode.AUTHORIZATION_ERROR,
+                f"CROSS_WORKSPACE_RUN: Task workspace '{task.workspace_id}' 与用例 "
+                f"'{tc_row.workspace_id}' 不一致",
+            )
 
     def acquire_lease(
         self, run_id: str, worker_id: str, ttl_seconds: float = 60.0
@@ -506,6 +588,7 @@ class TaskService:
         task_id: str | None = None,
         *,
         workspace_id: str | None = None,
+        workspace_ids: list[str] | None = None,
         status: str | None = None,
         verdict: str | None = None,
         limit: int = 200,
@@ -516,6 +599,8 @@ class TaskService:
                 q = q.where(RunRow.task_id == task_id)
             if workspace_id:
                 q = q.where(RunRow.workspace_id == workspace_id)
+            if workspace_ids is not None:
+                q = q.where(RunRow.workspace_id.in_(list(workspace_ids)))
             if status:
                 q = q.where(RunRow.execution_status == status)
             if verdict:

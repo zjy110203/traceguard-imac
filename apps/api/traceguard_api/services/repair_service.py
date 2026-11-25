@@ -29,6 +29,25 @@ from traceguard_api.runtime import TERMINAL_RUN_STATUSES, Runtime
 
 logger = get_logger("traceguard.service.repair")
 
+#: 服务端可信的确定性规则来源（RUN-011-R1.1 WP3 §3.2）。
+#: 只有"变更路径符合该规则契约"时才允许自称 `rule:<name>`，杜绝任意伪造。
+RULE_SOURCE_CONTRACTS: dict[str, dict[str, Any]] = {
+    "locator-fixture": {
+        "description": "仅允许修改步骤定位器/等待/动作配置（steps[].target|value|action_config）",
+        "path_suffixes": ("target", "value", "action_config"),
+        "max_changes": 8,
+    },
+    "llm-repair-fallback": {
+        "description": "LLM Advisor 未成功返回时的确定性回退规则（同样只允许步骤定位/等待/动作配置）",
+        "path_suffixes": ("target", "value", "action_config"),
+        "max_changes": 12,
+    },
+}
+
+#: Run 可作为"失败来源"的测试结论（PASSED 一律拒绝）
+FAILURE_SOURCE_VERDICTS = {"FAILED", "NOT_EVALUATED"}
+TERMINAL_STATUSES = {"COMPLETED", "FAILED", "TIMED_OUT", "CANCELLED"}
+
 
 class RepairService:
     #: 沙箱 Run 的等待上限（秒）：必须由独立 Worker 真实执行完，超时即失败而非伪造结论
@@ -50,26 +69,70 @@ class RepairService:
         diagnosis_id: str | None = None,
         source_run_id: str | None = None,
         repair_source: str = "",
+        actor: str | None = None,
+        trusted_source: bool = False,
     ) -> dict[str, Any]:
-        """创建修复提案。
+        """创建修复提案（RUN-011-R1.1 WP3：服务端血缘与来源真实性校验）。
 
-        RUN-011-R1 WP1 §1.3（向后兼容扩展）：新增可选血缘字段——
-        - diagnosis_id：本提案所依据的 Diagnosis（可空 = 老调用方行为不变）；
-        - source_run_id：触发修复的失败 Run（可空）；
-        - repair_source：修复方案来源，必须如实标注三类之一：
-          ``human:*``（人工提供）/ ``rule:*``（规则生成）/ ``llm:*``（LLM 生成）。
-        三者不得混淆；确定性夹具也必须标注为 human/rule，不得冒充 Agent 推导。
+        血缘校验（写库前完成，任一不满足即拒绝）：
+        - Diagnosis 必须真实存在、kind=diagnosis、testcase_id/run_id/workspace 一致；
+        - Run 必须真实存在、属于同一 TestCase、版本对应 base_version、Workspace 一致；
+        - Run 必须具备真实失败或 NOT_EVALUATED 的有效执行证据；PASSED Run 不得伪装为失败来源；
+        - Diagnosis 与 Run 不匹配 → 拒绝。
+
+        来源真实性：
+        - `human:*` / 空 → 服务端改写为 `human:{actor}`（actor 来自已认证 Principal）；
+        - `rule:<name>` → 必须命中服务端规则契约（`RULE_SOURCE_CONTRACTS`）且变更结构吻合；
+        - `llm:<model>` → 只允许内部 LLM Advisor 成功路径写入（`trusted_source=True`），
+          普通 API 调用方伪造一律拒绝；
+        - `created_by` 不再信任客户端声明，由 `actor` 决定（内部调用可显式传入）。
         """
+        actor = (actor or created_by or "").strip()
+        if not actor:
+            raise AppError(ErrorCode.VALIDATION_ERROR, "created_by/actor 不能为空")
+
         base = self.rt.catalog.get_version(testcase_id, base_version)
         if not base:
             raise AppError(ErrorCode.NOT_FOUND, "base testcase version not found")
         if not changes:
             raise AppError(ErrorCode.VALIDATION_ERROR, "changes 不能为空")
-        if repair_source and not repair_source.startswith(("human:", "rule:", "llm:")):
+
+        # ---- 血缘：Workspace 一律取自正式 TestCase 版本（服务端权威） ----
+        ws = self._workspace_of(base)
+        if workspace_id and str(workspace_id).strip() != ws:
             raise AppError(
-                ErrorCode.VALIDATION_ERROR,
-                "repair_source 必须以 human:/rule:/llm: 开头（如实标注修复方案来源）",
+                ErrorCode.AUTHORIZATION_ERROR,
+                f"CROSS_WORKSPACE_REPAIR: 提案 workspace '{workspace_id}' 与用例版本 "
+                f"'{ws}' 不一致",
             )
+
+        diagnosis_doc = self._load_diagnosis(diagnosis_id, testcase_id=testcase_id, workspace=ws) if diagnosis_id else None
+        run_doc = self._load_failure_run(
+            source_run_id, testcase_id=testcase_id, base_version=base_version, workspace=ws
+        ) if source_run_id else None
+
+        if diagnosis_doc is not None and run_doc is not None:
+            diag_run = str(diagnosis_doc.get("run_id") or "")
+            if diag_run and diag_run != str(run_doc.get("run_id")):
+                raise AppError(
+                    ErrorCode.CONFLICT,
+                    f"DIAGNOSIS_RUN_MISMATCH: Diagnosis.run_id={diag_run} 与 "
+                    f"source_run_id={run_doc.get('run_id')} 不一致",
+                )
+        if diagnosis_doc is not None and run_doc is None:
+            # 只给 Diagnosis 时自动回填其真实失败 Run，血缘不悬空
+            derived = str(diagnosis_doc.get("run_id") or "")
+            if derived:
+                run_doc = self._load_failure_run(
+                    derived, testcase_id=testcase_id, base_version=base_version, workspace=ws
+                )
+                source_run_id = derived
+        if diagnosis_doc is None and run_doc is not None and source_run_id is None:
+            source_run_id = str(run_doc.get("run_id") or "")
+
+        source, source_verified = self._resolve_source(
+            repair_source, actor=actor, changes=changes, trusted_source=trusted_source
+        )
 
         candidate = _apply_changes(base, changes)
         diff = _build_diff(changes)
@@ -84,7 +147,7 @@ class RepairService:
         doc = {
             "proposal_id": proposal_id,
             "testcase_id": testcase_id,
-            "workspace_id": workspace_id or self._workspace_of(base),
+            "workspace_id": ws,
             "base_testcase_version": f"{testcase_id}:v{base_version}",
             "base_version": base_version,
             "status": "VALIDATED" if (ok_assert and ok_oracle and ok_diff) else "VALIDATION_FAILED",
@@ -94,11 +157,21 @@ class RepairService:
             "diff_allowed": ok_diff,
             "diff": diff,
             "reason": reason,
-            "created_by": created_by,
-            # RUN-011-R1 WP1 §1.3：Diagnosis→Repair 血缘（可空，向后兼容）
-            "diagnosis_id": diagnosis_id or None,
-            "source_run_id": source_run_id or None,
-            "repair_source": repair_source or "",
+            "created_by": actor,
+            "created_by_source": "principal" if not trusted_source else "internal",
+            # RUN-011-R1 WP1 §1.3 + R1.1 WP3：Diagnosis→Repair 血缘（服务端验证）
+            "diagnosis_id": diagnosis_id or (diagnosis_doc or {}).get("diagnosis_id") or None,
+            "source_run_id": source_run_id or (run_doc or {}).get("run_id") or None,
+            "repair_source": source,
+            "repair_source_verified": source_verified,
+            "lineage": {
+                "diagnosis_run_id": (diagnosis_doc or {}).get("run_id"),
+                "diagnosis_testcase_id": (diagnosis_doc or {}).get("testcase_id"),
+                "run_testcase_version_id": (run_doc or {}).get("testcase_version_id"),
+                "run_test_verdict": (run_doc or {}).get("test_verdict"),
+                "run_execution_status": (run_doc or {}).get("execution_status"),
+                "verified_at": utc_now_iso(),
+            },
             "created_at": utc_now_iso(),
             "approval_ref": None,
             "sandbox_run_id": None,
@@ -118,6 +191,146 @@ class RepairService:
             status=doc["status"],
         )
         return doc
+
+    # ------------------------------------------------------- lineage helpers
+    def _load_diagnosis(
+        self, diagnosis_id: str, *, testcase_id: str, workspace: str
+    ) -> dict[str, Any]:
+        rec = self.rt.docs.get(diagnosis_id)
+        if rec is None or rec.kind != "diagnosis":
+            raise AppError(ErrorCode.NOT_FOUND, f"DIAGNOSIS_NOT_FOUND: {diagnosis_id}")
+        doc = dict(rec.doc or {})
+        if str(doc.get("testcase_id") or "") != testcase_id:
+            raise AppError(
+                ErrorCode.CONFLICT,
+                f"DIAGNOSIS_TESTCASE_MISMATCH: Diagnosis 属于用例 "
+                f"'{doc.get('testcase_id')}'，与请求 '{testcase_id}' 不一致",
+            )
+        diag_ws = str(doc.get("workspace_id") or rec.workspace_id or "default")
+        if diag_ws != workspace:
+            raise AppError(
+                ErrorCode.AUTHORIZATION_ERROR,
+                f"CROSS_WORKSPACE_DIAGNOSIS: Diagnosis 属于 workspace '{diag_ws}'，"
+                f"与用例版本 '{workspace}' 不一致",
+            )
+        doc.setdefault("diagnosis_id", diagnosis_id)
+        return doc
+
+    def _load_failure_run(
+        self, run_id: str, *, testcase_id: str, base_version: int, workspace: str
+    ) -> dict[str, Any]:
+        run = self.rt.tasks.get_run(run_id)
+        if not run:
+            raise AppError(ErrorCode.NOT_FOUND, f"RUN_NOT_FOUND: {run_id}")
+        run_ws = str(run.get("workspace_id") or "default")
+        if run_ws != workspace:
+            raise AppError(
+                ErrorCode.AUTHORIZATION_ERROR,
+                f"CROSS_WORKSPACE_RUN: Run 属于 workspace '{run_ws}'，与用例版本 "
+                f"'{workspace}' 不一致",
+            )
+        ref = str(run.get("testcase_version_id") or "")
+        tc_id, _, raw_version = ref.partition("@")
+        if tc_id != testcase_id:
+            raise AppError(
+                ErrorCode.CONFLICT,
+                f"RUN_TESTCASE_MISMATCH: Run 使用版本 {ref}，与请求用例 {testcase_id} 不一致",
+            )
+        if raw_version.isdigit() and int(raw_version) != int(base_version):
+            raise AppError(
+                ErrorCode.CONFLICT,
+                f"RUN_VERSION_MISMATCH: Run 使用 v{raw_version}，与 base_version "
+                f"v{base_version} 不一致",
+            )
+        verdict = str(run.get("test_verdict") or "")
+        status = str(run.get("execution_status") or "")
+        if status not in TERMINAL_STATUSES:
+            raise AppError(
+                ErrorCode.PRECONDITION_FAILED,
+                f"RUN_NOT_TERMINAL: Run 处于 {status or 'UNKNOWN'}，不能作为失败来源",
+            )
+        if verdict == "PASSED":
+            raise AppError(
+                ErrorCode.PRECONDITION_FAILED,
+                "PASSED_RUN_NOT_A_FAILURE_SOURCE: PASSED Run 不得伪装为失败来源",
+            )
+        if verdict not in FAILURE_SOURCE_VERDICTS:
+            raise AppError(
+                ErrorCode.PRECONDITION_FAILED,
+                f"RUN_VERDICT_NOT_A_FAILURE_SOURCE: {verdict or 'UNKNOWN'} 不能作为失败来源",
+            )
+        report = run.get("report") or {}
+        has_failure_evidence = bool(
+            report.get("errors")
+            or [
+                s
+                for s in report.get("steps") or []
+                if s.get("status") in {"FAILED", "TIMED_OUT", "NOT_EVALUATED"}
+            ]
+            or [o for o in report.get("assertion_outcomes") or [] if o.get("status") != "PASSED"]
+            or run.get("error")
+        )
+        if not has_failure_evidence:
+            raise AppError(
+                ErrorCode.PRECONDITION_FAILED,
+                "RUN_NO_FAILURE_EVIDENCE: Run 缺少真实失败/未评估执行证据，不能作为失败来源",
+            )
+        return run
+
+    def _resolve_source(
+        self,
+        repair_source: str,
+        *,
+        actor: str,
+        changes: list[dict[str, Any]],
+        trusted_source: bool,
+    ) -> tuple[str, bool]:
+        """返回 (服务端可信来源, 是否已验证)。
+
+        - `human:*` / 空 → `human:{actor}`；
+        - `rule:<name>` → 命中服务端规则契约才允许（trusted_source=True 的内部路径同样校验）；
+        - `llm:<model>` → 仅 `trusted_source=True`（真实 LLM Advisor 成功返回）允许。
+        """
+        raw = (repair_source or "").strip()
+        if not raw:
+            return f"human:{actor}", False
+        if raw.startswith("human:"):
+            return f"human:{actor}", False
+        if raw.startswith("rule:"):
+            rule_id = raw.split(":", 1)[1].strip()
+            contract = RULE_SOURCE_CONTRACTS.get(rule_id)
+            if contract is None:
+                raise AppError(
+                    ErrorCode.VALIDATION_ERROR,
+                    f"UNTRUSTED_REPAIR_SOURCE: 未知规则来源 rule:{rule_id}"
+                    "（只能由服务端登记的确定性规则写入）",
+                )
+            if len(changes) > int(contract.get("max_changes", 8)):
+                raise AppError(
+                    ErrorCode.VALIDATION_ERROR,
+                    f"RULE_SOURCE_CONTRACT_VIOLATED: rule:{rule_id} 变更数量超出契约",
+                )
+            for change in changes:
+                path = str(change.get("path") or "")
+                if not path.startswith("steps[") or not path.endswith(
+                    tuple(contract.get("path_suffixes", ()))
+                ):
+                    raise AppError(
+                        ErrorCode.VALIDATION_ERROR,
+                        f"RULE_SOURCE_CONTRACT_VIOLATED: rule:{rule_id} 不允许变更路径 {path}",
+                    )
+            return f"rule:{rule_id}", True
+        if raw.startswith("llm:"):
+            if not trusted_source:
+                raise AppError(
+                    ErrorCode.AUTHORIZATION_ERROR,
+                    "UNTRUSTED_REPAIR_SOURCE: llm:* 来源只能由服务端 LLM Advisor 成功路径写入",
+                )
+            return raw, True
+        raise AppError(
+            ErrorCode.VALIDATION_ERROR,
+            "repair_source 必须以 human:/rule:/llm: 开头（如实标注修复方案来源）",
+        )
 
     # --------------------------------------------------------- LLM 候选生成
     def llm_suggest(
@@ -178,15 +391,24 @@ class RepairService:
             "note": "LLM 仅生成候选；必须经校验/沙箱/人工审批/CAS 才可能晋升",
         }
         if propose and advice.changes:
+            # 来源真实性（RUN-011-R1.1 WP3）：只有真实 LLM 调用成功返回才可标 llm:<model>；
+            # Fallback 走服务端登记的规则契约，绝不冒充 LLM。
+            if advice.called and not advice.fallback:
+                source = f"llm:{advice.model or 'unknown'}"
+                trusted = True
+            else:
+                source = "rule:llm-repair-fallback"
+                trusted = True
             out["proposal"] = self.propose(
                 testcase_id=testcase_id,
                 base_version=base_version,
                 changes=advice.changes,
-                reason=f"LLM 修复候选（{advice.model}）",
+                reason=f"LLM 修复候选（{advice.model or 'fallback'}）",
                 created_by="agent:llm-repair-planner",
                 diagnosis_id=diagnosis_id,
                 source_run_id=run_id,
-                repair_source=f"llm:{advice.model or 'unknown'}",
+                repair_source=source,
+                trusted_source=trusted,
             )
         return out
 
@@ -197,9 +419,19 @@ class RepairService:
         return rec.to_dict()
 
     def list(
-        self, workspace_id: str | None = None, status: str | None = None
+        self,
+        workspace_id: str | None = None,
+        status: str | None = None,
+        *,
+        workspace_ids: list[str] | None = None,
     ) -> list[dict[str, Any]]:
-        recs = self.rt.docs.list(kind="repair", workspace_id=workspace_id, status=status, limit=200)
+        recs = self.rt.docs.list(
+            kind="repair",
+            workspace_id=workspace_id,
+            status=status,
+            limit=200,
+            workspace_ids=workspace_ids,
+        )
         return [_summary(r.to_dict()) for r in recs]
 
     # ------------------------------------------------------------- lifecycle
@@ -250,11 +482,14 @@ class RepairService:
         )
         sandbox_case_id = created["testcase_id"]
         version = created["version"]
+        # RUN-011-R1.1 WP1 §1.3：Sandbox Task/Run 必须显式继承 Repair 的 Workspace，
+        # 不得依赖 create_task 默认值（旧默认值会把沙箱 Task 落入 default）。
         task = self.rt.tasks.create_task(
             sandbox_case_id,
             f"repair-sandbox-{proposal_id}-{time.time_ns()}",
             testcase_version_id=f"{sandbox_case_id}@{version}",
             mode="sandbox",
+            workspace_id=doc["workspace_id"],
         )
         run = self.rt.tasks.create_run(task["task_id"], f"{sandbox_case_id}@{version}")
         # RUN-007-RESUME：沙箱属于正式执行，必须由独立 Worker 消费队列，

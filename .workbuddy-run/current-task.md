@@ -1,3 +1,14 @@
+# 当前任务（RUN-011-R1.1 交付，2026-11-25 追加；下方 R1 历史保留）
+
+> **RUN-011-R1.1 已交付**：Workspace 安全隔离 + Repair 血缘/来源可信 + Benchmark 口径修正 + 两轮闭环重测 + UI 验收。
+> P0/P1 修复全绿：隔离与血缘测试 23/23；两轮闭环 API 86/86 ×2、DB 逐实体 Workspace 24/24 ×2；
+> UI 验收 15/0（+2 NOTE）；全量 690 passed + PG16 专项 13 passed；Ruff 全绿。
+> 权威报告：`docs/RUN-011-R1.1-FINAL-REPORT.md`（含最终 10 问）；UI：`docs/RUN-011-R1.1-WP6-UI-ACCEPTANCE.md`。
+> 已知边界（如实登记）：前端无 workspace 切换控件（硬编码 default）；B-17 保持 BLOCKED；
+> 无真实 GitHub Actions 证据不标记 CI PASS；未合并 PR、未改 main。
+
+---
+
 # 当前任务（RUN-011-R1 交付，2026-11-25）
 
 > **RUN-011-R1 已完成（B-17 保持 BLOCKED）**：单一 TestCase 血缘 18 步闭环两轮

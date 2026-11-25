@@ -275,13 +275,16 @@ def run_scenario(
             return None
 
     run_ended_epoch = _epoch(run_doc.get("ended_at"))
+    # RUN-011-R1.1 WP4 §6.1：实测 F 臂全部 POST_HOC、G 臂全部 UNKNOWN，
+    # 本基准从未产生 Run 内 ALIGNED 探针证据；旧名 F_probe_aligned /
+    # G_probe_no_alignment 会误导为"时间对齐价值"实验，故按真实时间语义改名。
     # F/G 臂必须基于**完整首诊文档**（含 hypotheses 证据引用）；
     # plan 的 diagnosis_before 是摘要快照（无 hypotheses），不能用于回灌重算。
     diag_before = diag
-    sample["arms"]["F_probe_aligned"] = _arm_F(
+    sample["arms"]["F_probe_post_hoc_aware"] = _arm_F(
         diag_before, real_signals, report, run_ended_epoch or 0.0, merge_signals, DiagnosisEngine
     )
-    sample["arms"]["G_probe_no_alignment"] = _arm_F(
+    sample["arms"]["G_probe_unknown_time"] = _arm_F(
         diag_before, real_signals, report, 0.0, merge_signals, DiagnosisEngine
     )
     sample["real_probe_count"] = len(real_signals)
@@ -369,7 +372,7 @@ def main() -> int:
         arms = s.get("arms") or {}
         check(
             f"P3 {s['scenario']} 六臂齐全（A/C/D/E/F/G）",
-            all(k in arms for k in ("A_raw_report", "C_rule", "D_graph_ablation", "E_probe_no_feedback", "F_probe_aligned", "G_probe_no_alignment")),
+            all(k in arms for k in ("A_raw_report", "C_rule", "D_graph_ablation", "E_probe_no_feedback", "F_probe_post_hoc_aware", "G_probe_unknown_time")),
             sorted(arms.keys()),
             phase="pilot",
         )
@@ -377,9 +380,9 @@ def main() -> int:
         check(
             f"P4 {s['scenario']} 实验臂实现差异存在（D 消融/E 不回灌/F-G 对齐开关）",
             arms["E_probe_no_feedback"].get("feedback") == "NOT_APPLIED"
-            and arms["F_probe_aligned"].get("probes_used") == s.get("real_probe_count")
-            and arms["G_probe_no_alignment"].get("probes_used") == s.get("real_probe_count")
-            and ("time_alignments" in arms["F_probe_aligned"]),
+            and arms["F_probe_post_hoc_aware"].get("probes_used") == s.get("real_probe_count")
+            and arms["G_probe_unknown_time"].get("probes_used") == s.get("real_probe_count")
+            and ("time_alignments" in arms["F_probe_post_hoc_aware"]),
             {k: v.get("outcome") for k, v in arms.items()},
             phase="pilot",
         )
@@ -396,8 +399,8 @@ def main() -> int:
         # 主因准确率（小样本，不宣称统计显著）
         gt = s.get("gt_mechanism")
         c_pred = (s.get("arms") or {}).get("C_rule", {}).get("mechanism")
-        f_pred = (s.get("arms") or {}).get("F_probe_aligned", {}).get("mechanism")
-        s["gt_match"] = {"C_rule": c_pred == gt, "F_probe_aligned": f_pred == gt}
+        f_pred = (s.get("arms") or {}).get("F_probe_post_hoc_aware", {}).get("mechanism")
+        s["gt_match"] = {"C_rule": c_pred == gt, "F_probe_post_hoc_aware": f_pred == gt}
 
     # 统计（三场景小样本：如实给出，不宣称显著）
     n = len([s for s in RESULT["scenarios"] if not s.get("error")])
@@ -408,7 +411,7 @@ def main() -> int:
     RESULT["pilot_statistics"] = {
         "sample_size": n,
         "note": "三场景试验样本：不宣称统计显著；Macro-F1/Selective Accuracy/False Pass Rate 等需 19+ 场景两轮后计算",
-        "primary_cause_accuracy": {"C_rule": _acc("C_rule"), "F_probe_aligned": _acc("F_probe_aligned"), "G_no_alignment": _acc("F_probe_aligned")},
+        "primary_cause_accuracy": {"C_rule": _acc("C_rule"), "F_probe_post_hoc_aware": _acc("F_probe_post_hoc_aware"), "G_probe_unknown_time": _acc("G_probe_unknown_time")},
         "probe_execution_success_rate": (
             round(
                 sum(1 for e in RESULT["probe_executions"] if e.get("status") == "SUCCEEDED")

@@ -152,6 +152,11 @@ class CatalogService:
         clean = {k: v for k, v in payload.items() if k in TestIntent.model_fields}
         intent = TestIntent(**clean)
         with self.db.session() as s:
+            if s.get(IntentRow, intent.intent_id) is not None:
+                raise AppError(
+                    ErrorCode.CONFLICT,
+                    f"INTENT_ID_EXISTS: {intent.intent_id} 已存在，不得跨 Workspace 复用 ID",
+                )
             s.add(
                 IntentRow(
                     intent_id=intent.intent_id,
@@ -167,12 +172,18 @@ class CatalogService:
         return out
 
     def list_intents(
-        self, workspace_id: str | None = None, status: str | None = None
+        self,
+        workspace_id: str | None = None,
+        status: str | None = None,
+        *,
+        workspace_ids: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         with self.db.session() as s:
             q = select(IntentRow)
             if workspace_id:
                 q = q.where(IntentRow.workspace_id == workspace_id)
+            if workspace_ids is not None:
+                q = q.where(IntentRow.workspace_id.in_(list(workspace_ids)))
             if status:
                 q = q.where(IntentRow.status == status)
             rows = s.scalars(q.order_by(IntentRow.created_at.desc())).all()
@@ -228,6 +239,14 @@ class CatalogService:
         tc.review_status = review_status  # type: ignore[assignment]
         with self.db.session() as s:
             row = s.get(TestCaseRow, tc.testcase_id)
+            if row is not None and (row.workspace_id or DEFAULT_WORKSPACE) != (
+                workspace_id or DEFAULT_WORKSPACE
+            ):
+                raise AppError(
+                    ErrorCode.AUTHORIZATION_ERROR,
+                    f"CROSS_WORKSPACE_TESTCASE: {tc.testcase_id} 属于 workspace "
+                    f"'{row.workspace_id}'，不能在 '{workspace_id}' 下追加版本",
+                )
             if row is None:
                 row = TestCaseRow(
                     testcase_id=tc.testcase_id,
@@ -266,12 +285,18 @@ class CatalogService:
             return version_doc
 
     def list_testcases(
-        self, workspace_id: str | None = None, review_status: str | None = None
+        self,
+        workspace_id: str | None = None,
+        review_status: str | None = None,
+        *,
+        workspace_ids: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         with self.db.session() as s:
             q = select(TestCaseRow)
             if workspace_id:
                 q = q.where(TestCaseRow.workspace_id == workspace_id)
+            if workspace_ids is not None:
+                q = q.where(TestCaseRow.workspace_id.in_(list(workspace_ids)))
             if review_status:
                 q = q.where(TestCaseRow.review_status == review_status)
             rows = s.scalars(q.order_by(TestCaseRow.updated_at.desc())).all()
@@ -344,6 +369,26 @@ class CatalogService:
             out.setdefault("testcase_id", testcase_id)
             out.setdefault("version", version)
             return out
+
+    def version_workspace(self, testcase_id: str, version: int) -> str | None:
+        """指定版本的**权威** Workspace（RUN-011-R1.1 WP1：唯一来源，禁止采信请求体）。"""
+        with self.db.session() as s:
+            r = s.get(TestCaseVersionRow, f"{testcase_id}@{version}")
+            return (r.workspace_id or DEFAULT_WORKSPACE) if r else None
+
+    def version_row(self, testcase_id: str, version: int) -> dict[str, Any] | None:
+        """版本行的归属信息（testcase_id / version / workspace_id）。"""
+        with self.db.session() as s:
+            r = s.get(TestCaseVersionRow, f"{testcase_id}@{version}")
+            if not r:
+                return None
+            return {
+                "id": r.id,
+                "testcase_id": r.testcase_id,
+                "version": r.version,
+                "workspace_id": r.workspace_id or DEFAULT_WORKSPACE,
+                "review_status": r.review_status,
+            }
 
     def review_testcase(
         self,
@@ -1174,11 +1219,18 @@ class CatalogService:
             doc["workspace_id"] = r.workspace_id
             return doc
 
-    def list_oracles(self, workspace_id: str | None = None) -> list[dict[str, Any]]:
+    def list_oracles(
+        self,
+        workspace_id: str | None = None,
+        *,
+        workspace_ids: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
         with self.db.session() as s:
             q = select(OracleRow)
             if workspace_id:
                 q = q.where(OracleRow.workspace_id == workspace_id)
+            if workspace_ids is not None:
+                q = q.where(OracleRow.workspace_id.in_(list(workspace_ids)))
             rows = s.scalars(q.order_by(OracleRow.created_at.desc())).all()
             return [
                 {
@@ -1188,6 +1240,7 @@ class CatalogService:
                     "approved": r.approved,
                     "approved_by": r.approved_by,
                     "expected_behavior": (r.doc or {}).get("expected_behavior", ""),
+                    "workspace_id": r.workspace_id,
                     "created_at": r.created_at,
                 }
                 for r in rows

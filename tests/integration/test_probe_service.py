@@ -72,6 +72,21 @@ def rt(work_tmp, monkeypatch):  # type: ignore[no-untyped-def]
     runtime = Runtime(db)
     _insert_run(runtime, "run_probe")
     _insert_run(runtime, "run_probe_b")
+    # RUN-011-R1.1 WP1：探针的 Diagnosis 血缘必须指向真实存在的诊断文档。
+    runtime.docs.put(
+        doc_id="diag_wp2",
+        kind="diagnosis",
+        doc={
+            "diagnosis_id": "diag_wp2",
+            "run_id": "run_probe",
+            "testcase_id": "tcase_probe",
+            "workspace_id": "default",
+            "outcome": "PROBABLE",
+        },
+        workspace_id="default",
+        ref_id="run_probe",
+        status="PROBABLE",
+    )
     yield runtime
     db.dispose()
 

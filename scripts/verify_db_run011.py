@@ -205,6 +205,152 @@ def _check_lineage(out: dict, c, lineage: dict) -> None:  # type: ignore[no-unty
     )
 
 
+def _check_workspace_lineage(out: dict, c, lineage: dict, expected_ws: str) -> None:  # type: ignore[no-untyped-def]
+    """RUN-011-R1.1 WP5：逐 ID 校验主链每个实体的 Workspace 与父子关系。
+
+    与旧的 `workspace_counts`（只数行数）不同，这里失败会直接反映在 summary.failed。
+    """
+    ids = lineage.get("ids") or {}
+    phases = lineage.get("phases") or {}
+    tc_id = str(ids.get("testcase_id") or "")
+    version_id = str(ids.get("testcase_version_id") or "")
+    run_ids = [x for x in (ids.get("run_id"), ids.get("failed_run_id"), ids.get("regression_run_id")) if x]
+    evidence_ids = [x for x in (ids.get("evidence_ids") or []) if x]
+    probe = phases.get("probe") or {}
+    plan_id = str(probe.get("plan_id") or "")
+    budget_id = str((probe.get("budget") or {}).get("budget_id") or "")
+    evidence_ids += [x for x in (probe.get("new_evidence_ids") or []) if x]
+    doc_ids = [x for x in (ids.get("diagnosis_id"), ids.get("repair_proposal_id"), plan_id, budget_id,
+                           (phases.get("exploration") or {}).get("exploration_id")) if x]
+    intent_id = str(ids.get("intent_id") or "")
+    oracle_ids = [x for x in (ids.get("oracle_ids") or {}).values() if x]
+
+    def check(name: str, ok: bool, detail) -> None:  # type: ignore[no-untyped-def]
+        out["checks"].append({"name": name, "ok": bool(ok), "detail": detail})
+
+    def fetch(sql: str, key_col: str, values: list[str]) -> dict[str, str]:
+        if not values:
+            return {}
+        rows = c.execute(text(sql), {"ids": values}).mappings().all()
+        return {str(r[key_col]): str(r.get("workspace_id") or "") for r in rows}
+
+    entity_ws: dict[str, dict[str, str]] = {
+        "intent": fetch("SELECT intent_id, workspace_id FROM tg_intent WHERE intent_id = ANY(:ids)", "intent_id", [intent_id] if intent_id else []),
+        "testcase": fetch("SELECT testcase_id, workspace_id FROM tg_testcase WHERE testcase_id = ANY(:ids)", "testcase_id", [tc_id] if tc_id else []),
+        "testcase_version": fetch("SELECT id AS ids, workspace_id FROM tg_testcase_version WHERE id = ANY(:ids)", "ids", [version_id] if version_id else []),
+        "oracle": fetch("SELECT oracle_id AS ids, workspace_id FROM tg_oracle WHERE oracle_id = ANY(:ids)", "ids", oracle_ids),
+        "run": fetch("SELECT run_id AS ids, workspace_id FROM tg_run WHERE run_id = ANY(:ids)", "ids", run_ids),
+        "evidence": fetch("SELECT evidence_id AS ids, workspace_id FROM tg_evidence WHERE evidence_id = ANY(:ids)", "ids", evidence_ids),
+        "doc": fetch("SELECT id AS ids, workspace_id FROM tg_doc WHERE id = ANY(:ids)", "ids", doc_ids),
+    }
+    task_rows = c.execute(
+        text("SELECT task_id, workspace_id FROM tg_task WHERE task_id IN (SELECT task_id FROM tg_run WHERE run_id = ANY(:ids))"),
+        {"ids": run_ids},
+    ).mappings().all()
+    entity_ws["task"] = {str(r["task_id"]): str(r["workspace_id"] or "") for r in task_rows}
+
+    out["facts"]["workspace_lineage"] = entity_ws
+    bad = [
+        {"kind": kind, "id": eid, "workspace_id": ws, "expected": expected_ws}
+        for kind, rows in entity_ws.items()
+        for eid, ws in rows.items()
+        if expected_ws and ws != expected_ws
+    ]
+    check("逐实体 Workspace 均等于目标 Workspace（ID 级）", not bad, bad)
+
+    missing = [
+        {"kind": kind, "expected_ids": expected}
+        for kind, expected, rows in (
+            ("intent", [intent_id], entity_ws["intent"]),
+            ("testcase", [tc_id], entity_ws["testcase"]),
+            ("testcase_version", [version_id], entity_ws["testcase_version"]),
+            ("run", run_ids, entity_ws["run"]),
+            ("task", run_ids, entity_ws["task"]),
+        )
+        if expected and (not rows or len(rows) < len(set(expected)))
+    ]
+    check("主链实体逐 ID 存在（不允许缺漏）", not missing, missing)
+
+    run_parents = [
+        dict(r)
+        for r in c.execute(
+            text(
+                "SELECT r.run_id, r.workspace_id AS run_ws, t.workspace_id AS task_ws, "
+                "r.testcase_version_id FROM tg_run r JOIN tg_task t ON t.task_id = r.task_id "
+                "WHERE r.run_id = ANY(:ids)"
+            ),
+            {"ids": run_ids},
+        ).mappings().all()
+    ]
+    bad_parent = [
+        r for r in run_parents
+        if r["run_ws"] != r["task_ws"]
+        or (tc_id and str(r["testcase_version_id"] or "").split("@")[0] != tc_id)
+    ]
+    check("Run.workspace == Task.workspace 且版本属于主 TestCase", bool(run_parents) and not bad_parent,
+          {"runs": run_parents, "bad": bad_parent})
+
+    ev_rows = [
+        dict(r) for r in c.execute(
+            text("SELECT evidence_id, workspace_id, run_id FROM tg_evidence WHERE evidence_id = ANY(:ids)"),
+            {"ids": evidence_ids},
+        ).mappings().all()
+    ]
+    foreign_ev = [r for r in ev_rows if r["run_id"] and run_ids and r["run_id"] not in run_ids]
+    check("Evidence 逐 ID 绑定本链 Run（无跨 Run 引用）", bool(ev_rows) and not foreign_ev,
+          {"evidence": ev_rows, "foreign": foreign_ev})
+
+    event_rows = [
+        dict(r) for r in c.execute(
+            text("SELECT event_id, workspace_id, context_refs->>'run' AS run_id FROM tg_event "
+                 "WHERE context_refs->>'run' = ANY(:ids)"),
+            {"ids": run_ids},
+        ).mappings().all()
+    ]
+    bad_events = [r for r in event_rows if expected_ws and r["workspace_id"] != expected_ws]
+    check("Event 逐 ID 属于目标 Workspace 且绑定本链 Run", not bad_events,
+          {"count": len(event_rows), "bad": bad_events})
+
+    doc_rows = [
+        dict(r) for r in c.execute(
+            text("SELECT id, kind, workspace_id, ref_id, doc FROM tg_doc WHERE id = ANY(:ids)"),
+            {"ids": doc_ids},
+        ).mappings().all()
+    ]
+    bad_docs = [r for r in doc_rows if expected_ws and r["workspace_id"] != expected_ws]
+    check("Diagnosis/ProbePlan/ProbeBudget/Repair 文档逐 ID Workspace 正确",
+          bool(doc_rows) and not bad_docs, {"docs": doc_rows, "bad": bad_docs})
+
+    # Sandbox 三件套：TestCase / Task / Run 必须与 Repair 同 Workspace
+    sandbox = []
+    for r in doc_rows:
+        if r["kind"] != "repair":
+            continue
+        d = r.get("doc") or {}
+        sandbox_case = str(d.get("sandbox_testcase_id") or d.get("sandbox_case_id") or "")
+        sandbox_run = str(d.get("sandbox_run_id") or "")
+        if sandbox_case or sandbox_run:
+            sandbox.append({
+                "proposal_id": r["id"],
+                "repair_ws": r["workspace_id"],
+                "sandbox_case": sandbox_case,
+                "sandbox_run": sandbox_run,
+            })
+    sandbox_bad = []
+    for item in sandbox:
+        for table, col, val in (("tg_testcase", "testcase_id", item["sandbox_case"]),
+                                ("tg_run", "run_id", item["sandbox_run"])):
+            if not val:
+                continue
+            row = c.execute(
+                text(f"SELECT workspace_id FROM {table} WHERE {col} = :v"), {"v": val}  # noqa: S608 - 固定白名单
+            ).mappings().first()
+            if row is None or str(row["workspace_id"] or "") != item["repair_ws"]:
+                sandbox_bad.append({**item, "table": table, "row": dict(row) if row else None})
+    check("Sandbox TestCase/Run 与 Repair 同 Workspace", not sandbox_bad,
+          {"sandbox": sandbox, "bad": sandbox_bad})
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dsn", required=True)
@@ -399,6 +545,15 @@ def main() -> int:
 
         if lineage:
             _check_lineage(out, c, lineage)
+            target_ws = ws or str(
+                _scalar(
+                    c,
+                    "SELECT workspace_id FROM tg_testcase WHERE testcase_id = :tc",
+                    tc=(lineage.get("ids") or {}).get("testcase_id") or "",
+                )
+                or ""
+            )
+            _check_workspace_lineage(out, c, lineage, target_ws)
 
     engine.dispose()
     out["summary"] = {

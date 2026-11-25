@@ -24,9 +24,41 @@ from traceguard_persistence.models import RunRow
 
 
 def _svc(tmp_path: Path) -> TaskService:
+    from traceguard_core.ids import utc_now_iso
+    from traceguard_persistence.catalog import CatalogService
+
     db = Database(f"sqlite:///{tmp_path / f'idem-{uuid.uuid4().hex[:8]}.db'}")
     set_database(db)
-    return TaskService(db)
+    svc = TaskService(db)
+    # RUN-011-R1.1 WP1：Run 只能绑定数据库中真实存在且同 Workspace 的版本。
+    CatalogService(db).create_testcase(
+        {
+            "testcase_id": "tcase_idem",
+            "version": 1,
+            "workspace_id": "default",
+            "created_at": utc_now_iso(),
+            "steps": [
+                {
+                    "step_id": "s1",
+                    "action": "navigate",
+                    "target": {"strategy": "css", "value": "body"},
+                }
+            ],
+            "assertions": [
+                {
+                    "assertion_id": "a1",
+                    "description": "页面可见",
+                    "kind": "ui",
+                    "required": True,
+                    "expected": {},
+                }
+            ],
+        },
+        title="tcase_idem",
+        workspace_id="default",
+        review_status="DRAFT",
+    )
+    return svc
 
 
 def _claim_target(svc: TaskService, run_id: str) -> dict:
@@ -41,8 +73,10 @@ def _claim_target(svc: TaskService, run_id: str) -> dict:
 
 
 def _queued_run(svc: TaskService) -> tuple[str, str]:
-    task_id = svc.create_task("tc-idem", f"intent-{id(svc)}", mode="playwright")["task_id"]
-    run = svc.create_run(task_id, "tc-idem@1")
+    task_id = svc.create_task(
+        "tcase_idem", f"intent-{id(svc)}", mode="playwright", workspace_id="default"
+    )["task_id"]
+    run = svc.create_run(task_id, "tcase_idem@1")
     return task_id, run["run_id"]
 
 

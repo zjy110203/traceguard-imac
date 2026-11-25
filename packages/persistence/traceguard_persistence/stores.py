@@ -10,7 +10,7 @@ import hashlib
 import json
 import threading
 import uuid
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -174,11 +174,14 @@ class PersistentEventStore:
         event_type: str | None = None,
         limit: int = 500,
         offset: int = 0,
+        workspace_ids: Sequence[str] | None = None,
     ) -> list[StoredEvent]:
         with self.db.session() as s:
             q = select(EventRow)
             if workspace_id:
                 q = q.where(EventRow.workspace_id == workspace_id)
+            if workspace_ids is not None:
+                q = q.where(EventRow.workspace_id.in_(list(workspace_ids)))
             if event_type:
                 q = q.where(EventRow.event_type == event_type)
             rows = list(s.scalars(q.order_by(EventRow.recorded_at.desc()).limit(2000)))
@@ -568,11 +571,14 @@ class PersistentEvidenceManager:
         source_type: str | None = None,
         limit: int = 200,
         offset: int = 0,
+        workspace_ids: Sequence[str] | None = None,
     ) -> list[EvidenceRecord]:
         with self.db.session() as s:
             q = select(EvidenceRow)
             if workspace_id:
                 q = q.where(EvidenceRow.workspace_id == workspace_id)
+            if workspace_ids is not None:
+                q = q.where(EvidenceRow.workspace_id.in_(list(workspace_ids)))
             if run_id:
                 q = q.where(EvidenceRow.run_id == run_id)
             if kind:
@@ -902,6 +908,15 @@ class DocStore:
         """
         now = utc_now_iso()
         with self.db.session() as s:
+            existing = s.get(DocRow, doc_id)
+            if existing is not None and _workspace_conflict(
+                existing.workspace_id, workspace_id
+            ):
+                raise AppError(
+                    ErrorCode.AUTHORIZATION_ERROR,
+                    f"CROSS_WORKSPACE_DOC_WRITE: {doc_id} belongs to workspace "
+                    f"'{existing.workspace_id}', not '{workspace_id}'",
+                )
             if version is not None:
                 result = s.execute(
                     update(DocRow)
@@ -985,6 +1000,7 @@ class DocStore:
         status: str | None = None,
         limit: int = 200,
         offset: int = 0,
+        workspace_ids: Sequence[str] | None = None,
     ) -> list[DocRecord]:
         with self.db.session() as s:
             q = select(DocRow)
@@ -992,6 +1008,8 @@ class DocStore:
                 q = q.where(DocRow.kind == kind)
             if workspace_id:
                 q = q.where(DocRow.workspace_id == workspace_id)
+            if workspace_ids is not None:
+                q = q.where(DocRow.workspace_id.in_(list(workspace_ids)))
             if ref_id:
                 q = q.where(DocRow.ref_id == ref_id)
             if status:
@@ -1006,6 +1024,13 @@ class DocStore:
                 return False
             s.delete(row)
             return True
+
+
+def _workspace_conflict(existing: str | None, incoming: str | None) -> bool:
+    """既有行与本次写入的 Workspace 是否冲突（空值视为未声明，不冲突）。"""
+    a = (existing or "").strip()
+    b = (incoming or "").strip()
+    return bool(a and b and a != b)
 
 
 def _to_doc(row: DocRow) -> DocRecord:
@@ -1100,6 +1125,7 @@ class ArtifactStore:
                 "size": row.size,
                 "media_type": row.media_type,
                 "original_name": row.original_name,
+                "workspace_id": row.workspace_id,
             }
             data = Path(row.path).read_bytes()
         ok = hashlib.sha256(data).hexdigest() == meta["sha256"]
@@ -1121,11 +1147,19 @@ class ArtifactStore:
                 "workspace_id": row.workspace_id,
             }
 
-    def list(self, workspace_id: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
+    def list(
+        self,
+        workspace_id: str | None = None,
+        limit: int = 100,
+        *,
+        workspace_ids: Sequence[str] | None = None,
+    ) -> list[dict[str, Any]]:
         with self.db.session() as s:
             q = select(ArtifactRow)
             if workspace_id:
                 q = q.where(ArtifactRow.workspace_id == workspace_id)
+            if workspace_ids is not None:
+                q = q.where(ArtifactRow.workspace_id.in_(list(workspace_ids)))
             rows = s.scalars(q.order_by(ArtifactRow.created_at.desc()).limit(limit)).all()
             return [
                 {
@@ -1134,6 +1168,7 @@ class ArtifactStore:
                     "size": r.size,
                     "media_type": r.media_type,
                     "original_name": r.original_name,
+                    "workspace_id": r.workspace_id,
                     "created_at": r.created_at,
                 }
                 for r in rows

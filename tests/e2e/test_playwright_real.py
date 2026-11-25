@@ -99,6 +99,7 @@ def _execute(rt: Runtime, testcase_id: str) -> dict:  # type: ignore[no-untyped-
         testcase_id,
         f"e2e-{testcase_id}-{time.time_ns()}",
         testcase_version_id=f"{testcase_id}@1",
+        workspace_id="default",
     )
     run = rt.tasks.create_run(task["task_id"], f"{testcase_id}@1")
     return rt.execute_run(run["run_id"])
@@ -155,6 +156,7 @@ def test_http_fallback_mode_is_labelled(rt, teamflow_server) -> None:  # type: i
         f"e2e-http-{time.time_ns()}",
         mode="http",
         testcase_version_id="tcase_tf_create_normal@1",
+        workspace_id="default",
     )
     run = rt.tasks.create_run(task["task_id"], "tcase_tf_create_normal@1")
     out = rt.execute_run(run["run_id"])

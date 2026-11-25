@@ -1,4 +1,8 @@
-"""质量智能 API：Diagnosis / Disposition / Evidence Graph / Probe / Repair。"""
+"""质量智能 API：Diagnosis / Disposition / Evidence Graph / Probe / Repair。
+
+RUN-011-R1.1 WP1：对象级授权 + Workspace 作用域统一走 `workspace.py`；
+WP3：Repair 血缘与来源由服务端验证，不再信任请求体声明。
+"""
 
 from __future__ import annotations
 
@@ -13,6 +17,7 @@ from traceguard_persistence.catalog import require_human_actor
 
 from ..auth import trusted_actor
 from ..services import get_services
+from ..workspace import principal_of, require_entity_workspace, scope_filter
 
 router = APIRouter(prefix="/api/v1", tags=["intelligence"])
 
@@ -31,10 +36,44 @@ def _http(exc: AppError) -> HTTPException:
     )
 
 
+def _doc_or_404(doc_id: str, request: Request, *, kind: str | None = None):  # type: ignore[no-untyped-def]
+    """取聚合文档并做对象级授权（Graph/Diagnosis/Probe/Repair 统一入口）。"""
+    rec = get_services().rt.docs.get(doc_id)
+    if rec is None or (kind is not None and rec.kind != kind):
+        raise HTTPException(404, detail={"code": "NOT_FOUND", "message": f"{kind or 'doc'} not found"})
+    require_entity_workspace(
+        principal_of(request),
+        rec.workspace_id,
+        resource_type=rec.kind,
+        resource_id=doc_id,
+        request=request,
+    )
+    return rec
+
+
+def _run_workspace_of(run_id: str, request: Request) -> dict[str, Any]:
+    run = get_services().rt.tasks.get_run(run_id)
+    if not run:
+        raise HTTPException(404, detail={"code": "NOT_FOUND", "message": "run not found"})
+    require_entity_workspace(
+        principal_of(request),
+        run.get("workspace_id"),
+        resource_type="run",
+        resource_id=run_id,
+        request=request,
+    )
+    return run
+
+
 # ----------------------------------------------------------------- exploration
 @router.post("/intents/{intent_id}/explore", status_code=201)
-async def explore_intent(intent_id: str, max_steps: int = 8) -> dict[str, Any]:
+async def explore_intent(
+    intent_id: str, request: Request, max_steps: int = 8
+) -> dict[str, Any]:
     """Agent 真实探索（只读工具 + 预算 + 域名白名单），产出可复现轨迹。"""
+    from ..routers.catalog import _intent_or_404
+
+    _intent_or_404(intent_id, request)
     try:
         return await run_in_threadpool(get_services().exploration.explore, intent_id, max_steps)
     except AppError as exc:
@@ -43,26 +82,48 @@ async def explore_intent(intent_id: str, max_steps: int = 8) -> dict[str, Any]:
 
 @router.get("/explorations")
 async def list_explorations(
-    workspace_id: str | None = None, limit: int = 50
+    request: Request, workspace_id: str | None = None, limit: int = 50
 ) -> list[dict[str, Any]]:
-    return get_services().exploration.list(workspace_id, limit)
+    allowed = scope_filter(
+        principal_of(request), workspace_id, resource_type="exploration", request=request
+    )
+    return get_services().exploration.list(workspace_id, limit, workspace_ids=allowed)
 
 
 @router.get("/explorations/{exploration_id}")
-async def get_exploration(exploration_id: str) -> dict[str, Any]:
+async def get_exploration(exploration_id: str, request: Request) -> dict[str, Any]:
     doc = get_services().exploration.get(exploration_id)
     if not doc:
         raise HTTPException(404, detail={"code": "NOT_FOUND", "message": "exploration not found"})
+    require_entity_workspace(
+        principal_of(request),
+        doc.get("workspace_id"),
+        resource_type="exploration",
+        resource_id=exploration_id,
+        request=request,
+    )
     return doc
 
 
 @router.post("/explorations/{exploration_id}/compile", status_code=201)
-async def compile_exploration(exploration_id: str, mode: str | None = None) -> dict[str, Any]:
+async def compile_exploration(
+    exploration_id: str, request: Request, mode: str | None = None
+) -> dict[str, Any]:
     """轨迹 → 候选用例（PENDING，必须人工审核后才能执行）。
 
     mode: rule_only / llm_only / llm_plus_rule_validation（未指定则读配置开关）。
     LLM 路径失败时回退规则编译，并在 compiled.llm_meta 中如实标记 fallback。
     """
+    doc = get_services().exploration.get(exploration_id)
+    if not doc:
+        raise HTTPException(404, detail={"code": "NOT_FOUND", "message": "exploration not found"})
+    require_entity_workspace(
+        principal_of(request),
+        doc.get("workspace_id"),
+        resource_type="exploration",
+        resource_id=exploration_id,
+        request=request,
+    )
     try:
         return await run_in_threadpool(
             get_services().exploration.compile, exploration_id, mode=mode
@@ -75,6 +136,7 @@ async def compile_exploration(exploration_id: str, mode: str | None = None) -> d
 async def start_stability_replay(
     testcase_id: str,
     version: int,
+    request: Request,
     repeats: int | None = None,
     risk_profile: str = "default",
     sync: bool = False,
@@ -85,8 +147,9 @@ async def start_stability_replay(
     产生 "run not acquirable" 冲突），而是创建 Run 后等待**真实 Worker 消费**完成，
     超时仍返回 RUNNING 快照（不伪造结论）。
     """
-    from ..services import get_services
+    from ..routers.catalog import _testcase_or_404
 
+    _testcase_or_404(testcase_id, request)
     try:
         if not sync:
             return await run_in_threadpool(
@@ -113,13 +176,19 @@ async def start_stability_replay(
 
 @router.get("/stability-replays")
 async def list_stability_replays(
-    testcase_id: str | None = None, limit: int = 50
+    request: Request, testcase_id: str | None = None, limit: int = 50
 ) -> list[dict[str, Any]]:
-    return get_services().stability.list(testcase_id, limit)
+    allowed = scope_filter(
+        principal_of(request), None, resource_type="stability_replay", request=request
+    )
+    return get_services().stability.list(testcase_id, limit, workspace_ids=allowed)
 
 
 @router.get("/stability-replays/{replay_id}")
-async def get_stability_replay(replay_id: str, refresh: bool = False) -> dict[str, Any]:
+async def get_stability_replay(
+    replay_id: str, request: Request, refresh: bool = False
+) -> dict[str, Any]:
+    _doc_or_404(replay_id, request)
     try:
         svc = get_services().stability
         return svc.refresh(replay_id) if refresh else svc.get(replay_id)
@@ -129,11 +198,14 @@ async def get_stability_replay(replay_id: str, refresh: bool = False) -> dict[st
 
 # ------------------------------------------------------------------ diagnosis
 @router.post("/runs/{run_id}/diagnose", status_code=201)
-async def diagnose(run_id: str, use_llm: bool | None = None) -> dict[str, Any]:
+async def diagnose(
+    run_id: str, request: Request, use_llm: bool | None = None
+) -> dict[str, Any]:
     """诊断。`use_llm` 显式指定是否使用 LLM 顾问（None=按全局配置）。
 
     Benchmark 分组必须显式传 `use_llm=false` 才能保证"规则组"口径纯净。
     """
+    _run_workspace_of(run_id, request)
     try:
         return get_services().diagnosis.diagnose(run_id, use_llm_advisor=use_llm)
     except AppError as exc:
@@ -142,25 +214,47 @@ async def diagnose(run_id: str, use_llm: bool | None = None) -> dict[str, Any]:
 
 @router.get("/diagnoses")
 async def list_diagnoses(
-    workspace_id: str | None = None, run_id: str | None = None, limit: int = 100
+    request: Request,
+    workspace_id: str | None = None,
+    run_id: str | None = None,
+    limit: int = 100,
 ) -> list[dict[str, Any]]:
-    return get_services().diagnosis.list_diagnoses(workspace_id, run_id, limit)
+    allowed = scope_filter(
+        principal_of(request), workspace_id, resource_type="diagnosis", request=request
+    )
+    return get_services().diagnosis.list_diagnoses(
+        workspace_id, run_id, limit, workspace_ids=allowed
+    )
 
 
 @router.get("/diagnoses/{diagnosis_id}")
-async def get_diagnosis(diagnosis_id: str) -> dict[str, Any]:
+async def get_diagnosis(diagnosis_id: str, request: Request) -> dict[str, Any]:
     doc = get_services().diagnosis.get(diagnosis_id)
     if not doc:
         raise HTTPException(404, detail={"code": "NOT_FOUND", "message": "diagnosis not found"})
+    require_entity_workspace(
+        principal_of(request),
+        doc.get("workspace_id"),
+        resource_type="diagnosis",
+        resource_id=diagnosis_id,
+        request=request,
+    )
     return doc
 
 
 @router.get("/dispositions")
 async def list_dispositions(
-    workspace_id: str | None = None, status: str | None = None, limit: int = 100
+    request: Request,
+    workspace_id: str | None = None,
+    status: str | None = None,
+    limit: int = 100,
 ) -> list[dict[str, Any]]:
+    allowed = scope_filter(
+        principal_of(request), workspace_id, resource_type="disposition", request=request
+    )
     recs = get_services().rt.docs.list(
-        kind="disposition", workspace_id=workspace_id, status=status, limit=limit
+        kind="disposition", workspace_id=workspace_id, status=status, limit=limit,
+        workspace_ids=allowed,
     )
     return [r.to_dict() for r in recs]
 
@@ -197,9 +291,7 @@ async def review_disposition(
     except AppError as exc:
         raise _http(exc) from exc
     rt = get_services().rt
-    rec = rt.docs.get(disposition_id)
-    if not rec or rec.kind != "disposition":
-        raise HTTPException(404, detail={"code": "NOT_FOUND", "message": "disposition not found"})
+    rec = _doc_or_404(disposition_id, request, kind="disposition")
     doc = dict(rec.doc)
     doc["review_status"] = req.review_status
     doc["review_revision"] = int(doc.get("review_revision") or 0) + 1
@@ -225,12 +317,14 @@ async def review_disposition(
 
 # ---------------------------------------------------------------------- graph
 @router.post("/runs/{run_id}/graph")
-async def build_graph(run_id: str) -> dict[str, Any]:
+async def build_graph(run_id: str, request: Request) -> dict[str, Any]:
+    _run_workspace_of(run_id, request)
     return get_services().graph.build_for_run(run_id)
 
 
 @router.get("/runs/{run_id}/graph")
-async def get_graph(run_id: str) -> dict[str, Any]:
+async def get_graph(run_id: str, request: Request) -> dict[str, Any]:
+    _run_workspace_of(run_id, request)
     try:
         return get_services().graph.get(run_id)
     except AppError as exc:
@@ -238,8 +332,13 @@ async def get_graph(run_id: str) -> dict[str, Any]:
 
 
 @router.get("/graphs")
-async def list_graphs(workspace_id: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
-    return get_services().graph.list_graphs(workspace_id, limit)
+async def list_graphs(
+    request: Request, workspace_id: str | None = None, limit: int = 50
+) -> list[dict[str, Any]]:
+    allowed = scope_filter(
+        principal_of(request), workspace_id, resource_type="graph", request=request
+    )
+    return get_services().graph.list_graphs(workspace_id, limit, workspace_ids=allowed)
 
 
 # --------------------------------------------------------------------- probes
@@ -251,18 +350,32 @@ async def probe_definitions() -> list[dict[str, Any]]:
 class ProbeExecReq(BaseModel):
     probe_id: str
     params: dict[str, Any] = {}
-    workspace_id: str = "default"
+    #: 仅作兼容保留：Workspace 由 Run / Diagnosis 的真实归属决定（服务端解析）
+    workspace_id: str | None = None
     run_id: str | None = None
     diagnosis_id: str | None = None
 
 
 @router.post("/probes/execute", status_code=201)
-async def execute_probe(req: ProbeExecReq) -> dict[str, Any]:
+async def execute_probe(req: ProbeExecReq, request: Request) -> dict[str, Any]:
+    if req.run_id:
+        _run_workspace_of(req.run_id, request)
+    if req.diagnosis_id:
+        _doc_or_404(req.diagnosis_id, request, kind="diagnosis")
+    if not req.run_id and not req.diagnosis_id:
+        # 无关联实体时只能在自己有权的 Workspace 手动执行
+        require_entity_workspace(
+            principal_of(request),
+            req.workspace_id or "default",
+            resource_type="probe",
+            resource_id=req.probe_id,
+            request=request,
+        )
     try:
         return get_services().probe.execute(
             req.probe_id,
             req.params,
-            req.workspace_id,
+            req.workspace_id or "default",
             run_id=req.run_id,
             diagnosis_id=req.diagnosis_id,
         )
@@ -271,15 +384,22 @@ async def execute_probe(req: ProbeExecReq) -> dict[str, Any]:
 
 
 @router.get("/probes/budgets")
-async def probe_budgets(workspace_id: str | None = None) -> list[dict[str, Any]]:
+async def probe_budgets(request: Request, workspace_id: str | None = None) -> list[dict[str, Any]]:
     """探针预算快照（按 Run / Diagnosis 隔离，provisional 数值明确标注）。"""
-    return get_services().probe.budgets_snapshot(workspace_id)
+    allowed = scope_filter(
+        principal_of(request), workspace_id, resource_type="probe_budget", request=request
+    )
+    return get_services().probe.budgets_snapshot(workspace_id, workspace_ids=allowed)
 
 
 @router.post("/probes/budgets/close")
 async def close_probe_budget(
-    run_id: str | None = None, diagnosis_id: str | None = None
+    request: Request, run_id: str | None = None, diagnosis_id: str | None = None
 ) -> dict[str, Any]:
+    if run_id:
+        _run_workspace_of(run_id, request)
+    if diagnosis_id:
+        _doc_or_404(diagnosis_id, request, kind="diagnosis")
     try:
         snapshot = get_services().probe.close_budget(
             run_id=run_id or "", diagnosis_id=diagnosis_id or ""
@@ -294,10 +414,14 @@ async def close_probe_budget(
 @router.post("/runs/{run_id}/probe-plan", status_code=201)
 async def run_probe_plan(
     run_id: str,
+    request: Request,
     diagnosis_id: str | None = None,
     max_iterations: int = 6,
 ) -> dict[str, Any]:
     """真实执行 Active Diagnosis 循环（探针选择 → 执行 → 新证据 → 再评估）。"""
+    _run_workspace_of(run_id, request)
+    if diagnosis_id:
+        _doc_or_404(diagnosis_id, request, kind="diagnosis")
     try:
         return await run_in_threadpool(
             get_services().probe.plan_and_probe,
@@ -310,23 +434,34 @@ async def run_probe_plan(
 
 
 @router.get("/probe-plans")
-async def list_probe_plans(run_id: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
-    return get_services().probe.list_plans(run_id, limit)
+async def list_probe_plans(
+    request: Request, run_id: str | None = None, limit: int = 50
+) -> list[dict[str, Any]]:
+    allowed = scope_filter(
+        principal_of(request), None, resource_type="probe_plan", request=request
+    )
+    return get_services().probe.list_plans(run_id, limit, workspace_ids=allowed)
 
 
 @router.get("/probe-plans/{plan_id}")
-async def get_probe_plan(plan_id: str) -> dict[str, Any]:
-    plan = get_services().probe.get_plan(plan_id)
-    if plan is None:
-        raise HTTPException(404, detail={"code": "NOT_FOUND", "message": "plan not found"})
-    return plan
+async def get_probe_plan(plan_id: str, request: Request) -> dict[str, Any]:
+    rec = _doc_or_404(plan_id, request, kind="probe_plan")
+    return rec.to_dict()
 
 
 @router.get("/probes/executions")
 async def probe_executions(
-    workspace_id: str | None = None, run_id: str | None = None, limit: int = 100
+    request: Request,
+    workspace_id: str | None = None,
+    run_id: str | None = None,
+    limit: int = 100,
 ) -> list[dict[str, Any]]:
-    return get_services().probe.list_executions(workspace_id, run_id, limit)
+    allowed = scope_filter(
+        principal_of(request), workspace_id, resource_type="probe_execution", request=request
+    )
+    return get_services().probe.list_executions(
+        workspace_id, run_id, limit, workspace_ids=allowed
+    )
 
 
 @router.get("/probes/audit")
@@ -335,7 +470,12 @@ async def probe_audit() -> list[dict[str, Any]]:
 
 
 @router.get("/runs/{run_id}/probe-suggestions")
-async def probe_suggestions(run_id: str, diagnosis_id: str | None = None) -> list[dict[str, Any]]:
+async def probe_suggestions(
+    run_id: str, request: Request, diagnosis_id: str | None = None
+) -> list[dict[str, Any]]:
+    _run_workspace_of(run_id, request)
+    if diagnosis_id:
+        _doc_or_404(diagnosis_id, request, kind="diagnosis")
     try:
         return get_services().probe.suggest(run_id, diagnosis_id)
     except AppError as exc:
@@ -359,7 +499,7 @@ class RepairProposeReq(BaseModel):
     # RUN-011-R1 WP1 §1.3：Diagnosis→Repair 血缘（可选，向后兼容）
     diagnosis_id: str | None = None
     source_run_id: str | None = None
-    #: 修复方案来源：human:* / rule:* / llm:*（三类不得混淆）
+    #: 修复方案来源：human:* / rule:* / llm:*（三类不得混淆，服务端验证后落库）
     repair_source: str = ""
 
 
@@ -372,8 +512,15 @@ class RepairLLMReq(BaseModel):
 
 
 @router.post("/repairs/llm-suggest", status_code=201)
-async def llm_repair_suggest(req: RepairLLMReq) -> dict[str, Any]:
+async def llm_repair_suggest(req: RepairLLMReq, request: Request) -> dict[str, Any]:
     """LLM 生成受限修复候选（禁止自动审批/晋升；不具备凭据时明确返回未配置）。"""
+    from ..routers.catalog import _testcase_or_404
+
+    _testcase_or_404(req.testcase_id, request)
+    if req.run_id:
+        _run_workspace_of(req.run_id, request)
+    if req.diagnosis_id:
+        _doc_or_404(req.diagnosis_id, request, kind="diagnosis")
     try:
         return await run_in_threadpool(
             get_services().repair.llm_suggest,
@@ -388,17 +535,30 @@ async def llm_repair_suggest(req: RepairLLMReq) -> dict[str, Any]:
 
 
 @router.post("/repairs", status_code=201)
-async def propose_repair(req: RepairProposeReq) -> dict[str, Any]:
+async def propose_repair(req: RepairProposeReq, request: Request) -> dict[str, Any]:
+    from ..routers.catalog import _testcase_or_404
+
+    testcase = _testcase_or_404(req.testcase_id, request)
+    actor = trusted_actor(
+        request, req.created_by, "repair.submit", resource_type="repair", resource_id=req.testcase_id
+    )
+    if req.diagnosis_id:
+        _doc_or_404(req.diagnosis_id, request, kind="diagnosis")
+    if req.source_run_id:
+        _run_workspace_of(req.source_run_id, request)
     try:
         return get_services().repair.propose(
             testcase_id=req.testcase_id,
             base_version=req.base_version,
             changes=[c.model_dump() for c in req.changes],
             reason=req.reason,
-            created_by=req.created_by,
+            created_by=actor,
+            workspace_id=testcase.get("workspace_id"),
             diagnosis_id=req.diagnosis_id,
             source_run_id=req.source_run_id,
             repair_source=req.repair_source,
+            actor=actor,
+            trusted_source=False,
         )
     except AppError as exc:
         raise _http(exc) from exc
@@ -406,21 +566,23 @@ async def propose_repair(req: RepairProposeReq) -> dict[str, Any]:
 
 @router.get("/repairs")
 async def list_repairs(
-    workspace_id: str | None = None, status: str | None = None
+    request: Request, workspace_id: str | None = None, status: str | None = None
 ) -> list[dict[str, Any]]:
-    return get_services().repair.list(workspace_id, status)
+    allowed = scope_filter(
+        principal_of(request), workspace_id, resource_type="repair", request=request
+    )
+    return get_services().repair.list(workspace_id, status, workspace_ids=allowed)
 
 
 @router.get("/repairs/{proposal_id}")
-async def get_repair(proposal_id: str) -> dict[str, Any]:
-    try:
-        return get_services().repair.get(proposal_id)
-    except AppError as exc:
-        raise _http(exc) from exc
+async def get_repair(proposal_id: str, request: Request) -> dict[str, Any]:
+    rec = _doc_or_404(proposal_id, request, kind="repair")
+    return rec.to_dict()
 
 
 @router.post("/repairs/{proposal_id}/validate")
-async def validate_repair(proposal_id: str) -> dict[str, Any]:
+async def validate_repair(proposal_id: str, request: Request) -> dict[str, Any]:
+    _doc_or_404(proposal_id, request, kind="repair")
     try:
         return get_services().repair.validate(proposal_id)
     except AppError as exc:
@@ -428,7 +590,8 @@ async def validate_repair(proposal_id: str) -> dict[str, Any]:
 
 
 @router.post("/repairs/{proposal_id}/sandbox-run")
-async def sandbox_repair(proposal_id: str) -> dict[str, Any]:
+async def sandbox_repair(proposal_id: str, request: Request) -> dict[str, Any]:
+    _doc_or_404(proposal_id, request, kind="repair")
     try:
         # 沙箱验证会真实启动浏览器，必须在线程池执行
         return await run_in_threadpool(get_services().repair.sandbox_run, proposal_id)
@@ -442,7 +605,8 @@ class ApproveReq(BaseModel):
 
 
 @router.post("/repairs/{proposal_id}/submit")
-async def submit_repair(proposal_id: str) -> dict[str, Any]:
+async def submit_repair(proposal_id: str, request: Request) -> dict[str, Any]:
+    _doc_or_404(proposal_id, request, kind="repair")
     try:
         return get_services().repair.submit_for_approval(proposal_id)
     except AppError as exc:
@@ -450,7 +614,10 @@ async def submit_repair(proposal_id: str) -> dict[str, Any]:
 
 
 @router.post("/repairs/{proposal_id}/approve")
-async def approve_repair(proposal_id: str, req: ApproveReq, request: Request) -> dict[str, Any]:
+async def approve_repair(
+    proposal_id: str, req: ApproveReq, request: Request
+) -> dict[str, Any]:
+    _doc_or_404(proposal_id, request, kind="repair")
     reviewer = trusted_actor(
         request, req.reviewer, "repair.approve", resource_type="repair", resource_id=proposal_id
     )
@@ -462,6 +629,7 @@ async def approve_repair(proposal_id: str, req: ApproveReq, request: Request) ->
 
 @router.post("/repairs/{proposal_id}/reject")
 async def reject_repair(proposal_id: str, req: ApproveReq, request: Request) -> dict[str, Any]:
+    _doc_or_404(proposal_id, request, kind="repair")
     rejector = trusted_actor(
         request, req.reviewer, "repair.approve", resource_type="repair", resource_id=proposal_id
     )
@@ -476,7 +644,10 @@ class PromoteReq(BaseModel):
 
 
 @router.post("/repairs/{proposal_id}/promote")
-async def promote_repair(proposal_id: str, req: PromoteReq, request: Request) -> dict[str, Any]:
+async def promote_repair(
+    proposal_id: str, req: PromoteReq, request: Request
+) -> dict[str, Any]:
+    _doc_or_404(proposal_id, request, kind="repair")
     trusted_actor(
         request,
         "user:dev-operator",
@@ -498,7 +669,10 @@ class RollbackReq(BaseModel):
 
 
 @router.post("/repairs/{proposal_id}/rollback")
-async def rollback_repair(proposal_id: str, req: RollbackReq, request: Request) -> dict[str, Any]:
+async def rollback_repair(
+    proposal_id: str, req: RollbackReq, request: Request
+) -> dict[str, Any]:
+    _doc_or_404(proposal_id, request, kind="repair")
     operator = trusted_actor(
         request, req.operator, "repair.rollback", resource_type="repair", resource_id=proposal_id
     )
@@ -511,8 +685,9 @@ async def rollback_repair(proposal_id: str, req: RollbackReq, request: Request) 
 
 
 @router.post("/repairs/{proposal_id}/reconcile")
-async def reconcile_repair(proposal_id: str) -> dict[str, Any]:
+async def reconcile_repair(proposal_id: str, request: Request) -> dict[str, Any]:
     """确定性恢复：把崩溃后卡在 PROMOTING 的提案按已提交回执修复。"""
+    _doc_or_404(proposal_id, request, kind="repair")
     try:
         return get_services().repair.reconcile(proposal_id)
     except AppError as exc:

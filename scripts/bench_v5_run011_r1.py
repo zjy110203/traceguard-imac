@@ -78,10 +78,17 @@ def compute_statistics(rounds: list[dict[str, Any]], probe_executions: list[dict
     failed_runs = [s for s in samples if s.get("verdict") in {"FAILED", "NOT_EVALUATED"}]
     n = len(failed_runs)
 
+    # WP4 §6.1：历史 JSON 使用旧臂名，复核时必须按别名读取，不能因改名丢数据。
+    legacy_alias = {
+        "F_probe_post_hoc_aware": "F_probe_aligned",
+        "G_probe_unknown_time": "G_probe_no_alignment",
+    }
+
     def _preds(arm: str) -> list[dict[str, Any]]:
         out = []
         for s in failed_runs:
-            a = (s.get("arms") or {}).get(arm) or {}
+            arms = s.get("arms") or {}
+            a = arms.get(arm) or arms.get(legacy_alias.get(arm, "")) or {}
             out.append({"gt": s.get("gt_mechanism"), "pred": _mechanism_of(a), "outcome": a.get("outcome"), "sample": s.get("scenario")})
         return out
 
@@ -117,7 +124,7 @@ def compute_statistics(rounds: list[dict[str, Any]], probe_executions: list[dict
 
     def _false_pass_rate() -> float | None:
         """False Pass：GT=PERSISTENCE 的场景被预测为非 PERSISTENCE 的比例。"""
-        preds = [p for p in _preds("F_probe_aligned") if p["gt"] == "PERSISTENCE"]
+        preds = [p for p in _preds("F_probe_post_hoc_aware") if p["gt"] == "PERSISTENCE"]
         if not preds:
             return None
         bad = sum(1 for p in preds if p["pred"] not in (None, "PERSISTENCE", "TIMING"))
@@ -136,6 +143,38 @@ def compute_statistics(rounds: list[dict[str, Any]], probe_executions: list[dict
     fbs = list(probe_feedback or [e for r in rounds for e in r.get("probe_feedback_applied", [])])
     lat = [s.get("diagnosis_latency_ms") for s in failed_runs if s.get("diagnosis_latency_ms") is not None]
 
+    # ---- RUN-011-R1.1 WP4 §6.2/6.3/6.4：把"混合口径"拆成可复核的分项统计 ----
+    llm_samples = [s.get("llm_arm") or {} for s in failed_runs]
+    llm_called = [m for m in llm_samples if m.get("called") is True]
+    llm_invalid = [m for m in llm_samples if "invalid_json" in str(m.get("skipped") or "")]
+    # 本轮真实数据用 skipped=llm_error:invalid_json 标记规则回退（无 fallback 布尔字段）
+    llm_fallback = [m for m in llm_samples if str(m.get("skipped") or "")]
+    llm_success_hits = sum(
+        1
+        for s in failed_runs
+        if (s.get("llm_arm") or {}).get("called") is True
+        and ((s.get("arms") or {}).get("H_llm_advisor") or {}).get("mechanism")
+        == s.get("gt_mechanism")
+    )
+
+    updates: list[dict[str, Any]] = []
+    for fb in fbs:
+        for u in fb.get("hypothesis_updates") or []:
+            updates.append(u)
+    update_counts = {
+        "SUPPORT": sum(1 for u in updates if u.get("relation") == "SUPPORT"),
+        "CONTRADICT": sum(1 for u in updates if u.get("relation") == "CONTRADICT"),
+        "CONFIRM": sum(1 for u in updates if u.get("relation") == "CONFIRM"),
+        "EXCLUDE": sum(1 for u in updates if u.get("relation") == "EXCLUDE"),
+    }
+    alignments = [
+        a
+        for s in failed_runs
+        for arm in (s.get("arms") or {}).values()
+        for a in (arm.get("time_alignments") or [])
+    ]
+    e2e_lat = [s.get("exec_ms") for s in failed_runs if isinstance(s.get("exec_ms"), (int, float))]
+
     return {
         "sample_size": n,
         "rounds": len(rounds),
@@ -144,10 +183,10 @@ def compute_statistics(rounds: list[dict[str, Any]], probe_executions: list[dict
             "produced_failure_samples": len({s.get("scenario") for s in failed_runs}),
             "coverage": round(len({s.get("scenario") for s in failed_runs}) / max(1, len({s.get("scenario") for s in samples})), 4),
         },
-        "primary_cause_accuracy": {arm: _accuracy(arm) for arm in ("A_raw_report", "C_rule", "D_graph_ablation", "E_probe_no_feedback", "F_probe_aligned", "G_probe_no_alignment", "H_llm_advisor")},
-        "macro_f1": {arm: _macro_f1(arm) for arm in ("C_rule", "F_probe_aligned")},
-        "selective_accuracy": {arm: _selective_accuracy(arm) for arm in ("C_rule", "F_probe_aligned")},
-        "false_pass_rate_F": _false_pass_rate(),
+        "primary_cause_accuracy": {arm: _accuracy(arm) for arm in ("A_raw_report", "C_rule", "D_graph_ablation", "E_probe_no_feedback", "F_probe_post_hoc_aware", "G_probe_unknown_time", "H_llm_advisor")},
+        "macro_f1": {arm: _macro_f1(arm) for arm in ("C_rule", "F_probe_post_hoc_aware")},
+        "selective_accuracy": {arm: _selective_accuracy(arm) for arm in ("C_rule", "F_probe_post_hoc_aware")},
+        "false_pass_rate": _false_pass_rate(),
         "probe_execution_success_rate": (
             round(sum(1 for e in execs if e.get("status") == "SUCCEEDED") / max(1, len(execs)), 4) if execs else None
         ),
@@ -159,7 +198,53 @@ def compute_statistics(rounds: list[dict[str, Any]], probe_executions: list[dict
             "max": max(lat) if lat else None,
             "count": len(lat),
         },
-        "abstention_rate_F": _abstention_accuracy("F_probe_aligned"),
+        "abstention_rate_F": _abstention_accuracy("F_probe_post_hoc_aware"),
+        # WP4 修正后的分项口径（与上方兼容字段并存，不覆盖历史 JSON）
+        "arm_definitions": {
+            "F_probe_post_hoc_aware": "事后探针回灌（实测 time_alignment=POST_HOC），不是 Run 内 ALIGNED 探针",
+            "G_probe_unknown_time": "同一探针但时间关系标 UNKNOWN，不是'无对齐'的因果对照",
+            "H_llm_advisor": "混合臂：LLM 成功调用 + 规则 Fallback，不得当作 LLM 单独准确率",
+        },
+        "time_alignment_evidence": {
+            "total": len(alignments),
+            "ALIGNED": sum(1 for a in alignments if a == "ALIGNED"),
+            "POST_HOC": sum(1 for a in alignments if a == "POST_HOC"),
+            "UNKNOWN": sum(1 for a in alignments if a == "UNKNOWN"),
+            "run_internal_aligned_probes_produced": False,
+        },
+        "llm_advisor_statistics": {
+            "sample_size": n,
+            "success_calls": len(llm_called),
+            "success_rate": round(len(llm_called) / max(1, n), 4) if n else None,
+            "invalid_json_calls": len(llm_invalid),
+            "invalid_json_rate": round(len(llm_invalid) / max(1, n), 4) if n else None,
+            "fallback_calls": len(llm_fallback),
+            "fallback_rate": round(len(llm_fallback) / max(1, n), 4) if n else None,
+            "candidate_count": sum(int(m.get("added") or 0) for m in llm_samples),
+            "success_subset_accuracy": (
+                round(llm_success_hits / len(llm_called), 4) if llm_called else None
+            ),
+            "note": "H 臂总体准确率混合了 LLM 成功与规则 Fallback，不能当作 LLM 自身准确率",
+        },
+        "probe_feedback_statistics": {
+            "probe_executions": len(execs),
+            "feedback_processed": len(fbs),
+            "hypothesis_updates": len(updates),
+            "SUPPORT": update_counts["SUPPORT"],
+            "CONTRADICT": update_counts["CONTRADICT"],
+            "CONFIRM": update_counts["CONFIRM"],
+            "EXCLUDE": update_counts["EXCLUDE"],
+            "note": "feedback_processed 只表示进入重新评估流程；只有 hypothesis_updates 才产生假设更新",
+        },
+        "diagnosis_latency_ms_breakdown": {
+            "engine_only": {"mean": round(sum(lat) / len(lat), 1) if lat else None, "count": len(lat)},
+            "end_to_end": {"mean": round(sum(e2e_lat) / len(e2e_lat), 1) if e2e_lat else None, "count": len(e2e_lat)},
+        },
+        "abstention": {
+            "rate": _abstention_accuracy("F_probe_post_hoc_aware"),
+            "accuracy": None,
+            "note": "当前实现只统计弃权率；弃权判断正确性需要单独 GT，本轮 NOT MEASURED",
+        },
         "note": (
             f"n={n} 失败样本（两轮合并）：小样本，不宣称统计显著；"
             "GT 来自故障机制定义（复合场景取首要机制）；Flaky 场景概率注入，单轮可能未触发故障"

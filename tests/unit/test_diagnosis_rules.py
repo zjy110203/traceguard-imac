@@ -22,7 +22,15 @@ def rt(work_tmp):  # type: ignore[no-untyped-def]
 
     db = Database(f"sqlite:///{work_tmp / f'diag-{uuid.uuid4().hex[:6]}.db'}")
     db.create_schema()
-    return Runtime(db)
+    runtime = Runtime(db)
+    # RUN-011-R1.1 WP1：Run 的版本血缘要求 TestCaseVersion 真实存在且同 Workspace。
+    runtime.catalog.create_testcase(
+        _base_tc().model_dump(),
+        title="tcase_rules",
+        workspace_id="default",
+        review_status="DRAFT",
+    )
+    return runtime
 
 
 def _base_tc(version: int = 1) -> TestCaseVersion:
@@ -87,7 +95,10 @@ def test_diff_whitelist() -> None:
 def test_api_5xx_outranks_persistence_symptom(rt) -> None:  # type: ignore[no-untyped-def]
     """接口 500 导致未落库时，主因必须是 API，而不是把症状当根因。"""
     task = rt.tasks.create_task(
-        "tcase_rules", f"diag-{time.time_ns()}", testcase_version_id="tcase_rules@1"
+        "tcase_rules",
+        f"diag-{time.time_ns()}",
+        testcase_version_id="tcase_rules@1",
+        workspace_id="default",
     )
     run = rt.tasks.create_run(task["task_id"], "tcase_rules@1")
     lease = rt.tasks.acquire_lease(run["run_id"], "w")
@@ -185,7 +196,10 @@ def test_api_5xx_outranks_persistence_symptom(rt) -> None:  # type: ignore[no-un
 def test_no_evidence_stays_inconclusive(rt) -> None:  # type: ignore[no-untyped-def]
     """只有 UI 断言失败、无任何权威证据时，不得确认根因。"""
     task = rt.tasks.create_task(
-        "tcase_rules", f"diag2-{time.time_ns()}", testcase_version_id="tcase_rules@1"
+        "tcase_rules",
+        f"diag2-{time.time_ns()}",
+        testcase_version_id="tcase_rules@1",
+        workspace_id="default",
     )
     run = rt.tasks.create_run(task["task_id"], "tcase_rules@1")
     lease = rt.tasks.acquire_lease(run["run_id"], "w")
@@ -243,7 +257,10 @@ def test_flaky_characteristic_is_flagged_not_root_cause(rt) -> None:  # type: ig
     tc_version = "tcase_rules@1"
     # 先跑一次 PASSED（同版本）
     ok_task = rt.tasks.create_task(
-        "tcase_rules", f"flaky-ok-{time.time_ns()}", testcase_version_id=tc_version
+        "tcase_rules",
+        f"flaky-ok-{time.time_ns()}",
+        testcase_version_id=tc_version,
+        workspace_id="default",
     )
     ok_run = rt.tasks.create_run(ok_task["task_id"], tc_version)
     lease = rt.tasks.acquire_lease(ok_run["run_id"], "w")
@@ -264,7 +281,10 @@ def test_flaky_characteristic_is_flagged_not_root_cause(rt) -> None:  # type: ig
     )
     # 再跑一次 FAILED（UI 断言失败，带证据）
     bad_task = rt.tasks.create_task(
-        "tcase_rules", f"flaky-bad-{time.time_ns()}", testcase_version_id=tc_version
+        "tcase_rules",
+        f"flaky-bad-{time.time_ns()}",
+        testcase_version_id=tc_version,
+        workspace_id="default",
     )
     bad_run = rt.tasks.create_run(bad_task["task_id"], tc_version)
     lease = rt.tasks.acquire_lease(bad_run["run_id"], "w")

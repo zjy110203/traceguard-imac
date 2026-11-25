@@ -168,15 +168,53 @@ class ProbeService:
     def budget_for(
         self, *, run_id: str = "", diagnosis_id: str = "", workspace_id: str = "default"
     ) -> ProbeBudget:
+        # RUN-011-R1.1 WP1 §1.4：Workspace 必须来自 Run / Diagnosis 的真实归属，
+        # 不采信调用方声明（旧实现会让探针预算静默落入 default）。
+        ws = self._resolve_workspace(run_id=run_id, diagnosis_id=diagnosis_id, declared=workspace_id)
         if diagnosis_id:
             scope = f"diagnosis:{diagnosis_id}"
         elif run_id:
             scope = f"run:{run_id}"
         else:
-            scope = f"manual:{workspace_id}"
+            scope = f"manual:{ws}"
         return self.budgets.get_or_create(
-            scope, run_id=run_id, diagnosis_id=diagnosis_id, workspace_id=workspace_id
+            scope, run_id=run_id, diagnosis_id=diagnosis_id, workspace_id=ws
         )
+
+    def _resolve_workspace(
+        self, *, run_id: str = "", diagnosis_id: str = "", declared: str = ""
+    ) -> str:
+        """解析探针作用域的**权威 Workspace**（fail-closed）。"""
+        if diagnosis_id:
+            rec = self.rt.docs.get(diagnosis_id)
+            if rec is None or rec.kind != "diagnosis":
+                raise AppError(ErrorCode.NOT_FOUND, f"DIAGNOSIS_NOT_FOUND: {diagnosis_id}")
+            ws = str(rec.workspace_id or (rec.doc or {}).get("workspace_id") or "")
+            run_ref = str((rec.doc or {}).get("run_id") or "")
+            if run_id and run_ref and run_ref != run_id:
+                raise AppError(
+                    ErrorCode.CONFLICT,
+                    f"DIAGNOSIS_RUN_MISMATCH: {diagnosis_id} 属于 run {run_ref}，"
+                    f"与请求 run {run_id} 不一致",
+                )
+            if not ws:
+                raise AppError(ErrorCode.VALIDATION_ERROR, "DIAGNOSIS_WORKSPACE_MISSING")
+        elif run_id:
+            run = self.rt.tasks.get_run(run_id)
+            if not run:
+                raise AppError(ErrorCode.NOT_FOUND, f"RUN_NOT_FOUND: {run_id}")
+            ws = str(run.get("workspace_id") or "")
+            if not ws:
+                raise AppError(ErrorCode.VALIDATION_ERROR, "RUN_WORKSPACE_MISSING")
+        else:
+            ws = (declared or "").strip() or "default"
+        if declared and declared.strip() and declared.strip() != ws:
+            raise AppError(
+                ErrorCode.AUTHORIZATION_ERROR,
+                f"CROSS_WORKSPACE_PROBE: 请求 workspace '{declared}' 与实体 workspace "
+                f"'{ws}' 不一致",
+            )
+        return ws
 
     def close_budget(
         self, *, run_id: str = "", diagnosis_id: str = "", reason: str = "DIAGNOSIS_COMPLETED"
@@ -187,12 +225,20 @@ class ProbeService:
         budget = self.budgets.close(scope, reason)
         return budget.snapshot() if budget else None
 
-    def budgets_snapshot(self, workspace_id: str | None = None) -> list[dict[str, Any]]:
-        """内存中的活跃预算 + 持久化的历史上预算文档。"""
+    def budgets_snapshot(
+        self, workspace_id: str | None = None, *, workspace_ids: list[str] | None = None
+    ) -> list[dict[str, Any]]:
+        """内存中的活跃预算 + 持久化的历史上预算文档（按 Workspace 作用域过滤）。"""
         active = {b["budget_id"]: b for b in self.budgets.snapshot()}
-        for rec in self.rt.docs.list(kind=BUDGET_KIND, workspace_id=workspace_id, limit=200):
+        for rec in self.rt.docs.list(
+            kind=BUDGET_KIND, workspace_id=workspace_id, limit=200, workspace_ids=workspace_ids
+        ):
             active.setdefault(rec.id, rec.doc)
-        return sorted(active.values(), key=lambda b: b.get("started_at") or 0, reverse=True)
+        out = sorted(active.values(), key=lambda b: b.get("started_at") or 0, reverse=True)
+        if workspace_ids is not None:
+            allowed = set(workspace_ids)
+            out = [b for b in out if str(b.get("workspace_id") or "default") in allowed]
+        return out
 
     # -------------------------------------------------------------- execute
     def execute(
@@ -206,9 +252,13 @@ class ProbeService:
         budget: ProbeBudget | None = None,
     ) -> dict[str, Any]:
         params = dict(params or {})
-        params.setdefault("workspace", workspace_id)
         run_id = run_id or params.get("run_id") or None
         diagnosis_id = diagnosis_id or params.get("diagnosis_id") or None
+        # RUN-011-R1.1 WP1 §1.4：探针 Workspace 必须继承 Run / Diagnosis 的真实归属。
+        workspace_id = self._resolve_workspace(
+            run_id=run_id or "", diagnosis_id=diagnosis_id or "", declared=workspace_id
+        )
+        params["workspace"] = workspace_id
         # RUN-011 WP2：未知/未注册探针在预算占位前就拒绝。
         # 旧行为会生成一条 BLOCKED 执行记录并返回 201，调用方无法区分
         # "探针不存在"与"探针被策略拒绝"，也会污染执行历史。
@@ -355,6 +405,24 @@ class ProbeService:
             raise AppError(ErrorCode.NOT_FOUND, "run not found")
         workspace_id = run.get("workspace_id") or "default"
         diag = self.rt.docs.get(diagnosis_id) if diagnosis_id else None
+        if diagnosis_id:
+            # RUN-011-R1.1 WP1 §1.4：Diagnosis 必须属于同一 Run 与同一 Workspace
+            if diag is None or diag.kind != "diagnosis":
+                raise AppError(ErrorCode.NOT_FOUND, f"DIAGNOSIS_NOT_FOUND: {diagnosis_id}")
+            diag_run = str((diag.doc or {}).get("run_id") or "")
+            if diag_run and diag_run != run_id:
+                raise AppError(
+                    ErrorCode.CONFLICT,
+                    f"DIAGNOSIS_RUN_MISMATCH: {diagnosis_id} 属于 run {diag_run}，"
+                    f"与请求 run {run_id} 不一致",
+                )
+            diag_ws = str(diag.workspace_id or (diag.doc or {}).get("workspace_id") or "")
+            if diag_ws and diag_ws != workspace_id:
+                raise AppError(
+                    ErrorCode.AUTHORIZATION_ERROR,
+                    f"CROSS_WORKSPACE_PROBE: Diagnosis 属于 workspace '{diag_ws}'，"
+                    f"与 Run 的 '{workspace_id}' 不一致",
+                )
         diag_doc = rec_doc = dict(diag.doc or {}) if diag else None
         budget = self.budget_for(
             run_id=run_id, diagnosis_id=diagnosis_id or "", workspace_id=workspace_id
@@ -660,8 +728,19 @@ class ProbeService:
         rec = self.rt.docs.get(plan_id)
         return rec.to_dict() if rec else None
 
-    def list_plans(self, run_id: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
-        return [r.to_dict() for r in self.rt.docs.list(kind=PLAN_KIND, ref_id=run_id, limit=limit)]
+    def list_plans(
+        self,
+        run_id: str | None = None,
+        limit: int = 50,
+        *,
+        workspace_ids: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        return [
+            r.to_dict()
+            for r in self.rt.docs.list(
+                kind=PLAN_KIND, ref_id=run_id, limit=limit, workspace_ids=workspace_ids
+            )
+        ]
 
     # ------------------------------------------------------------- gaps
     def _evidence_gaps(
@@ -767,10 +846,19 @@ class ProbeService:
 
     # -------------------------------------------------------------- listing
     def list_executions(
-        self, workspace_id: str | None = None, run_id: str | None = None, limit: int = 100
+        self,
+        workspace_id: str | None = None,
+        run_id: str | None = None,
+        limit: int = 100,
+        *,
+        workspace_ids: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         recs = self.rt.docs.list(
-            kind="probe_execution", workspace_id=workspace_id, ref_id=run_id, limit=limit
+            kind="probe_execution",
+            workspace_id=workspace_id,
+            ref_id=run_id,
+            limit=limit,
+            workspace_ids=workspace_ids,
         )
         return [r.to_dict() for r in recs]
 

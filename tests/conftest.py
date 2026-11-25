@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -71,6 +72,61 @@ def tmp_traceguard_dir(tmp_path):  # type: ignore[no-untyped-def]
     d = tmp_path / "traceguard-test"
     d.mkdir()
     return d
+
+
+@pytest.fixture
+def ensure_testcase():  # type: ignore[no-untyped-def]
+    """RUN-011-R1.1 WP1：为 Task/Run 血缘校验准备真实 TestCaseVersion 行。
+
+    `create_run()` 现在要求 `testcase_version_id` 指向数据库中真实存在的版本，
+    且与 Task 的 testcase_ref / workspace 一致。测试不得再使用假版本字符串。
+    """
+
+    def _make(
+        rt: Any,
+        testcase_id: str,
+        *,
+        version: int = 1,
+        workspace_id: str = "default",
+        review_status: str = "DRAFT",
+    ) -> str:
+        from traceguard_core.ids import utc_now_iso
+
+        catalog = getattr(rt, "catalog", rt)
+        payload = {
+            "testcase_id": testcase_id,
+            "version": 1,
+            "workspace_id": workspace_id,
+            "created_at": utc_now_iso(),
+            "steps": [
+                {
+                    "step_id": "s1",
+                    "action": "navigate",
+                    "target": {"strategy": "css", "value": "body"},
+                }
+            ],
+            "assertions": [
+                {
+                    "assertion_id": "a1",
+                    "description": "页面可见",
+                    "kind": "ui",
+                    "required": True,
+                    "expected": {},
+                }
+            ],
+        }
+        for current in range(1, int(version) + 1):
+            if catalog.get_version(testcase_id, current) is not None:
+                continue
+            catalog.create_testcase(
+                payload,
+                title=testcase_id,
+                workspace_id=workspace_id,
+                review_status=review_status,
+            )
+        return f"{testcase_id}@{int(version)}"
+
+    return _make
 
 
 @pytest.fixture(scope="module")

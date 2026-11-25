@@ -1,0 +1,1737 @@
+{
+  "dsn_scheme": "postgresql+psycopg",
+  "workspace": "ws-r11-1",
+  "checks": [
+    {
+      "name": "所有 Run 的 lease_owner 均非 API 进程",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "终态 Run 均有 Evidence（无孤儿 Run）",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "Event (producer_instance_id, sequence) 全局唯一",
+      "ok": true,
+      "detail": 0
+    },
+    {
+      "name": "Event 均可追溯到 Run",
+      "ok": true,
+      "detail": 0
+    },
+    {
+      "name": "审计 seq 唯一且连续（1..N）",
+      "ok": true,
+      "detail": {
+        "entries": 17,
+        "min_seq": 1,
+        "max_seq": 17,
+        "distinct_seq": 17
+      }
+    },
+    {
+      "name": "主线用例 tcase_17955899876690db216f4187e 存在多个版本（晋升 + 回滚留痕）",
+      "ok": true,
+      "detail": [
+        {
+          "testcase_id": "tcase_17955899876690db216f4187e",
+          "version": 1,
+          "review_status": "APPROVED",
+          "compile_source": "compiler"
+        },
+        {
+          "testcase_id": "tcase_17955899876690db216f4187e",
+          "version": 2,
+          "review_status": "APPROVED",
+          "compile_source": "healed"
+        },
+        {
+          "testcase_id": "tcase_17955899876690db216f4187e",
+          "version": 3,
+          "review_status": "APPROVED",
+          "compile_source": "compiler"
+        }
+      ]
+    },
+    {
+      "name": "CAS 晋升回执与回滚回执均已落库",
+      "ok": true,
+      "detail": [
+        {
+          "idempotency_key": "run011r1-repair_17955900257361136729097d3",
+          "kind": "PROMOTE",
+          "proposal_id": "repair_17955900257361136729097d3",
+          "testcase_id": "tcase_17955899876690db216f4187e",
+          "base_version": 1,
+          "target_version": 2,
+          "created_at": "2026-11-25T07:00:29.867912Z"
+        },
+        {
+          "idempotency_key": "rollback:repair_17955900257361136729097d3:v2",
+          "kind": "ROLLBACK",
+          "proposal_id": "repair_17955900257361136729097d3",
+          "testcase_id": "tcase_17955899876690db216f4187e",
+          "base_version": 2,
+          "target_version": 3,
+          "created_at": "2026-11-25T07:00:34.242925Z"
+        }
+      ]
+    },
+    {
+      "name": "每条回执都绑定 base_version 与 target_version",
+      "ok": true,
+      "detail": [
+        {
+          "idempotency_key": "run011r1-repair_17955900257361136729097d3",
+          "kind": "PROMOTE",
+          "proposal_id": "repair_17955900257361136729097d3",
+          "testcase_id": "tcase_17955899876690db216f4187e",
+          "base_version": 1,
+          "target_version": 2,
+          "created_at": "2026-11-25T07:00:29.867912Z"
+        },
+        {
+          "idempotency_key": "rollback:repair_17955900257361136729097d3:v2",
+          "kind": "ROLLBACK",
+          "proposal_id": "repair_17955900257361136729097d3",
+          "testcase_id": "tcase_17955899876690db216f4187e",
+          "base_version": 2,
+          "target_version": 3,
+          "created_at": "2026-11-25T07:00:34.242925Z"
+        }
+      ]
+    },
+    {
+      "name": "DB: 正式/失败/回归 Run 均存在且同一 testcase_id",
+      "ok": true,
+      "detail": {
+        "run_17955899928106022f9d29f23": {
+          "testcase_id": "tcase_17955899876690db216f4187e",
+          "testcase_version_id": "tcase_17955899876690db216f4187e@1",
+          "verdict": "PASSED"
+        },
+        "run_1795589997827306f7075229a": {
+          "testcase_id": "tcase_17955899876690db216f4187e",
+          "testcase_version_id": "tcase_17955899876690db216f4187e@1",
+          "verdict": "NOT_EVALUATED"
+        },
+        "run_17955900298866e557fdf73da": {
+          "testcase_id": "tcase_17955899876690db216f4187e",
+          "testcase_version_id": "tcase_17955899876690db216f4187e@2",
+          "verdict": "PASSED"
+        }
+      }
+    },
+    {
+      "name": "DB: 正式 Run 与失败 Run 使用批准版本",
+      "ok": true,
+      "detail": {
+        "run_17955899928106022f9d29f23": "tcase_17955899876690db216f4187e@1",
+        "run_1795589997827306f7075229a": "tcase_17955899876690db216f4187e@1",
+        "run_17955900298866e557fdf73da": "tcase_17955899876690db216f4187e@2"
+      }
+    },
+    {
+      "name": "DB: 回归 Run 使用精确晋升版本",
+      "ok": true,
+      "detail": {
+        "testcase_id": "tcase_17955899876690db216f4187e",
+        "testcase_version_id": "tcase_17955899876690db216f4187e@2",
+        "verdict": "PASSED"
+      }
+    },
+    {
+      "name": "DB: Diagnosis.run_id 与失败 Run 一致且绑定主 TestCase",
+      "ok": true,
+      "detail": [
+        {
+          "diagnosis_id": "diagnosis_1795590025637029910002389",
+          "run_id": "run_1795589997827306f7075229a",
+          "testcase_id": "tcase_17955899876690db216f4187e"
+        }
+      ]
+    },
+    {
+      "name": "DB: Repair 绑定主 TestCase + Diagnosis + 失败 Run + base_version",
+      "ok": true,
+      "detail": [
+        {
+          "proposal_id": "repair_17955900257361136729097d3",
+          "testcase_id": "tcase_17955899876690db216f4187e",
+          "base_version": 1,
+          "diagnosis_id": "diagnosis_1795590025637029910002389",
+          "source_run_id": "run_1795589997827306f7075229a",
+          "repair_source": "rule:locator-fixture",
+          "promoted_version": 2
+        }
+      ]
+    },
+    {
+      "name": "DB: Repair.repair_source 如实标注（human:/rule:/llm:）",
+      "ok": true,
+      "detail": "rule:locator-fixture"
+    },
+    {
+      "name": "DB: PROMOTE 回执绑定 Proposal/TestCase 且 base=批准版本 → target=晋升版本",
+      "ok": true,
+      "detail": [
+        {
+          "idempotency_key": "run011r1-repair_17955900257361136729097d3",
+          "kind": "PROMOTE",
+          "proposal_id": "repair_17955900257361136729097d3",
+          "testcase_id": "tcase_17955899876690db216f4187e",
+          "base_version": 1,
+          "target_version": 2
+        }
+      ]
+    },
+    {
+      "name": "DB: ROLLBACK 回执绑定 Proposal 且 base=晋升版本",
+      "ok": true,
+      "detail": [
+        {
+          "idempotency_key": "rollback:repair_17955900257361136729097d3:v2",
+          "kind": "ROLLBACK",
+          "proposal_id": "repair_17955900257361136729097d3",
+          "testcase_id": "tcase_17955899876690db216f4187e",
+          "base_version": 2,
+          "target_version": 3
+        }
+      ]
+    },
+    {
+      "name": "DB: 诊断证据引用均属于失败 Run（无跨 Run 误引）",
+      "ok": true,
+      "detail": {
+        "run_evidence_count": 25,
+        "diagnosis_evidence_count": 6,
+        "foreign": []
+      }
+    },
+    {
+      "name": "逐实体 Workspace 均等于目标 Workspace（ID 级）",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "主链实体逐 ID 存在（不允许缺漏）",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "Run.workspace == Task.workspace 且版本属于主 TestCase",
+      "ok": true,
+      "detail": {
+        "runs": [
+          {
+            "run_id": "run_17955899928106022f9d29f23",
+            "run_ws": "ws-r11-1",
+            "task_ws": "ws-r11-1",
+            "testcase_version_id": "tcase_17955899876690db216f4187e@1"
+          },
+          {
+            "run_id": "run_1795589997827306f7075229a",
+            "run_ws": "ws-r11-1",
+            "task_ws": "ws-r11-1",
+            "testcase_version_id": "tcase_17955899876690db216f4187e@1"
+          },
+          {
+            "run_id": "run_17955900298866e557fdf73da",
+            "run_ws": "ws-r11-1",
+            "task_ws": "ws-r11-1",
+            "testcase_version_id": "tcase_17955899876690db216f4187e@2"
+          }
+        ],
+        "bad": []
+      }
+    },
+    {
+      "name": "Evidence 逐 ID 绑定本链 Run（无跨 Run 引用）",
+      "ok": true,
+      "detail": {
+        "evidence": [
+          {
+            "evidence_id": "evd_1795589994450a02880f79a4b",
+            "workspace_id": "ws-r11-1",
+            "run_id": "run_17955899928106022f9d29f23"
+          },
+          {
+            "evidence_id": "evd_17955899944523df7972bb63a",
+            "workspace_id": "ws-r11-1",
+            "run_id": "run_17955899928106022f9d29f23"
+          },
+          {
+            "evidence_id": "evd_1795589994453397adab6598e",
+            "workspace_id": "ws-r11-1",
+            "run_id": "run_17955899928106022f9d29f23"
+          },
+          {
+            "evidence_id": "evd_179558999445439244ad27ca6",
+            "workspace_id": "ws-r11-1",
+            "run_id": "run_17955899928106022f9d29f23"
+          },
+          {
+            "evidence_id": "evd_1795589995377c5b1fafd0f17",
+            "workspace_id": "ws-r11-1",
+            "run_id": "run_17955899928106022f9d29f23"
+          },
+          {
+            "evidence_id": "evd_1795589995378b123089b97f4",
+            "workspace_id": "ws-r11-1",
+            "run_id": "run_17955899928106022f9d29f23"
+          },
+          {
+            "evidence_id": "evd_179558999537916c02a3a7ed0",
+            "workspace_id": "ws-r11-1",
+            "run_id": "run_17955899928106022f9d29f23"
+          },
+          {
+            "evidence_id": "evd_1795589995379489dd92fe137",
+            "workspace_id": "ws-r11-1",
+            "run_id": "run_17955899928106022f9d29f23"
+          },
+          {
+            "evidence_id": "evd_1795589996391fec920117510",
+            "workspace_id": "ws-r11-1",
+            "run_id": "run_17955899928106022f9d29f23"
+          },
+          {
+            "evidence_id": "evd_1795589996393a5cc66411bae",
+            "workspace_id": "ws-r11-1",
+            "run_id": "run_17955899928106022f9d29f23"
+          },
+          {
+            "evidence_id": "evd_1795589996397f32f5cdf7b07",
+            "workspace_id": "ws-r11-1",
+            "run_id": "run_17955899928106022f9d29f23"
+          },
+          {
+            "evidence_id": "evd_1795589996399c152783b7fc4",
+            "workspace_id": "ws-r11-1",
+            "run_id": "run_17955899928106022f9d29f23"
+          },
+          {
+            "evidence_id": "evd_1795589996763f0b68d40da58",
+            "workspace_id": "ws-r11-1",
+            "run_id": "run_17955899928106022f9d29f23"
+          },
+          {
+            "evidence_id": "evd_17955899967642836040644fc",
+            "workspace_id": "ws-r11-1",
+            "run_id": "run_17955899928106022f9d29f23"
+          },
+          {
+            "evidence_id": "evd_17955899967655979ade8eca2",
+            "workspace_id": "ws-r11-1",
+            "run_id": "run_17955899928106022f9d29f23"
+          },
+          {
+            "evidence_id": "evd_179558999721195908c8077b5",
+            "workspace_id": "ws-r11-1",
+            "run_id": "run_17955899928106022f9d29f23"
+          },
+          {
+            "evidence_id": "evd_1795589997212b7dc0c382933",
+            "workspace_id": "ws-r11-1",
+            "run_id": "run_17955899928106022f9d29f23"
+          },
+          {
+            "evidence_id": "evd_1795589997213d911a3a4ad56",
+            "workspace_id": "ws-r11-1",
+            "run_id": "run_17955899928106022f9d29f23"
+          },
+          {
+            "evidence_id": "evd_179558999721434525abda134",
+            "workspace_id": "ws-r11-1",
+            "run_id": "run_17955899928106022f9d29f23"
+          },
+          {
+            "evidence_id": "evd_179558999725130586846a75d",
+            "workspace_id": "ws-r11-1",
+            "run_id": "run_17955899928106022f9d29f23"
+          },
+          {
+            "evidence_id": "evd_179558999725287fab00edfea",
+            "workspace_id": "ws-r11-1",
+            "run_id": "run_17955899928106022f9d29f23"
+          },
+          {
+            "evidence_id": "evd_1795589997252a6f57aea69c5",
+            "workspace_id": "ws-r11-1",
+            "run_id": "run_17955899928106022f9d29f23"
+          },
+          {
+            "evidence_id": "evd_17955899973979a19180b6395",
+            "workspace_id": "ws-r11-1",
+            "run_id": "run_17955899928106022f9d29f23"
+          },
+          {
+            "evidence_id": "evd_1795590025660176032d8817a",
+            "workspace_id": "ws-r11-1",
+            "run_id": "run_1795589997827306f7075229a"
+          },
+          {
+            "evidence_id": "evd_17955900256791082f4ce5a20",
+            "workspace_id": "ws-r11-1",
+            "run_id": "run_1795589997827306f7075229a"
+          },
+          {
+            "evidence_id": "evd_1795590025693cdbf74a8157b",
+            "workspace_id": "ws-r11-1",
+            "run_id": "run_1795589997827306f7075229a"
+          }
+        ],
+        "foreign": []
+      }
+    },
+    {
+      "name": "Event 逐 ID 属于目标 Workspace 且绑定本链 Run",
+      "ok": true,
+      "detail": {
+        "count": 27,
+        "bad": []
+      }
+    },
+    {
+      "name": "Diagnosis/ProbePlan/ProbeBudget/Repair 文档逐 ID Workspace 正确",
+      "ok": true,
+      "detail": {
+        "docs": [
+          {
+            "id": "diagnosis_1795590025637029910002389",
+            "kind": "diagnosis",
+            "workspace_id": "ws-r11-1",
+            "ref_id": "run_1795589997827306f7075229a",
+            "doc": {
+              "diagnosis_id": "diagnosis_1795590025637029910002389",
+              "run_id": "run_1795589997827306f7075229a",
+              "task_id": "task_17955899978213300960c8159",
+              "workspace_id": "ws-r11-1",
+              "testcase_id": "tcase_17955899876690db216f4187e",
+              "symptom": "s4:TIMEOUT: Locator.wait_for: Timeout 8000ms exceeded.\nCall log:\n  - waiting for get_by_test_id(\"create-submit\").first to b",
+              "outcome": "PROBABLE",
+              "disposition": "NEEDS_MORE_EVIDENCE",
+              "root_causes": [],
+              "unresolved_conflicts": [],
+              "hypotheses": [
+                {
+                  "hypothesis_id": "hyp_1795590010009306f6b0a4e50",
+                  "description": "元素定位失败或等待超时（可能为用例资产问题）",
+                  "failure_domain": "TEST_ASSET",
+                  "failure_mechanism": "LOCATOR",
+                  "supporting": [
+                    {
+                      "id": "evd_179559000939524804b7e33e7",
+                      "trust": "TRUSTED",
+                      "confirming": false
+                    },
+                    {
+                      "id": "evd_17955900093949d677a18da70",
+                      "trust": "TRUSTED",
+                      "confirming": false
+                    },
+                    {
+                      "id": "evd_17955900093935c78d28eb370",
+                      "trust": "TRUSTED",
+                      "confirming": false
+                    },
+                    {
+                      "id": "evd_1795590025693cdbf74a8157b",
+                      "trust": "POST_HOC",
+                      "confirming": false
+                    }
+                  ],
+                  "contradicting": [],
+                  "status": "SUPPORTED",
+                  "contributing_factors": [
+                    "TIMEOUT: Locator.wait_for: Timeout 8000ms exceeded.\nCall log:\n  - waiting for get_by_test_id(\"create-submit\").first to be visible\n",
+                    "[dom_snapshot] [POST_HOC] 失败步骤的目标元素 ['create-submit'] 不在 DOM 中：定位器无法解析，属于用例资产/定位策略问题",
+                    "[graph] 时间不匹配证据（不作为权威）：['evd_1795590025693cdbf74a8157b']"
+                  ],
+                  "flaky_characteristic": false,
+                  "suggested_by": "rule",
+                  "probe_feedback": [
+                    {
+                      "probe_id": "dom_snapshot",
+                      "execution_id": "probeexec_17955900256938d613f8fc513",
+                      "relation": "SUPPORT",
+                      "confirming": false,
+                      "exclude": false,
+                      "reason": "[POST_HOC] 失败步骤的目标元素 ['create-submit'] 不在 DOM 中：定位器无法解析，属于用例资产/定位策略问题",
+                      "time_alignment": "POST_HOC"
+                    }
+                  ],
+                  "excluded_by": []
+                },
+                {
+                  "hypothesis_id": "hyp_1795590010009a0e02f5dc505",
+                  "description": "网络请求失败或超时（环境/链路问题）",
+                  "failure_domain": "ENVIRONMENT",
+                  "failure_mechanism": "NETWORK",
+                  "supporting": [
+                    {
+                      "id": "evd_179559000939524804b7e33e7",
+                      "trust": "TRUSTED",
+                      "confirming": false
+                    },
+                    {
+                      "id": "evd_17955900093949d677a18da70",
+                      "trust": "TRUSTED",
+                      "confirming": false
+                    },
+                    {
+                      "id": "evd_17955900093935c78d28eb370",
+                      "trust": "TRUSTED",
+                      "confirming": false
+                    }
+                  ],
+                  "contradicting": [
+                    {
+                      "id": "evd_1795590025660176032d8817a",
+                      "trust": "POST_HOC"
+                    }
+                  ],
+                  "status": "SUPPORTED",
+                  "contributing_factors": [
+                    "[graph] 重复证据已消重：['evd_17955900093935c78d28eb370', 'evd_17955900093949d677a18da70', 'evd_179559000939524804b7e33e7']",
+                    "[network_trace] [POST_HOC] 网络观测无失败请求，网络层问题假设不成立",
+                    "[graph] 重复证据已消重：['evd_17955900093935c78d28eb370', 'evd_17955900093949d677a18da70', 'evd_179559000939524804b7e33e7']",
+                    "[graph] 时间不匹配证据（不作为权威）：['evd_1795590025660176032d8817a']",
+                    "[graph] 重复证据已消重：['evd_17955900093935c78d28eb370', 'evd_17955900093949d677a18da70', 'evd_179559000939524804b7e33e7']",
+                    "[graph] 时间不匹配证据（不作为权威）：['evd_1795590025660176032d8817a']",
+                    "[graph] 重复证据已消重：['evd_17955900093935c78d28eb370', 'evd_17955900093949d677a18da70', 'evd_179559000939524804b7e33e7']",
+                    "[graph] 时间不匹配证据（不作为权威）：['evd_1795590025660176032d8817a']"
+                  ],
+                  "flaky_characteristic": false,
+                  "suggested_by": "rule",
+                  "probe_feedback": [
+                    {
+                      "probe_id": "network_trace",
+                      "execution_id": "probeexec_17955900256602aad3ff95b6a",
+                      "relation": "CONTRADICT",
+                      "confirming": false,
+                      "exclude": false,
+                      "reason": "[POST_HOC] 网络观测无失败请求，网络层问题假设不成立",
+                      "time_alignment": "POST_HOC"
+                    }
+                  ],
+                  "excluded_by": []
+                }
+              ],
+              "evidence_refs": [
+                "evd_179559000939524804b7e33e7",
+                "evd_17955900093949d677a18da70",
+                "evd_17955900093935c78d28eb370",
+                "evd_1795590025693cdbf74a8157b",
+                "evd_1795590025660176032d8817a"
+              ],
+              "graph_adjudication": {
+                "verdicts": [
+                  {
+                    "hypothesis_id": "hyp_1795590010009306f6b0a4e50",
+                    "support_ids": [
+                      "evd_179559000939524804b7e33e7",
+                      "evd_17955900093949d677a18da70",
+                      "evd_17955900093935c78d28eb370",
+                      "evd_1795590025693cdbf74a8157b"
+                    ],
+                    "refute_ids": [],
+                    "independent_support_sources": [
+                      "s4"
+                    ],
+                    "duplicate_evidence": [],
+                    "time_mismatched": [
+                      "evd_1795590025693cdbf74a8157b"
+                    ],
+                    "authority_confirmed": false,
+                    "authority_refuted": false,
+                    "has_conflict": false,
+                    "notes": [
+                      "evidence evd_1795590025693cdbf74a8157b captured_at 1795590026 晚于 run 结束 1795590010"
+                    ]
+                  },
+                  {
+                    "hypothesis_id": "hyp_1795590010009a0e02f5dc505",
+                    "support_ids": [],
+                    "refute_ids": [
+                      "evd_1795590025660176032d8817a"
+                    ],
+                    "independent_support_sources": [
+                      "s4"
+                    ],
+                    "duplicate_evidence": [
+                      "evd_179559000939524804b7e33e7",
+                      "evd_17955900093949d677a18da70",
+                      "evd_17955900093935c78d28eb370"
+                    ],
+                    "time_mismatched": [
+                      "evd_1795590025660176032d8817a"
+                    ],
+                    "authority_confirmed": false,
+                    "authority_refuted": false,
+                    "has_conflict": false,
+                    "notes": [
+                      "evidence evd_1795590025660176032d8817a captured_at 1795590026 晚于 run 结束 1795590010"
+                    ]
+                  }
+                ],
+                "global_duplicates": [
+                  "evd_179559000939524804b7e33e7",
+                  "evd_17955900093949d677a18da70",
+                  "evd_17955900093935c78d28eb370"
+                ],
+                "unresolved_conflicts": []
+              },
+              "hypothesis_dedup": {
+                "threshold": 0.72,
+                "input_count": 2,
+                "output_count": 2,
+                "untouched": 2,
+                "merged_groups": [],
+                "order_invariant": true,
+                "note": "按 failure_mechanism 分组 + 规范化描述相似度合并近似重复候选；证据引用并集去重（同一 Evidence 不重复计独立支持）；原始候选记录保留在 merged_from；合并顺序与输入顺序无关"
+              },
+              "flaky_characteristic": false,
+              "engine": "rule-v1+probe-feedback",
+              "llm_advisor": {
+                "called": false,
+                "skipped": "llm_error:invalid_json"
+              },
+              "strategy_version": "v2",
+              "created_at": "2026-11-25T07:00:25.637183Z",
+              "probe_feedback": [
+                {
+                  "probe_id": "dom_snapshot",
+                  "execution_id": "probeexec_17955900256938d613f8fc513",
+                  "status": "SUCCEEDED",
+                  "updates": [
+                    {
+                      "hypothesis_id": "hyp_1795590010009306f6b0a4e50",
+                      "relation": "SUPPORT",
+                      "confirming": false,
+                      "evidence_ids": [
+                        "evd_1795590025693cdbf74a8157b"
+                      ],
+                      "exclude": false,
+                      "reason": "[POST_HOC] 失败步骤的目标元素 ['create-submit'] 不在 DOM 中：定位器无法解析，属于用例资产/定位策略问题",
+                      "time_alignment": "POST_HOC"
+                    }
+                  ],
+                  "skipped_reason": "",
+                  "notes": {
+                    "alignment": "probe observed_at=1795590026 > run_ended_at=1795590010: 事后观测反映当前状态，不能冒充 Run 时历史状态",
+                    "expected_test_ids": [
+                      "banner-success"
+                    ],
+                    "failed_step_targets": [
+                      "create-submit"
+                    ],
+                    "present": [],
+                    "missing": [
+                      "banner-success"
+                    ],
+                    "missing_failed_step_targets": [
+                      "create-submit"
+                    ]
+                  },
+                  "time_alignment": "POST_HOC",
+                  "new_hypotheses": [],
+                  "claimed_as_target_failure": false
+                }
+              ],
+              "probe_evidence_ids": [
+                "evd_1795590025660176032d8817a",
+                "evd_17955900256791082f4ce5a20",
+                "evd_1795590025693cdbf74a8157b"
+              ],
+              "updated_at": "2026-11-25T07:00:25.703865Z",
+              "evaluation_history": [
+                {
+                  "at": "2026-11-25T07:00:25.666246Z",
+                  "trigger": "probe_evidence",
+                  "probes": [
+                    "network_trace"
+                  ],
+                  "outcome_before": "PROBABLE",
+                  "outcome_after": "PROBABLE",
+                  "root_causes_after": [],
+                  "unresolved_conflicts": []
+                },
+                {
+                  "at": "2026-11-25T07:00:25.684505Z",
+                  "trigger": "probe_evidence",
+                  "probes": [
+                    "http_state"
+                  ],
+                  "outcome_before": "PROBABLE",
+                  "outcome_after": "PROBABLE",
+                  "root_causes_after": [],
+                  "unresolved_conflicts": []
+                },
+                {
+                  "at": "2026-11-25T07:00:25.698705Z",
+                  "trigger": "probe_evidence",
+                  "probes": [
+                    "dom_snapshot"
+                  ],
+                  "outcome_before": "PROBABLE",
+                  "outcome_after": "PROBABLE",
+                  "root_causes_after": [],
+                  "unresolved_conflicts": []
+                }
+              ],
+              "last_probe_plan_id": "probeplan_1795590025657706ff5233cfc"
+            }
+          },
+          {
+            "id": "pbudget_diagnosis-diagnosis_1795590025637029910002389",
+            "kind": "probe_budget",
+            "workspace_id": "ws-r11-1",
+            "ref_id": "run_1795589997827306f7075229a",
+            "doc": {
+              "budget_id": "pbudget_diagnosis-diagnosis_1795590025637029910002389",
+              "scope_key": "diagnosis:diagnosis_1795590025637029910002389",
+              "owner_run_id": "run_1795589997827306f7075229a",
+              "owner_diagnosis_id": "diagnosis_1795590025637029910002389",
+              "workspace_id": "ws-r11-1",
+              "max_probes": 50,
+              "probes_used": 3,
+              "probes_left": 47,
+              "max_total_cost": 100.0,
+              "cost_used": 1.4,
+              "cost_left": 98.6,
+              "max_duration_seconds": 60.0,
+              "elapsed_seconds": 0.038,
+              "time_left": 59.962,
+              "closed": false,
+              "close_reason": "",
+              "provisional": true,
+              "note": "P06 待负责人确认：以下预算与风险阈值为 provisional 配置，仅用于本轮实现与测试，不得视为正式冻结的工程决策。",
+              "started_at": 1795590025.648653,
+              "closed_at": null,
+              "version": 4
+            }
+          },
+          {
+            "id": "probeplan_1795590025657706ff5233cfc",
+            "kind": "probe_plan",
+            "workspace_id": "ws-r11-1",
+            "ref_id": "run_1795589997827306f7075229a",
+            "doc": {
+              "plan_id": "probeplan_1795590025657706ff5233cfc",
+              "run_id": "run_1795589997827306f7075229a",
+              "diagnosis_id": "diagnosis_1795590025637029910002389",
+              "workspace_id": "ws-r11-1",
+              "budget": {
+                "budget_id": "pbudget_diagnosis-diagnosis_1795590025637029910002389",
+                "scope_key": "diagnosis:diagnosis_1795590025637029910002389",
+                "owner_run_id": "run_1795589997827306f7075229a",
+                "owner_diagnosis_id": "diagnosis_1795590025637029910002389",
+                "workspace_id": "ws-r11-1",
+                "max_probes": 50,
+                "probes_used": 3,
+                "probes_left": 47,
+                "max_total_cost": 100.0,
+                "cost_used": 1.4,
+                "cost_left": 98.6,
+                "max_duration_seconds": 60.0,
+                "elapsed_seconds": 0.054,
+                "time_left": 59.946,
+                "closed": false,
+                "close_reason": "",
+                "provisional": true,
+                "note": "P06 待负责人确认：以下预算与风险阈值为 provisional 配置，仅用于本轮实现与测试，不得视为正式冻结的工程决策。",
+                "started_at": 1795590025.648653,
+                "closed_at": null,
+                "version": 4,
+                "doc_version": 4
+              },
+              "gaps_before": [
+                {
+                  "gap_id": "business_state_unknown",
+                  "probe_id": "http_state",
+                  "params": {
+                    "template": "get_state_projects",
+                    "run_id": "run_1795589997827306f7075229a"
+                  },
+                  "why": "业务状态证据缺失或不足，需要独立状态查询确认是否真正持久化",
+                  "info_gain": 0.7
+                },
+                {
+                  "gap_id": "network_unverified",
+                  "probe_id": "network_trace",
+                  "params": {
+                    "template": "run_network",
+                    "run_id": "run_1795589997827306f7075229a"
+                  },
+                  "why": "核对网络请求状态码与失败原因，排除环境/接口因素",
+                  "info_gain": 0.55
+                },
+                {
+                  "gap_id": "dom_unverified",
+                  "probe_id": "dom_snapshot",
+                  "params": {
+                    "template": "run_dom",
+                    "run_id": "run_1795589997827306f7075229a"
+                  },
+                  "why": "核对真实 DOM 是否渲染期望元素（区分定位器问题与渲染问题）",
+                  "info_gain": 0.45
+                },
+                {
+                  "gap_id": "backend_log_unchecked",
+                  "probe_id": "backend_log",
+                  "params": {
+                    "template": "tail_teamflow",
+                    "line_limit": 100
+                  },
+                  "why": "核对后端日志尾部，确认服务端是否报错或异常退出",
+                  "info_gain": 0.35
+                }
+              ],
+              "gaps_after": [
+                {
+                  "gap_id": "backend_log_unchecked",
+                  "probe_id": "backend_log",
+                  "params": {
+                    "template": "tail_teamflow",
+                    "line_limit": 100
+                  },
+                  "why": "核对后端日志尾部，确认服务端是否报错或异常退出",
+                  "info_gain": 0.35
+                }
+              ],
+              "steps": [
+                {
+                  "iteration": 1,
+                  "gap_id": "network_unverified",
+                  "probe_id": "network_trace",
+                  "why": "核对网络请求状态码与失败原因，排除环境/接口因素",
+                  "info_gain": 0.55,
+                  "score": 0.49,
+                  "status": "SUCCEEDED",
+                  "reason": "",
+                  "evidence_ids": [
+                    "evd_1795590025660176032d8817a"
+                  ],
+                  "duration_ms": 2,
+                  "execution_id": "probeexec_17955900256602aad3ff95b6a",
+                  "budget": {
+                    "budget_id": "pbudget_diagnosis-diagnosis_1795590025637029910002389",
+                    "scope_key": "diagnosis:diagnosis_1795590025637029910002389",
+                    "owner_run_id": "run_1795589997827306f7075229a",
+                    "owner_diagnosis_id": "diagnosis_1795590025637029910002389",
+                    "workspace_id": "ws-r11-1",
+                    "max_probes": 50,
+                    "probes_used": 1,
+                    "probes_left": 49,
+                    "max_total_cost": 100.0,
+                    "cost_used": 0.2,
+                    "cost_left": 99.8,
+                    "max_duration_seconds": 60.0,
+                    "elapsed_seconds": 0.014,
+                    "time_left": 59.986,
+                    "closed": false,
+                    "close_reason": "",
+                    "provisional": true,
+                    "note": "P06 待负责人确认：以下预算与风险阈值为 provisional 配置，仅用于本轮实现与测试，不得视为正式冻结的工程决策。",
+                    "started_at": 1795590025.648653,
+                    "closed_at": null,
+                    "version": 2,
+                    "doc_version": 2
+                  },
+                  "applied_to_diagnosis": true,
+                  "diagnosis_after": {
+                    "outcome": "PROBABLE",
+                    "root_causes": [],
+                    "unresolved_conflicts": []
+                  },
+                  "hypothesis_updates": [
+                    {
+                      "hypothesis_id": "hyp_1795590010009a0e02f5dc505",
+                      "relation": "CONTRADICT",
+                      "confirming": false,
+                      "evidence_ids": [
+                        "evd_1795590025660176032d8817a"
+                      ],
+                      "exclude": false,
+                      "reason": "[POST_HOC] 网络观测无失败请求，网络层问题假设不成立",
+                      "time_alignment": "POST_HOC"
+                    }
+                  ]
+                },
+                {
+                  "iteration": 2,
+                  "gap_id": "business_state_unknown",
+                  "probe_id": "http_state",
+                  "why": "业务状态证据缺失或不足，需要独立状态查询确认是否真正持久化",
+                  "info_gain": 0.7,
+                  "score": 0.4,
+                  "status": "SUCCEEDED",
+                  "reason": "",
+                  "evidence_ids": [
+                    "evd_17955900256791082f4ce5a20"
+                  ],
+                  "duration_ms": 10,
+                  "execution_id": "probeexec_1795590025679871d63df013a",
+                  "budget": {
+                    "budget_id": "pbudget_diagnosis-diagnosis_1795590025637029910002389",
+                    "scope_key": "diagnosis:diagnosis_1795590025637029910002389",
+                    "owner_run_id": "run_1795589997827306f7075229a",
+                    "owner_diagnosis_id": "diagnosis_1795590025637029910002389",
+                    "workspace_id": "ws-r11-1",
+                    "max_probes": 50,
+                    "probes_used": 2,
+                    "probes_left": 48,
+                    "max_total_cost": 100.0,
+                    "cost_used": 1.2,
+                    "cost_left": 98.8,
+                    "max_duration_seconds": 60.0,
+                    "elapsed_seconds": 0.032,
+                    "time_left": 59.968,
+                    "closed": false,
+                    "close_reason": "",
+                    "provisional": true,
+                    "note": "P06 待负责人确认：以下预算与风险阈值为 provisional 配置，仅用于本轮实现与测试，不得视为正式冻结的工程决策。",
+                    "started_at": 1795590025.648653,
+                    "closed_at": null,
+                    "version": 3,
+                    "doc_version": 3
+                  },
+                  "applied_to_diagnosis": true,
+                  "diagnosis_after": {
+                    "outcome": "PROBABLE",
+                    "root_causes": [],
+                    "unresolved_conflicts": []
+                  },
+                  "hypothesis_updates": []
+                },
+                {
+                  "iteration": 3,
+                  "gap_id": "dom_unverified",
+                  "probe_id": "dom_snapshot",
+                  "why": "核对真实 DOM 是否渲染期望元素（区分定位器问题与渲染问题）",
+                  "info_gain": 0.45,
+                  "score": 0.39,
+                  "status": "SUCCEEDED",
+                  "reason": "",
+                  "evidence_ids": [
+                    "evd_1795590025693cdbf74a8157b"
+                  ],
+                  "duration_ms": 7,
+                  "execution_id": "probeexec_17955900256938d613f8fc513",
+                  "budget": {
+                    "budget_id": "pbudget_diagnosis-diagnosis_1795590025637029910002389",
+                    "scope_key": "diagnosis:diagnosis_1795590025637029910002389",
+                    "owner_run_id": "run_1795589997827306f7075229a",
+                    "owner_diagnosis_id": "diagnosis_1795590025637029910002389",
+                    "workspace_id": "ws-r11-1",
+                    "max_probes": 50,
+                    "probes_used": 3,
+                    "probes_left": 47,
+                    "max_total_cost": 100.0,
+                    "cost_used": 1.4,
+                    "cost_left": 98.6,
+                    "max_duration_seconds": 60.0,
+                    "elapsed_seconds": 0.046,
+                    "time_left": 59.954,
+                    "closed": false,
+                    "close_reason": "",
+                    "provisional": true,
+                    "note": "P06 待负责人确认：以下预算与风险阈值为 provisional 配置，仅用于本轮实现与测试，不得视为正式冻结的工程决策。",
+                    "started_at": 1795590025.648653,
+                    "closed_at": null,
+                    "version": 4,
+                    "doc_version": 4
+                  },
+                  "applied_to_diagnosis": true,
+                  "diagnosis_after": {
+                    "outcome": "PROBABLE",
+                    "root_causes": [],
+                    "unresolved_conflicts": []
+                  },
+                  "hypothesis_updates": [
+                    {
+                      "hypothesis_id": "hyp_1795590010009306f6b0a4e50",
+                      "relation": "SUPPORT",
+                      "confirming": false,
+                      "evidence_ids": [
+                        "evd_1795590025693cdbf74a8157b"
+                      ],
+                      "exclude": false,
+                      "reason": "[POST_HOC] 失败步骤的目标元素 ['create-submit'] 不在 DOM 中：定位器无法解析，属于用例资产/定位策略问题",
+                      "time_alignment": "POST_HOC"
+                    }
+                  ]
+                }
+              ],
+              "evidence_ids": [
+                "evd_1795590025660176032d8817a",
+                "evd_17955900256791082f4ce5a20",
+                "evd_1795590025693cdbf74a8157b"
+              ],
+              "diagnosis_before": {
+                "diagnosis_id": "diagnosis_1795590025637029910002389",
+                "outcome": "PROBABLE",
+                "disposition": "NEEDS_MORE_EVIDENCE",
+                "root_causes": [],
+                "unresolved_conflicts": []
+              },
+              "diagnosis_after": {
+                "diagnosis_id": "diagnosis_1795590025637029910002389",
+                "outcome": "PROBABLE",
+                "disposition": "NEEDS_MORE_EVIDENCE",
+                "root_causes": [],
+                "unresolved_conflicts": []
+              },
+              "assessments": [
+                {
+                  "probe_id": "network_trace",
+                  "execution_id": "probeexec_17955900256602aad3ff95b6a",
+                  "before": {
+                    "outcome": "PROBABLE",
+                    "root_causes": [],
+                    "disposition": "NEEDS_MORE_EVIDENCE",
+                    "unresolved_conflicts": []
+                  },
+                  "after": {
+                    "outcome": "PROBABLE",
+                    "root_causes": [],
+                    "unresolved_conflicts": []
+                  },
+                  "updates": [
+                    {
+                      "hypothesis_id": "hyp_1795590010009a0e02f5dc505",
+                      "relation": "CONTRADICT",
+                      "confirming": false,
+                      "evidence_ids": [
+                        "evd_1795590025660176032d8817a"
+                      ],
+                      "exclude": false,
+                      "reason": "[POST_HOC] 网络观测无失败请求，网络层问题假设不成立",
+                      "time_alignment": "POST_HOC"
+                    }
+                  ]
+                },
+                {
+                  "probe_id": "http_state",
+                  "execution_id": "probeexec_1795590025679871d63df013a",
+                  "before": {
+                    "outcome": "PROBABLE",
+                    "root_causes": [],
+                    "disposition": "NEEDS_MORE_EVIDENCE",
+                    "unresolved_conflicts": []
+                  },
+                  "after": {
+                    "outcome": "PROBABLE",
+                    "root_causes": [],
+                    "unresolved_conflicts": []
+                  },
+                  "updates": []
+                },
+                {
+                  "probe_id": "dom_snapshot",
+                  "execution_id": "probeexec_17955900256938d613f8fc513",
+                  "before": {
+                    "outcome": "PROBABLE",
+                    "root_causes": [],
+                    "disposition": "NEEDS_MORE_EVIDENCE",
+                    "unresolved_conflicts": []
+                  },
+                  "after": {
+                    "outcome": "PROBABLE",
+                    "root_causes": [],
+                    "unresolved_conflicts": []
+                  },
+                  "updates": [
+                    {
+                      "hypothesis_id": "hyp_1795590010009306f6b0a4e50",
+                      "relation": "SUPPORT",
+                      "confirming": false,
+                      "evidence_ids": [
+                        "evd_1795590025693cdbf74a8157b"
+                      ],
+                      "exclude": false,
+                      "reason": "[POST_HOC] 失败步骤的目标元素 ['create-submit'] 不在 DOM 中：定位器无法解析，属于用例资产/定位策略问题",
+                      "time_alignment": "POST_HOC"
+                    }
+                  ]
+                }
+              ],
+              "unresolved_conflicts": [],
+              "stop_reason": "STOP_ITERATION_LIMIT",
+              "stop_detail": "达到最大迭代 3",
+              "planner": {
+                "weights": {
+                  "w_i": 1.0,
+                  "w_c": 0.3,
+                  "w_r": 0.5,
+                  "note": "启发式默认权重，归一化与参数仍为待确认事项（P05），非校准概率"
+                },
+                "note": "启发式默认权重，归一化与参数仍为待确认事项（P05），非校准概率"
+              },
+              "llm_planner": {
+                "called": false
+              },
+              "provisional": true,
+              "note": "P06 待负责人确认：以下预算与风险阈值为 provisional 配置，仅用于本轮实现与测试，不得视为正式冻结的工程决策。",
+              "created_at": "2026-11-25T07:00:25.702206Z"
+            }
+          },
+          {
+            "id": "repair_17955900257361136729097d3",
+            "kind": "repair",
+            "workspace_id": "ws-r11-1",
+            "ref_id": "tcase_17955899876690db216f4187e",
+            "doc": {
+              "id": "repair_17955900257361136729097d3",
+              "kind": "repair",
+              "workspace_id": "ws-r11-1",
+              "ref_id": "tcase_17955899876690db216f4187e",
+              "version": 1,
+              "status": "ROLLED_BACK",
+              "created_at": "2026-11-25T07:00:25.736955Z",
+              "updated_at": "2026-11-25T07:00:25.736960Z",
+              "proposal_id": "repair_17955900257361136729097d3",
+              "testcase_id": "tcase_17955899876690db216f4187e",
+              "base_testcase_version": "tcase_17955899876690db216f4187e:v1",
+              "base_version": 1,
+              "sandbox_status": "PASSED",
+              "assertion_preservation": "PASS",
+              "oracle_integrity": "PASS",
+              "diff_allowed": true,
+              "diff": [
+                {
+                  "path": "steps[].target",
+                  "from": null,
+                  "to": {
+                    "strategy": "role",
+                    "value": "button:创建",
+                    "source": "healed"
+                  },
+                  "step_index": 4,
+                  "reason": "TF-LOC-001：create-submit 定位器失效，改用等价 role/label 定位（rule:locator-fixture）"
+                }
+              ],
+              "reason": "RUN-011-R1：TF-LOC-001 真实定位器故障驱动的最小修复（rule:locator-fixture）",
+              "created_by": "user:qa-engineer",
+              "created_by_source": "principal",
+              "diagnosis_id": "diagnosis_1795590025637029910002389",
+              "source_run_id": "run_1795589997827306f7075229a",
+              "repair_source": "rule:locator-fixture",
+              "repair_source_verified": true,
+              "lineage": {
+                "diagnosis_run_id": "run_1795589997827306f7075229a",
+                "diagnosis_testcase_id": "tcase_17955899876690db216f4187e",
+                "run_testcase_version_id": "tcase_17955899876690db216f4187e@1",
+                "run_test_verdict": "NOT_EVALUATED",
+                "run_execution_status": "FAILED",
+                "verified_at": "2026-11-25T07:00:25.736951Z"
+              },
+              "approval_ref": "approval:repair_17955900257361136729097d3:user:qa-lead:2026-11-25T07:00:29.844378Z:RUN-011-R1 人工审批",
+              "sandbox_run_id": "run_1795590025747c230b25fa8b9",
+              "promotion_record": {
+                "idempotency_key": "run011r1-repair_17955900257361136729097d3",
+                "target_version": 2,
+                "operator": "system:promotion",
+                "check": "CAS_OK",
+                "atomic": true,
+                "receipt_recovered": true,
+                "at": "2026-11-25T07:00:29.870006Z",
+                "rollback": {
+                  "target_version": "tcase_17955899876690db216f4187e:v2",
+                  "restored_version": 3,
+                  "operator": "user:platform-admin",
+                  "reason": "RUN-011-R1 闭环结束回滚",
+                  "receipt_recovered": false,
+                  "at": "2026-11-25T07:00:34.244480Z"
+                }
+              },
+              "failure_reason": "",
+              "candidate_doc": {
+                "testcase_id": "tcase_17955899876690db216f4187e",
+                "version": 1,
+                "intent_ref": "intent_179558997780931a3ba983b4c",
+                "intent_text": "RUN-011-R1 单一 TestCase 血缘闭环：项目创建必须真实持久化 在项目列表点击新建，填写名称后提交；必须出现成功提示，且独立业务状态查询能看到该项目。看到成功提示即完成探索，不要打开详情页。",
+                "steps": [
+                  {
+                    "step_id": "s0",
+                    "action": "navigate",
+                    "target": null,
+                    "value": "http://127.0.0.1:8311",
+                    "description": ""
+                  },
+                  {
+                    "step_id": "s1",
+                    "action": "navigate",
+                    "target": null,
+                    "value": "http://127.0.0.1:8311/projects",
+                    "description": ""
+                  },
+                  {
+                    "step_id": "s2",
+                    "action": "click",
+                    "target": {
+                      "strategy": "test_id",
+                      "value": "nav-new",
+                      "source": "compiler",
+                      "stability_score": 0.85
+                    },
+                    "value": null,
+                    "description": ""
+                  },
+                  {
+                    "step_id": "s3",
+                    "action": "fill",
+                    "target": {
+                      "strategy": "test_id",
+                      "value": "project-name",
+                      "source": "compiler",
+                      "stability_score": 0.85
+                    },
+                    "value": "RUN-011-R1 血缘闭环项目",
+                    "description": ""
+                  },
+                  {
+                    "step_id": "s4",
+                    "action": "click",
+                    "target": {
+                      "strategy": "role",
+                      "value": "button:创建",
+                      "source": "healed"
+                    },
+                    "value": null,
+                    "description": ""
+                  },
+                  {
+                    "step_id": "assert_cand_a_create_ui",
+                    "action": "assert",
+                    "target": {
+                      "strategy": "test_id",
+                      "value": "banner-success",
+                      "source": "compiler",
+                      "stability_score": 0.9
+                    },
+                    "value": "banner-success",
+                    "description": ""
+                  }
+                ],
+                "assertions": [
+                  {
+                    "assertion_id": "cand_a_create_ui",
+                    "description": "创建成功提示（候选）",
+                    "kind": "ui",
+                    "required": true,
+                    "expected": {
+                      "test_id": "banner-success",
+                      "text_contains": "项目创建成功"
+                    },
+                    "oracle_id": "oracle_run011r1_compiled_cand_a_create_ui",
+                    "oracle_version": 1
+                  }
+                ],
+                "test_data_refs": [],
+                "preconditions": [
+                  "探索轨迹来源：exploration_17955899781420fd141b0b369"
+                ],
+                "postconditions": [],
+                "cleanup_policy": "RESET_DATA",
+                "run_config": {
+                  "base_url": "http://127.0.0.1:8311",
+                  "fail_fast": false,
+                  "trace": true
+                },
+                "compile_source": "healed",
+                "review_status": "APPROVED",
+                "immutable": true,
+                "created_at": "2026-11-25T06:59:47.669814Z",
+                "schema_version": "0.1.0",
+                "oracle_bindings": {
+                  "cand_a_create_ui": {
+                    "oracle_id": "oracle_run011r1_compiled_cand_a_create_ui",
+                    "oracle_version": 1,
+                    "workspace_id": "ws-r11-1",
+                    "approved": true,
+                    "approved_by": "user:qa-lead",
+                    "oracle_assertion_id": "cand_a_create_ui",
+                    "assertion_id_mismatch": false,
+                    "bound_by": "user:qa-lead",
+                    "bound_at": "2026-11-25T06:59:47.707202Z",
+                    "pinned_at": "2026-11-25T06:59:52.782867Z"
+                  }
+                },
+                "oracle_binding_warnings": [],
+                "binding_history": [
+                  {
+                    "actor": "user:qa-lead",
+                    "bindings": {
+                      "cand_a_create_ui": {
+                        "oracle_id": "oracle_run011r1_compiled_cand_a_create_ui",
+                        "oracle_version": 1,
+                        "workspace_id": "ws-r11-1",
+                        "approved": true,
+                        "approved_by": "user:qa-lead",
+                        "oracle_assertion_id": "cand_a_create_ui",
+                        "assertion_id_mismatch": false,
+                        "bound_by": "user:qa-lead",
+                        "bound_at": "2026-11-25T06:59:47.707202Z"
+                      }
+                    },
+                    "warnings": [],
+                    "at": "2026-11-25T06:59:47.707209Z"
+                  }
+                ],
+                "oracle_binding_frozen": true,
+                "review_history": [
+                  {
+                    "decision": "APPROVED",
+                    "reviewer": "user:qa-lead",
+                    "note": "RUN-011-R1：请求体声明必须伪造无效",
+                    "at": "2026-11-25T06:59:52.783826Z",
+                    "review_revision": 1,
+                    "stability_policy": "ENFORCED",
+                    "stability_evidence": {
+                      "replay_id": "replay_17955899877121b7faddda496",
+                      "testcase_version_ref": "tcase_17955899876690db216f4187e@1",
+                      "testcase_fingerprint": "07297aa7ba74b0b43320f47f305b802f",
+                      "repeats": 3,
+                      "classification": "STABLE_PASS",
+                      "oracle_versions": {
+                        "cand_a_create_ui": "oracle_run011r1_compiled_cand_a_create_ui@1"
+                      },
+                      "browser_versions": [],
+                      "promotable": true,
+                      "completed_at": "2026-11-25T06:59:52.776137Z"
+                    }
+                  }
+                ],
+                "review_revision": 1,
+                "workspace_id": "ws-r11-1"
+              },
+              "base_doc": {
+                "testcase_id": "tcase_17955899876690db216f4187e",
+                "version": 1,
+                "intent_ref": "intent_179558997780931a3ba983b4c",
+                "intent_text": "RUN-011-R1 单一 TestCase 血缘闭环：项目创建必须真实持久化 在项目列表点击新建，填写名称后提交；必须出现成功提示，且独立业务状态查询能看到该项目。看到成功提示即完成探索，不要打开详情页。",
+                "steps": [
+                  {
+                    "step_id": "s0",
+                    "action": "navigate",
+                    "target": null,
+                    "value": "http://127.0.0.1:8311",
+                    "description": ""
+                  },
+                  {
+                    "step_id": "s1",
+                    "action": "navigate",
+                    "target": null,
+                    "value": "http://127.0.0.1:8311/projects",
+                    "description": ""
+                  },
+                  {
+                    "step_id": "s2",
+                    "action": "click",
+                    "target": {
+                      "strategy": "test_id",
+                      "value": "nav-new",
+                      "source": "compiler",
+                      "stability_score": 0.85
+                    },
+                    "value": null,
+                    "description": ""
+                  },
+                  {
+                    "step_id": "s3",
+                    "action": "fill",
+                    "target": {
+                      "strategy": "test_id",
+                      "value": "project-name",
+                      "source": "compiler",
+                      "stability_score": 0.85
+                    },
+                    "value": "RUN-011-R1 血缘闭环项目",
+                    "description": ""
+                  },
+                  {
+                    "step_id": "s4",
+                    "action": "click",
+                    "target": {
+                      "strategy": "test_id",
+                      "value": "create-submit",
+                      "source": "compiler",
+                      "stability_score": 0.85
+                    },
+                    "value": null,
+                    "description": ""
+                  },
+                  {
+                    "step_id": "assert_cand_a_create_ui",
+                    "action": "assert",
+                    "target": {
+                      "strategy": "test_id",
+                      "value": "banner-success",
+                      "source": "compiler",
+                      "stability_score": 0.9
+                    },
+                    "value": "banner-success",
+                    "description": ""
+                  }
+                ],
+                "assertions": [
+                  {
+                    "assertion_id": "cand_a_create_ui",
+                    "description": "创建成功提示（候选）",
+                    "kind": "ui",
+                    "required": true,
+                    "expected": {
+                      "test_id": "banner-success",
+                      "text_contains": "项目创建成功"
+                    },
+                    "oracle_id": "oracle_run011r1_compiled_cand_a_create_ui",
+                    "oracle_version": 1
+                  }
+                ],
+                "test_data_refs": [],
+                "preconditions": [
+                  "探索轨迹来源：exploration_17955899781420fd141b0b369"
+                ],
+                "postconditions": [],
+                "cleanup_policy": "RESET_DATA",
+                "run_config": {
+                  "base_url": "http://127.0.0.1:8311",
+                  "fail_fast": false,
+                  "trace": true
+                },
+                "compile_source": "compiler",
+                "review_status": "APPROVED",
+                "immutable": true,
+                "created_at": "2026-11-25T06:59:47.669814Z",
+                "schema_version": "0.1.0",
+                "oracle_bindings": {
+                  "cand_a_create_ui": {
+                    "oracle_id": "oracle_run011r1_compiled_cand_a_create_ui",
+                    "oracle_version": 1,
+                    "workspace_id": "ws-r11-1",
+                    "approved": true,
+                    "approved_by": "user:qa-lead",
+                    "oracle_assertion_id": "cand_a_create_ui",
+                    "assertion_id_mismatch": false,
+                    "bound_by": "user:qa-lead",
+                    "bound_at": "2026-11-25T06:59:47.707202Z",
+                    "pinned_at": "2026-11-25T06:59:52.782867Z"
+                  }
+                },
+                "oracle_binding_warnings": [],
+                "binding_history": [
+                  {
+                    "actor": "user:qa-lead",
+                    "bindings": {
+                      "cand_a_create_ui": {
+                        "oracle_id": "oracle_run011r1_compiled_cand_a_create_ui",
+                        "oracle_version": 1,
+                        "workspace_id": "ws-r11-1",
+                        "approved": true,
+                        "approved_by": "user:qa-lead",
+                        "oracle_assertion_id": "cand_a_create_ui",
+                        "assertion_id_mismatch": false,
+                        "bound_by": "user:qa-lead",
+                        "bound_at": "2026-11-25T06:59:47.707202Z"
+                      }
+                    },
+                    "warnings": [],
+                    "at": "2026-11-25T06:59:47.707209Z"
+                  }
+                ],
+                "oracle_binding_frozen": true,
+                "review_history": [
+                  {
+                    "decision": "APPROVED",
+                    "reviewer": "user:qa-lead",
+                    "note": "RUN-011-R1：请求体声明必须伪造无效",
+                    "at": "2026-11-25T06:59:52.783826Z",
+                    "review_revision": 1,
+                    "stability_policy": "ENFORCED",
+                    "stability_evidence": {
+                      "replay_id": "replay_17955899877121b7faddda496",
+                      "testcase_version_ref": "tcase_17955899876690db216f4187e@1",
+                      "testcase_fingerprint": "07297aa7ba74b0b43320f47f305b802f",
+                      "repeats": 3,
+                      "classification": "STABLE_PASS",
+                      "oracle_versions": {
+                        "cand_a_create_ui": "oracle_run011r1_compiled_cand_a_create_ui@1"
+                      },
+                      "browser_versions": [],
+                      "promotable": true,
+                      "completed_at": "2026-11-25T06:59:52.776137Z"
+                    }
+                  }
+                ],
+                "review_revision": 1,
+                "workspace_id": "ws-r11-1"
+              },
+              "sandbox_testcase_id": "tcase_1795590025743d9c10b60f94f",
+              "sandbox_verdict": "PASSED",
+              "sandbox_observer_mode": "playwright",
+              "sandbox_executed_by": "r11-w3",
+              "sandbox_fencing_token": 1,
+              "candidate_version": 1,
+              "approved_by": "user:qa-lead",
+              "promoted_version": 2,
+              "rollback_record": {
+                "target_version": "tcase_17955899876690db216f4187e:v2",
+                "restored_version": 3,
+                "operator": "user:platform-admin",
+                "reason": "RUN-011-R1 闭环结束回滚",
+                "receipt_recovered": false,
+                "at": "2026-11-25T07:00:34.244480Z"
+              }
+            }
+          }
+        ],
+        "bad": []
+      }
+    },
+    {
+      "name": "Sandbox TestCase/Run 与 Repair 同 Workspace",
+      "ok": true,
+      "detail": {
+        "sandbox": [
+          {
+            "proposal_id": "repair_17955900257361136729097d3",
+            "repair_ws": "ws-r11-1",
+            "sandbox_case": "tcase_1795590025743d9c10b60f94f",
+            "sandbox_run": "run_1795590025747c230b25fa8b9"
+          }
+        ],
+        "bad": []
+      }
+    }
+  ],
+  "facts": {
+    "server_version": "16.16 (Postgres.app)",
+    "migration_versions": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ],
+    "migration_count": 12,
+    "row_counts": {
+      "tg_intent": 6,
+      "tg_testcase": 32,
+      "tg_testcase_version": 34,
+      "tg_oracle": 9,
+      "tg_task": 9,
+      "tg_run": 9,
+      "tg_event": 81,
+      "tg_evidence": 198,
+      "tg_audit_log": 17,
+      "tg_doc": 11
+    },
+    "workspace_counts": {
+      "intents": 1,
+      "testcases": 2,
+      "runs": 9
+    },
+    "verdicts": {
+      "NOT_EVALUATED": 1,
+      "PASSED": 8
+    },
+    "run_lease_owners": [
+      {
+        "lease_owner": "r11-w3",
+        "n": 4
+      },
+      {
+        "lease_owner": "r11-w2",
+        "n": 3
+      },
+      {
+        "lease_owner": "r11-w1",
+        "n": 2
+      }
+    ],
+    "event_seq_duplicates": 0,
+    "events_without_run_ref": 0,
+    "audit": {
+      "entries": 17,
+      "min_seq": 1,
+      "max_seq": 17,
+      "distinct_seq": 17
+    },
+    "main_testcase_versions": [
+      {
+        "testcase_id": "tcase_17955899876690db216f4187e",
+        "version": 1,
+        "review_status": "APPROVED",
+        "compile_source": "compiler"
+      },
+      {
+        "testcase_id": "tcase_17955899876690db216f4187e",
+        "version": 2,
+        "review_status": "APPROVED",
+        "compile_source": "healed"
+      },
+      {
+        "testcase_id": "tcase_17955899876690db216f4187e",
+        "version": 3,
+        "review_status": "APPROVED",
+        "compile_source": "compiler"
+      }
+    ],
+    "promotion_receipts": [
+      {
+        "idempotency_key": "run011r1-repair_17955900257361136729097d3",
+        "kind": "PROMOTE",
+        "proposal_id": "repair_17955900257361136729097d3",
+        "testcase_id": "tcase_17955899876690db216f4187e",
+        "base_version": 1,
+        "target_version": 2,
+        "created_at": "2026-11-25T07:00:29.867912Z"
+      },
+      {
+        "idempotency_key": "rollback:repair_17955900257361136729097d3:v2",
+        "kind": "ROLLBACK",
+        "proposal_id": "repair_17955900257361136729097d3",
+        "testcase_id": "tcase_17955899876690db216f4187e",
+        "base_version": 2,
+        "target_version": 3,
+        "created_at": "2026-11-25T07:00:34.242925Z"
+      }
+    ],
+    "probe_plans": 1,
+    "diagnoses": 1,
+    "replay_docs": 1,
+    "lineage_runs": {
+      "run_17955899928106022f9d29f23": {
+        "testcase_id": "tcase_17955899876690db216f4187e",
+        "testcase_version_id": "tcase_17955899876690db216f4187e@1",
+        "verdict": "PASSED"
+      },
+      "run_1795589997827306f7075229a": {
+        "testcase_id": "tcase_17955899876690db216f4187e",
+        "testcase_version_id": "tcase_17955899876690db216f4187e@1",
+        "verdict": "NOT_EVALUATED"
+      },
+      "run_17955900298866e557fdf73da": {
+        "testcase_id": "tcase_17955899876690db216f4187e",
+        "testcase_version_id": "tcase_17955899876690db216f4187e@2",
+        "verdict": "PASSED"
+      }
+    },
+    "lineage_diagnosis": [
+      {
+        "diagnosis_id": "diagnosis_1795590025637029910002389",
+        "run_id": "run_1795589997827306f7075229a",
+        "testcase_id": "tcase_17955899876690db216f4187e"
+      }
+    ],
+    "lineage_repair": [
+      {
+        "proposal_id": "repair_17955900257361136729097d3",
+        "testcase_id": "tcase_17955899876690db216f4187e",
+        "base_version": 1,
+        "diagnosis_id": "diagnosis_1795590025637029910002389",
+        "source_run_id": "run_1795589997827306f7075229a",
+        "repair_source": "rule:locator-fixture",
+        "promoted_version": 2
+      }
+    ],
+    "lineage_receipts": [
+      {
+        "idempotency_key": "run011r1-repair_17955900257361136729097d3",
+        "kind": "PROMOTE",
+        "proposal_id": "repair_17955900257361136729097d3",
+        "testcase_id": "tcase_17955899876690db216f4187e",
+        "base_version": 1,
+        "target_version": 2
+      },
+      {
+        "idempotency_key": "rollback:repair_17955900257361136729097d3:v2",
+        "kind": "ROLLBACK",
+        "proposal_id": "repair_17955900257361136729097d3",
+        "testcase_id": "tcase_17955899876690db216f4187e",
+        "base_version": 2,
+        "target_version": 3
+      }
+    ],
+    "lineage_evidence": {
+      "run_evidence_count": 25,
+      "diagnosis_evidence_count": 6,
+      "foreign": []
+    },
+    "workspace_lineage": {
+      "intent": {
+        "intent_179558997780931a3ba983b4c": "ws-r11-1"
+      },
+      "testcase": {
+        "tcase_17955899876690db216f4187e": "ws-r11-1"
+      },
+      "testcase_version": {
+        "tcase_17955899876690db216f4187e@1": "ws-r11-1"
+      },
+      "oracle": {
+        "oracle_run011r1_compiled_cand_a_create_ui": "ws-r11-1"
+      },
+      "run": {
+        "run_17955899928106022f9d29f23": "ws-r11-1",
+        "run_1795589997827306f7075229a": "ws-r11-1",
+        "run_17955900298866e557fdf73da": "ws-r11-1"
+      },
+      "evidence": {
+        "evd_1795589994450a02880f79a4b": "ws-r11-1",
+        "evd_17955899944523df7972bb63a": "ws-r11-1",
+        "evd_1795589994453397adab6598e": "ws-r11-1",
+        "evd_179558999445439244ad27ca6": "ws-r11-1",
+        "evd_1795589995377c5b1fafd0f17": "ws-r11-1",
+        "evd_1795589995378b123089b97f4": "ws-r11-1",
+        "evd_179558999537916c02a3a7ed0": "ws-r11-1",
+        "evd_1795589995379489dd92fe137": "ws-r11-1",
+        "evd_1795589996391fec920117510": "ws-r11-1",
+        "evd_1795589996393a5cc66411bae": "ws-r11-1",
+        "evd_1795589996397f32f5cdf7b07": "ws-r11-1",
+        "evd_1795589996399c152783b7fc4": "ws-r11-1",
+        "evd_1795589996763f0b68d40da58": "ws-r11-1",
+        "evd_17955899967642836040644fc": "ws-r11-1",
+        "evd_17955899967655979ade8eca2": "ws-r11-1",
+        "evd_179558999721195908c8077b5": "ws-r11-1",
+        "evd_1795589997212b7dc0c382933": "ws-r11-1",
+        "evd_1795589997213d911a3a4ad56": "ws-r11-1",
+        "evd_179558999721434525abda134": "ws-r11-1",
+        "evd_179558999725130586846a75d": "ws-r11-1",
+        "evd_179558999725287fab00edfea": "ws-r11-1",
+        "evd_1795589997252a6f57aea69c5": "ws-r11-1",
+        "evd_17955899973979a19180b6395": "ws-r11-1",
+        "evd_1795590025660176032d8817a": "ws-r11-1",
+        "evd_17955900256791082f4ce5a20": "ws-r11-1",
+        "evd_1795590025693cdbf74a8157b": "ws-r11-1"
+      },
+      "doc": {
+        "diagnosis_1795590025637029910002389": "ws-r11-1",
+        "pbudget_diagnosis-diagnosis_1795590025637029910002389": "ws-r11-1",
+        "probeplan_1795590025657706ff5233cfc": "ws-r11-1",
+        "repair_17955900257361136729097d3": "ws-r11-1"
+      },
+      "task": {
+        "task_17955899928041487192403c0": "ws-r11-1",
+        "task_17955899978213300960c8159": "ws-r11-1",
+        "task_1795590029882fe3d15dd8131": "ws-r11-1"
+      }
+    }
+  },
+  "summary": {
+    "total": 24,
+    "passed": 24,
+    "failed": []
+  }
+}

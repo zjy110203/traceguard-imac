@@ -1,5 +1,21 @@
 # TraceGuard 持续开发任务台账
 
+> **RUN-011-R1.1 台账（2026-11-25 追加，历史保留）**：权威报告 `docs/RUN-011-R1.1-FINAL-REPORT.md`。
+>
+> | 编号 | 任务 | 状态 | 证据 |
+> |---|---|---|---|
+> | R1.1-01 | WP0 源码审计与基线 | PASS | `RUN-011-R1.1-BASELINE.md`（12 项问题） |
+> | R1.1-02 | WP1 Workspace 隔离 + 对象级授权 | PASS | 隔离测试 9/9；`RUN-011-R1.1-WP1-WORKSPACE-SECURITY.md` |
+> | R1.1-03 | WP2 多 Workspace 安全验收 | PASS | 23 用例（隔离 9 + 血缘 14）全绿 |
+> | R1.1-04 | WP3 Repair 血缘 + 来源可信 | PASS | `RUN-011-R1.1-WP2-REPAIR-INTEGRITY.md`，14/14 |
+> | R1.1-05 | WP4 Benchmark v5 口径修正 | PASS | `RUN-011-R1.1-WP3-BENCHMARK-ERRATA.md`，原始数据保留 |
+> | R1.1-06 | WP5 两轮闭环重测 | PASS | loop1/loop2 各 API 86/86 + DB 24/24（逐实体 Workspace） |
+> | R1.1-07 | WP6 UI 全链路验收 | PASS（2 NOTE） | `RUN-011-R1.1-WP6-UI-ACCEPTANCE.md`，15/0 + 6 截图 |
+> | R1.1-08 | 回归：全量 / PG16 / Ruff | PASS | 690 passed + PG 13 passed + Ruff 全绿 |
+> | R1.1-09 | B-17 补充故障矩阵 | BLOCKED | 安全拦截未解除，不重试不绕过 |
+>
+> 边界：前端无 workspace 切换控件（硬编码 default）；无真实 CI 证据不标 PASS；未合并 PR、未改 main。
+
 > **RUN-010 台账（2026-11-24；2026-11-25 收尾更正）**：10 个工作包全部完成。
 > **统计以收尾复核为准**：RUN-010 提交 **17**（含收尾修复 `d4d59ba`）、改动文件 **79**、
 > **+8,314 / −336** 行；全量测试 **657 收集 / 644 passed / 13 skipped / 0 failed**；

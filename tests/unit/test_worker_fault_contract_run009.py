@@ -15,16 +15,53 @@ from traceguard_execution.tasks.service import TaskService
 from traceguard_persistence import Database
 
 
+def _seed_testcase(svc: TaskService) -> None:
+    """Run 版本血缘要求 TestCaseVersion 真实存在且 Workspace 一致。"""
+    from traceguard_core.ids import utc_now_iso
+    from traceguard_persistence.catalog import CatalogService
+
+    catalog = CatalogService(svc.db)
+    catalog.create_testcase(
+        {
+            "testcase_id": "tcase_create001",
+            "version": 1,
+            "workspace_id": "default",
+            "created_at": utc_now_iso(),
+            "steps": [
+                {
+                    "step_id": "s1",
+                    "action": "navigate",
+                    "target": {"strategy": "css", "value": "body"},
+                }
+            ],
+            "assertions": [
+                {
+                    "assertion_id": "a1",
+                    "description": "页面可见",
+                    "kind": "ui",
+                    "required": True,
+                    "expected": {},
+                }
+            ],
+        },
+        title="tcase_create001",
+        workspace_id="default",
+        review_status="DRAFT",
+    )
+
+
 def _svc() -> TaskService:
     # 每测试独立内存库，避免 claim_next_run 误领取共享库里的既有 Run。
-    return TaskService(Database("sqlite:///:memory:"))
+    svc = TaskService(Database("sqlite:///:memory:"))
+    _seed_testcase(svc)
+    return svc
 
 
 def _queued_run(svc: TaskService) -> tuple[str, str]:
     key = "run009-fault-contract-" + uuid.uuid4().hex[:10]
-    task_id = svc.create_task("tcase_create001", key)["task_id"]
+    task_id = svc.create_task("tcase_create001", key, workspace_id="default")["task_id"]
     svc.transition_task(task_id, "QUEUED")
-    run_id = svc.create_run(task_id, "tcase_create001:v1")["run_id"]
+    run_id = svc.create_run(task_id, "tcase_create001@1")["run_id"]
     return task_id, run_id
 
 
@@ -88,6 +125,7 @@ def test_api_restart_and_fleet_restart_contract_claim_is_idempotent_boundary() -
     """场景3/4 契约：重建 TaskService（模拟 API/Worker 重启）后租约与代次仍持久化。"""
     db = Database("sqlite:///:memory:")
     svc = TaskService(db)
+    _seed_testcase(svc)
     _, run_id = _queued_run(svc)
     claim = svc.claim_next_run("worker-old", ttl_seconds=30)
     assert claim is not None

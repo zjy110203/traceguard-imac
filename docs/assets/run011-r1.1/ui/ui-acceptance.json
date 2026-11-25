@@ -1,0 +1,117 @@
+{
+  "workpackage": "RUN-011-R1.1 WP6",
+  "engine": "Playwright Chromium + real API (auth+CSRF, Vue dist)",
+  "total": 17,
+  "passed": 15,
+  "failed": 0,
+  "screenshots": [
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run011-r1.1/ui/01-admin-dashboard.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run011-r1.1/ui/02-viewer-readonly.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run011-r1.1/ui/03-engineer-intent-created.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run011-r1.1/ui/04-engineer-testcase-pending.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run011-r1.1/ui/05-lead-review-gate.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run011-r1.1/ui/06-admin-user-created.png"
+  ],
+  "results": [
+    {
+      "check": "环境：真实 API 可启动",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "http://127.0.0.1:59034"
+    },
+    {
+      "check": "环境：受限 workspace 用户已初始化",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "5 个用户"
+    },
+    {
+      "check": "401：未登录访问 /runs 跳转登录页",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "http://127.0.0.1:59034/login?redirect=/runs"
+    },
+    {
+      "check": "platform-admin 身份来自服务端",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "roles=['platform-admin', 'qa-engineer', 'qa-lead']"
+    },
+    {
+      "check": "platform-admin 可见用户管理菜单",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": ""
+    },
+    {
+      "check": "viewer 看不到用户管理菜单",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": ""
+    },
+    {
+      "check": "viewer 访问 /users 被守卫送回",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "http://127.0.0.1:59034/"
+    },
+    {
+      "check": "viewer 创建 Intent 服务端 403",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "HTTP 403"
+    },
+    {
+      "check": "qa-engineer 身份来自服务端",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "roles=['qa-engineer']"
+    },
+    {
+      "check": "qa-engineer UI 创建需求 → 服务端真实落库",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "匹配 1 条"
+    },
+    {
+      "check": "qa-engineer UI 新建用例 → 服务端落库（PENDING）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "匹配 1 条"
+    },
+    {
+      "check": "qa-lead 身份来自服务端",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": ""
+    },
+    {
+      "check": "qa-lead UI 审核点击被服务端 Oracle/稳定性门禁正确拒绝（未绕过）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "UI提示='ORACLE_BINDING_INCOMPLETE: MISSING_ORACLE: a_ui' 状态=PENDING"
+    },
+    {
+      "check": "审核成功路径覆盖范围",
+      "status": "NOTE",
+      "detail": "UI 手工创建用例的断言未绑定已审批 Oracle，服务端正确拒绝审核（门禁生效）。审核成功路径由两轮完整闭环脚本（含 Oracle 绑定 + 稳定性回放 + 人工审批）验证，见 docs/assets/run011-r1.1/lineage/loop*.json（86/86）。"
+    },
+    {
+      "check": "platform-admin UI 创建用户 → 服务端落库",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "匹配 1 条"
+    },
+    {
+      "check": "结构性缺口：UI 无 workspace 切换控件",
+      "status": "NOTE",
+      "detail": "前端硬编码 workspace_id=default，无切换控件；跨 Workspace 数据边界由 API 层 test_workspace_isolation_run011_r1_1.py（23 passed）验证。"
+    },
+    {
+      "check": "仅 ws-B-only 权限用户写 default 被服务端拒绝",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "HTTP 403"
+    }
+  ]
+}

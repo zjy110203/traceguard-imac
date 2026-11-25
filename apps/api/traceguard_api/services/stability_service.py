@@ -145,9 +145,15 @@ class StabilityReplayService:
             raise AppError(ErrorCode.NOT_FOUND, "stability replay not found")
         return rec.to_dict()
 
-    def list(self, testcase_id: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
+    def list(
+        self,
+        testcase_id: str | None = None,
+        limit: int = 50,
+        *,
+        workspace_ids: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
         ref = f"{testcase_id}@" if testcase_id else None
-        recs = self.rt.docs.list(kind=REPLAY_KIND, limit=limit)
+        recs = self.rt.docs.list(kind=REPLAY_KIND, limit=limit, workspace_ids=workspace_ids)
         out = []
         for rec in recs:
             if ref and not str(rec.ref_id or "").startswith(ref):
@@ -156,6 +162,7 @@ class StabilityReplayService:
                 {
                     "replay_id": rec.id,
                     "testcase_ref": rec.ref_id,
+                    "workspace_id": rec.workspace_id,
                     "status": rec.status,
                     "classification": (rec.doc.get("classification") or {}).get("classification"),
                     "promotable": rec.doc.get("promotable", False),

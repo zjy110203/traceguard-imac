@@ -1,3 +1,20 @@
+# 进度（RUN-011-R1.1，2026-11-25 追加；下方 R1 历史保留）
+
+| WP | 内容 | 状态 | 产出/结果 |
+|---|---|---|---|
+| WP0 | 源码与证据审计 | ✅ | `docs/RUN-011-R1.1-BASELINE.md`（12 项问题） |
+| WP1 | Workspace 数据隔离与对象级授权 | ✅ | `workspace.py` + 路由/服务修复；隔离测试 9/9 |
+| WP2 | 多 Workspace 安全验收 | ✅ | WP1 报告；23 用例（含 Repair 血缘）全绿 |
+| WP3 | Repair 血缘 + 来源可信 | ✅ | WP2 报告；14 用例；伪造来源/跨空间全拒 |
+| WP4 | Benchmark v5 口径修正 | ✅ | WP3-BENCHMARK-ERRATA；原始 JSON 保留 |
+| WP5 | 两轮完整闭环重测 | ✅ | loop1/loop2 各 API 86/86 + DB 24/24（逐实体 Workspace） |
+| WP6 | UI 全链路验收 | ✅（2 项 NOTE） | WP6 报告 + `ui-acceptance.json` 15/0 + 6 截图 |
+| 回归 | 全量 pytest / PG16 / Ruff | ✅ | 690 passed + PG13 + ruff 全绿 |
+
+权威报告：`docs/RUN-011-R1.1-FINAL-REPORT.md`（含 10 问明确回答）。B-17 保持 BLOCKED。
+
+---
+
 # 进度（RUN-011-R1，2026-11-25）
 
 | WP | 内容 | 状态 | 产出 |
