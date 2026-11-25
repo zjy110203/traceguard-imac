@@ -1,0 +1,204 @@
+{
+  "workpackage": "RUN-013 WP5",
+  "provider": "deepseek",
+  "model": [
+    "deepseek-flash"
+  ],
+  "cases": 6,
+  "statistical_limit": "n=6，仅用于回归与相对比较，不能外推总体准确率",
+  "rule_group": {
+    "domain_accuracy": 0.8333,
+    "rows": [
+      {
+        "case": "timing",
+        "gt_domain": "TIMING",
+        "domain": "TIMING",
+        "hit": true
+      },
+      {
+        "case": "locator",
+        "gt_domain": "LOCATOR",
+        "domain": "LOCATOR",
+        "hit": true
+      },
+      {
+        "case": "environment",
+        "gt_domain": "ENVIRONMENT",
+        "domain": "PRODUCT",
+        "hit": false
+      },
+      {
+        "case": "product",
+        "gt_domain": "PRODUCT",
+        "domain": "PRODUCT",
+        "hit": true
+      },
+      {
+        "case": "network",
+        "gt_domain": "NETWORK",
+        "domain": "NETWORK",
+        "hit": true
+      },
+      {
+        "case": "ui",
+        "gt_domain": "UI",
+        "domain": "UI",
+        "hit": true
+      }
+    ]
+  },
+  "llm_group": {
+    "structure_rate": 1.0,
+    "schema_pass_rate": 1.0,
+    "evidence_supported_ratio": 1.0,
+    "invalid_candidate_ratio": 0.0,
+    "duplicate_ratio": 0.0,
+    "adoption_rate": 0.5,
+    "adoption_rate_normalized": 0.8333,
+    "fallback_rate": 0.0,
+    "avg_latency_ms": 3005.3,
+    "tokens_in": 1908,
+    "tokens_out": 2313,
+    "estimated_cost_usd": 0.001116,
+    "rows": [
+      {
+        "case": "timing",
+        "gt_domain": "TIMING",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains": [
+          "TIMEOUT",
+          "UI",
+          "API"
+        ],
+        "hit": false,
+        "hit_normalized": true,
+        "latency_ms": 3294,
+        "tokens_in": 341,
+        "tokens_out": 464,
+        "cost_usd": 0.000219
+      },
+      {
+        "case": "locator",
+        "gt_domain": "LOCATOR",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains": [
+          "LOCATOR",
+          "TIMEOUT",
+          "UI"
+        ],
+        "hit": true,
+        "hit_normalized": true,
+        "latency_ms": 3336,
+        "tokens_in": 305,
+        "tokens_out": 406,
+        "cost_usd": 0.000193
+      },
+      {
+        "case": "environment",
+        "gt_domain": "ENVIRONMENT",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains": [
+          "NETWORK",
+          "API",
+          "TIMEOUT"
+        ],
+        "hit": false,
+        "hit_normalized": false,
+        "latency_ms": 1899,
+        "tokens_in": 306,
+        "tokens_out": 302,
+        "cost_usd": 0.000152
+      },
+      {
+        "case": "product",
+        "gt_domain": "PRODUCT",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains": [
+          "API",
+          "PERSISTENCE",
+          "UI"
+        ],
+        "hit": false,
+        "hit_normalized": true,
+        "latency_ms": 1783,
+        "tokens_in": 328,
+        "tokens_out": 291,
+        "cost_usd": 0.000149
+      },
+      {
+        "case": "network",
+        "gt_domain": "NETWORK",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains": [
+          "API",
+          "NETWORK",
+          "PERSISTENCE"
+        ],
+        "hit": true,
+        "hit_normalized": true,
+        "latency_ms": 5101,
+        "tokens_in": 302,
+        "tokens_out": 497,
+        "cost_usd": 0.000229
+      },
+      {
+        "case": "ui",
+        "gt_domain": "UI",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains": [
+          "UI",
+          "JS",
+          "TIMEOUT"
+        ],
+        "hit": true,
+        "hit_normalized": true,
+        "latency_ms": 2619,
+        "tokens_in": 326,
+        "tokens_out": 353,
+        "cost_usd": 0.000174
+      }
+    ]
+  }
+}
