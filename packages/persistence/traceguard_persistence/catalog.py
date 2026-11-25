@@ -404,8 +404,12 @@ class CatalogService:
 
         RUN-007 WP1-01：Agent 生成的候选（`compile_source in {compiler, healed}`）必须存在
         "同版本、已完成、全样本终态、STABLE_PASS、Oracle 完整且版本固定" 的稳定性回放，
-        否则不得 APPROVED。人工编写版本（`compile_source == "human"`）显式记录豁免事实，
+        否则不得 APPROVED。        人工编写版本（`compile_source == "human"`）显式记录豁免事实，
         不做静默跳过；豁免会写进 `review_history`，可审计。
+
+        RUN-011-R1.2：`require_stability=False` 仅用于受信任的服务端内部
+        历史迁移/数据修复路径；公共 HTTP 审核 API 固定传入 True，
+        不允许客户端通过该参数跳过门禁。
         """
         if decision not in {"APPROVED", "REJECTED", "PENDING"}:
             raise AppError(ErrorCode.VALIDATION_ERROR, "decision must be APPROVED/REJECTED/PENDING")

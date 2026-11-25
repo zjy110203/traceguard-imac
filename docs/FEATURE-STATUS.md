@@ -274,3 +274,25 @@
 | 依赖 moderate 漏洞（dev-only） | **PARTIAL（已登记）** | high=0 / critical=0 / moderate=3；semver-major 升级未实施 |
 | 60 分钟长稳 | **进行中** | `BZ1Hp8`，每周期 real PASSED；报告未生成前不标通过 |
 | Benchmark v3 本轮实验 | **进行中** | 隔离 API/Worker/TeamFlow，2 次重复；完成前不引用历史数字冒充本轮 |
+
+---
+
+# RUN-011-R1.2 功能状态（2026-11-25，追加；不改写上面历史条目）
+
+> 口径：VERIFIED = 本轮真实执行证据；BLOCKED = 外部条件阻塞；NEEDS_DECISION = 待批准。
+> 详细证据见 `docs/RUN-011-R1.2-SECURITY-BENCHMARK-CLOSEOUT.md`。
+
+| 能力 | 状态 | 证据 / 说明 |
+|---|---|---|
+| HTTP 审核稳定性门禁不可绕过 | **VERIFIED** | `ReviewReq.require_stability=Literal[True]` + 路由固定 True；6/6 专项（422/412/200/EXEMPT_HUMAN_AUTHORED，无 HTTP `SKIPPED_BY_CALLER`） |
+| 受信任服务端内部迁移豁免 | **VERIFIED** | 服务层 `require_stability=False` 仍可用；HTTP 不暴露；RUN-011-R1.1 夹具未删除 |
+| 三个全局观测接口权限收口 | **VERIFIED** | `system.observe` 仅 platform-admin；未登录 401 / viewer·qa-engineer·qa-lead 403 / admin 200；拒绝有 DENIED 审计 |
+| 普通 Workspace 业务读取不变 | **VERIFIED** | 三角色 default 读取 200，范围外 403；RBAC 矩阵同步 |
+| Benchmark v5 场景覆盖修正 | **VERIFIED** | 46 执行 / 23 场景 / 37 诊断 / 19 失败场景 / 9 正向控制；覆盖率 19/23=0.8261 |
+| Benchmark v5 False Pass 修正 | **VERIFIED** | evaluator 级真实 Verdict 判定，0/37=0；F 臂预测机制不再参与；F/G 别名兼容 |
+| 原始归档证据保护 | **VERIFIED** | 两个 JSON SHA-256 修复前后一致，并写入离线测试断言 |
+| 全量回归 | **VERIFIED** | `pytest -q` 713 passed / 13 skipped（基线 690，新增 23 项，无新增 skip）；`ruff check .`、`git diff --check` 均通过 |
+| PostgreSQL 16 专项 | **BLOCKED** | 本机无 PG URL / 服务 / 容器工具；13 项显式 skip，不标记为通过 |
+| GitHub Actions 门禁 | **NOT_RUN** | 本轮未触发，不作 PASS 声明 |
+| `/api/v1/system/metrics` 是否纳入全局观测权限 | **NEEDS_DECISION** | 跨 Workspace 计数汇总但无 Workspace 标识，SystemView 依赖；本轮不改 |
+| RUN-012 准入 | **具备（附条件）** | 安全与 Benchmark 验收完成；进入前需补 PG16 与真实 Actions 结果 |

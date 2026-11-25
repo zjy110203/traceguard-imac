@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -72,11 +73,50 @@ def _mechanism_of(arm: dict[str, Any]) -> str | None:
     return arm.get("mechanism")
 
 
+#: RUN-011-R1.2：历史归档只留下异常字符串，正向控制必须严格满足
+#: "HTTP 412 且 run PASSED（诊断正确地被跳过）"；其它异常一律保留为普通执行异常。
+_POSITIVE_CONTROL_STATUS_RE = re.compile(r"\b412\b")
+_POSITIVE_CONTROL_RUN_PASSED_RE = re.compile(r"run\s+PASSED", re.IGNORECASE)
+
+
+def is_positive_control(sample: dict[str, Any]) -> bool:
+    """判定正向控制记录：注入未触发故障，Run PASSED → 诊断正确跳过。
+
+    未来运行应写入结构化字段 `positive_control`，避免继续依赖异常字符串识别；
+    结构化字段存在时优先采用，历史归档再回退到严格的异常文本匹配。
+    """
+    flag = sample.get("positive_control")
+    if isinstance(flag, bool):
+        return flag
+    error = str(sample.get("error") or "")
+    return bool(
+        _POSITIVE_CONTROL_STATUS_RE.search(error)
+        and _POSITIVE_CONTROL_RUN_PASSED_RE.search(error)
+    )
+
+
 def compute_statistics(rounds: list[dict[str, Any]], probe_executions: list[dict[str, Any]] | None = None, probe_feedback: list[dict[str, Any]] | None = None) -> dict[str, Any]:
-    """两轮合并统计（小样本如实声明，不宣称统计显著）。"""
-    samples = [s for r in rounds for s in r.get("samples", []) if not s.get("error")]
-    failed_runs = [s for s in samples if s.get("verdict") in {"FAILED", "NOT_EVALUATED"}]
+    """两轮合并统计（小样本如实声明，不宣称统计显著）。
+
+    RUN-011-R1.2：执行记录、诊断样本、正向控制分开统计。
+    正向控制不进入主因诊断准确率分母，也不计入 False Pass；
+    普通执行异常不会被误归类为正向控制。
+    """
+    execution_records = [s for r in rounds for s in r.get("samples", [])]
+    positive_controls = [s for s in execution_records if is_positive_control(s)]
+    unclassified_errors = [
+        s for s in execution_records if s.get("error") and not is_positive_control(s)
+    ]
+    diagnosis_samples = [
+        s for s in execution_records if not s.get("error") and not is_positive_control(s)
+    ]
+    failed_runs = [s for s in diagnosis_samples if s.get("verdict") in {"FAILED", "NOT_EVALUATED"}]
     n = len(failed_runs)
+    execution_scenarios = len({s.get("scenario") for s in execution_records})
+    failure_scenarios = len({s.get("scenario") for s in failed_runs})
+    failure_scenario_coverage = (
+        round(failure_scenarios / max(1, execution_scenarios), 4) if execution_scenarios else None
+    )
 
     # WP4 §6.1：历史 JSON 使用旧臂名，复核时必须按别名读取，不能因改名丢数据。
     legacy_alias = {
@@ -122,13 +162,23 @@ def compute_statistics(rounds: list[dict[str, Any]], probe_executions: list[dict
         hits = sum(1 for p in preds if p["pred"] == p["gt"])
         return round(hits / len(preds), 4)
 
-    def _false_pass_rate() -> float | None:
-        """False Pass：GT=PERSISTENCE 的场景被预测为非 PERSISTENCE 的比例。"""
-        preds = [p for p in _preds("F_probe_post_hoc_aware") if p["gt"] == "PERSISTENCE"]
-        if not preds:
-            return None
-        bad = sum(1 for p in preds if p["pred"] not in (None, "PERSISTENCE", "TIMING"))
-        return round(bad / len(preds), 4)
+    def _false_pass() -> tuple[int, int, float | None]:
+        """Evaluator 级 False Pass：GT 期望失败，但实际 Run Verdict=PASSED。
+
+        只统计实际注入故障且有有效 GT 的诊断样本；正向控制（本应 PASSED）
+        与 F 臂预测机制均不参与计算。口径与 `DiagnosisEvaluator.false_pass_rate()`
+        一致：GT 未持久化却判 PASSED 才是 False Pass。
+        """
+        gt_samples = [
+            s for s in diagnosis_samples if str(s.get("gt_mechanism") or "").strip()
+        ]
+        count = sum(
+            1 for s in gt_samples if str(s.get("verdict") or "").upper() == "PASSED"
+        )
+        denominator = len(gt_samples)
+        return count, denominator, round(count / denominator, 4) if denominator else None
+
+    false_pass_count, false_pass_denominator, false_pass_rate = _false_pass()
 
     def _abstention_accuracy(arm: str) -> float | None:
         """弃权准确率：弃权（无机制/INCONCLUSIVE）时 GT 是否确实不可判定（此处以
@@ -178,15 +228,26 @@ def compute_statistics(rounds: list[dict[str, Any]], probe_executions: list[dict
     return {
         "sample_size": n,
         "rounds": len(rounds),
+        # 兼容字段：含义修正为"执行场景 / 失败场景"，覆盖率为失败场景覆盖率。
         "scenario_coverage": {
-            "total_scenarios": len({s.get("scenario") for s in samples}),
-            "produced_failure_samples": len({s.get("scenario") for s in failed_runs}),
-            "coverage": round(len({s.get("scenario") for s in failed_runs}) / max(1, len({s.get("scenario") for s in samples})), 4),
+            "total_scenarios": execution_scenarios,
+            "produced_failure_samples": failure_scenarios,
+            "coverage": failure_scenario_coverage,
         },
+        # RUN-011-R1.2：拆分的清晰口径（历史 46 / 23 / 37 / 19 / 9）。
+        "execution_records": len(execution_records),
+        "execution_scenarios": execution_scenarios,
+        "diagnosis_sample_size": len(diagnosis_samples),
+        "failure_scenarios": failure_scenarios,
+        "positive_control_records": len(positive_controls),
+        "failure_scenario_coverage": failure_scenario_coverage,
+        "unclassified_error_records": len(unclassified_errors),
         "primary_cause_accuracy": {arm: _accuracy(arm) for arm in ("A_raw_report", "C_rule", "D_graph_ablation", "E_probe_no_feedback", "F_probe_post_hoc_aware", "G_probe_unknown_time", "H_llm_advisor")},
         "macro_f1": {arm: _macro_f1(arm) for arm in ("C_rule", "F_probe_post_hoc_aware")},
         "selective_accuracy": {arm: _selective_accuracy(arm) for arm in ("C_rule", "F_probe_post_hoc_aware")},
-        "false_pass_rate": _false_pass_rate(),
+        "false_pass_rate": false_pass_rate,
+        "false_pass_count": false_pass_count,
+        "false_pass_denominator": false_pass_denominator,
         "probe_execution_success_rate": (
             round(sum(1 for e in execs if e.get("status") == "SUCCEEDED") / max(1, len(execs)), 4) if execs else None
         ),
@@ -247,7 +308,9 @@ def compute_statistics(rounds: list[dict[str, Any]], probe_executions: list[dict
         },
         "note": (
             f"n={n} 失败样本（两轮合并）：小样本，不宣称统计显著；"
-            "GT 来自故障机制定义（复合场景取首要机制）；Flaky 场景概率注入，单轮可能未触发故障"
+            "GT 来自故障机制定义（复合场景取首要机制）；Flaky 场景概率注入，单轮可能未触发故障；"
+            f"{len(positive_controls)} 条正向控制已从诊断分母排除；"
+            "False Pass 按真实 Run Verdict 与 GT 判定，与 F 臂预测机制无关"
         ),
     }
 

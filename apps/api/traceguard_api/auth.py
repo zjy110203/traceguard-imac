@@ -23,11 +23,22 @@ from traceguard_persistence.db import Database
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 PUBLIC_PATHS = {"/api/v1/auth/login", "/api/v1/auth/csrf", "/api/v1/auth/status"}
 
+#: RUN-011-R1.2：三个无 Workspace 过滤的全局运维观测接口。
+#: 必须先于通用 SAFE_METHODS → read 映射判定，避免普通 read 角色越权读取。
+GLOBAL_OBSERVATION_PATHS = {
+    "/api/v1/events/conflicts",
+    "/api/v1/probes/audit",
+    "/api/v1/inbox/stats",
+}
+
 
 def action_for_request(method: str, path: str) -> str | None:
     """把 HTTP 请求映射到 RBAC 动作；未知写操作 fail-closed 交给 platform-admin。"""
     if path.startswith("/api/v1/auth/"):
         return None
+    normalized = path.rstrip("/") or "/"
+    if method in SAFE_METHODS and normalized in GLOBAL_OBSERVATION_PATHS:
+        return "system.observe"
     if method in SAFE_METHODS:
         return "read"
     # RUN-011 WP1：语义修正（不是放宽权限）——

@@ -46,6 +46,9 @@ PERMISSIONS: dict[str, set[str]] = {
     "repair.promote": {ROLE_PLATFORM_ADMIN},
     "repair.rollback": {ROLE_PLATFORM_ADMIN},
     "system.configure": {ROLE_PLATFORM_ADMIN},
+    # RUN-011-R1.2：跨 Workspace 的全局运维观测（审计/冲突/Inbox 汇总）独立权限，
+    # 不得通过普通 read 暴露给 viewer / qa-engineer / qa-lead。
+    "system.observe": {ROLE_PLATFORM_ADMIN},
     "user.manage": {ROLE_PLATFORM_ADMIN},
 }
 

@@ -287,8 +287,9 @@ class ReviewReq(BaseModel):
     decision: str
     reviewer: str
     note: str = ""
-    #: 仅供历史数据修复/迁移使用；正常审核路径必须保持默认 True（不得用来跳过门禁）
-    require_stability: bool = True
+    #: RUN-011-R1.2：公共 HTTP 审核入口不接受关闭稳定性门禁。
+    #: 历史数据迁移豁免只保留在可信服务端内部路径（persistence 服务层），不通过 HTTP 暴露。
+    require_stability: Literal[True] = True
 
 
 @router.post("/testcases/{testcase_id}/versions/{version}/review")
@@ -306,7 +307,8 @@ async def review(
             req.decision,
             reviewer,
             req.note,
-            require_stability=req.require_stability,
+            # 显式固定：即使客户端携带其它值，也不得影响稳定性门禁。
+            require_stability=True,
         )
     except AppError as exc:
         raise _handle(exc) from exc
