@@ -1,0 +1,22 @@
+- navigation:
+  - link "项目":
+    - /url: /projects
+  - link "新建项目":
+    - /url: /projects/new
+- heading "项目列表" [level=1]
+- text: 项目创建成功
+- table:
+  - rowgroup:
+    - row "Key 名称 状态 操作":
+      - columnheader "Key"
+      - columnheader "名称"
+      - columnheader "状态"
+      - columnheader "操作"
+  - rowgroup:
+    - row "TF-186674 Bench 正常2-基准 ACTIVE 详情":
+      - cell "TF-186674"
+      - cell "Bench 正常2-基准"
+      - cell "ACTIVE"
+      - cell "详情":
+        - link "详情":
+          - /url: /projects/TF-186674

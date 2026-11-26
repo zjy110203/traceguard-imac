@@ -79,5 +79,5 @@
 ## 18:55–19:20　WP5 与收尾
 
 - 修复 CI 口径：`llm-smoke-status` 工件 + Release Gate 强制 `PASSED`；
-- 全量回归（含真实 PG）**894 passed**；
+- 全量回归（含真实 PG）**895 passed / 0 skipped**；
 - 长稳结束、执行产物巡检与最终报告（见后文实测章节）。

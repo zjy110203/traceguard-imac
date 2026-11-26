@@ -2,6 +2,7 @@
 
 > 仓库：`traceguard-imac`｜分支：`workbuddy/run016-finalization`
 > 起点：`73e4fe689cdd950334b000cfe45961c9c7adc383`（RUN-015 交付）
+> 交付提交：`844e40f`（已推送 `origin/workbuddy/run016-finalization`）
 > 完成时间：2026-11-26（CST）
 > 原则：只写实际发生的事；未跑的不写 PASS；被阻塞的保持 BLOCKED 并给出依赖。
 
