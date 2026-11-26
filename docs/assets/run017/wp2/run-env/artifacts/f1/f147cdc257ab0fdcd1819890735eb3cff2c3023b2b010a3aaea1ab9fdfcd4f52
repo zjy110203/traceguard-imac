@@ -1,0 +1,12 @@
+- navigation:
+  - link "项目":
+    - /url: /projects
+- heading "项目详情" [level=1]
+- paragraph: "Key: TF-645868"
+- paragraph: "名称: Bench 编辑链路-基准"
+- paragraph: "状态: ACTIVE"
+- heading "编辑名称" [level=2]
+- text: 新名称
+- textbox "新名称": 编辑后名称-基准
+- button "保存"
+- text: 保存失败：simulated update failure (TF-API-003)

@@ -817,3 +817,40 @@ async def regression_status(proposal_id: str, request: Request) -> dict[str, Any
         return get_services().repair.regression_status(proposal_id)
     except AppError as exc:
         raise _http(exc) from exc
+
+
+class RegressionRetryReq(BaseModel):
+    """人工授权重试（RUN-017 WP3）。缺少 confirm 时服务端拒绝。"""
+
+    operator: str
+    confirm: bool = False
+    reason_code: str = ""
+    note: str = ""
+    idempotency_key: str = ""
+
+
+@router.post("/repairs/{proposal_id}/regression-retry")
+async def regression_retry(
+    proposal_id: str,
+    req: RegressionRetryReq,
+    request: Request,
+    wait_timeout_s: float | None = None,
+) -> dict[str, Any]:
+    """为 INCONCLUSIVE 回归创建**新的 Attempt**（不覆盖旧 Run/结论/证据）。"""
+    _doc_or_404(proposal_id, request, kind="repair")
+    operator = trusted_actor(
+        request, req.operator, "repair.regression", resource_type="repair", resource_id=proposal_id
+    )
+    try:
+        return await run_in_threadpool(
+            get_services().repair.regression_retry,
+            proposal_id,
+            actor=operator,
+            confirm=req.confirm,
+            reason_code=req.reason_code,
+            note=req.note,
+            idempotency_key=req.idempotency_key,
+            timeout_s=wait_timeout_s,
+        )
+    except AppError as exc:
+        raise _http(exc) from exc

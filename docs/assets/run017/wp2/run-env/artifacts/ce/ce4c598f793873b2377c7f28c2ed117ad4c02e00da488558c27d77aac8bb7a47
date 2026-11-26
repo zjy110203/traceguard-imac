@@ -1,0 +1,9 @@
+- navigation:
+  - link "项目":
+    - /url: /projects
+- heading "新建项目" [level=1]
+- text: 项目名称
+- textbox "项目名称": TraceGuard 假通过-2026-11-26T12:33:39
+- text: 描述
+- textbox "描述": TraceGuard 自动化创建
+- button "创建"

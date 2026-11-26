@@ -1,0 +1,9 @@
+- navigation:
+  - link "项目":
+    - /url: /projects
+- heading "新建项目" [level=1]
+- text: 项目名称
+- textbox "项目名称": Bench 写入慢-基准
+- text: 描述
+- textbox "描述"
+- button "创建"

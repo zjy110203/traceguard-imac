@@ -1,0 +1,55 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>项目列表 - TeamFlow</title>
+<style>
+  :root{color-scheme:light} body{font-family:system-ui,sans-serif;color:#1f2937;max-width:900px;margin:2rem auto;padding:0 1rem}
+  h1{font-size:1.6rem} .card{border:1px solid #e5e7eb;border-radius:10px;padding:1.2rem;margin:1rem 0}
+  label{display:block;margin:.6rem 0 .2rem;font-weight:600} input,textarea{padding:.5rem;border:1px solid #d1d5db;border-radius:6px;width:100%;box-sizing:border-box}
+  button{background:#3730a3;color:#fff;border:none;border-radius:6px;padding:.6rem 1.2rem;cursor:pointer;margin-top:.8rem}
+  .success{color:#15803d;background:#dcfce7;padding:.6rem;border-radius:6px} .error{color:#b91c1c;background:#fee2e2;padding:.6rem;border-radius:6px}
+  table{border-collapse:collapse;width:100%} th,td{border:1px solid #e5e7eb;padding:.5rem;text-align:left} a{color:#3730a3}
+  nav a{margin-right:1rem}
+</style>
+</head>
+<body>
+    <nav><a href="/projects" data-testid="nav-projects">项目</a><a href="/projects/new" data-testid="nav-new">新建项目</a></nav>
+    <h1 data-testid="page-title">项目列表</h1>
+    <div id="banner" data-testid="banner"></div>
+    <div class="card">
+      <table><thead><tr><th>Key</th><th>名称</th><th>状态</th><th>操作</th></tr></thead>
+      <tbody id="rows" data-testid="project-rows"></tbody></table>
+      <p id="empty" data-testid="empty-state" style="display: block;">暂无项目</p>
+    </div>
+    <script>
+      const uiFault = false;
+      async function load() {
+        const res = await fetch('/api/projects?workspace=default');
+        const data = await res.json();
+        const rows = document.getElementById('rows');
+        rows.innerHTML='';
+        if (data.items.length===0) { document.getElementById('empty').style.display='block'; }
+        else { document.getElementById('empty').style.display='none';
+          data.items.forEach(p => {
+            const tr=document.createElement('tr');
+            tr.setAttribute('data-testid','project-row');
+            tr.innerHTML=`<td>${p.key}</td><td>${p.name}</td><td>${p.status}</td><td><a data-testid="detail-link" href="/projects/${p.key}">详情</a></td>`;
+            rows.appendChild(tr);
+          });
+        }
+      }
+      const banner = document.getElementById('banner');
+      const params = new URLSearchParams(location.search);
+      if (params.get('created')==='1') {
+        if (uiFault) { banner.className='error'; banner.setAttribute('data-testid','banner-error'); banner.textContent='创建失败（UI 表现异常）'; }
+        else if (true) {
+          // TF-UI-003：业务已成功，但提示被误导为失败文案（testid 也变为 banner-error）
+          banner.className='error'; banner.setAttribute('data-testid','banner-error'); banner.textContent='创建失败（误导信息）';
+        }
+        else if (false) {
+          // TF-UI-004：成功提示延迟 3000ms 渲染（提示晚到）
+          setTimeout(() => { banner.className='success'; banner.setAttribute('data-testid','banner-success'); banner.textContent='项目创建成功'; }, 3000);
+        }
+        else { banner.className='success'; banner.setAttribute('data-testid','banner-success'); banner.textContent='项目创建成功'; }
+      }
+      load();
+    </script>
+    </body></html>

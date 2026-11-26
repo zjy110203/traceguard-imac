@@ -57,6 +57,35 @@ REGRESSION_STATUSES = frozenset(
 REGRESSION_TERMINAL = frozenset({"PASSED", "FAILED", "INCONCLUSIVE", "BLOCKED"})
 REGRESSION_INFLIGHT = frozenset({"QUEUED", "RUNNING"})
 
+#: RUN-017 WP3：INCONCLUSIVE 的人工授权重试（方案 A：新 Attempt，不改写历史）。
+#: 每个 (proposal, promoted_version) 最多 2 次 Attempt（首次 + 1 次重试）。
+MAX_REGRESSION_ATTEMPTS = 2
+
+#: 决策稿 §3 的"可重跑"原因码（其余一律拒绝，含 Oracle 缺失/FAILED/STALE/UNKNOWN）。
+RETRYABLE_REGRESSION_REASONS = frozenset(
+    {"EVIDENCE_MISSING", "EXECUTION_TIMEOUT", "RUN_ABORTED", "ENVIRONMENT_DRIFT"}
+)
+
+#: 文档里的 failure_reason → 对外原因码。缺失/未知一律映射为 UNKNOWN（不可重试）。
+_REGRESSION_REASON_CODES: dict[str, str] = {
+    "REGRESSION_EVIDENCE_MISSING": "EVIDENCE_MISSING",
+    "REGRESSION_RUN_TIMED_OUT": "EXECUTION_TIMEOUT",
+    "REGRESSION_RUN_FAILED": "RUN_ABORTED",
+    "REGRESSION_RUN_CANCELLED": "RUN_ABORTED",
+    "REGRESSION_ENVIRONMENT_DRIFT": "ENVIRONMENT_DRIFT",
+    "REGRESSION_ORACLE_UNAVAILABLE": "REGRESSION_ORACLE_UNAVAILABLE",
+    "REGRESSION_ASSERTION_FAILED": "FAILED",
+    "REGRESSION_VERDICT_NOT_EVALUATED": "UNKNOWN",
+}
+
+
+def regression_reason_code(failure_reason: str | None) -> str:
+    """把内部失败原因归一成决策稿里的原因码（不可重试的统一落到 UNKNOWN）。"""
+    raw = str(failure_reason or "").strip()
+    if not raw:
+        return "UNKNOWN"
+    return _REGRESSION_REASON_CODES.get(raw, "UNKNOWN")
+
 
 class RepairService:
     #: 沙箱 Run 的等待上限（秒）：必须由独立 Worker 真实执行完，超时即失败而非伪造结论
@@ -1075,6 +1104,21 @@ class RepairService:
         fresh["regression_started_at"] = utc_now_iso()
         fresh["regression_finished_at"] = None
         fresh["regression_stale"] = False
+        # RUN-017 WP3：首次 Attempt 也进台账（重试时在其后追加，历史永不覆盖）
+        fresh["regression_attempt_no"] = 1
+        fresh["regression_parent_run_id"] = None
+        fresh["regression_attempts"] = [
+            {
+                "attempt": 1,
+                "run_id": run_id,
+                "parent_run_id": None,
+                "status": "QUEUED",
+                "reason_code": "",
+                "authorized_by": "",
+                "authorized_at": fresh["regression_started_at"],
+                "note": "首次验证（无需授权）",
+            }
+        ]
         try:
             saved = self._save(fresh, expected_version=version)
         except AppError as exc:
@@ -1105,6 +1149,22 @@ class RepairService:
         elif regression_version and approved_version and regression_version != approved_version:
             stale = True
             stale_reason = f"APPROVED_VERSION_MOVED:{regression_version}->{approved_version}"
+
+        # RUN-017 WP3：重试资格由服务端计算（前端只按 regression_retry_allowed 渲染入口）。
+        attempt_no = int(doc.get("regression_attempt_no") or 1)
+        reason_code = regression_reason_code(doc.get("regression_failure_reason"))
+        retry_block = ""
+        if doc.get("regression_status") != "INCONCLUSIVE":
+            retry_block = "NOT_INCONCLUSIVE"
+        elif reason_code not in RETRYABLE_REGRESSION_REASONS:
+            retry_block = f"REASON_NOT_RETRYABLE:{reason_code}"
+        elif attempt_no >= MAX_REGRESSION_ATTEMPTS:
+            retry_block = "ATTEMPT_LIMIT_REACHED"
+        elif stale:
+            retry_block = "STALE"
+        elif approved_version and approved_version != int(doc.get("promoted_version") or 0):
+            retry_block = "VERSION_DRIFT"
+        retry_allowed = not retry_block
         return {
             "proposal_id": proposal_id,
             "regression_status": doc.get("regression_status") or "NOT_STARTED",
@@ -1119,10 +1179,20 @@ class RepairService:
             "regression_stale": stale,
             "regression_stale_reason": stale_reason,
             "regression_approved_version": approved_version or None,
-            # NEEDS_DECISION：Oracle 缺失/证据缺失后的 INCONCLUSIVE 是否允许重新执行，
-            # 涉及状态机与人工授权，本轮不擅自改变；前端不得暗示可重试。
-            "regression_retry_allowed": False,
-            "regression_retry_decision": "NEEDS_DECISION",
+            # RUN-017 WP3：人工授权的新 Attempt（方案 A）
+            "regression_attempt_no": attempt_no,
+            "regression_max_attempts": MAX_REGRESSION_ATTEMPTS,
+            "regression_attempts": list(doc.get("regression_attempts") or []),
+            "regression_parent_run_id": doc.get("regression_parent_run_id"),
+            "regression_retry_allowed": retry_allowed,
+            "regression_retry_reason_code": reason_code,
+            "regression_retry_decision": (
+                "ALLOWED_WITH_AUTHORIZATION" if retry_allowed else "NOT_ALLOWED"
+            ),
+            "regression_retry_block_reason": retry_block,
+            "regression_retry_authorizations": list(
+                doc.get("regression_retry_authorizations") or []
+            ),
             "regression_history": list(doc.get("regression_history") or []),
             "run": (
                 {
@@ -1138,6 +1208,183 @@ class RepairService:
                 else None
             ),
         }
+
+    def regression_retry(
+        self,
+        proposal_id: str,
+        *,
+        actor: str,
+        confirm: bool,
+        reason_code: str,
+        note: str = "",
+        idempotency_key: str = "",
+        timeout_s: float | None = None,
+    ) -> dict[str, Any]:
+        """人工授权的新 Attempt（RUN-017 WP3 / 决策稿方案 A）。
+
+        安全约束（任一不满足即拒绝，不创建任何 Run）：
+
+        - 主体必须是**人类**（`require_human_actor`），角色由路由层
+          `repair.regression`（qa-lead / platform-admin）约束；
+        - 必须显式 `confirm=true`；
+        - 只有 `INCONCLUSIVE` 可重试，且原因码必须在可重跑集合内；
+        - 每个 (proposal, promoted_version) 最多 2 次 Attempt；
+        - 正式批准版本必须仍等于 promoted_version（否则要求重新晋升）；
+        - Oracle 必须仍然可用（缺 Oracle 属配置问题，重跑同样缺，直接拒绝）；
+        - 幂等键绑定 proposal + version + attempt：并发/重复点击只会有一个新 Run；
+        - 旧 Run / 旧 Verdict / 旧 Evidence / 旧 history 全部保留，不原地重置。
+        """
+        actor = require_human_actor(actor, field="operator")
+        if not confirm:
+            raise AppError(
+                ErrorCode.PRECONDITION_FAILED,
+                "REGRESSION_RETRY_REQUIRES_CONFIRM: 重新验证必须显式确认（confirm=true）",
+            )
+        doc = self.get(proposal_id)
+        if doc["status"] != "PROMOTED":
+            raise AppError(
+                ErrorCode.PRECONDITION_FAILED,
+                f"REGRESSION_RETRY_REQUIRES_PROMOTED: 当前状态 {doc['status']}",
+            )
+        current = str(doc.get("regression_status") or "NOT_STARTED")
+        attempt_no = int(doc.get("regression_attempt_no") or 1)
+        # 幂等：同一 idempotency_key 的重复请求（含新 Attempt 已完成后再次提交）
+        # 直接返回当前文档，不报错、不重复创建。
+        if idempotency_key:
+            prior = next(
+                (
+                    a
+                    for a in (doc.get("regression_retry_authorizations") or [])
+                    if a.get("idempotency_key") == idempotency_key
+                ),
+                None,
+            )
+            if prior is not None:
+                return doc
+        if current in REGRESSION_INFLIGHT:
+            # 幂等：重试已在途，直接返回当前文档（不重复创建）
+            return doc
+        if current != "INCONCLUSIVE":
+            raise AppError(
+                ErrorCode.CONFLICT,
+                f"REGRESSION_RETRY_REQUIRES_INCONCLUSIVE: 当前回归状态 {current}",
+            )
+        current_reason = regression_reason_code(doc.get("regression_failure_reason"))
+        if current_reason not in RETRYABLE_REGRESSION_REASONS:
+            raise AppError(
+                ErrorCode.PRECONDITION_FAILED,
+                f"REGRESSION_RETRY_REASON_NOT_ALLOWED: {current_reason} 不允许重试",
+            )
+        if reason_code and reason_code != current_reason:
+            raise AppError(
+                ErrorCode.VALIDATION_ERROR,
+                f"REGRESSION_RETRY_REASON_MISMATCH: 服务端判定 {current_reason}，"
+                f"请求填写 {reason_code}",
+            )
+        if attempt_no >= MAX_REGRESSION_ATTEMPTS:
+            raise AppError(
+                ErrorCode.PRECONDITION_FAILED,
+                f"REGRESSION_RETRY_LIMIT_REACHED: 最多 {MAX_REGRESSION_ATTEMPTS} 次 Attempt",
+            )
+        promoted = int(doc.get("promoted_version") or 0)
+        approved = int(self.rt.catalog.approved_version_number(doc["testcase_id"]) or 0)
+        if promoted <= 0 or approved != promoted:
+            raise AppError(
+                ErrorCode.PRECONDITION_FAILED,
+                f"BLOCKED_VERSION_DRIFT: 正式版本 {approved or 'N/A'} != 晋升版本 {promoted}，"
+                "必须先重新晋升再回归",
+            )
+        if bool(doc.get("regression_stale")):
+            raise AppError(
+                ErrorCode.PRECONDITION_FAILED,
+                "REGRESSION_RETRY_STALE: 旧结论已标记 STALE，不允许重试",
+            )
+        version_ref = f"{doc['testcase_id']}@{promoted}"
+        version_doc = self.rt.catalog.get_version(doc["testcase_id"], promoted)
+        if not version_doc:
+            raise AppError(
+                ErrorCode.PRECONDITION_FAILED,
+                f"PROMOTED_VERSION_NOT_FOUND: {version_ref}",
+            )
+        oracle_refs, oracle_problems = self._regression_oracles(version_doc)
+        if oracle_problems:
+            raise AppError(
+                ErrorCode.PRECONDITION_FAILED,
+                "REGRESSION_ORACLE_UNAVAILABLE: " + "; ".join(oracle_problems),
+            )
+
+        new_attempt = attempt_no + 1
+        parent_run_id = str(doc.get("regression_run_id") or "")
+        suffix = f":attempt{new_attempt}" + (f":{idempotency_key}" if idempotency_key else "")
+        task_key = f"repair-regression:{proposal_id}:v{promoted}{suffix}"
+        task = self.rt.tasks.create_task(
+            doc["testcase_id"],
+            task_key,
+            testcase_version_id=version_ref,
+            mode="playwright",
+            workspace_id=doc["workspace_id"],
+        )
+        claim = f"repair-regression:{proposal_id}:v{promoted}:attempt{new_attempt}"
+        claimed = self.rt.tasks.create_run_once(
+            task["task_id"], version_ref, claim=claim, proposal_id=proposal_id
+        )
+        run_id = str(claimed["run_id"])
+
+        fresh, version = self._fresh_doc(proposal_id)
+        if int(fresh.get("regression_attempt_no") or 1) != attempt_no:
+            # 另一个并发请求已经推进到新 Attempt：回到它的 Run，不覆盖状态
+            return fresh
+        authorized_at = utc_now_iso()
+        attempts = list(fresh.get("regression_attempts") or [])
+        attempts.append(
+            {
+                "attempt": new_attempt,
+                "run_id": run_id,
+                "parent_run_id": parent_run_id,
+                "status": "QUEUED",
+                "reason_code": current_reason,
+                "authorized_by": actor,
+                "authorized_at": authorized_at,
+                "note": note[:500],
+            }
+        )
+        fresh["regression_attempt_no"] = new_attempt
+        fresh["regression_parent_run_id"] = parent_run_id
+        fresh["regression_attempts"] = attempts
+        fresh["regression_run_id"] = run_id
+        fresh["regression_task_id"] = task["task_id"]
+        fresh["regression_testcase_version_id"] = version_ref
+        fresh["regression_status"] = "QUEUED"
+        fresh["regression_verdict"] = ""
+        fresh["regression_failure_reason"] = ""
+        fresh["regression_evidence_ids"] = []
+        fresh["regression_started_at"] = authorized_at
+        fresh["regression_finished_at"] = None
+        fresh["regression_stale"] = False
+        fresh["regression_oracle_refs"] = oracle_refs
+        fresh["regression_retry_authorizations"] = list(
+            fresh.get("regression_retry_authorizations") or []
+        ) + [
+            {
+                "actor": actor,
+                "at": authorized_at,
+                "reason_code": current_reason,
+                "note": note[:500],
+                "attempt": new_attempt,
+                "idempotency_key": idempotency_key,
+                "from_run_id": parent_run_id,
+                "to_run_id": run_id,
+                "previous_status": current,
+                "previous_failure_reason": doc.get("regression_failure_reason"),
+            }
+        ]
+        try:
+            saved = self._save(fresh, expected_version=version)
+        except AppError as exc:
+            if exc.code != ErrorCode.CONFLICT:
+                raise
+            saved = self.get(proposal_id)
+        return self._settle_regression(saved, self._wait_regression(run_id, timeout_s))
 
     def _regression_oracles(
         self, version_doc: dict[str, Any]
@@ -1263,6 +1510,26 @@ class RepairService:
             }
         )
         doc["regression_history"] = history
+        # RUN-017 WP3：Attempt 台账与 history 同步（同一 Run 只记录一次终态）
+        attempts = list(doc.get("regression_attempts") or [])
+        attempt_item = next((a for a in attempts if a.get("run_id") == run.get("run_id")), None)
+        record = {
+            "attempt": int(doc.get("regression_attempt_no") or 1),
+            "run_id": run.get("run_id"),
+            "parent_run_id": doc.get("regression_parent_run_id"),
+            "status": new_status,
+            "verdict": verdict,
+            "execution_status": status,
+            "reason_code": regression_reason_code(reason),
+            "failure_reason": reason,
+            "finished_at": doc["regression_finished_at"],
+            "evidence_count": len(evidence),
+        }
+        if attempt_item is None:
+            attempts.append(record)
+        elif attempt_item.get("status") in REGRESSION_INFLIGHT:
+            attempt_item.update(record)
+        doc["regression_attempts"] = attempts
         return self._save_cas(doc)
 
     def rollback(

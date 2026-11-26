@@ -75,6 +75,10 @@ def action_for_request(method: str, path: str) -> str | None:
             # RUN-014 WP1：回归验证会创建真实 Run 并改变修复的验证结论，
             # 与晋升同级的正式资产动作，不能落到 repair.submit（qa-engineer）。
             return "repair.regression"
+        if path.endswith("/regression-retry"):
+            # RUN-017 WP3：人工授权重试同样属于 repair.regression（qa-lead / platform-admin），
+            # 且服务层还会强制 require_human_actor + confirm=true。
+            return "repair.regression"
         if path.endswith("/approve") or path.endswith("/reject"):
             return "repair.approve"
         return "repair.submit"

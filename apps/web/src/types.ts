@@ -354,6 +354,27 @@ export interface Repair {
   regression_oracle_refs?: { assertion_id?: string; oracle_id: string; oracle_version?: number | null; status?: string }[]
   regression_stale?: boolean
   regression_history?: Record<string, any>[]
+  // RUN-017 WP3：INCONCLUSIVE 的人工授权重试（新 Attempt，不改写历史）
+  regression_attempt_no?: number
+  regression_max_attempts?: number
+  regression_attempts?: {
+    attempt: number
+    run_id: string
+    parent_run_id?: string | null
+    status: string
+    verdict?: string
+    reason_code?: string
+    authorized_by?: string
+    authorized_at?: string
+    note?: string
+    evidence_count?: number
+  }[]
+  regression_parent_run_id?: string | null
+  regression_retry_allowed?: boolean
+  regression_retry_reason_code?: string
+  regression_retry_decision?: string
+  regression_retry_block_reason?: string
+  regression_retry_authorizations?: Record<string, any>[]
 }
 
 export interface ProbeExecution {

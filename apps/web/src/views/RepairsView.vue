@@ -219,6 +219,36 @@ const regressionRunning = computed(() =>
 const regressionTerminal = computed(() =>
   ['PASSED', 'FAILED', 'INCONCLUSIVE', 'BLOCKED'].includes(selected.value?.regression_status || ''),
 )
+// RUN-017 WP3：只有服务端返回 regression_retry_allowed=true 时才显示"重新验证"入口。
+// 前端不自行推断原因码/次数/版本是否满足条件。
+const canRetryRegression = computed(
+  () => selected.value?.regression_retry_allowed === true,
+)
+const retryNote = ref('')
+const regressionAttempts = computed(() => selected.value?.regression_attempts || [])
+const remainingAttempts = computed(() => {
+  const r = selected.value
+  if (!r) return 0
+  return Math.max(0, (r.regression_max_attempts || 2) - (r.regression_attempt_no || 1))
+})
+
+/** 人工授权的新 Attempt：二次确认 + 原因码（服务端判定）+ 说明。 */
+function askRetryRegression() {
+  const r = selected.value
+  if (!r || !canRetryRegression.value) return
+  ask(
+    'regression-retry',
+    {
+      operator: reviewer.value,
+      confirm: true,
+      reason_code: r.regression_retry_reason_code || '',
+      note: retryNote.value,
+      idempotency_key: `retry-${r.proposal_id}-${r.regression_attempt_no || 1}`,
+    },
+    '重新验证（新 Attempt）',
+    true,
+  )
+}
 
 /** 回归持续时间（秒）：只有真实时间戳才算，不用"已进行多久"冒充结果。 */
 const regressionDuration = computed(() => {
@@ -476,6 +506,64 @@ onMounted(load)
             <p v-else-if="selected.status === 'PROMOTED' && (selected.regression_status || 'NOT_STARTED') === 'NOT_STARTED'" class="small muted">
               晋升已生效，但回归尚未执行：不得视为已验证。
             </p>
+
+            <div class="hr" />
+            <div class="kv">
+              <dt>Attempt</dt>
+              <dd class="small">
+                第 {{ selected.regression_attempt_no || 1 }} 次 / 最多 {{ selected.regression_max_attempts || 2 }} 次
+                <span v-if="remainingAttempts === 0" class="muted">（已用完）</span>
+              </dd>
+              <dt>重试资格</dt>
+              <dd class="small">
+                <span v-if="canRetryRegression" class="pass-text">允许人工授权重试（{{ selected.regression_retry_reason_code }}）</span>
+                <span v-else-if="selected.regression_status === 'INCONCLUSIVE'" class="muted">
+                  不可重试：{{ selected.regression_retry_block_reason || '未满足条件' }}
+                </span>
+                <span v-else class="muted">—</span>
+              </dd>
+              <dt>血缘</dt>
+              <dd class="small mono">
+                <span v-if="selected.regression_parent_run_id">
+                  上一 Attempt：<router-link :to="`/runs/${selected.regression_parent_run_id}`">{{ selected.regression_parent_run_id }}</router-link>
+                </span>
+                <span v-else class="muted">首次验证（无父 Run）</span>
+              </dd>
+            </div>
+
+            <div v-if="regressionAttempts.length">
+              <div class="small muted" style="margin: 8px 0 4px">Attempt 历史（旧结果只读，不被覆盖）</div>
+              <table class="table">
+                <thead>
+                  <tr><th>#</th><th>Run</th><th>状态</th><th>原因码</th><th>授权人</th><th>完成时间</th></tr>
+                </thead>
+                <tbody>
+                  <tr v-for="a in regressionAttempts" :key="a.run_id">
+                    <td>{{ a.attempt }}</td>
+                    <td class="mono small"><router-link :to="`/runs/${a.run_id}`">{{ a.run_id }}</router-link></td>
+                    <td><StatusBadge :value="a.status" /></td>
+                    <td class="small">{{ a.reason_code || '—' }}</td>
+                    <td class="small">{{ a.authorized_by || '—' }}</td>
+                    <td class="small">{{ a.authorized_at ? fmtTime(a.authorized_at) : '—' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div v-if="canRetryRegression" class="hr" />
+            <div v-if="canRetryRegression">
+              <label>重试说明（写入授权审计）</label>
+              <input v-model="retryNote" placeholder="例如：采集失败导致证据缺失，环境已自检恢复" />
+              <div class="flex wrap" style="margin-top: 8px">
+                <button class="sm primary" :disabled="busy === 'regression-retry'" @click="askRetryRegression">
+                  重新验证（人工授权 · 新 Attempt）
+                </button>
+                <span class="small muted" style="align-self: center">
+                  原因码 {{ selected.regression_retry_reason_code }} 由服务端判定；旧 Run / 旧结论永远保留。
+                </span>
+              </div>
+            </div>
+
             <div v-if="(selected.regression_history || []).length" class="hr" />
             <pre v-if="(selected.regression_history || []).length" class="json" style="max-height: 180px">{{ JSON.stringify(selected.regression_history, null, 2) }}</pre>
           </div>
