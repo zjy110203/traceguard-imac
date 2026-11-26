@@ -58,7 +58,11 @@ def _payload(tc: str) -> dict:
         "workspace_id": "default",
         "steps": [
             {"step_id": "s1", "action": "navigate", "value": "/projects"},
-            {"step_id": "s2", "action": "click", "target": {"strategy": "test_id", "value": "nav-a"}},
+            {
+                "step_id": "s2",
+                "action": "click",
+                "target": {"strategy": "test_id", "value": "nav-a"},
+            },
         ],
         "assertions": [
             {
@@ -145,9 +149,7 @@ def test_recovery_requires_explicit_confirmation_and_human(env) -> None:  # type
     proposal = _approved_proposal(rt, tc, "confirm")
     _force_failed(rt, proposal)
     with pytest.raises(AppError) as exc:
-        svc.promote_recover(
-            proposal, idempotency_key="k1", confirm=False, actor="human:lead"
-        )
+        svc.promote_recover(proposal, idempotency_key="k1", confirm=False, actor="human:lead")
     assert "REQUIRES_HUMAN_CONFIRMATION" in str(exc.value)
     with pytest.raises(AppError) as exc2:
         svc.promote_recover(proposal, idempotency_key="k2", confirm=True, actor="agent:bot")

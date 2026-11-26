@@ -50,7 +50,9 @@ def test_v2_confirmed_by_independent_probe_is_false_pass() -> None:
 
 def test_v2_activation_only_is_unverified_not_false_pass() -> None:
     """只有激活、没有效果证据：不得判 False Pass（RUN-016 核心要求）。"""
-    sample = _sample(**V2, fault_effect_status="UNKNOWN", fault_effect_source="NO_INDEPENDENT_PROBE")
+    sample = _sample(
+        **V2, fault_effect_status="UNKNOWN", fault_effect_source="NO_INDEPENDENT_PROBE"
+    )
     out = classify_record(sample)
     assert out["record_class"] == RecordClass.FALSE_PASS_UNVERIFIED.value
     assert out["fault_effect_status"] == "UNKNOWN"

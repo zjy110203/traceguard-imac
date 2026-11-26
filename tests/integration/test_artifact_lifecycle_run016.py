@@ -286,7 +286,12 @@ def test_scan_protects_artifact_referenced_only_by_run_report(env) -> None:
         s.execute(
             update(RunRow)
             .where(RunRow.run_id == env["run_id"])
-            .values(report_json={"run_id": env["run_id"], "trace_artifact": {"artifact_id": meta["artifact_id"]}})
+            .values(
+                report_json={
+                    "run_id": env["run_id"],
+                    "trace_artifact": {"artifact_id": meta["artifact_id"]},
+                }
+            )
         )
     import os
 

@@ -104,7 +104,10 @@ def rt(pg_db, monkeypatch):  # type: ignore[no-untyped-def]
 def _run(rt, key: str, worker: str = "worker-A", ttl: float = 60.0):  # type: ignore[no-untyped-def]
     tc = rt._r16_tc  # type: ignore[attr-defined]
     task = rt.tasks.create_task(
-        tc, f"r16-{key}-{uuid.uuid4().hex[:6]}", testcase_version_id=f"{tc}@1", workspace_id="default"
+        tc,
+        f"r16-{key}-{uuid.uuid4().hex[:6]}",
+        testcase_version_id=f"{tc}@1",
+        workspace_id="default",
     )
     run_id = rt.tasks.create_run(task["task_id"], f"{tc}@1")["run_id"]
     lease = rt.tasks.acquire_lease(run_id, worker, ttl_seconds=ttl)
@@ -115,7 +118,9 @@ def _step_count(rt, run_id: str) -> int:
     from traceguard_persistence.models import StepRow
 
     with rt.db.session() as s:
-        return int(s.scalar(select(func.count()).select_from(StepRow).where(StepRow.run_id == run_id)))
+        return int(
+            s.scalar(select(func.count()).select_from(StepRow).where(StepRow.run_id == run_id))
+        )
 
 
 def test_partial_transaction_rolls_back_completely(rt) -> None:  # type: ignore[no-untyped-def]
@@ -124,9 +129,7 @@ def test_partial_transaction_rolls_back_completely(rt) -> None:  # type: ignore[
     with pytest.raises(RuntimeError):
         with rt.tasks.fenced_session(run_id, "worker-A", token) as s:
             # 在同一事务内写 step（不再开新会话：同一行锁重入会自锁）
-            rt.tasks._record_step_in(
-                s, run_id, "s-partial", 0, "PASSED", None, "navigate", 0, None
-            )
+            rt.tasks._record_step_in(s, run_id, "s-partial", 0, "PASSED", None, "navigate", 0, None)
             raise RuntimeError("simulated crash mid-run")
     # 事务回滚：守卫与 step 一起消失，不产生"守卫成功但 step 已写"的部分成功
     assert _step_count(rt, run_id) == 0

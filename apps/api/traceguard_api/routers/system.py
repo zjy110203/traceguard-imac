@@ -311,7 +311,9 @@ async def config(request: Request) -> dict[str, Any]:
     rt = get_services().rt
     s = rt.settings
     principal = principal_of(request)
-    is_admin = ("platform-admin" in principal.roles) if principal is not None else not s.auth_enabled
+    is_admin = (
+        ("platform-admin" in principal.roles) if principal is not None else not s.auth_enabled
+    )
 
     payload: dict[str, Any] = {
         "environment": s.environment,
