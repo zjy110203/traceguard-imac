@@ -113,6 +113,9 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/testcases/tcase_tf_create_normal/ex
 | POST | `/repairs/{id}/approve` \| `/reject` | 人工审批（agent 被拒） |
 | POST | `/repairs/{id}/promote` | CAS 晋升 + 幂等键 |
 | POST | `/repairs/{id}/rollback` | 回滚（生成恢复版本，不删历史） |
+| POST | `/repairs/{id}/regression-run` | 晋升后的**真实回归验证**（独立 Run；权限 `repair.regression`） |
+| GET | `/repairs/{id}/regression` | 回归状态（**含服务端计算的重试资格**：`regression_retry_allowed` / `regression_retry_reason_code` / `regression_attempts` / `regression_retry_authorizations`） |
+| POST | `/repairs/{id}/regression-retry` | **RUN-017**：INCONCLUSIVE 的人工授权新 Attempt。请求体 `{operator, confirm:true, reason_code, note, idempotency_key}`；上限 2 次 Attempt、旧结论不可变、权限 `repair.regression`（qa-lead / platform-admin）、必须人类主体 |
 
 ## 8. Benchmark
 

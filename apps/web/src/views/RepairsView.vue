@@ -93,6 +93,14 @@ async function selectById(proposalId: string) {
   } catch {
     selected.value = items.value.find((x) => x.proposal_id === proposalId) ?? null
   }
+  // RUN-017 WP3：重试资格/次数/血缘是服务端**计算字段**，只出现在 /regression 状态接口里。
+  // 不合并的话前端永远看不到 regression_retry_allowed=true，入口不会出现。
+  if (selected.value?.status === 'PROMOTED') {
+    try {
+      const rs = await api.get<Record<string, any>>(`/repairs/${proposalId}/regression`)
+      selected.value = { ...selected.value, ...rs } as Repair
+    } catch { /* 状态接口不可用时只展示文档字段，不伪造可重试 */ }
+  }
   baseDoc.value = null
   if (selected.value) {
     try {

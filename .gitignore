@@ -86,3 +86,4 @@ docs/assets/run017/**/logs/
 docs/assets/run017/**/_runtime/
 docs/assets/run017/**/worker-*
 docs/assets/run017/**/*.log
+docs/assets/run017/wp4/gc-*/

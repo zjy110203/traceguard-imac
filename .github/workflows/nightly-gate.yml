@@ -81,9 +81,6 @@ jobs:
             tests/integration/test_regression_retry_run017.py \
             tests/integration/test_fault_effect_teamflow_run017.py \
             tests/integration/test_browser_effect_run017.py
-      - name: 真实浏览器全链路业务验收（RUN-017 WP6）
-        # 失败必须真实失败：脚本退出码非 0 即阻断。
-        run: .venv/bin/python scripts/business_loop_ui_acceptance_run017.py
       - name: Worker / event / inbox concurrency (real processes)
         run: |
           .venv/bin/pytest -q \
@@ -102,6 +99,44 @@ jobs:
             .pytest-tmp
             logs
           retention-days: 7
+
+  ui-acceptance:
+    # RUN-017 WP6：真实浏览器业务全链路验收（独立 Worker + 真实 Chromium + 真实 TeamFlow）。
+    # 独立成 job：这一步最慢（分钟级），不能拖住 backend-full 的 45 分钟上限；
+    # 失败必须真实失败（脚本退出码非 0 即阻断），不允许用 `|| true` 掩盖。
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -r requirements-dev.txt
+      - name: Install Playwright chromium (must succeed)
+        run: |
+          .venv/bin/python -m playwright install --with-deps chromium
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Build frontend
+        working-directory: apps/web
+        run: |
+          npm ci
+          npm run build
+          test -f dist/index.html
+      - name: 真实 UI 全链路业务验收
+        run: .venv/bin/python scripts/business_loop_ui_acceptance_run017.py
+      - name: Upload UI evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-acceptance-evidence
+          path: docs/assets/run017/wp5/ui
+          retention-days: 14
+          if-no-files-found: warn
 
   postgres:
     # WP4-01：PostgreSQL 16 Service Container 上的扩展验证（不只是"能连上"）。
@@ -318,7 +353,7 @@ jobs:
 
   gate-verdict:
     # 汇总门禁结论：任一关键 Job 失败即失败；LLM 缺凭据显式标 BLOCKED（不算通过）。
-    needs: [backend-full, postgres, security, llm-smoke]
+    needs: [backend-full, postgres, security, llm-smoke, ui-acceptance]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -341,6 +376,7 @@ jobs:
             echo "| postgres (PG16) | ${{ needs.postgres.result }} | PG16 专项 |"
             echo "| security | ${{ needs.security.result }} | 供应链/密钥扫描 |"
             echo "| llm-smoke | ${{ needs.llm-smoke.result }} | $llm_status |"
+            echo "| ui-acceptance | ${{ needs.ui-acceptance.result }} | 真实浏览器业务全链路 |"
             echo ""
             echo "LLM 证据口径：$llm_text"
             if [ "$llm_status" != "PASSED" ]; then
@@ -349,7 +385,7 @@ jobs:
             fi
           } >> "$GITHUB_STEP_SUMMARY"
           failed=0
-          for r in "${{ needs.backend-full.result }}" "${{ needs.postgres.result }}" "${{ needs.security.result }}"; do
+          for r in "${{ needs.backend-full.result }}" "${{ needs.postgres.result }}" "${{ needs.security.result }}" "${{ needs.ui-acceptance.result }}"; do
             if [ "$r" != "success" ]; then failed=1; fi
           done
           if [ "${{ needs.llm-smoke.result }}" != "success" ]; then

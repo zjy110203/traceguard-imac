@@ -1,0 +1,79 @@
+{
+  "run": "RUN-017 WP4.2",
+  "db_url": "sqlite (per-case temp)",
+  "cases": [
+    {
+      "case": "evidence=10000",
+      "seeded": {
+        "evidence": 10000,
+        "artifacts": 500,
+        "runs": 500,
+        "seed_seconds": 3.86,
+        "rss_mb_after_seed": 78.1
+      },
+      "scan_seconds": 0.058,
+      "scan_queries": 51,
+      "rss_before_scan_mb": 78.1,
+      "rss_after_scan_mb": 78.2,
+      "rss_delta_mb": 0.1,
+      "concurrent_write_ms": 3.5,
+      "scanned_rows": 500,
+      "scanned_files": 500,
+      "referenced_artifacts": 500,
+      "orphan_rows": 0,
+      "orphan_files": 0,
+      "protected_fresh": 0,
+      "referenced_but_orphaned": 0,
+      "consistent": true
+    },
+    {
+      "case": "evidence=50000",
+      "seeded": {
+        "evidence": 50000,
+        "artifacts": 500,
+        "runs": 500,
+        "seed_seconds": 4.66,
+        "rss_mb_after_seed": 81.2
+      },
+      "scan_seconds": 0.198,
+      "scan_queries": 212,
+      "rss_before_scan_mb": 81.2,
+      "rss_after_scan_mb": 81.3,
+      "rss_delta_mb": 0.1,
+      "concurrent_write_ms": 6.0,
+      "scanned_rows": 500,
+      "scanned_files": 500,
+      "referenced_artifacts": 500,
+      "orphan_rows": 0,
+      "orphan_files": 0,
+      "protected_fresh": 0,
+      "referenced_but_orphaned": 0,
+      "consistent": true
+    },
+    {
+      "case": "evidence=100000",
+      "seeded": {
+        "evidence": 100000,
+        "artifacts": 500,
+        "runs": 500,
+        "seed_seconds": 5.87,
+        "rss_mb_after_seed": 83.2
+      },
+      "scan_seconds": 0.383,
+      "scan_queries": 412,
+      "rss_before_scan_mb": 83.2,
+      "rss_after_scan_mb": 83.5,
+      "rss_delta_mb": 0.3,
+      "concurrent_write_ms": 6.5,
+      "scanned_rows": 500,
+      "scanned_files": 500,
+      "referenced_artifacts": 500,
+      "orphan_rows": 0,
+      "orphan_files": 0,
+      "protected_fresh": 0,
+      "referenced_but_orphaned": 0,
+      "consistent": true
+    }
+  ],
+  "note": "scan() 只读；referenced_but_orphaned 必须为 0（有引用的产物不得进入孤儿列表）"
+}

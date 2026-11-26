@@ -285,20 +285,41 @@ PROBE_JS = """
 () => {
   const doc = document.documentElement;
   const vw = window.innerWidth;
+  // 表格放在 overflow-x:auto 容器里是**可接受的响应式做法**（用户可横向滚动），
+  // 因此只有"越界且不在可滚动容器内"的元素才算真正的控件越界。
+  const inScrollable = (el) => {
+    let p = el.parentElement;
+    while (p && p !== document.body) {
+      const st = getComputedStyle(p);
+      if ((st.overflowX === 'auto' || st.overflowX === 'scroll') && p.scrollWidth > p.clientWidth) {
+        return true;
+      }
+      p = p.parentElement;
+    }
+    return false;
+  };
   const offenders = [];
   for (const el of document.querySelectorAll('body *')) {
     const r = el.getBoundingClientRect();
     if (r.width <= 0 || r.height <= 0) continue;
-    const style = getComputedStyle(el);
-    if (style.visibility === 'hidden' || style.display === 'none') continue;
-    if (r.right > vw + 2) {
-      offenders.push({
-        tag: el.tagName.toLowerCase(),
-        cls: String(el.className || '').slice(0, 80),
-        right: Math.round(r.right),
-      });
-      if (offenders.length >= 5) break;
-    }
+    const st = getComputedStyle(el);
+    if (st.visibility === 'hidden' || st.display === 'none') continue;
+    if (r.right <= vw + 2) continue;
+    if (inScrollable(el)) continue;
+    // SVG 内部图元（如 rect）由 SVG 自身裁剪，几何超出不代表溢出；
+    // 真正要看的是 <svg> 元素本身的右边界。
+    const svgHost = el.closest ? el.closest('svg') : null;
+    const host = svgHost || el;
+    const hr = host.getBoundingClientRect();
+    if (hr.right <= vw + 2) continue;
+    offenders.push({
+      tag: el.tagName.toLowerCase(),
+      cls: String(el.className || '').slice(0, 80),
+      right: Math.round(r.right),
+      host_tag: host.tagName.toLowerCase(),
+      host_right: Math.round(hr.right),
+    });
+    if (offenders.length >= 5) break;
   }
   return {
     scroll_width: doc.scrollWidth,
@@ -382,7 +403,7 @@ def main() -> int:
                         console_errors.clear()
                         try:
                             page.goto(env.api_base + path, wait_until="domcontentloaded")
-                            page.wait_for_timeout(700)
+                            page.wait_for_timeout(1500)
                             probe = page.evaluate(PROBE_JS)
                             page.screenshot(path=str(shot_dir / f"{name}.png"), full_page=True)
                             ok = probe["overflow_px"] <= 2 and not probe["offenders"]

@@ -1,0 +1,1325 @@
+{
+  "run": "RUN-017 WP6.1",
+  "views": [
+    "dashboard",
+    "intents",
+    "explorer",
+    "testcases",
+    "testcase_detail",
+    "oracles",
+    "runs",
+    "run_detail",
+    "diagnoses",
+    "diagnosis_detail",
+    "repairs",
+    "benchmark",
+    "models",
+    "system",
+    "users",
+    "login"
+  ],
+  "widths": [
+    1440,
+    1024,
+    768,
+    390
+  ],
+  "themes": [
+    "light",
+    "dark"
+  ],
+  "cells_total": 128,
+  "passed": 128,
+  "failed": 0,
+  "skipped": 0,
+  "entities": {
+    "testcase_id": "tcase_tf_create_normal",
+    "run_id": "run_1795701928148758738b6972b",
+    "failed_run_id": "run_1795701934275ded49b59c652",
+    "diagnosis_id": "diagnosis_17957019404534daeed253aec"
+  },
+  "failures": [],
+  "skips": [],
+  "cells": [
+    {
+      "view": "dashboard",
+      "path": "/",
+      "width": 1440,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "intents",
+      "path": "/intents",
+      "width": 1440,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "explorer",
+      "path": "/explorer",
+      "width": 1440,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "testcases",
+      "path": "/testcases",
+      "width": 1440,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "testcase_detail",
+      "path": "/testcases/tcase_tf_create_normal",
+      "width": 1440,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "oracles",
+      "path": "/oracles",
+      "width": 1440,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "runs",
+      "path": "/runs",
+      "width": 1440,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "run_detail",
+      "path": "/runs/run_1795701928148758738b6972b",
+      "width": 1440,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "diagnoses",
+      "path": "/diagnoses",
+      "width": 1440,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "diagnosis_detail",
+      "path": "/diagnoses/diagnosis_17957019404534daeed253aec",
+      "width": 1440,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "repairs",
+      "path": "/repairs",
+      "width": 1440,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "benchmark",
+      "path": "/benchmark",
+      "width": 1440,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "models",
+      "path": "/models",
+      "width": 1440,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "system",
+      "path": "/system",
+      "width": 1440,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "users",
+      "path": "/users",
+      "width": 1440,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "login",
+      "path": "/login",
+      "width": 1440,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "dashboard",
+      "path": "/",
+      "width": 1024,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "intents",
+      "path": "/intents",
+      "width": 1024,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "explorer",
+      "path": "/explorer",
+      "width": 1024,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "testcases",
+      "path": "/testcases",
+      "width": 1024,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "testcase_detail",
+      "path": "/testcases/tcase_tf_create_normal",
+      "width": 1024,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "oracles",
+      "path": "/oracles",
+      "width": 1024,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "runs",
+      "path": "/runs",
+      "width": 1024,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "run_detail",
+      "path": "/runs/run_1795701928148758738b6972b",
+      "width": 1024,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "diagnoses",
+      "path": "/diagnoses",
+      "width": 1024,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "diagnosis_detail",
+      "path": "/diagnoses/diagnosis_17957019404534daeed253aec",
+      "width": 1024,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "repairs",
+      "path": "/repairs",
+      "width": 1024,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "benchmark",
+      "path": "/benchmark",
+      "width": 1024,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "models",
+      "path": "/models",
+      "width": 1024,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "system",
+      "path": "/system",
+      "width": 1024,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "users",
+      "path": "/users",
+      "width": 1024,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "login",
+      "path": "/login",
+      "width": 1024,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "dashboard",
+      "path": "/",
+      "width": 768,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "intents",
+      "path": "/intents",
+      "width": 768,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "explorer",
+      "path": "/explorer",
+      "width": 768,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "testcases",
+      "path": "/testcases",
+      "width": 768,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "testcase_detail",
+      "path": "/testcases/tcase_tf_create_normal",
+      "width": 768,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "oracles",
+      "path": "/oracles",
+      "width": 768,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "runs",
+      "path": "/runs",
+      "width": 768,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "run_detail",
+      "path": "/runs/run_1795701928148758738b6972b",
+      "width": 768,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "diagnoses",
+      "path": "/diagnoses",
+      "width": 768,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "diagnosis_detail",
+      "path": "/diagnoses/diagnosis_17957019404534daeed253aec",
+      "width": 768,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "repairs",
+      "path": "/repairs",
+      "width": 768,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "benchmark",
+      "path": "/benchmark",
+      "width": 768,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "models",
+      "path": "/models",
+      "width": 768,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "system",
+      "path": "/system",
+      "width": 768,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "users",
+      "path": "/users",
+      "width": 768,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "login",
+      "path": "/login",
+      "width": 768,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "dashboard",
+      "path": "/",
+      "width": 390,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "intents",
+      "path": "/intents",
+      "width": 390,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "explorer",
+      "path": "/explorer",
+      "width": 390,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "testcases",
+      "path": "/testcases",
+      "width": 390,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "testcase_detail",
+      "path": "/testcases/tcase_tf_create_normal",
+      "width": 390,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "oracles",
+      "path": "/oracles",
+      "width": 390,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "runs",
+      "path": "/runs",
+      "width": 390,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "run_detail",
+      "path": "/runs/run_1795701928148758738b6972b",
+      "width": 390,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "diagnoses",
+      "path": "/diagnoses",
+      "width": 390,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "diagnosis_detail",
+      "path": "/diagnoses/diagnosis_17957019404534daeed253aec",
+      "width": 390,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "repairs",
+      "path": "/repairs",
+      "width": 390,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "benchmark",
+      "path": "/benchmark",
+      "width": 390,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "models",
+      "path": "/models",
+      "width": 390,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "system",
+      "path": "/system",
+      "width": 390,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "users",
+      "path": "/users",
+      "width": 390,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "login",
+      "path": "/login",
+      "width": 390,
+      "theme": "light",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "dashboard",
+      "path": "/",
+      "width": 1440,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "intents",
+      "path": "/intents",
+      "width": 1440,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "explorer",
+      "path": "/explorer",
+      "width": 1440,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "testcases",
+      "path": "/testcases",
+      "width": 1440,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "testcase_detail",
+      "path": "/testcases/tcase_tf_create_normal",
+      "width": 1440,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "oracles",
+      "path": "/oracles",
+      "width": 1440,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "runs",
+      "path": "/runs",
+      "width": 1440,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "run_detail",
+      "path": "/runs/run_1795701928148758738b6972b",
+      "width": 1440,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "diagnoses",
+      "path": "/diagnoses",
+      "width": 1440,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "diagnosis_detail",
+      "path": "/diagnoses/diagnosis_17957019404534daeed253aec",
+      "width": 1440,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "repairs",
+      "path": "/repairs",
+      "width": 1440,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "benchmark",
+      "path": "/benchmark",
+      "width": 1440,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "models",
+      "path": "/models",
+      "width": 1440,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "system",
+      "path": "/system",
+      "width": 1440,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "users",
+      "path": "/users",
+      "width": 1440,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "login",
+      "path": "/login",
+      "width": 1440,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "dashboard",
+      "path": "/",
+      "width": 1024,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "intents",
+      "path": "/intents",
+      "width": 1024,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "explorer",
+      "path": "/explorer",
+      "width": 1024,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "testcases",
+      "path": "/testcases",
+      "width": 1024,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "testcase_detail",
+      "path": "/testcases/tcase_tf_create_normal",
+      "width": 1024,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "oracles",
+      "path": "/oracles",
+      "width": 1024,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "runs",
+      "path": "/runs",
+      "width": 1024,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "run_detail",
+      "path": "/runs/run_1795701928148758738b6972b",
+      "width": 1024,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "diagnoses",
+      "path": "/diagnoses",
+      "width": 1024,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "diagnosis_detail",
+      "path": "/diagnoses/diagnosis_17957019404534daeed253aec",
+      "width": 1024,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "repairs",
+      "path": "/repairs",
+      "width": 1024,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "benchmark",
+      "path": "/benchmark",
+      "width": 1024,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "models",
+      "path": "/models",
+      "width": 1024,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "system",
+      "path": "/system",
+      "width": 1024,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "users",
+      "path": "/users",
+      "width": 1024,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "login",
+      "path": "/login",
+      "width": 1024,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "dashboard",
+      "path": "/",
+      "width": 768,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "intents",
+      "path": "/intents",
+      "width": 768,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "explorer",
+      "path": "/explorer",
+      "width": 768,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "testcases",
+      "path": "/testcases",
+      "width": 768,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "testcase_detail",
+      "path": "/testcases/tcase_tf_create_normal",
+      "width": 768,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "oracles",
+      "path": "/oracles",
+      "width": 768,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "runs",
+      "path": "/runs",
+      "width": 768,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "run_detail",
+      "path": "/runs/run_1795701928148758738b6972b",
+      "width": 768,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "diagnoses",
+      "path": "/diagnoses",
+      "width": 768,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "diagnosis_detail",
+      "path": "/diagnoses/diagnosis_17957019404534daeed253aec",
+      "width": 768,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "repairs",
+      "path": "/repairs",
+      "width": 768,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "benchmark",
+      "path": "/benchmark",
+      "width": 768,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "models",
+      "path": "/models",
+      "width": 768,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "system",
+      "path": "/system",
+      "width": 768,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "users",
+      "path": "/users",
+      "width": 768,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "login",
+      "path": "/login",
+      "width": 768,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "dashboard",
+      "path": "/",
+      "width": 390,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "intents",
+      "path": "/intents",
+      "width": 390,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "explorer",
+      "path": "/explorer",
+      "width": 390,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "testcases",
+      "path": "/testcases",
+      "width": 390,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "testcase_detail",
+      "path": "/testcases/tcase_tf_create_normal",
+      "width": 390,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "oracles",
+      "path": "/oracles",
+      "width": 390,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "runs",
+      "path": "/runs",
+      "width": 390,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "run_detail",
+      "path": "/runs/run_1795701928148758738b6972b",
+      "width": 390,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "diagnoses",
+      "path": "/diagnoses",
+      "width": 390,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "diagnosis_detail",
+      "path": "/diagnoses/diagnosis_17957019404534daeed253aec",
+      "width": 390,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "repairs",
+      "path": "/repairs",
+      "width": 390,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "benchmark",
+      "path": "/benchmark",
+      "width": 390,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "models",
+      "path": "/models",
+      "width": 390,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "system",
+      "path": "/system",
+      "width": 390,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "users",
+      "path": "/users",
+      "width": 390,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    },
+    {
+      "view": "login",
+      "path": "/login",
+      "width": 390,
+      "theme": "dark",
+      "status": "PASS",
+      "overflow_px": 0,
+      "offenders": [],
+      "console_errors": []
+    }
+  ]
+}
