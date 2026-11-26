@@ -1,3 +1,17 @@
+# 变更（RUN-017，2026-11-26 21:55 CST）
+
+- `benchmark/traceguard_benchmark/fault_effect.py`：重写（基线/分类/一致性/清理）。
+- `benchmark/traceguard_benchmark/browser_effect.py`：新增浏览器级观测。
+- `apps/teamflow/traceguard_teamflow/api.py`：状态接口返回 projects；新增 probe-cleanup。
+- `apps/api/.../repair_service.py`：在途 verdict 修正；`regression_retry()` + 台账。
+- `apps/api/.../routers/intelligence.py` + `auth.py`：`/regression-retry` 与 RBAC。
+- `packages/execution/.../tasks/service.py`：`fenced_session` 重入检测。
+- `packages/persistence/.../stores.py`：GC keyset 分页 + 定向复核；ArtifactStore 边界。
+- `.github/workflows/*`：分支通配 + 新增 Nightly 专项 + 新增 Reliability Gate。
+- `scripts/`：bench_v2、backup_restore、doctor、UI run017、GC bench；PG 端点参数化。
+
+---
+
 # 变更清单（RUN-016）
 
 ## 代码

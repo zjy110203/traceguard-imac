@@ -1,3 +1,15 @@
+# RESUME（RUN-017，2026-11-26 21:55 CST）
+
+- 分支：`workbuddy/run017-product-maturity`；已推送 `1faebec`（CI run #75/#27）。
+- 先读：`docs/RUN-017-BASELINE.md` → `RUN-017-WP1-CI.md` → `RUN-017-WP2-BENCHMARK.md`
+  → `RUN-017-WP3-REGRESSION-RETRY.md` → `RUN-017-WP5-PRODUCT.md`。
+- 环境：PG16.16 在 `127.0.0.1:55432`（**不要用 localhost**，IPv6 指向另一个 16.2 实例）。
+- 未完成：WP4.4 长稳收尾、WP6 UI 全链路、WP7/最终报告、WP8 最终 HEAD 复跑。
+- 复现入口：`scripts/bench_v2_run017.py`、`scripts/backup_restore_verify_run017.py`、
+  `scripts/doctor.py`、`scripts/business_loop_ui_acceptance_run017.py`。
+
+---
+
 # RESUME（RUN-015，2026-11-26 追加；下方历史保留）
 
 - **当前分支**：`workbuddy/run015-execution-consistency`（基线 `438c54a`，勿改 main / 勿合并 PR #1/#2）。

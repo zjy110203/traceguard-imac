@@ -189,6 +189,9 @@ class DiagnosisService:
             )
 
         # ---- UI 渲染缺失（业务成功但界面无反馈）
+        # RUN-017 WP7：与"持久化"同一条原则——存在 5xx 时，界面缺失可能只是接口失败的
+        # **后果**，不能作为独立根因被 CONFIRMED（症状不能冒充根因）。
+        # 无 5xx 时才允许把 UI 渲染作为确认级假设；有 5xx 时保留为候选（非确认）。
         if failed_ui and not failed_biz:
             ui_ids: list[str] = []
             if failed_ui:
@@ -201,7 +204,12 @@ class DiagnosisService:
                     description="业务状态正常但界面未渲染预期反馈（UI 渲染缺陷）",
                     failure_domain=DOMAIN_UI,
                     failure_mechanism=FailureMechanism.UI_RENDERING,
-                    supporting=refs(ui_ids or state_ids, confirming=True),
+                    supporting=refs(ui_ids or state_ids, confirming=not http_5xx),
+                    contributing_factors=(
+                        ["检测到接口 5xx：界面缺失可能是接口失败的后果，不作为独立根因"]
+                        if http_5xx
+                        else []
+                    ),
                 )
             )
 

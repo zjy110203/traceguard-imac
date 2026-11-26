@@ -1,3 +1,22 @@
+# 进度（RUN-017，2026-11-26 21:55 CST）
+
+| 工作包 | 状态 | 证据 |
+|---|---|---|
+| WP0 基线 | DONE | `docs/RUN-017-BASELINE.md` |
+| WP1 CI | DONE（触发成功；结果见 run #74/#26/#75/#27） | `docs/RUN-017-WP1-CI.md` |
+| WP2 观测 + 实验 | DONE 60 样本 | `docs/RUN-017-WP2-BENCHMARK.md`、`docs/assets/run017/wp2/` |
+| WP3 重试 | DONE 15 测试 | `docs/RUN-017-WP3-REGRESSION-RETRY.md` |
+| WP4.1 重入 | DONE 6 测试 | `tests/integration/test_fenced_reentry_run017.py` |
+| WP4.2 GC | DONE（分页 + 定向复核 + 规模测试） | `scripts/artifact_gc_bench_run017.py` |
+| WP4.3 后端边界 | DONE（s3 启动失败） | `test_artifact_lifecycle_run016.py` |
+| WP4.4 PG16 长稳 | RUNNING | `docs/assets/run017/wp4/soak/` |
+| WP5 备份/诊断/文档 | DONE | `docs/RUN-017-WP5-PRODUCT.md` |
+| WP6 UI 验收 | TODO（长稳后执行） | `docs/assets/run017/wp5/ui/` |
+| WP7 诊断 | 分析中（1 处规则修复已落地） | `docs/RUN-017-WP7-DIAGNOSIS.md` |
+| WP8 全量回归 | PARTIAL（本地全绿 932 passed） | 待最终 HEAD 复跑 |
+
+---
+
 # 进度（RUN-015，2026-11-26 追加；下方历史保留）
 
 | WP | 内容 | 状态 | 产出 / 结果 |

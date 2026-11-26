@@ -1,3 +1,21 @@
+# 测试结果（RUN-017，2026-11-26 21:55 CST）
+
+| 命令 | 结果 |
+|---|---|
+| `pytest -q`（本地，无 TG_TEST_POSTGRES_URL） | **932 passed / 0 failed / 16 skipped** |
+| `pytest tests/unit/test_benchmark_fault_effect_run016.py` | 17 passed |
+| `pytest tests/integration/test_fault_effect_teamflow_run017.py` | 14 passed |
+| `pytest tests/integration/test_browser_effect_run017.py` | 8 passed |
+| `pytest tests/integration/test_fenced_reentry_run017.py` | 6 passed（PG16） |
+| `pytest tests/integration/test_regression_retry_run017.py` | 15 passed |
+| `pytest tests/integration/test_artifact_lifecycle_run016.py` | 14 passed |
+| `scripts/backup_restore_verify_run017.py`（SQLite + PG16） | all_passed=true（12/12 项） |
+| `scripts/doctor.py` | PASS=9 WARN=5 FAIL=0 |
+| Ruff check / format（packages apps tests benchmark scripts） | 全绿 |
+| `npm run build`（vue-tsc + vite） | 通过 |
+
+---
+
 # 测试结果（RUN-016，最终）
 
 | 项 | 命令 | 结果 |

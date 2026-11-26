@@ -1,3 +1,22 @@
+# 阶段状态（RUN-017，2026-11-26 21:55 CST）
+
+| 阶段 | 状态 | 证据 |
+|---|---|---|
+| WP0 基线核查 | DONE | `docs/RUN-017-BASELINE.md` |
+| WP1 CI 门禁 | DONE（真实触发；#74/#26 暴露 1 个断言冲突已修） | `docs/RUN-017-WP1-CI.md` |
+| WP2 独立观测 | DONE | 60 样本 / UNKNOWN 2 / FP 0 |
+| WP3 重试 | DONE | 15 passed |
+| WP4.1 重入 | DONE | 6 passed（PG16） |
+| WP4.2 GC | DONE（待 10k/50k/100k 实测数字） | `gc-bench.json` |
+| WP4.3 边界 | DONE | 启动失败用例 |
+| WP4.4 长稳 | RUNNING | soak 目录 |
+| WP5 备份/诊断 | DONE | 12 项全 true（SQLite + PG16） |
+| WP6 UI | TODO | — |
+| WP7 诊断 | 分析 + 1 规则修复 | — |
+| WP8 全量 | PARTIAL | 932 passed（本地） |
+
+---
+
 # 阶段状态（RUN-016，2026-11-26）
 
 | 阶段 | 状态 | 证据 |
