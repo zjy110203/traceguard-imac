@@ -70,3 +70,6 @@ tests/reports/*
 docs/assets/run013/**/_runtime/
 docs/assets/run013/**/_attempt*/
 docs/assets/run013/soak-smoke/
+
+# ===== RUN-014 验收运行时产物（只保留 JSON/截图/日志证据） =====
+docs/assets/run014/**/_runtime/

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import signal
 import subprocess
 import sys
@@ -36,7 +37,8 @@ from business_loop_ui_acceptance_run012 import (  # noqa: E402
 )
 
 PG_ADMIN = "postgresql://traceguard@127.0.0.1:55432/postgres"
-PG_NAME = "traceguard_run013_soak"
+# RUN-014 WP6：数据库名可参数化，避免覆盖 RUN-013 的历史长稳库（默认值保持兼容）。
+PG_NAME = os.environ.get("TG_SOAK_PG_DB", "traceguard_run013_soak")
 PG_URL = f"postgresql+psycopg://traceguard@127.0.0.1:55432/{PG_NAME}"
 PASSWORD = "Soak-accept-2026!"
 

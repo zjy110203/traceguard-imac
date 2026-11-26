@@ -17,6 +17,7 @@ on:
       - "workbuddy/run011-*"
       - "workbuddy/run012-*"
       - "workbuddy/run013-*"
+      - "workbuddy/run014-*"
       - workbuddy/traceguard-autonomous
 
 concurrency:

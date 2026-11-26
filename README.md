@@ -1,9 +1,33 @@
 # TraceGuard
 
+> **RUN-014（2026-11-26）**：产品闭环补全——晋升后的**真实 Regression**（独立 Run + 证据 +
+> 结论时效）、Worker 租约过期即失效与 Step/Evidence/Event 同事务 fencing、SSE 活跃连接撤权、
+> 全局统计接口 RBAC 与统计口径修正、单资产全血缘 UI 验收 40/40、Benchmark v5 23×2 真跑、
+> AI 质量评估 n=32。状态与限制见 `docs/RUN-014-FINAL-REPORT.md`。
+>
 > **RUN-013（2026-11-25）**：生产形态验证与可靠性强化——独立 Worker 真实 UI 闭环、
 > Workspace 并发与 SSE 授权收口、稳定性回放审核闭环、60 分钟 PostgreSQL 16 长稳、
 > 真实 LLM Smoke 与 AI 质量量化。状态与限制见 `docs/RUN-013-FINAL-REPORT.md`。
 > 历史阶段报告保留在 `docs/`。
+
+## RUN-014 新增能力（2026-11-26）
+
+- **Repair → Promotion → Regression → Rollback 真实闭环**：新增独立 `regression_status`
+  （NOT_STARTED/QUEUED/RUNNING/PASSED/FAILED/INCONCLUSIVE）；晋升后创建真实 Regression Run，
+  由独立 Worker 执行，`COMPLETED + PASSED + 证据非空` 才算通过；Oracle/证据缺失 fail-closed；
+  终态幂等、在途只收敛同一 Run；前端生命周期七段全部来自服务端状态，Promotion 失败不再显示成功。
+- **租约/围栏原子性**：租约过期即失效（不再以"尚未被接管"为合法依据），`lease_valid`/`renew_lease`/
+  `submit_result` 全部校验租期；Step/Evidence/Event 写入与租约守卫在**同一事务**（`fenced_guard`），
+  旧 Worker 恢复后无法写入任何业务结果。
+- **SSE 活跃连接撤权**：每轮询重新核验会话/用户状态/Workspace 授权，失效即发 `auth.revoked`
+  并关闭连接；全局模型摘要与浏览器自检收归 `system.observe`；LLM 摘要改键集分页全量聚合，
+  消除 `limit` 静默截断。
+- **单资产全血缘验收**：Intent → Explorer → Compiler → Oracle → Binding → Replay → Review →
+  Run（独立 Worker）→ Diagnosis → Probe → Repair → Sandbox → Approval → Promotion →
+  Regression → Rollback，40 条记录 40 PASS + 13 张截图 + 机器可读血缘 ID。
+- **Benchmark v5 与 AI 质量**：23 场景 × 2 轮真实执行（46 次 Run / 38 诊断样本），
+  False Pass 0/38（PARTIAL）；AI 诊断 n=32（8 域），规则 0.9688 / LLM 细粒度 0.8750，
+  四类顾问真实 Smoke。
 
 Agentic Web UI Testing & Quality Intelligence Platform（智能 Web UI 自动化测试与质量情报平台）
 

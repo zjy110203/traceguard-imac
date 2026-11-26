@@ -1,3 +1,23 @@
+# 功能状态矩阵（更新至 2026-11-26 RUN-014）
+
+> **RUN-014 状态（2026-11-26，权威）**：`docs/RUN-014-FINAL-REPORT.md` 为准。
+> 基线 `85f18c1`；主题：产品闭环补全、安全可靠性强化与发布就绪。
+>
+> - **Repair 闭环**：晋升后新增**真实 Regression**（独立 Run + 证据 + 版本关联 + 结论时效）；
+>   Promotion 失败不再被前端误判成功；生命周期七段全部取服务端状态（`RUN-014-WP1-REGRESSION.md`）。
+> - **租约/围栏**：过期即失效；Step/Evidence/Event 写入与租约守卫同事务；旧 Worker 恢复后无法写入
+>   （专项 26 passed；PG16 上 9/9）。`RUN-014-WP2-LEASE-FENCING.md`。
+> - **SSE 撤权 / 全局 RBAC**：活跃连接每 2s 复核会话与 Workspace；`/system/llm/summary`、
+>   `/system/browser` 收归 `system.observe`；LLM 摘要键集分页全量聚合。`RUN-014-WP3-SECURITY.md`。
+> - **全血缘 UI**：40/40 记录 + 13 张截图 + 14 个血缘 ID（`docs/assets/run014/wp4/full-loop.json`）。
+> - **Benchmark v5**：23×2 真跑（46 执行 / 38 样本 / 合同 5/5 / False Pass 0-38 PARTIAL）。
+> - **AI 质量**：n=32（8 域），规则 0.9688/0.9683，LLM 细粒度 0.8750/0.6119；四类顾问 Smoke。
+>
+> 仍 BLOCKED / NOT_RUN：B-17、宿主级网络隔离、外部真实站点、真实人工基线、LLM 四臂成本实验、
+> Nightly/Release Gate（无凭据）。以上均不标 PASS。
+
+---
+
 # 功能状态矩阵（更新至 2026-11-25 RUN-013）
 
 > **RUN-013 状态（2026-11-25，权威）**：`docs/RUN-013-FINAL-REPORT.md` 为准。

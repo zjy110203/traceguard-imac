@@ -41,7 +41,9 @@ OUT = ROOT / "docs/assets/run014/wp5"
 DOMAINS = ["TIMING", "NETWORK", "UI", "LOCATOR", "PERSISTENCE", "ENVIRONMENT", "API", "JS"]
 
 
-def _case(cid: str, domain: str, symptom: str, step: str, err: str, ev: list[tuple[str, str]]) -> dict:
+def _case(
+    cid: str, domain: str, symptom: str, step: str, err: str, ev: list[tuple[str, str]]
+) -> dict:
     return {
         "id": cid,
         "symptom": symptom,
@@ -56,109 +58,272 @@ def _case(cid: str, domain: str, symptom: str, step: str, err: str, ev: list[tup
 
 CASES: list[dict[str, Any]] = [
     # ---- TIMING (4)
-    _case("timing_banner", "TIMING", "创建成功后成功提示 3 秒后才出现，断言 2 秒超时",
-          "assert", "Timeout 2000ms exceeded waiting for banner",
-          [("trace", "banner rendered at 3012ms"), ("screenshot", "success banner visible")]),
-    _case("timing_api", "TIMING", "接口响应慢，前端请求 15 秒后才返回，步骤等待超时",
-          "click", "waiting for response /api/projects exceeded 8000ms",
-          [("network", "POST /api/projects took 15230ms")]),
-    _case("timing_anim", "TIMING", "列表动画 1.2 秒后才可点击，点击时元素仍在过渡",
-          "click", "element not stable: animation in progress (timeout 1000ms)",
-          [("dom", "transition duration 1200ms"), ("screenshot", "row fading in")]),
-    _case("timing_race", "TIMING", "轮询间隔导致状态更新晚于断言时刻",
-          "assert", "expected count=1 but got 0 (poll delayed 2 cycles)",
-          [("api", "state updated after 4.1s"), ("trace", "assertion at 2.0s")]),
+    _case(
+        "timing_banner",
+        "TIMING",
+        "创建成功后成功提示 3 秒后才出现，断言 2 秒超时",
+        "assert",
+        "Timeout 2000ms exceeded waiting for banner",
+        [("trace", "banner rendered at 3012ms"), ("screenshot", "success banner visible")],
+    ),
+    _case(
+        "timing_api",
+        "TIMING",
+        "接口响应慢，前端请求 15 秒后才返回，步骤等待超时",
+        "click",
+        "waiting for response /api/projects exceeded 8000ms",
+        [("network", "POST /api/projects took 15230ms")],
+    ),
+    _case(
+        "timing_anim",
+        "TIMING",
+        "列表动画 1.2 秒后才可点击，点击时元素仍在过渡",
+        "click",
+        "element not stable: animation in progress (timeout 1000ms)",
+        [("dom", "transition duration 1200ms"), ("screenshot", "row fading in")],
+    ),
+    _case(
+        "timing_race",
+        "TIMING",
+        "轮询间隔导致状态更新晚于断言时刻",
+        "assert",
+        "expected count=1 but got 0 (poll delayed 2 cycles)",
+        [("api", "state updated after 4.1s"), ("trace", "assertion at 2.0s")],
+    ),
     # ---- NETWORK (4)
-    _case("net_503", "NETWORK", "提交请求返回 503，重试仍失败",
-          "click", "response 503 from /api/projects",
-          [("network", "POST /api/projects 503")]),
-    _case("net_timeout", "NETWORK", "请求连接超时，未收到任何响应",
-          "click", "net::ERR_TIMED_OUT",
-          [("network", "POST /api/projects no response in 30s")]),
-    _case("net_reset", "NETWORK", "连接被重置，前端显示网络错误",
-          "click", "net::ERR_CONNECTION_RESET",
-          [("network", "connection reset by peer")]),
-    _case("net_cors", "NETWORK", "跨域预检失败，请求未发出",
-          "click", "CORS preflight failed: no Access-Control-Allow-Origin",
-          [("console", "blocked by CORS policy")]),
+    _case(
+        "net_503",
+        "NETWORK",
+        "提交请求返回 503，重试仍失败",
+        "click",
+        "response 503 from /api/projects",
+        [("network", "POST /api/projects 503")],
+    ),
+    _case(
+        "net_timeout",
+        "NETWORK",
+        "请求连接超时，未收到任何响应",
+        "click",
+        "net::ERR_TIMED_OUT",
+        [("network", "POST /api/projects no response in 30s")],
+    ),
+    _case(
+        "net_reset",
+        "NETWORK",
+        "连接被重置，前端显示网络错误",
+        "click",
+        "net::ERR_CONNECTION_RESET",
+        [("network", "connection reset by peer")],
+    ),
+    _case(
+        "net_cors",
+        "NETWORK",
+        "跨域预检失败，请求未发出",
+        "click",
+        "CORS preflight failed: no Access-Control-Allow-Origin",
+        [("console", "blocked by CORS policy")],
+    ),
     # ---- UI (4)
-    _case("ui_hidden", "UI", "数据已落库，但成功提示元素 display:none 不可见",
-          "assert", "element not visible: banner-success",
-          [("dom", "banner class=hidden"), ("api", "project persisted")]),
-    _case("ui_overlay", "UI", "弹窗遮罩覆盖按钮，点击命中遮罩",
-          "click", "element intercepted by .modal-backdrop",
-          [("screenshot", "overlay covers form"), ("dom", "z-index 999 overlay")]),
-    _case("ui_text", "UI", "提示文案与断言不一致（“已保存” vs “创建成功”）",
-          "assert", "text mismatch: expected 创建成功, got 已保存",
-          [("dom", "banner text=已保存")]),
-    _case("ui_render", "UI", "列表渲染为空骨架屏，数据行未挂载",
-          "assert", "count of [data-testid=project-row] == 0",
-          [("dom", "skeleton placeholder present"), ("api", "GET /api/projects returns 1 item")]),
+    _case(
+        "ui_hidden",
+        "UI",
+        "数据已落库，但成功提示元素 display:none 不可见",
+        "assert",
+        "element not visible: banner-success",
+        [("dom", "banner class=hidden"), ("api", "project persisted")],
+    ),
+    _case(
+        "ui_overlay",
+        "UI",
+        "弹窗遮罩覆盖按钮，点击命中遮罩",
+        "click",
+        "element intercepted by .modal-backdrop",
+        [("screenshot", "overlay covers form"), ("dom", "z-index 999 overlay")],
+    ),
+    _case(
+        "ui_text",
+        "UI",
+        "提示文案与断言不一致（“已保存” vs “创建成功”）",
+        "assert",
+        "text mismatch: expected 创建成功, got 已保存",
+        [("dom", "banner text=已保存")],
+    ),
+    _case(
+        "ui_render",
+        "UI",
+        "列表渲染为空骨架屏，数据行未挂载",
+        "assert",
+        "count of [data-testid=project-row] == 0",
+        [("dom", "skeleton placeholder present"), ("api", "GET /api/projects returns 1 item")],
+    ),
     # ---- LOCATOR (4)
-    _case("loc_submit", "LOCATOR", "点击提交按钮提示 locator not found，页面结构已改版",
-          "click", "locator #create-submit not found",
-          [("dom", "button data-testid=create-btn")]),
-    _case("loc_name", "LOCATOR", "输入框 test_id 改名，fill 无法定位",
-          "fill", "get_by_test_id('project-name') not found",
-          [("dom", "input name=projectName")]),
-    _case("loc_strict", "LOCATOR", "同一 test_id 命中多个元素，严格模式报错",
-          "click", "strict mode violation: resolved to 3 elements",
-          [("dom", "three nodes share data-testid=row")]),
-    _case("loc_iframe", "LOCATOR", "元素位于 iframe 内，主文档定位失败",
-          "click", "locator not found in main frame (element inside iframe#editor)",
-          [("dom", "iframe id=editor detected")]),
+    _case(
+        "loc_submit",
+        "LOCATOR",
+        "点击提交按钮提示 locator not found，页面结构已改版",
+        "click",
+        "locator #create-submit not found",
+        [("dom", "button data-testid=create-btn")],
+    ),
+    _case(
+        "loc_name",
+        "LOCATOR",
+        "输入框 test_id 改名，fill 无法定位",
+        "fill",
+        "get_by_test_id('project-name') not found",
+        [("dom", "input name=projectName")],
+    ),
+    _case(
+        "loc_strict",
+        "LOCATOR",
+        "同一 test_id 命中多个元素，严格模式报错",
+        "click",
+        "strict mode violation: resolved to 3 elements",
+        [("dom", "three nodes share data-testid=row")],
+    ),
+    _case(
+        "loc_iframe",
+        "LOCATOR",
+        "元素位于 iframe 内，主文档定位失败",
+        "click",
+        "locator not found in main frame (element inside iframe#editor)",
+        [("dom", "iframe id=editor detected")],
+    ),
     # ---- PERSISTENCE (4)
-    _case("persist_missing", "PERSISTENCE", "页面显示成功但后端列表没有新增记录",
-          "assert", "business_state assertion failed: count unchanged",
-          [("api", "GET /api/state/projects returns 0 items"), ("screenshot", "banner-success visible")]),
-    _case("persist_dup", "PERSISTENCE", "提交后数据库出现两条重复记录",
-          "assert", "expected count=1, got 2 (duplicate rows)",
-          [("api", "two rows share same name"), ("log", "retry inserted again")]),
-    _case("persist_lag", "PERSISTENCE", "写入延迟 9 秒才可见，断言时读不到",
-          "assert", "expected count=1 got 0; row appears 9s later",
-          [("api", "row visible after 9s"), ("trace", "assert at 2s")]),
-    _case("persist_rollback", "PERSISTENCE", "后续步骤失败触发回滚，数据未提交",
-          "assert", "transaction rolled back: 0 rows persisted",
-          [("log", "ROLLBACK executed"), ("api", "count=0")]),
+    _case(
+        "persist_missing",
+        "PERSISTENCE",
+        "页面显示成功但后端列表没有新增记录",
+        "assert",
+        "business_state assertion failed: count unchanged",
+        [
+            ("api", "GET /api/state/projects returns 0 items"),
+            ("screenshot", "banner-success visible"),
+        ],
+    ),
+    _case(
+        "persist_dup",
+        "PERSISTENCE",
+        "提交后数据库出现两条重复记录",
+        "assert",
+        "expected count=1, got 2 (duplicate rows)",
+        [("api", "two rows share same name"), ("log", "retry inserted again")],
+    ),
+    _case(
+        "persist_lag",
+        "PERSISTENCE",
+        "写入延迟 9 秒才可见，断言时读不到",
+        "assert",
+        "expected count=1 got 0; row appears 9s later",
+        [("api", "row visible after 9s"), ("trace", "assert at 2s")],
+    ),
+    _case(
+        "persist_rollback",
+        "PERSISTENCE",
+        "后续步骤失败触发回滚，数据未提交",
+        "assert",
+        "transaction rolled back: 0 rows persisted",
+        [("log", "ROLLBACK executed"), ("api", "count=0")],
+    ),
     # ---- ENVIRONMENT (4)
-    _case("env_refused", "ENVIRONMENT", "执行时连接被测服务被拒绝",
-          "navigate", "net::ERR_CONNECTION_REFUSED",
-          [("log", "target 127.0.0.1:8001 refused")]),
-    _case("env_dns", "ENVIRONMENT", "域名解析失败，页面无法打开",
-          "navigate", "net::ERR_NAME_NOT_RESOLVED",
-          [("log", "dns lookup failed for app.local")]),
-    _case("env_browser", "ENVIRONMENT", "浏览器二进制缺失，执行器启动失败",
-          "navigate", "BrowserType.launch: Executable doesn't exist",
-          [("log", "chromium not installed")]),
-    _case("env_disk", "ENVIRONMENT", "磁盘写满导致截图与证据落盘失败",
-          "assert", "OSError: [Errno 28] No space left on device",
-          [("log", "artifact write failed: ENOSPC")]),
+    _case(
+        "env_refused",
+        "ENVIRONMENT",
+        "执行时连接被测服务被拒绝",
+        "navigate",
+        "net::ERR_CONNECTION_REFUSED",
+        [("log", "target 127.0.0.1:8001 refused")],
+    ),
+    _case(
+        "env_dns",
+        "ENVIRONMENT",
+        "域名解析失败，页面无法打开",
+        "navigate",
+        "net::ERR_NAME_NOT_RESOLVED",
+        [("log", "dns lookup failed for app.local")],
+    ),
+    _case(
+        "env_browser",
+        "ENVIRONMENT",
+        "浏览器二进制缺失，执行器启动失败",
+        "navigate",
+        "BrowserType.launch: Executable doesn't exist",
+        [("log", "chromium not installed")],
+    ),
+    _case(
+        "env_disk",
+        "ENVIRONMENT",
+        "磁盘写满导致截图与证据落盘失败",
+        "assert",
+        "OSError: [Errno 28] No space left on device",
+        [("log", "artifact write failed: ENOSPC")],
+    ),
     # ---- API (4)
-    _case("api_500", "API", "创建接口返回 500，服务端异常",
-          "click", "response 500 from POST /api/projects",
-          [("api", "traceback: KeyError 'name'"), ("network", "500 Internal Server Error")]),
-    _case("api_validation", "API", "请求体校验失败，返回 422",
-          "click", "response 422: field required: name",
-          [("api", "422 Unprocessable Entity")]),
-    _case("api_contract", "API", "响应字段改名，前端读取 undefined",
-          "assert", "expected items[0].title, got undefined",
-          [("api", '{"projects":[{"name":"x"}]}'), ("console", "TypeError reading title")]),
-    _case("api_auth", "API", "会话过期导致 401，操作被拒绝",
-          "click", "response 401: UNAUTHENTICATED",
-          [("api", "401 on POST /api/projects"), ("log", "session expired")]),
+    _case(
+        "api_500",
+        "API",
+        "创建接口返回 500，服务端异常",
+        "click",
+        "response 500 from POST /api/projects",
+        [("api", "traceback: KeyError 'name'"), ("network", "500 Internal Server Error")],
+    ),
+    _case(
+        "api_validation",
+        "API",
+        "请求体校验失败，返回 422",
+        "click",
+        "response 422: field required: name",
+        [("api", "422 Unprocessable Entity")],
+    ),
+    _case(
+        "api_contract",
+        "API",
+        "响应字段改名，前端读取 undefined",
+        "assert",
+        "expected items[0].title, got undefined",
+        [("api", '{"projects":[{"name":"x"}]}'), ("console", "TypeError reading title")],
+    ),
+    _case(
+        "api_auth",
+        "API",
+        "会话过期导致 401，操作被拒绝",
+        "click",
+        "response 401: UNAUTHENTICATED",
+        [("api", "401 on POST /api/projects"), ("log", "session expired")],
+    ),
     # ---- JS (4)
-    _case("js_typeerror", "JS", "页面脚本抛出 TypeError，交互失效",
-          "click", "pageerror: TypeError: Cannot read properties of null",
-          [("console", "Uncaught TypeError at app.js:120")]),
-    _case("js_promise", "JS", "未捕获的 Promise 拒绝，提交后无反馈",
-          "click", "pageerror: Unhandled promise rejection",
-          [("console", "UnhandledPromiseRejection: submit failed")]),
-    _case("js_syntax", "JS", "新发布的前端包语法错误，整页白屏",
-          "navigate", "pageerror: SyntaxError: Unexpected token '<'",
-          [("console", "SyntaxError in chunk-vendors.js")]),
-    _case("js_infinite", "JS", "渲染循环导致主线程卡死，步骤超时",
-          "click", "page unresponsive: main thread blocked",
-          [("trace", "long task 12000ms"), ("console", "Maximum update depth exceeded")]),
+    _case(
+        "js_typeerror",
+        "JS",
+        "页面脚本抛出 TypeError，交互失效",
+        "click",
+        "pageerror: TypeError: Cannot read properties of null",
+        [("console", "Uncaught TypeError at app.js:120")],
+    ),
+    _case(
+        "js_promise",
+        "JS",
+        "未捕获的 Promise 拒绝，提交后无反馈",
+        "click",
+        "pageerror: Unhandled promise rejection",
+        [("console", "UnhandledPromiseRejection: submit failed")],
+    ),
+    _case(
+        "js_syntax",
+        "JS",
+        "新发布的前端包语法错误，整页白屏",
+        "navigate",
+        "pageerror: SyntaxError: Unexpected token '<'",
+        [("console", "SyntaxError in chunk-vendors.js")],
+    ),
+    _case(
+        "js_infinite",
+        "JS",
+        "渲染循环导致主线程卡死，步骤超时",
+        "click",
+        "page unresponsive: main thread blocked",
+        [("trace", "long task 12000ms"), ("console", "Maximum update depth exceeded")],
+    ),
 ]
 
 
@@ -175,7 +340,13 @@ def _rule_domain(case: dict[str, Any]) -> str:
 
     if has("pageerror", "unhandled promise", "syntaxerror", "maximum update depth", "uncaught"):
         return "JS"
-    if has("connection refused", "econnrefused", "err_name_not_resolved", "executable doesn't exist", "enospc"):
+    if has(
+        "connection refused",
+        "econnrefused",
+        "err_name_not_resolved",
+        "executable doesn't exist",
+        "enospc",
+    ):
         return "ENVIRONMENT"
     if has("locator", "strict mode", "get_by_test_id", "not found in main frame", "iframe"):
         return "LOCATOR"
@@ -183,11 +354,15 @@ def _rule_domain(case: dict[str, Any]) -> str:
         return "NETWORK"
     if has("500 ", " 500", "422", "401", "response 5", "undefined"):
         return "API"
-    if has("count unchanged", "duplicate rows", "rollback", "row appears", "transaction rolled back"):
+    if has(
+        "count unchanged", "duplicate rows", "rollback", "row appears", "transaction rolled back"
+    ):
         return "PERSISTENCE"
     if has("timeout", "exceeded", "delayed", "poll delayed", "not stable"):
         return "TIMING"
-    if has("not visible", "hidden", "intercepted", "overlay", "text mismatch", "skeleton", "count of ["):
+    if has(
+        "not visible", "hidden", "intercepted", "overlay", "text mismatch", "skeleton", "count of ["
+    ):
         return "UI"
     return "UI"
 
@@ -230,7 +405,9 @@ def _norm_text(text: str) -> str:
     return re.sub(r"\s+", " ", (text or "").lower()).strip()
 
 
-def _prf(rows: list[dict[str, Any]], gt_key: str, pred_key: str, labels: list[str]) -> dict[str, Any]:
+def _prf(
+    rows: list[dict[str, Any]], gt_key: str, pred_key: str, labels: list[str]
+) -> dict[str, Any]:
     per: dict[str, Any] = {}
     f1s = []
     for label in labels:
@@ -291,15 +468,26 @@ def _advisor_smoke(stack: dict[str, Any]) -> dict[str, Any]:
     trace = {
         "action_sequence": [
             {"action": "navigate", "params": {"url": "/projects/new"}, "result": "/projects/new"},
-            {"action": "fill", "params": {"test_id": "project-name", "value": "X"}, "result": "filled"},
-            {"action": "click", "params": {"test_id": "create-submit"}, "result": "/projects?created=1"},
+            {
+                "action": "fill",
+                "params": {"test_id": "project-name", "value": "X"},
+                "result": "filled",
+            },
+            {
+                "action": "click",
+                "params": {"test_id": "create-submit"},
+                "result": "/projects?created=1",
+            },
         ],
         "business_state_api_available": "/api/state/projects",
     }
     before = tracker.usage_for_date(day)
     t0 = time.time()
     cadv = LLMCompilerAdvisor(
-        provider=stack["provider"], router=stack["router"], prompts=stack["prompts"], tracker=tracker
+        provider=stack["provider"],
+        router=stack["router"],
+        prompts=stack["prompts"],
+        tracker=tracker,
     ).suggest(trace, "创建项目后必须持久化并可回读")
     out["compiler_advisor"] = {
         "called": cadv.called,
@@ -326,7 +514,10 @@ def _advisor_smoke(stack: dict[str, Any]) -> dict[str, Any]:
     before = tracker.usage_for_date(day)
     t0 = time.time()
     padv = LLMProbePlannerAdvisor(
-        provider=stack["provider"], router=stack["router"], prompts=stack["prompts"], tracker=tracker
+        provider=stack["provider"],
+        router=stack["router"],
+        prompts=stack["prompts"],
+        tracker=tracker,
     ).suggest(gaps, defs)
     selected = (padv.selections or [{}])[0].get("probe_id", "") if padv.selections else ""
     out["probe_planner"] = {
@@ -345,10 +536,19 @@ def _advisor_smoke(stack: dict[str, Any]) -> dict[str, Any]:
     before = tracker.usage_for_date(day)
     t0 = time.time()
     radv = LLMRepairAdvisor(
-        provider=stack["provider"], router=stack["router"], prompts=stack["prompts"], tracker=tracker
+        provider=stack["provider"],
+        router=stack["router"],
+        prompts=stack["prompts"],
+        tracker=tracker,
     ).suggest(
         symptom="点击提交提示 locator not found",
-        steps=[{"step_id": "s2", "action": "click", "target": {"strategy": "test_id", "value": "create-submit"}}],
+        steps=[
+            {
+                "step_id": "s2",
+                "action": "click",
+                "target": {"strategy": "test_id", "value": "create-submit"},
+            }
+        ],
         assertions=[{"assertion_id": "a1", "expected": {"test_id": "banner-success"}}],
         step_count=5,
     )
@@ -417,8 +617,7 @@ def main() -> int:
         supported = [
             c
             for c in candidates
-            if c.supporting_evidence_ids
-            and all(e in valid_ids for e in c.supporting_evidence_ids)
+            if c.supporting_evidence_ids and all(e in valid_ids for e in c.supporting_evidence_ids)
         ]
         seen: set[tuple[str, str]] = set()
         duplicates = 0
@@ -445,8 +644,7 @@ def main() -> int:
             "gt_coarse": _norm_coarse(case["gt_domain"]),
             "hit_raw": case["gt_domain"] in domains,
             "hit_fine": case["gt_domain"] in [_norm_fine(d) for d in domains],
-            "hit_coarse": _norm_coarse(case["gt_domain"])
-            in [_norm_coarse(d) for d in domains],
+            "hit_coarse": _norm_coarse(case["gt_domain"]) in [_norm_coarse(d) for d in domains],
             "latency_ms": latency_ms,
             "tokens_in": int(after.get("input_tokens", 0)) - int(before.get("input_tokens", 0)),
             "tokens_out": int(after.get("output_tokens", 0)) - int(before.get("output_tokens", 0)),
@@ -548,11 +746,11 @@ def main() -> int:
                 else 0.0,
                 4,
             ),
-            "duplicate_ratio": round(total_dupes / total_candidates if total_candidates else 0.0, 4),
+            "duplicate_ratio": round(
+                total_dupes / total_candidates if total_candidates else 0.0, 4
+            ),
             "false_positive_cases": sum(
-                1
-                for r in llm_rows
-                if r["candidates"] and not r["hit_fine"] and not r["fallback"]
+                1 for r in llm_rows if r["candidates"] and not r["hit_fine"] and not r["fallback"]
             ),
             "fallback_rate": round(sum(1 for r in llm_rows if r["fallback"]) / len(llm_rows), 4),
             "avg_latency_ms": round(statistics.mean(latencies), 1) if latencies else 0.0,

@@ -1,0 +1,50 @@
+{
+  "database": "postgresql+psycopg://traceguard@127.0.0.1:55432/traceguard_run014_fence",
+  "results": [
+    {
+      "check": "PG: 初始租约有效",
+      "status": "PASS",
+      "detail": "token=1"
+    },
+    {
+      "check": "PG: 过期后 lease_valid=false（不依赖他人接管）",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "PG: 过期后不可续租",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "PG: 过期 Worker 不能写 Step",
+      "status": "PASS",
+      "detail": "LEASE_LOST: 租约已过期/被接管，写入被拒绝（fencing guard）"
+    },
+    {
+      "check": "PG: 接管后 fencing_token 单调递增",
+      "status": "PASS",
+      "detail": "1->2"
+    },
+    {
+      "check": "PG: 新代次可正常写 Step",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "PG: 旧代次写入被拒绝",
+      "status": "PASS",
+      "detail": "LEASE_LOST: 租约已过期/被接管，写入被拒绝（fencing guard）"
+    },
+    {
+      "check": "PG: 并发争抢只有一个 owner",
+      "status": "PASS",
+      "detail": "winners=['pg-c1'] token_now=3"
+    },
+    {
+      "check": "PG: 终态后写入被拒绝",
+      "status": "PASS",
+      "detail": "LEASE_LOST: 租约已过期/被接管，写入被拒绝（fencing guard）"
+    }
+  ]
+}

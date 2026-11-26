@@ -50,6 +50,8 @@ PASSWORD = "Loop-accept-2026!"
 
 class _SkipRest(Exception):
     """沙箱未通过时按门禁停止后续链路（不是失败，也不伪造通过）。"""
+
+
 OUT = ROOT / "docs/assets/run014/wp4"
 
 
@@ -313,10 +315,13 @@ def main() -> int:
                     expect_status=(200, 201),
                 )
                 lineage["oracle_id"] = list(oracle_ids.values())[0] if oracle_ids else ""
-                bound = (bind.get("oracle_bindings") or bind or {})
+                bound = bind.get("oracle_bindings") or bind or {}
                 rep.check(
                     "⑧ 全断言绑定已审批 Oracle（服务端门禁依据）",
-                    all(str((bound.get(aid) or {}).get("oracle_id")) == oid for aid, oid in oracle_ids.items()),
+                    all(
+                        str((bound.get(aid) or {}).get("oracle_id")) == oid
+                        for aid, oid in oracle_ids.items()
+                    ),
                     f"bindings={list(bound)[:6]} oracles={len(oracle_ids)}",
                     server_verified=True,
                 )
@@ -331,8 +336,7 @@ def main() -> int:
                 gate_text = json.dumps(gate_block, ensure_ascii=False)
                 rep.check(
                     "⑨ 未完成 Stability Replay 时审核被服务端门禁拒绝（未绕过）",
-                    "STABILITY_REPLAY_GATE_FAILED" in gate_text
-                    or "STABILITY" in gate_text.upper(),
+                    "STABILITY_REPLAY_GATE_FAILED" in gate_text or "STABILITY" in gate_text.upper(),
                     f"detail={gate_text[:160]}",
                     server_verified=True,
                 )
@@ -347,16 +351,20 @@ def main() -> int:
                 lineage["replay_id"] = replay_id
                 final_replay = _poll(
                     lambda: (
-                        lambda d: d
-                        if str(d.get("status")) in {"COMPLETED", "PASSED", "FAILED", "INCOMPLETE", "BLOCKED"}
-                        else {}
+                        lambda d: (
+                            d
+                            if str(d.get("status"))
+                            in {"COMPLETED", "PASSED", "FAILED", "INCOMPLETE", "BLOCKED"}
+                            else {}
+                        )
                     )(lead.get(f"/api/v1/stability-replays/{replay_id}?refresh=true")),
                     420,
                     3.0,
                 )
                 rep.check(
                     "⑩ Stability Replay 真实执行多轮并给出结论",
-                    str(final_replay.get("status")) in {"COMPLETED", "PASSED", "FAILED", "INCOMPLETE"},
+                    str(final_replay.get("status"))
+                    in {"COMPLETED", "PASSED", "FAILED", "INCOMPLETE"},
                     f"replay={replay_id} status={final_replay.get('status')} "
                     f"records={len(final_replay.get('records') or [])} "
                     f"conclusion={final_replay.get('conclusion')}",
@@ -398,7 +406,9 @@ def main() -> int:
                 rep.screenshot(lead_p, "06-approved")
 
                 # ==================================== 7) Run（独立 Worker）
-                run = lead.post(f"/api/v1/testcases/{tc_id}/execute", {"sync": False}, expect_status=(200, 201))
+                run = lead.post(
+                    f"/api/v1/testcases/{tc_id}/execute", {"sync": False}, expect_status=(200, 201)
+                )
                 run_id = str(run.get("run_id") or "")
                 lineage["run_id"] = run_id
                 final = _wait_terminal_run(lead, run_id, timeout_s=240)
@@ -583,7 +593,8 @@ def main() -> int:
                 eng_p.wait_for_timeout(1500)
                 rep.check(
                     "㉑ UI 提交审批 → PENDING_APPROVAL（沙箱未过不得提交）",
-                    str(eng.get(f"/api/v1/repairs/{proposal_id}").get("status")) == "PENDING_APPROVAL",
+                    str(eng.get(f"/api/v1/repairs/{proposal_id}").get("status"))
+                    == "PENDING_APPROVAL",
                     "status=PENDING_APPROVAL",
                     server_verified=True,
                 )
@@ -635,9 +646,12 @@ def main() -> int:
                 admin_p.click("button:has-text('运行回归验证')")
                 reg = _poll(
                     lambda: (
-                        lambda d: d
-                        if str(d.get("regression_status")) in {"PASSED", "FAILED", "INCONCLUSIVE"}
-                        else {}
+                        lambda d: (
+                            d
+                            if str(d.get("regression_status"))
+                            in {"PASSED", "FAILED", "INCONCLUSIVE"}
+                            else {}
+                        )
                     )(admin.get(f"/api/v1/repairs/{proposal_id}")),
                     360,
                     3.0,
@@ -647,14 +661,16 @@ def main() -> int:
                     f"㉕ UI 触发回归 → 真实 Regression Run PASSED（版本=v{promoted_version}）",
                     str(reg.get("regression_status")) == "PASSED"
                     and str(reg.get("regression_verdict")) == "PASSED"
-                    and str(reg.get("regression_testcase_version_id")) == f"{tc_id}@{promoted_version}",
+                    and str(reg.get("regression_testcase_version_id"))
+                    == f"{tc_id}@{promoted_version}",
                     f"status={reg.get('regression_status')} verdict={reg.get('regression_verdict')} "
                     f"run={reg.get('regression_run_id')} version={reg.get('regression_testcase_version_id')}",
                     server_verified=True,
                 )
                 rep.check(
                     "㉖ 回归证据可回读（Run 关联 + evidence 非空）",
-                    bool(reg.get("regression_run_id")) and len(reg.get("regression_evidence_ids") or []) >= 1,
+                    bool(reg.get("regression_run_id"))
+                    and len(reg.get("regression_evidence_ids") or []) >= 1,
                     f"evidence={len(reg.get('regression_evidence_ids') or [])}",
                     server_verified=True,
                 )
@@ -679,7 +695,8 @@ def main() -> int:
                 rep.check(
                     "㉘ UI 人工回滚 → ROLLED_BACK 且回执版本正确、回归结论失效",
                     rolled.get("status") == "ROLLED_BACK"
-                    and int((rolled.get("rollback_record") or {}).get("restored_version") or 0) > promoted_version
+                    and int((rolled.get("rollback_record") or {}).get("restored_version") or 0)
+                    > promoted_version
                     and bool(rolled.get("regression_stale")),
                     f"status={rolled.get('status')} record={rolled.get('rollback_record')} "
                     f"stale={rolled.get('regression_stale')}",
@@ -733,7 +750,9 @@ def main() -> int:
                     expect_status=(200,),
                 )
                 _post_fault(teamflow, "TF-UI-002", {"sticky": True})
-                reg2 = admin.post(f"/api/v1/repairs/{p2_id}/regression-run", {}, expect_status=(200,))
+                reg2 = admin.post(
+                    f"/api/v1/repairs/{p2_id}/regression-run", {}, expect_status=(200,)
+                )
                 lineage["regression_run_id_failed"] = reg2.get("regression_run_id")
                 rep.check(
                     "㉚ 负向：晋升后注入真实故障 → 回归 FAILED（不得标记通过）",
