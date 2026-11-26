@@ -1,0 +1,10 @@
+........................................................................ [ 63%]
+..........................................                               [100%]
+=============================== warnings summary ===============================
+tests/integration/test_sse_revocation_and_global_rbac_run014.py: 11 warnings
+  /Users/dlp--test/Desktop/traceguard/.venv/lib/python3.13/site-packages/starlette/testclient.py:518: DeprecationWarning: Setting per-request cookies=<...> is being deprecated, because the expected behaviour on cookie persistence is ambiguous. Set cookies directly on the client instance instead.
+    return super().request(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+114 passed, 11 warnings in 30.30s
+EXIT=0

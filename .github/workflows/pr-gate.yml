@@ -18,6 +18,8 @@ on:
       - "workbuddy/run012-*"
       - "workbuddy/run013-*"
       - "workbuddy/run014-*"
+      # RUN-015 执行一致性专项必须能在合并前触发快速门禁。
+      - "workbuddy/run015-*"
       - workbuddy/traceguard-autonomous
 
 concurrency:
@@ -49,6 +51,8 @@ jobs:
         # 这些用例覆盖 SSE 续传、探针预算、时间线投影、稳定性回放、LLM 摘要、
         # 沙箱走 Worker 队列（无 Worker 时 fail-closed）与 Run 级状态隔离。
         # RUN-011-R1.2 关键安全专项（审核稳定性门禁绕过、全局观测越权）纳入 PR 快速门禁。
+        # RUN-015 WP4：RUN-014 三个专项 + RUN-015 新增回归/fencing/SSE 专项纳入快速门禁。
+        # PG16 长稳/锁等待不进 PR（耗时 + 依赖 Service Container），交给 Nightly。
         run: |
           .venv/bin/pytest -q \
             tests/integration/test_sse.py \
@@ -61,7 +65,13 @@ jobs:
             tests/integration/test_soak_run007_guards.py \
             tests/unit/test_pipeline_state_cache.py \
             tests/integration/test_review_gate_http_security_run011_r1_2.py \
-            tests/integration/test_global_observation_rbac_run011_r1_2.py
+            tests/integration/test_global_observation_rbac_run011_r1_2.py \
+            tests/integration/test_repair_regression_run014.py \
+            tests/integration/test_worker_fencing_run014.py \
+            tests/integration/test_sse_revocation_and_global_rbac_run014.py \
+            tests/integration/test_repair_regression_run015.py \
+            tests/integration/test_worker_fencing_run015.py \
+            tests/integration/test_sse_recheck_limit_run015.py
       - name: Gate result
         if: always()
         run: |

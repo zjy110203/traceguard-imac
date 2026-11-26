@@ -8,6 +8,11 @@ on:
   schedule:
     - cron: "0 18 * * *" # UTC 18:00 = 北京时间次日 02:00
   workflow_dispatch:
+  # RUN-015 WP4：工作分支每次推送都以该 HEAD 真实跑一次 Nightly，
+  # Release Gate 再按 head_sha 严格匹配，杜绝旧提交的成功结果冒充本轮证据。
+  push:
+    branches:
+      - "workbuddy/run015-*"
 
 concurrency:
   group: nightly-gate
@@ -132,6 +137,14 @@ jobs:
       - name: PostgreSQL workspace isolation, audit chain and review CAS (RUN-012 WP1)
         # 覆盖：双 Workspace 数据查询与权限过滤、审计链完整性、审核修订号 CAS。
         run: .venv/bin/pytest -q tests/integration/test_postgres_workspace_run012.py -rs
+      - name: PostgreSQL 16 lease-fencing lock-wait (RUN-015 WP1)
+        # 覆盖：等锁期间租约过期不得复活；原子 submit_result；并发接管单 owner。
+        run: .venv/bin/pytest -q tests/integration/test_fencing_pg_run015.py -rs
+      - name: PostgreSQL 16 fencing contract verification script (RUN-014/015)
+        # 可自动复核的 PG16 fencing 专项；脚本支持 TG_TEST_POSTGRES_URL。
+        env:
+          TG_FENCE_PG_DB: traceguard_run015_fence_ci
+        run: .venv/bin/python scripts/verify_fencing_pg_run014.py
       - name: Migration idempotency on a fresh PostgreSQL database
         run: |
           .venv/bin/python - <<'PY'

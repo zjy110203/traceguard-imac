@@ -29,9 +29,19 @@ for p in (
 ):
     sys.path.insert(0, str(ROOT / p))
 
-PG_ADMIN = "postgresql://traceguard@127.0.0.1:55432/postgres"
-PG_NAME = os.environ.get("TG_FENCE_PG_DB", "traceguard_run014_fence")
-PG_URL = f"postgresql+psycopg://traceguard@127.0.0.1:55432/{PG_NAME}"
+#: RUN-015 WP4：支持 Nightly 的 TG_TEST_POSTGRES_URL（Service Container），
+#: 本机默认仍为 127.0.0.1:55432，不改变历史调用方式。
+_env_pg = os.environ.get("TG_TEST_POSTGRES_URL", "").strip()
+if _env_pg:
+    PG_URL = _env_pg
+    PG_NAME = os.environ.get("TG_FENCE_PG_DB", "traceguard_run015_fence_ci")
+    PG_ADMIN = (
+        f"{PG_URL.replace('postgresql+psycopg://', 'postgresql://').rsplit('/', 1)[0]}/postgres"
+    )
+else:
+    PG_ADMIN = "postgresql://traceguard@127.0.0.1:55432/postgres"
+    PG_NAME = os.environ.get("TG_FENCE_PG_DB", "traceguard_run014_fence")
+    PG_URL = f"postgresql+psycopg://traceguard@127.0.0.1:55432/{PG_NAME}"
 
 
 def main() -> int:
@@ -168,7 +178,12 @@ def main() -> int:
     except AppError as exc:
         check("PG: 终态后写入被拒绝", "LEASE_LOST" in exc.message, exc.message[:80])
 
-    out = ROOT / "docs/assets/run014/wp6/pg-fencing.json"
+    # RUN-015 WP4：CI/新实验写到本轮证据目录，绝不覆盖 RUN-014 原始归档
+    out = (
+        ROOT / "docs/assets/run015/wp4/pg-fencing-ci.json"
+        if _env_pg
+        else ROOT / "docs/assets/run014/wp6/pg-fencing.json"
+    )
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(
         json.dumps({"database": PG_URL, "results": results}, ensure_ascii=False, indent=2), "utf-8"
