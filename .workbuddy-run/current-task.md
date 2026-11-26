@@ -1,3 +1,15 @@
+# 当前任务（RUN-017 收口，2026-11-26 23:55 CST）
+
+> 最终 HEAD：`f34f6b4`（分支 `workbuddy/run017-product-maturity`，已推送）。
+> 本轮全部可自主完成的工作已完成；**唯一未闭环**是 Nightly 的 `ui-acceptance`
+> 在 GitHub runner 上失败（本地 35/35、58/58 通过），定位需要 job 日志（本机无 `gh`/凭据），
+> 已记为 B-28，并把结果写入 Job Summary 便于下轮定位。
+> 权威文档：`docs/RUN-017-FINAL-REPORT.md`；日志：`docs/RUN-017-WORKLOG.md`；
+> 证据：`docs/assets/run017/**`。
+> 禁止：改 main、强推、reset --hard、git clean、自动合并 PR、读取凭据。
+
+---
+
 # 当前任务（RUN-017 收口，2026-11-26 22:40 CST）
 
 > 分支 `workbuddy/run017-product-maturity`，最终 HEAD 待推送。

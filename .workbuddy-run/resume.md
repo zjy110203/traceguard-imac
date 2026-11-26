@@ -1,3 +1,17 @@
+# RESUME（RUN-017 收口，2026-11-26 23:55 CST）
+
+- 分支：`workbuddy/run017-product-maturity`，最终 HEAD `f34f6b4`（已推送）。
+- 先读：`docs/RUN-017-FINAL-REPORT.md` → `RUN-017-BASELINE.md` → 各 WP 专题 → `RUN-017-WORKLOG.md`。
+- **下一步第一件事**：`gh run view 45849709837 --log-failed`（Nightly #30 的 ui-acceptance 失败日志）
+  与 `gh run download 45849709837 -n ui-acceptance-evidence`（报告 JSON + 截图），
+  定位 B-28；随后再考虑 PR #3 的创建（描述见 `docs/RUN-017-PR3-DESCRIPTION.md`）。
+- 环境：PG16.16 在 `127.0.0.1:55432`（**不要用 localhost**，IPv6 指向另一个 16.2 实例）。
+- 复现入口：`scripts/bench_v2_run017.py`、`scripts/backup_restore_verify_run017.py`、
+  `scripts/doctor.py`、`scripts/business_loop_ui_acceptance_run017.py --profile full`、
+  `scripts/ui_matrix_run017.py`、`scripts/artifact_gc_bench_run017.py`。
+
+---
+
 # RESUME（RUN-017，2026-11-26 21:55 CST）
 
 - 分支：`workbuddy/run017-product-maturity`；已推送 `1faebec`（CI run #75/#27）。
