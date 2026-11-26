@@ -28,6 +28,11 @@ from typing import Any
 from traceguard_core.errors import AppError, ErrorCode
 from traceguard_core.ids import new_id, utc_now_iso
 from traceguard_core.logging import get_logger, redact
+from traceguard_evidence.probe.contract import (
+    build_probe_evidence_contract,
+    canonical_params_hash,
+    derive_idempotency_key,
+)
 from traceguard_evidence.probe.feedback import ProbeSignal
 from traceguard_evidence.probe.planner import (
     PROVISIONAL_NOTE,
@@ -37,6 +42,7 @@ from traceguard_evidence.probe.planner import (
     ProbeDefinition,
     ProbeEngine,
     ProbeResult,
+    ProbeUnavailable,
     budget_doc_id,
 )
 

@@ -1,3 +1,16 @@
+# 测试结果（RUN-018，2026-11-27 01:00 CST）
+
+| 命令 | 结果 |
+|---|---|
+| `pytest tests/unit/` | **419 passed** |
+| `pytest tests/unit/test_probe_cleanup_security_run018.py` | 19 passed |
+| `pytest tests/unit/test_double_submit_run018.py` | 9 passed |
+| `pytest tests/integration/test_fault_effect_teamflow_run017.py` | 14 passed |
+| PR Gate #81 @ c807284 | success (2m28s) |
+| Nightly #33 @ c807284 | failed (ui-acceptance) |
+
+---
+
 # 测试结果（RUN-017 收口，2026-11-26 22:40 CST）
 
 | 命令 | 结果 |

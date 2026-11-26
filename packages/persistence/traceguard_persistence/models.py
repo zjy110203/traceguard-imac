@@ -320,6 +320,69 @@ class PromotionReceiptRow(Base):
     created_at: Mapped[str] = mapped_column(String(40), default=utc_now_iso)
 
 
+class WorkerHeartbeatRow(Base):
+    """RUN-018 WP8：Worker 心跳登记（Worker 数量 / 在线状态 / 当前执行 Run 的数据源）。
+
+    Worker 每个轮询周期 upsert 一次；`last_heartbeat_at` 与阈值比较得出在线/离线。
+    阈值是 provisional 配置，不是 SLA（见 traceguard_persistence.monitoring）。
+    """
+
+    __tablename__ = "tg_worker_heartbeat"
+    worker_id: Mapped[str] = mapped_column(String(120), primary_key=True)
+    #: inline = API 内嵌 Worker；standalone = 独立进程 Worker
+    mode: Mapped[str] = mapped_column(String(20), default="standalone")
+    #: IDLE / RUNNING / STOPPED（STOPPED 为优雅退出时的最后状态）
+    status: Mapped[str] = mapped_column(String(20), default="IDLE")
+    hostname: Mapped[str] = mapped_column(String(120), default="")
+    pid: Mapped[int] = mapped_column(Integer, default=0)
+    current_run_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    current_task_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    lease_expires_at: Mapped[float] = mapped_column(Float, default=0.0)
+    claims_total: Mapped[int] = mapped_column(Integer, default=0)
+    takeovers_total: Mapped[int] = mapped_column(Integer, default=0)
+    failures_total: Mapped[int] = mapped_column(Integer, default=0)
+    started_at: Mapped[float] = mapped_column(Float, default=_ts)
+    last_heartbeat_at: Mapped[float] = mapped_column(Float, default=_ts)
+    detail: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+
+
+class AlertRow(Base):
+    """RUN-018 WP8：运行告警记录（状态机 OPEN → ACKNOWLEDGED → RESOLVED）。
+
+    同一 `fingerprint` 的未解决告警只保留一条（应用层去重）；条件消失后由告警引擎
+    自动 RESOLVED，人工处理走 acknowledge / resolve API 并记录处理主体与时间。
+    """
+
+    __tablename__ = "tg_alert"
+    alert_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    #: 去重指纹：`{alert_type}:{维度}`，如 WORKER_OFFLINE:{worker_id}
+    fingerprint: Mapped[str] = mapped_column(String(160), index=True)
+    alert_type: Mapped[str] = mapped_column(String(40), index=True)
+    #: INFO / WARNING / CRITICAL
+    severity: Mapped[str] = mapped_column(String(12), default="WARNING")
+    #: OPEN / ACKNOWLEDGED / RESOLVED
+    status: Mapped[str] = mapped_column(String(16), default="OPEN", index=True)
+    title: Mapped[str] = mapped_column(String(200), default="")
+    message: Mapped[str] = mapped_column(Text, default="")
+    detail: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    #: 告警归属 Workspace；None = 系统级（全员可见）
+    scope_workspace: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    ref_run_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    ref_worker_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    occurrences: Mapped[int] = mapped_column(Integer, default=1)
+    first_seen: Mapped[float] = mapped_column(Float, default=_ts)
+    last_seen: Mapped[float] = mapped_column(Float, default=_ts)
+    #: 处理主体（ACK）与时间
+    acknowledged_by: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    acknowledged_at: Mapped[float | None] = mapped_column(Float, nullable=True)
+    #: 处理主体（RESOLVE）、时间与解决原因
+    resolved_by: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    resolved_at: Mapped[float | None] = mapped_column(Float, nullable=True)
+    resolution_reason: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[float] = mapped_column(Float, default=_ts)
+    updated_at: Mapped[float] = mapped_column(Float, default=_ts)
+
+
 class MetricRow(Base):
     __tablename__ = "tg_metric"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -337,3 +400,4 @@ class MetricRow(Base):
 
 Index("ix_tg_run_queue", RunRow.execution_status, RunRow.lease_expires_at)
 Index("ix_tg_step_run_idx", StepRow.run_id, StepRow.step_index)
+Index("ix_tg_alert_status_seen", AlertRow.status, AlertRow.last_seen)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import random
+import re
 import string
 from typing import Any
 
@@ -395,6 +396,11 @@ class ProbeCleanupReq(BaseModel):
     allow_default: bool = False
 
 
+#: 合法探针 token 字符集（RUN-018 WP3）：与 `new_probe_token()` 的 `uuid4().hex` 一致，
+#: 只允许 [0-9a-f]，不含 SQL LIKE 通配符 `%`/`_`，也不含其他特殊字符。
+_PROBE_TOKEN_RE = re.compile(r"^[0-9a-f]{8,64}$")
+
+
 @router.post("/api/test/probe-cleanup")
 async def probe_cleanup(req: ProbeCleanupReq) -> dict[str, Any]:
     """只清理**本探针自己创建**的数据（RUN-017 WP2.3）。
@@ -404,6 +410,11 @@ async def probe_cleanup(req: ProbeCleanupReq) -> dict[str, Any]:
     - 清理 `default` 需要显式 `allow_default=true`，且 token ≥ 12 位；
     - 只删除名称以 `bp:<token>:` 开头的项目，token 由调用方随机生成并持有；
     - 返回删除前后计数，调用方可据此判断"清理是否真的成功"。
+
+    RUN-018 WP3 安全加固：
+    - token 字符集严格校验（只允许 [0-9a-f]），杜绝 SQL LIKE 通配符注入；
+    - 前缀匹配使用 `startswith()`（SQLAlchemy 自动转义 LIKE 特殊字符）；
+    - default workspace 仍需显式授权，不允许跨 Workspace 清理。
 
     为什么需要这个入口：探针必须真实写入才能验证持久化，而 `/api/test/reset`
     会清空**全部**项目（含用户数据），不能用于探针回收。
@@ -426,15 +437,23 @@ async def probe_cleanup(req: ProbeCleanupReq) -> dict[str, Any]:
             status_code=400,
             detail=f"token 长度不足 {min_len}，拒绝清理以免误删",
         )
+    # RUN-018 WP3：严格字符集校验——只允许 hex 字符，防止 %/_ 等 LIKE 通配符
+    if not _PROBE_TOKEN_RE.match(token):
+        raise HTTPException(
+            status_code=400,
+            detail="token 含非法字符（只允许 [0-9a-f]），拒绝清理",
+        )
     prefix = f"bp:{token}:"
     session = get_session()
     try:
         before = session.query(Project).filter_by(workspace_slug=req.workspace).count()
+        # RUN-018 WP3：使用 startswith() 而非 like(prefix + "%")——
+        # startswith() 自动转义 LIKE 通配符，即使 token 校验被绕过也不会误匹配
         matched = (
             session.query(Project)
             .filter(
                 Project.workspace_slug == req.workspace,
-                Project.name.like(prefix + "%"),
+                Project.name.startswith(prefix),
             )
             .all()
         )
@@ -447,7 +466,7 @@ async def probe_cleanup(req: ProbeCleanupReq) -> dict[str, Any]:
             session.query(Project)
             .filter(
                 Project.workspace_slug == req.workspace,
-                Project.name.like(prefix + "%"),
+                Project.name.startswith(prefix),
             )
             .count()
         )

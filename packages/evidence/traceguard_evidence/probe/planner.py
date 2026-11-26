@@ -51,12 +51,15 @@ class ProbeDefinition:
     timeout_ms: int = 5000
     estimated_cost: float = 1.0
     estimated_duration_ms: int = 500
+    #: 写入型探针（read_only=False）必须声明隔离作用域与清理策略（RUN-018 WP5 §5.5）
+    isolation: str = ""
+    cleanup_policy: str = ""
 
 
 @dataclass
 class ProbeResult:
     probe_id: str
-    status: str  # SUCCEEDED / FAILED / TIMED_OUT / BLOCKED
+    status: str  # SUCCEEDED / FAILED / TIMED_OUT / BLOCKED / UNKNOWN
     data: dict[str, Any] = field(default_factory=dict)
     reason: str = ""
     source: dict[str, Any] = field(default_factory=dict)  # 来源记录
@@ -66,6 +69,14 @@ class ProbeResult:
     #: RUN-011 WP2：实际观测发生时刻（epoch 秒）。探针在 Run 结束后执行时，
     #: 该时刻 > run_ended_at，属于"事后观测"，不能冒充 Run 当时的历史状态。
     observed_at: float = 0.0
+
+
+class ProbeUnavailable(Exception):
+    """执行器信号：探针不可用 / 观测无法判定（不是目标系统故障证据）。
+
+    `ProbeEngine.execute` 捕获后返回 status="UNKNOWN"：零证据、零假设变更。
+    RUN-018 WP5 §5.3：Probe UNKNOWN 不能提升假设置信度。
+    """
 
 
 def _fake_clock() -> float:  # pragma: no cover - 仅作为 dataclass 默认占位
@@ -538,6 +549,13 @@ class ProbeEngine:
         # 3. 风险检查
         if d.risk_level == "HIGH" and not params.get("explicit_risk_approval"):
             raise AppError(ErrorCode.AUTHORIZATION_ERROR, "HIGH_RISK_PROBE_REQUIRES_APPROVAL")
+        # 3b. 写入型探针必须声明隔离与清理策略（RUN-018 WP5 §5.5）：
+        # 不允许"会写目标系统但没有隔离/清理方案"的探针注册后直接执行。
+        if not d.read_only and (not d.isolation or not d.cleanup_policy):
+            raise AppError(
+                ErrorCode.PRECONDITION_FAILED,
+                "WRITE_PROBE_REQUIRES_ISOLATION_AND_CLEANUP",
+            )
 
         # 4. 预算检查（预算按 Run/Diagnosis 实例化，不再是全局计数）
         reason = budget.exhausted_reason()
@@ -678,6 +696,24 @@ class ProbeEngine:
                 budget_scope=b.scope_key,
                 duration_ms=int((time.time() - started) * 1000),
             )
+        except ProbeUnavailable as e:
+            # 探针不可用/无法判定：UNKNOWN 状态，零证据、不冒充目标系统故障
+            self._audit.append(
+                {
+                    "probe_id": probe_id,
+                    "budget_scope": b.scope_key,
+                    "decision": "UNKNOWN",
+                    "reason": str(e)[:100],
+                    "at": time.time(),
+                }
+            )
+            return ProbeResult(
+                probe_id,
+                "UNKNOWN",
+                reason=str(e)[:200] or "PROBE_UNAVAILABLE",
+                budget_scope=b.scope_key,
+                duration_ms=int((time.time() - started) * 1000),
+            )
         except Exception as e:  # noqa: BLE001
             self._audit.append(
                 {
@@ -774,5 +810,6 @@ __all__ = [
     "ProbeDefinition",
     "ProbeEngine",
     "ProbeResult",
+    "ProbeUnavailable",
     "ScoreWeights",
 ]

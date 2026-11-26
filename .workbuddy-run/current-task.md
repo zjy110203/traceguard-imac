@@ -1,3 +1,17 @@
+# 当前任务（RUN-018 执行中，2026-11-27 01:00 CST）
+
+> 分支 `workbuddy/run018-diagnostic-closure`（起点 `c807284`）。
+> 主题：诊断反馈闭环、观测可信度、产品可靠性完善。
+> WP0 基线核查 DONE；WP2 观测三态语义 DONE；WP3 探针清理安全 DONE（19 测试）；
+> WP4 GC 并发安全 IMPLEMENTED；WP5 诊断反馈闭环 IMPLEMENTED；
+> WP6 双提交观测 DONE（9 测试）；WP7 保留集方法论 DONE；
+> WP8 运维监控 IMPLEMENTED；WP9 无障碍 PARTIAL；WP10 运维文档 DONE。
+> PR Gate #81 success；Nightly #33 failed（B-28 仍未闭环）。
+> 全量：419 unit passed + 14 integration passed。
+> 禁止：改 main、强推、reset --hard、git clean、自动合并 PR、读取凭据。
+
+---
+
 # 当前任务（RUN-017 收口，2026-11-26 23:55 CST）
 
 > 最终 HEAD：`f34f6b4`（分支 `workbuddy/run017-product-maturity`，已推送）。

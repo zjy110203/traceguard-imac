@@ -58,6 +58,19 @@ class EffectStatus(str, Enum):
     UNKNOWN = "UNKNOWN"
 
 
+class ReadVerdict(str, Enum):
+    """独立状态读取的三态裁决（RUN-018 WP2）。
+
+    只有**有效的权威读取**（HTTP 200 + ok=true + 合法响应结构）才允许给出
+    PRESENT / ABSENT；403 / 5xx / 超时 / 连接失败 / 非法 JSON / 缺少必要字段
+    一律 UNKNOWN——读取不可用绝不能被当作"记录不存在"的证据。
+    """
+
+    PRESENT = "PRESENT"
+    ABSENT = "ABSENT"
+    UNKNOWN = "UNKNOWN"
+
+
 class EffectClass(str, Enum):
     """探针结论的机器可读分类（写入样本，便于审计与统计）。"""
 
@@ -80,6 +93,8 @@ class EffectClass(str, Enum):
     CREATE_REJECTED = "CREATE_REJECTED"
     UNEXPECTED_ACCEPT = "UNEXPECTED_ACCEPT"
     NO_INDEPENDENT_PROBE = "NO_INDEPENDENT_PROBE"
+    STATE_READ_UNAVAILABLE = "STATE_READ_UNAVAILABLE"
+    CONTRADICTORY_STATE_READS = "CONTRADICTORY_STATE_READS"
 
 
 #: 每类故障用哪些独立探针。缺少映射 = 无独立证据能力 → UNKNOWN。
@@ -195,6 +210,25 @@ def _json(text: str) -> dict[str, Any]:
     except (json.JSONDecodeError, TypeError):
         return {}
     return value if isinstance(value, dict) else {}
+
+
+def _parse_json_strict(text: str) -> dict[str, Any] | None:
+    """严格 JSON 解析：非法 JSON / 非对象返回 None（区别于"响应合法但缺字段"）。"""
+    try:
+        value = json.loads(text)
+    except (json.JSONDecodeError, TypeError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def network_error_reason(error_text: str) -> str:
+    """把网络层异常文本归类成可审计的失败原因（保留原文由调用方记录）。"""
+    low = error_text.lower()
+    if "timed out" in low or "timeout" in low:
+        return "TIMEOUT"
+    if "refused" in low:
+        return "CONNECTION_REFUSED"
+    return "CONNECTION_FAILURE"
 
 
 def _percentile(samples: list[float], q: float) -> float:
@@ -404,21 +438,17 @@ def _baseline_read_latency(base_url: str, timeout: float) -> dict[str, Any]:
 
 
 def _baseline_state_consistency(base_url: str, timeout: float, token: str) -> dict[str, Any]:
-    """健康基线：刚写入的项目必须立刻出现在状态读里（读写一致）。"""
+    """健康基线：刚写入的项目必须立刻出现在状态读里（读写一致，且读取必须有效）。"""
     name = f"{_probe_prefix(token)}baseline-consistency"
     status, payload, ms, text = _create_project(base_url, name, timeout)
     key = str((payload.get("project") or {}).get("key") or "")
     immediate = _state_list_contains(base_url, name, key, timeout)
-    direct_status, direct_payload, direct_ms = (
-        _http("GET", base_url.rstrip("/") + f"/api/state/project/{key}", timeout=timeout)
-        if key
-        else (0, "{}", 0.0)
-    )
+    direct = _read_state_project(base_url, key, timeout)
     cleanup = _cleanup_probe_data(base_url, token, timeout)
     healthy = (
         status in (200, 201)
-        and immediate.get("present") is True
-        and bool(_json(direct_payload).get("ok"))
+        and immediate.get("verdict") == ReadVerdict.PRESENT.value
+        and direct.get("verdict") == ReadVerdict.PRESENT.value
         and bool(cleanup.get("ok"))
     )
     return {
@@ -426,11 +456,12 @@ def _baseline_state_consistency(base_url: str, timeout: float, token: str) -> di
         "create_status": status,
         "create_body": text[:160],
         "immediate_read": immediate,
-        "direct_status": direct_status,
-        "direct_elapsed_ms": round(direct_ms, 1),
+        "direct_read": direct,
+        "direct_status": direct.get("http_status"),
+        "direct_elapsed_ms": direct.get("elapsed_ms"),
         "cleanup": cleanup,
         "create_elapsed_ms": round(ms, 1),
-        "note": "" if healthy else "健康基线读写不一致或清理失败",
+        "note": "" if healthy else "健康基线读写不一致、状态读取不可用或清理失败",
     }
 
 
@@ -487,59 +518,169 @@ def _baseline_api_update(base_url: str, timeout: float, token: str) -> dict[str,
     }
 
 
-def _state_list_contains(base_url: str, name: str, key: str, timeout: float) -> dict[str, Any]:
-    """状态列表里是否能看到这条刚写入的记录（按 key 优先，名称回退）。"""
-    status, payload, ms = _state_projects(base_url, timeout)
-    projects = payload.get("projects")
-    present = False
-    if isinstance(projects, list):
-        for item in projects:
-            if not isinstance(item, dict):
-                continue
-            if key and str(item.get("key")) == key:
-                present = True
-                break
-            if str(item.get("name")) == name:
-                present = True
-                break
-    return {
-        "present": present,
+def _read_state_list(base_url: str, timeout: float) -> dict[str, Any]:
+    """权威状态列表的严格读取（三态）：只有 HTTP 200 + ok=true + 合法 projects 列表有效。
+
+    RUN-018 WP2：403 / 5xx / 超时 / 连接失败 / 非 JSON / 缺少 ok / 缺少 projects
+    一律 UNKNOWN（旧实现把这些当作"记录不存在"，会把读取不可用误判成
+    ACCEPTED_NOT_PERSISTED / STALE_READ）。原始状态码与错误原因保留在返回值里。
+    """
+    status, text, ms = _http(
+        "GET",
+        base_url.rstrip("/") + f"/api/state/projects?workspace={PROBE_WORKSPACE}",
+        timeout=timeout,
+    )
+    result: dict[str, Any] = {
+        "valid": False,
+        "reason": "",
         "http_status": status,
-        "count": payload.get("count"),
         "elapsed_ms": round(ms, 1),
     }
+    if status == 0:
+        result["reason"] = network_error_reason(text)
+        result["error"] = text[:300]
+        return result
+    if status != 200:
+        result["reason"] = f"HTTP_{status}"
+        result["body"] = text[:300]
+        return result
+    payload = _parse_json_strict(text)
+    if payload is None:
+        result["reason"] = "NON_JSON_RESPONSE"
+        result["body"] = text[:300]
+        return result
+    if "ok" not in payload:
+        result["reason"] = "MISSING_OK_FIELD"
+        result["body"] = text[:300]
+        return result
+    if payload.get("ok") is not True:
+        result["reason"] = "OK_NOT_TRUE"
+        result["body"] = text[:300]
+        return result
+    projects = payload.get("projects")
+    if not isinstance(projects, list) or any(not isinstance(p, dict) for p in projects):
+        result["reason"] = "MISSING_OR_MALFORMED_PROJECTS_FIELD"
+        result["body"] = text[:300]
+        return result
+    result["valid"] = True
+    result["reason"] = "OK"
+    result["count"] = payload.get("count")
+    result["projects"] = projects
+    return result
+
+
+def _state_list_contains(base_url: str, name: str, key: str, timeout: float) -> dict[str, Any]:
+    """状态列表里是否能看到这条刚写入的记录（三态，按 key 优先，名称回退）。
+
+    `present` 为 True/False/None（None = UNKNOWN）；只有有效权威读取才能给出
+    True / False——有效读取明确表示记录不在列表里，才允许判 ABSENT。
+    """
+    read = _read_state_list(base_url, timeout)
+    result: dict[str, Any] = {
+        "present": None,
+        "verdict": ReadVerdict.UNKNOWN.value,
+        "reason": read.get("reason", ""),
+        "http_status": read.get("http_status"),
+        "elapsed_ms": read.get("elapsed_ms"),
+    }
+    for extra in ("count", "error", "body"):
+        if extra in read:
+            result[extra] = read[extra]
+    if not read.get("valid"):
+        return result
+    for item in read["projects"]:
+        if key and str(item.get("key")) == key:
+            result["present"] = True
+            result["verdict"] = ReadVerdict.PRESENT.value
+            return result
+        if str(item.get("name")) == name:
+            result["present"] = True
+            result["verdict"] = ReadVerdict.PRESENT.value
+            return result
+    result["present"] = False
+    result["verdict"] = ReadVerdict.ABSENT.value
+    return result
+
+
+def _read_state_project(base_url: str, key: str, timeout: float) -> dict[str, Any]:
+    """直接按 key 的权威状态查询（三态）：ok=True → PRESENT，ok=False → ABSENT。
+
+    HTTP 200 + 布尔 `ok` 字段才是有效读取；ok=False 是权威的"记录不存在"。
+    其余（HTTP 非 200 / 网络失败 / 非 JSON / 缺少 ok）一律 UNKNOWN，
+    不得当作"不存在"的证据（RUN-018 WP2 修正点）。
+    """
+    result: dict[str, Any] = {
+        "present": None,
+        "verdict": ReadVerdict.UNKNOWN.value,
+        "reason": "",
+        "ok": None,
+        "http_status": 0,
+        "elapsed_ms": 0.0,
+    }
+    if not key:
+        result["reason"] = "NO_PROJECT_KEY"
+        return result
+    status, text, ms = _http(
+        "GET", base_url.rstrip("/") + f"/api/state/project/{key}", timeout=timeout
+    )
+    result["http_status"] = status
+    result["elapsed_ms"] = round(ms, 1)
+    if status == 0:
+        result["reason"] = network_error_reason(text)
+        result["error"] = text[:300]
+        return result
+    if status != 200:
+        result["reason"] = f"HTTP_{status}"
+        result["body"] = text[:300]
+        return result
+    payload = _parse_json_strict(text)
+    if payload is None:
+        result["reason"] = "NON_JSON_RESPONSE"
+        result["body"] = text[:300]
+        return result
+    if "ok" not in payload:
+        result["reason"] = "MISSING_OK_FIELD"
+        result["body"] = text[:300]
+        return result
+    ok = payload.get("ok")
+    result["ok"] = ok
+    if ok is True:
+        result["present"] = True
+        result["verdict"] = ReadVerdict.PRESENT.value
+        result["reason"] = "OK"
+        return result
+    if ok is False:
+        result["present"] = False
+        result["verdict"] = ReadVerdict.ABSENT.value
+        result["reason"] = "OK"
+        return result
+    result["reason"] = "MALFORMED_OK_FIELD"
+    return result
 
 
 def _readback(base_url: str, name: str, key: str, timeout: float) -> dict[str, Any]:
-    """按 key 精确回读（优先）或按名称在权威状态里查（回退）。"""
+    """按 key 精确回读（优先）或按名称在权威状态里查（回退）。三态：persisted=True/False/None。
+
+    RUN-018 WP2：`persisted` 为 None（UNKNOWN）表示读取不可用——旧实现把它
+    当作 False，会把 500/403/超时误判成"未落库"。只有有效权威读取才能证明不存在。
+    """
     if key:
-        status, text, ms = _http(
-            "GET",
-            base_url.rstrip("/") + f"/api/state/project/{key}",
-            timeout=timeout,
-        )
-        payload = _json(text)
-        return {
-            "by": "key",
-            "key": key,
-            "http_status": status,
-            "persisted": bool(payload.get("ok")),
-            "elapsed_ms": round(ms, 1),
-        }
-    status, payload, ms = _state_projects(base_url, timeout)
-    projects = payload.get("projects")
-    names = (
-        [str(p.get("name")) for p in projects if isinstance(p, dict)]
-        if isinstance(projects, list)
-        else []
-    )
+        read = _read_state_project(base_url, key, timeout)
+        by, identity = "key", {"key": key}
+    else:
+        read = _state_list_contains(base_url, name, "", timeout)
+        by, identity = "name", {"name": name}
+    verdict = read.get("verdict")
+    persisted = {"PRESENT": True, "ABSENT": False}.get(str(verdict))
     return {
-        "by": "name",
-        "name": name,
-        "http_status": status,
-        "persisted": name in names,
-        "elapsed_ms": round(ms, 1),
-        "state_count": payload.get("count"),
+        "by": by,
+        **identity,
+        "http_status": read.get("http_status"),
+        "persisted": persisted,
+        "verdict": verdict,
+        "reason": read.get("reason"),
+        "elapsed_ms": read.get("elapsed_ms"),
+        "state_count": read.get("count"),
     }
 
 
@@ -805,6 +946,11 @@ def _probe_persistence(
         key = str((payload.get("project") or {}).get("key") or "")
         readback = _readback(base_url, name, key, timeout)
         attempt["readback"] = readback
+        if readback.get("persisted") is None:
+            # 读取不可用 ≠ 未落库：该次尝试无法判定，不得当作 ACCEPTED_NOT_PERSISTED
+            attempt["outcome"] = "READ_UNAVAILABLE"
+            detail["attempts"].append(attempt)
+            continue
         if not readback.get("persisted"):
             attempt["outcome"] = "ACCEPTED_NOT_PERSISTED"
             impacted = True
@@ -830,18 +976,33 @@ def _probe_persistence(
             if dup_key:
                 dup_read = _readback(base_url, name, dup_key, timeout)
             else:
-                s_status, s_payload, _s_ms = _state_projects(base_url, timeout)
-                names = [
-                    str(p.get("name"))
-                    for p in (s_payload.get("projects") or [])
-                    if isinstance(p, dict)
-                ]
-                dup_read = {
-                    "by": "name",
-                    "http_status": s_status,
-                    "persisted": names.count(name) >= 2,
-                }
+                s_read = _read_state_list(base_url, timeout)
+                if s_read.get("valid"):
+                    dup_count = sum(
+                        1 for p in s_read["projects"] if str(p.get("name")) == name
+                    )
+                    dup_read = {
+                        "by": "name",
+                        "http_status": s_read.get("http_status"),
+                        "persisted": dup_count >= 2,
+                        "verdict": (
+                            ReadVerdict.PRESENT if dup_count >= 2 else ReadVerdict.ABSENT
+                        ).value,
+                        "reason": "OK",
+                    }
+                else:
+                    dup_read = {
+                        "by": "name",
+                        "http_status": s_read.get("http_status"),
+                        "persisted": None,
+                        "verdict": ReadVerdict.UNKNOWN.value,
+                        "reason": s_read.get("reason"),
+                    }
             attempt["duplicate"]["readback"] = dup_read
+            if dup_read.get("persisted") is None:
+                attempt["outcome"] = "DUPLICATE_READ_UNAVAILABLE"
+                detail["attempts"].append(attempt)
+                continue
             if not dup_read.get("persisted"):
                 attempt["outcome"] = "DUPLICATE_NOT_PERSISTED"
                 impacted = True
@@ -892,13 +1053,28 @@ def _probe_persistence(
             time.time(),
             EffectClass.PERSISTED.value,
         )
+    read_unavailable = any(
+        a.get("outcome") in ("READ_UNAVAILABLE", "DUPLICATE_READ_UNAVAILABLE")
+        for a in detail["attempts"]
+    )
     return ProbeResult(
         "persistence",
         None,
-        {**detail, "reason": "NO_CONCLUSIVE_ATTEMPT"},
+        {
+            **detail,
+            "reason": (
+                "READ_UNAVAILABLE_NO_CONCLUSIVE_ATTEMPT"
+                if read_unavailable
+                else "NO_CONCLUSIVE_ATTEMPT"
+            ),
+        },
         total_ms,
         time.time(),
-        EffectClass.CREATE_REJECTED.value,
+        (
+            EffectClass.STATE_READ_UNAVAILABLE.value
+            if read_unavailable
+            else EffectClass.CREATE_REJECTED.value
+        ),
     )
 
 
@@ -1044,7 +1220,17 @@ def _probe_state_consistency(
         )
     key = str((payload.get("project") or {}).get("key") or "")
     if status not in (200, 201) or not key:
-        _cleanup_probe_data(base_url, token, timeout)
+        cleanup = _cleanup_probe_data(base_url, token, timeout)
+        detail["cleanup"] = cleanup
+        if not cleanup.get("ok"):
+            return ProbeResult(
+                "state_consistency",
+                None,
+                {**detail, "reason": "PROBE_CLEANUP_FAILED", "requires_environment_reset": True},
+                total_ms,
+                time.time(),
+                EffectClass.CLEANUP_FAILED.value,
+            )
         return ProbeResult(
             "state_consistency",
             None,
@@ -1056,32 +1242,46 @@ def _probe_state_consistency(
 
     immediate = _state_list_contains(base_url, name, key, timeout)
     total_ms += float(immediate.get("elapsed_ms") or 0.0)
-    direct_status, direct_text, direct_ms = _http(
-        "GET", base_url.rstrip("/") + f"/api/state/project/{key}", timeout=timeout
-    )
-    total_ms += direct_ms
-    direct = _json(direct_text)
-    detail.update(
-        {
-            "immediate_read": immediate,
-            "direct_read": {"http_status": direct_status, "ok": direct.get("ok")},
-        }
-    )
+    direct = _read_state_project(base_url, key, timeout)
+    total_ms += float(direct.get("elapsed_ms") or 0.0)
+    detail.update({"immediate_read": immediate, "direct_read": direct})
 
-    eventual_present = immediate.get("present") is True
+    # 延迟复测：区分"有效读取"与"不可用读取"，只有有效读取才改变结论
+    eventual_present: bool | None = (
+        True if immediate.get("verdict") == ReadVerdict.PRESENT.value else None
+    )
+    retest_attempts: list[dict[str, Any]] = []
     waited_s = 0.0
-    if not eventual_present:
+    if eventual_present is None:
         started_wait = time.time()
         deadline = started_wait + 12.0
+        saw_valid_absent = False
         while time.time() < deadline:
             time.sleep(0.5)
             again = _state_list_contains(base_url, name, key, timeout)
             total_ms += float(again.get("elapsed_ms") or 0.0)
-            if again.get("present"):
+            retest_attempts.append(
+                {
+                    "t_s": round(time.time() - started_wait, 1),
+                    "verdict": again.get("verdict"),
+                    "http_status": again.get("http_status"),
+                    "reason": again.get("reason"),
+                }
+            )
+            if again.get("verdict") == ReadVerdict.PRESENT.value:
                 eventual_present = True
                 break
+            if again.get("verdict") == ReadVerdict.ABSENT.value:
+                saw_valid_absent = True
         waited_s = round(time.time() - started_wait, 1)
-    detail["eventual_read"] = {"present": eventual_present, "waited_s": waited_s}
+        if eventual_present is None and saw_valid_absent:
+            # 窗口内只有有效读取且全部说"不在" → 有效证据；不可用读取不算
+            eventual_present = False
+    detail["eventual_read"] = {
+        "present": eventual_present,
+        "waited_s": waited_s,
+        "attempts": retest_attempts[-20:],
+    }
     cleanup = _cleanup_probe_data(base_url, token, timeout)
     detail["cleanup"] = cleanup
     detail["side_effect"] = True
@@ -1094,8 +1294,28 @@ def _probe_state_consistency(
             time.time(),
             EffectClass.CLEANUP_FAILED.value,
         )
-    if not direct.get("ok"):
-        # 写入返回成功、直接按 key 也读不到 → 不是"读滞后"，是根本没落库
+
+    # ---- 三态判定（RUN-018 WP2）：只有有效权威读取才能证明"存在/不存在" ----
+    verdict_d = direct.get("verdict")
+    verdict_i = immediate.get("verdict")
+    if verdict_d == ReadVerdict.ABSENT.value and verdict_i == ReadVerdict.PRESENT.value:
+        return ProbeResult(
+            "state_consistency",
+            None,
+            {
+                **detail,
+                "reason": "CONTRADICTORY_STATE_READS",
+                "observation_failure": (
+                    f"直接读取判 ABSENT（{direct.get('reason')}）但列表读取判 PRESENT："
+                    "权威读取互相矛盾，不下结论"
+                ),
+            },
+            total_ms,
+            time.time(),
+            EffectClass.CONTRADICTORY_STATE_READS.value,
+        )
+    if verdict_d == ReadVerdict.ABSENT.value:
+        # 有效权威直接读取明确"不存在"（ok=false）→ 才允许判未落库
         return ProbeResult(
             "state_consistency",
             True,
@@ -1104,7 +1324,7 @@ def _probe_state_consistency(
             time.time(),
             EffectClass.API_ACCEPTED_NOT_PERSISTED.value,
         )
-    if immediate.get("present") is True:
+    if verdict_i == ReadVerdict.PRESENT.value:
         return ProbeResult(
             "state_consistency",
             False,
@@ -1113,17 +1333,69 @@ def _probe_state_consistency(
             time.time(),
             EffectClass.PERSISTED.value,
         )
+    if verdict_i == ReadVerdict.ABSENT.value and (
+        verdict_d == ReadVerdict.PRESENT.value or eventual_present is True
+    ):
+        # 列表有效缺席而记录确实存在（直接读或延迟复测证实）→ 快照过期
+        return ProbeResult(
+            "state_consistency",
+            True,
+            {
+                **detail,
+                "reason": "STALE_STATE_READ",
+                "eventually_consistent": eventual_present,
+            },
+            total_ms,
+            time.time(),
+            EffectClass.STALE_READ.value,
+        )
+    if verdict_i == ReadVerdict.ABSENT.value:
+        # 列表有效缺席但无法证明记录存在或不存在（直接读不可用且延迟未证实）
+        return ProbeResult(
+            "state_consistency",
+            None,
+            {
+                **detail,
+                "reason": "ABSENCE_UNPROVEN",
+                "observation_failure": (
+                    f"列表读取有效但记录缺席，直接读取不可用（{direct.get('reason')}）"
+                    "且延迟复测未证实存在：无法证明数据不存在"
+                ),
+            },
+            total_ms,
+            time.time(),
+            EffectClass.STATE_READ_UNAVAILABLE.value,
+        )
+    if verdict_d == ReadVerdict.PRESENT.value:
+        return ProbeResult(
+            "state_consistency",
+            None,
+            {
+                **detail,
+                "reason": "IMMEDIATE_LIST_READ_UNAVAILABLE",
+                "observation_failure": (
+                    f"落库已被直接读取证实，但立即列表读取不可用（{immediate.get('reason')}）"
+                    "：读写一致性未测到，不判受影响也不判正常"
+                ),
+            },
+            total_ms,
+            time.time(),
+            EffectClass.STATE_READ_UNAVAILABLE.value,
+        )
     return ProbeResult(
         "state_consistency",
-        True,
+        None,
         {
             **detail,
-            "reason": "STALE_STATE_READ",
-            "eventually_consistent": eventual_present,
+            "reason": "STATE_READS_UNAVAILABLE",
+            "observation_failure": (
+                f"直接读取（{direct.get('reason')}）与立即列表读取（{immediate.get('reason')}）"
+                "均不可用：读取失败不得当作数据不存在"
+            ),
         },
         total_ms,
         time.time(),
-        EffectClass.STALE_READ.value,
+        EffectClass.STATE_READ_UNAVAILABLE.value,
     )
 
 
@@ -1482,8 +1754,10 @@ __all__ = [
     "FAULT_EFFECT_PROBES",
     "PROBE_WORKSPACE",
     "ProbeResult",
+    "ReadVerdict",
     "capture_baseline",
     "diff_business_state",
+    "network_error_reason",
     "new_probe_token",
     "observe_fault_activation",
     "observe_fault_effect",

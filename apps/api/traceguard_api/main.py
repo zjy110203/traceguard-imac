@@ -52,6 +52,33 @@ def effective_auth_recheck_seconds(requested: float) -> float:
     )
 
 
+async def _request_metrics_middleware(request: Request, call_next):  # type: ignore[no-untyped-def]
+    """RUN-018 WP8：请求计数 / 错误率 / 响应时间（进程内有界窗口，见 monitoring 模块）。
+
+    只做轻量聚合，不做按路径的高基数分组；观测失败绝不影响业务响应。
+    """
+    import time as _time
+
+    from traceguard_persistence.monitoring import REQUEST_METRICS
+
+    started = _time.perf_counter()
+    status = 500
+    try:
+        response = await call_next(request)
+        status = int(response.status_code)
+        return response
+    finally:
+        try:
+            REQUEST_METRICS.record(
+                request.method,
+                request.url.path,
+                status,
+                (_time.perf_counter() - started) * 1000.0,
+            )
+        except Exception:  # noqa: BLE001 - 观测不得影响业务
+            pass
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     from .runtime import get_runtime
@@ -103,6 +130,7 @@ def create_app() -> FastAPI:
     else:
         logger.info("auth_enabled", session_ttl_s=settings.auth_session_ttl_s)
     app.middleware("http")(auth_middleware)
+    app.middleware("http")(_request_metrics_middleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_origins,
@@ -305,7 +333,7 @@ def create_app() -> FastAPI:
         )
 
     from .routers import auth as auth_router
-    from .routers import catalog, evidence, execution, intelligence, system
+    from .routers import catalog, evidence, execution, intelligence, monitoring, system
 
     app.include_router(system.router)
     app.include_router(auth_router.router)
@@ -313,6 +341,7 @@ def create_app() -> FastAPI:
     app.include_router(execution.router)
     app.include_router(evidence.router)
     app.include_router(intelligence.router)
+    app.include_router(monitoring.router)
 
     try:
         from .routers import benchmark as benchmark_router

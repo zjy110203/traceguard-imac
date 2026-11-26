@@ -68,6 +68,48 @@ class Disposition(str, Enum):
     MANUAL_REVIEW = "MANUAL_REVIEW"
 
 
+#: 状态基线置信度（确定性映射，启发式标注；不冒充校准概率）
+_STATUS_CONFIDENCE: dict[str, float] = {
+    "CONFIRMED": 0.9,
+    "SUPPORTED": 0.6,
+    "CANDIDATE": 0.3,
+    "CONTRADICTED": 0.2,
+    "EXCLUDED": 0.0,
+}
+
+
+def hypothesis_confidence(h: Any) -> float:
+    """假设置信度（RUN-018 WP5：重诊断"置信度变化"的确定性度量）。
+
+    规则（可解释、无学习成分）：
+    - 以状态基线为底（CONFIRMED 0.9 / SUPPORTED 0.6 / CANDIDATE 0.3 /
+      CONTRADICTED 0.2 / EXCLUDED 0.0）；
+    - 每条 TRUSTED 且 directly_confirming 的支持证据 +0.05（封顶 +0.1）；
+    - 支持证据**全部**为 POST_HOC / TIME_UNKNOWN 时封顶 0.4：
+      时间未对齐的观测不得撑起高置信（与 R1-02 一致）。
+
+    取值为启发式标量，只用于版本间变化对比与展示，不参与 CONFIRMED 判定。
+    """
+    if isinstance(h, Hypothesis):
+        status = h.status.value
+        supporting = [
+            {"trust": e.source_trust, "confirming": e.directly_confirming} for e in h.supporting
+        ]
+    else:
+        status = str(h.get("status", "CANDIDATE"))
+        supporting = list(h.get("supporting") or [])
+    base = _STATUS_CONFIDENCE.get(status, 0.3)
+    confirming = sum(
+        1 for r in supporting if r.get("confirming") and str(r.get("trust")) == "TRUSTED"
+    )
+    bonus = min(0.1, 0.05 * confirming)
+    if supporting and all(
+        str(r.get("trust")) in {"POST_HOC", "TIME_UNKNOWN"} for r in supporting
+    ):
+        base = min(base, 0.4)
+    return round(min(1.0, base + bonus), 3)
+
+
 @dataclass
 class EvidenceRef:
     evidence_id: str
@@ -105,6 +147,7 @@ class Hypothesis:
                 {"id": e.evidence_id, "trust": e.source_trust} for e in self.contradicting
             ],
             "status": self.status.value,
+            "confidence": hypothesis_confidence(self),
             "contributing_factors": list(self.contributing_factors),
             "flaky_characteristic": self.flaky_characteristic,
             "suggested_by": self.suggested_by,

@@ -113,19 +113,72 @@ class Runtime:
         self._inline_stop.clear()
 
         def loop() -> None:
+            # RUN-018 WP8：心跳 + 告警评估（共享同一持久化层；观测失败绝不影响执行）
+            from traceguard_persistence.alerts import AlertEngine
+            from traceguard_persistence.monitoring import (
+                MetricsCollector,
+                upsert_worker_heartbeat,
+            )
+
             pid = f"{self.worker_id}-inline"
+            counters = {"claims": 0, "takeovers": 0, "failures": 0}
+            heartbeat = upsert_worker_heartbeat
+            engine = AlertEngine(self.db, min_evaluate_interval_s=30.0)
+            collector = MetricsCollector(self.db, self.artifacts, worker_id=pid)
+
+            def beat(status: str, run_id: str | None = None, task_id: str | None = None,
+                     lease_expires_at: float = 0.0) -> None:
+                try:
+                    heartbeat(
+                        self.db,
+                        worker_id=pid,
+                        mode="inline",
+                        status=status,
+                        hostname=__import__("socket").gethostname(),
+                        pid=__import__("os").getpid(),
+                        current_run_id=run_id,
+                        current_task_id=task_id,
+                        lease_expires_at=lease_expires_at,
+                        claims_delta=counters["claims"],
+                        takeovers_delta=counters["takeovers"],
+                        failures_delta=counters["failures"],
+                    )
+                    counters["claims"] = counters["takeovers"] = counters["failures"] = 0
+                except Exception:  # noqa: BLE001 - 心跳失败不得影响 Worker 主循环
+                    pass
+
             while not self._inline_stop.is_set():
                 try:
                     self.tasks.reap_expired_runs()
                     claimed = self.tasks.claim_next_run(pid, ttl_seconds=600)
                     if not claimed:
+                        beat("IDLE")
+                        try:
+                            engine.evaluate(collector.collect())
+                        except Exception:  # noqa: BLE001
+                            pass
                         self._inline_stop.wait(self.settings.worker_poll_interval_s)
                         continue
                     logger.info("worker_claim", run_id=claimed["run_id"], worker=pid)
-                    self.pipeline(pid).execute(claimed["run_id"], lease=claimed)
+                    counters["claims"] += 1
+                    if str(claimed.get("previous_status") or "QUEUED") != "QUEUED":
+                        counters["takeovers"] += 1
+                    beat(
+                        "RUNNING",
+                        run_id=claimed["run_id"],
+                        task_id=claimed.get("task_id"),
+                        lease_expires_at=float(claimed.get("lease_expires_at") or 0.0),
+                    )
+                    outcome = self.pipeline(pid).execute(claimed["run_id"], lease=claimed)
+                    if outcome.execution_status in ("FAILED", "TIMED_OUT"):
+                        counters["failures"] += 1
+                    beat("IDLE")
                 except Exception:  # noqa: BLE001 - worker 不得因单次任务失败退出
                     logger.exception("worker_loop_error")
+                    counters["failures"] += 1
+                    beat("IDLE")
                     self._inline_stop.wait(2.0)
+            beat("STOPPED")
 
         self._inline_thread = threading.Thread(target=loop, name="tg-inline-worker", daemon=True)
         self._inline_thread.start()

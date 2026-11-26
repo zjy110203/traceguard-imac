@@ -16,7 +16,14 @@
 | dom_snapshot | 期望 test_id 存在 | 反驳"未渲染"；支持"定位策略/用例资产问题" |
 | dom_snapshot | 期望 test_id 缺失 | 支持"未渲染"；反驳"定位策略" |
 | backend_log | 出现 ERROR/Traceback/500 | 支持 API/产品缺陷（不 confirm） |
-| 任意探针 FAILED/TIMED_OUT/BLOCKED | — | 不产生任何支持/反驳证据 |
+| 任意探针 FAILED/TIMED_OUT/BLOCKED/UNKNOWN | — | 不产生任何支持/反驳证据 |
+
+RUN-018 WP5 确定性规则补充（§5.3）：
+- Probe PASS（SUCCEEDED）本身**不能**自动确认任何根因——确认只来自证据内容
+  （TRUSTED + directly_confirming）经确定性规则裁决，单查询 count=0 亦然（R1-04）；
+- Probe FAIL / UNKNOWN / TIMED_OUT 一律不产生证据、不改变假设、不提升置信度；
+- 存在 5xx 的 Run 里，"界面未渲染"可能只是接口失败的**后果**：
+  http_state 探针不得据此确权 UI_RENDERING（症状不能冒充根因）。
 """
 
 from __future__ import annotations
@@ -144,6 +151,19 @@ def _failed_step_ids(run_report: dict[str, Any]) -> set[str]:
     }
 
 
+def _run_has_5xx(run_report: dict[str, Any]) -> bool:
+    """Run 报告中是否存在接口 5xx（RUN-018 WP5：UI 缺失可能是接口失败的后果）。"""
+    for s in run_report.get("steps") or []:
+        obs = s.get("observation") or {}
+        for he in obs.get("http_errors") or []:
+            if int(he.get("status") or 0) >= 500:
+                return True
+        for ne in obs.get("network") or []:
+            if int(ne.get("status") or 0) >= 500:
+                return True
+    return False
+
+
 def _expected_test_ids(run_report: dict[str, Any]) -> set[str]:
     """从失败步骤里提取期望出现的 test_id（用于 DOM 判定）。"""
     ids: set[str] = set()
@@ -260,7 +280,9 @@ def assess(
     if alignment_note:
         result.notes["alignment"] = alignment_note
     if signal.status != "SUCCEEDED":
-        # 关键安全约束：探针本身失败不等于被测系统出问题
+        # 关键安全约束：探针本身失败 ≠ 被测系统出问题。
+        # FAILED / TIMED_OUT / BLOCKED / UNKNOWN（探针不可用/无法判定）统一处理：
+        # 零证据、零假设变更、置信度不变（RUN-018 WP5 §5.3）。
         result.skipped_reason = f"PROBE_{signal.status}_NOT_EVIDENCE"
         return result
     if not signal.evidence_ids:
@@ -296,6 +318,10 @@ def assess(
         if count is None:
             result.skipped_reason = "STATE_COUNT_UNPARSEABLE"
             return result
+        # RUN-018 WP5 §5.4 场景 C：接口 5xx 存在时，界面未显示成功只是失败的
+        # **后果**——不得据此再次确权 UI_RENDERING（症状不能冒充根因）。
+        run_has_5xx = _run_has_5xx(run_report)
+        result.notes["run_has_5xx"] = run_has_5xx
         for h in _hypotheses_by_mechanism(hypotheses, "PERSISTENCE", "UI_RENDERING"):
             hid = str(h["hypothesis_id"])
             mech = h.get("failure_mechanism")
@@ -346,15 +372,28 @@ def assess(
                         )
             else:  # UI_RENDERING
                 if count >= 1:
-                    result.updates.append(
-                        upd(
-                            hid,
-                            SUPPORT,
-                            True,
-                            False,
-                            f"业务数据已存在（count={count}）但界面断言失败：支持渲染缺陷",
+                    if run_has_5xx:
+                        # 5xx 场景：UI 缺失可能是接口失败的后果，只记方向性支持，不确权
+                        result.updates.append(
+                            upd(
+                                hid,
+                                SUPPORT,
+                                False,
+                                False,
+                                f"业务数据已存在（count={count}）但界面断言失败：方向性支持渲染缺陷，"
+                                "但 Run 存在接口 5xx（界面缺失可能是接口失败的后果），不作为确认依据",
+                            )
                         )
-                    )
+                    else:
+                        result.updates.append(
+                            upd(
+                                hid,
+                                SUPPORT,
+                                True,
+                                False,
+                                f"业务数据已存在（count={count}）但界面断言失败：支持渲染缺陷",
+                            )
+                        )
                 else:
                     result.updates.append(
                         upd(
