@@ -1,3 +1,18 @@
+# 当前任务（RUN-017 收口，2026-11-26 22:40 CST）
+
+> 分支 `workbuddy/run017-product-maturity`，最终 HEAD 待推送。
+> 本轮全部可自主完成的工作已做完：
+> - WP0 基线（12 项技术债登记）、WP1 CI（真实触发，PR #75 success）、
+>   WP2 独立观测重写 + 浏览器观测 + 120 样本实验、WP3 人工授权新 Attempt（15 测试）、
+>   WP4.1 重入防护 / WP4.2 GC 分页 + 10 万级实测 / WP4.3 后端边界 /
+>   WP4.4 PG16 62.05 分钟长稳（33/33 PASS、0 NOTE）、
+>   WP5 备份恢复（SQLite+PG16 各 12 项）+ doctor + 文档同步、
+>   WP6 UI 业务闭环 58/0 + 128 格矩阵全过、WP7 诊断评估 + 1 处规则修复（A/B 中性）。
+> - 全量：SQLite 932 passed / PG16 专项 28 passed / Ruff / vue-tsc / vite / npm audit 全绿。
+> 禁止：改 main、强推、reset --hard、git clean、自动合并 PR、读取凭据。
+
+---
+
 # 当前任务（RUN-017，2026-11-26 21:55 CST）
 
 > 分支 `workbuddy/run017-product-maturity`（起点 `f18e871`，已推送 `1faebec`）。

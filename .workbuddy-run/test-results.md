@@ -1,3 +1,26 @@
+# 测试结果（RUN-017 收口，2026-11-26 22:40 CST）
+
+| 命令 | 结果 |
+|---|---|
+| `pytest -q` | **932 passed / 0 failed / 16 skipped**（跳过=PG 专项） |
+| PG16 专项（真实 16.16） | **28 passed** |
+| `pytest tests/unit/test_benchmark_fault_effect_run016.py` | 17 passed |
+| `pytest tests/integration/test_fault_effect_teamflow_run017.py` | 14 passed |
+| `pytest tests/integration/test_browser_effect_run017.py` | 8 passed |
+| `pytest tests/integration/test_fenced_reentry_run017.py` | 6 passed |
+| `pytest tests/integration/test_regression_retry_run017.py` | 15 passed |
+| `pytest tests/integration/test_artifact_lifecycle_run016.py` | 14 passed |
+| `scripts/soak_run013.py --minutes 62` | 62.05 min / 119 Run / 33 PASS / 0 NOTE |
+| `scripts/bench_v2_run017.py`（2 次） | 120 样本 / UNKNOWN 4 / FP 0 / 确认率 84.3% |
+| `scripts/artifact_gc_bench_run017.py` | 10k/50k/100k 全一致，0.058/0.198/0.383 s |
+| `scripts/backup_restore_verify_run017.py` | SQLite + PG16 all_passed=true |
+| `scripts/doctor.py` | PASS=9 WARN=5 FAIL=0 |
+| `scripts/business_loop_ui_acceptance_run017.py` | 58 PASS / 0 FAIL |
+| `scripts/ui_matrix_run017.py` | 128 / 128 PASS |
+| Ruff / format / vue-tsc / vite / npm audit / secret scan / git diff --check | 全绿 |
+
+---
+
 # 测试结果（RUN-017，2026-11-26 21:55 CST）
 
 | 命令 | 结果 |

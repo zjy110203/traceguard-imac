@@ -13,8 +13,8 @@ RUN-017 把 TraceGuard 从"功能齐备但关键测量不可信"推进到"**测�
 
 - 独立故障观测从 4 个**测错对象**的探针，重写为"故障前基线 + 故障后独立观测 +
   分类 + 清理"，并新增**浏览器级观测**（纯 UI/定位器场景从 100% UNKNOWN 变为 0 UNKNOWN）；
-- 30 场景 × 2 轮资格实验真实跑完（60 样本）：Fault Effect 确认率 83.3%、
-  **False Pass 0**、诊断主因准确率 93.75%（n=16，方向性 83.33%，n=30）；
+- 30 场景 × 2 轮资格实验**独立执行两次**（共 120 样本）：Fault Effect 确认率 84.3%
+  （CI 76.2%–89.9%）、**False Pass 0**、诊断主因准确率 90.6%（n=32，方向性 81.7%，n=60）；
 - Regression INCONCLUSIVE 的人工授权新 Attempt 落地（15 项测试，零历史改写）；
 - 执行内核加固：`fenced_session` 重入不再自锁、Artifact GC 分页化、
   Artifact 后端能力边界启动即失败；
@@ -63,7 +63,7 @@ PostgreSQL 16**；SQLite 仅用于本地快速演示；Artifact 仅本地内容�
 | Artifact GC 可扩展性 | **VERIFIED（本轮新增）** | keyset 分页 + 定向复核 + 规模测试 |
 | Artifact 后端能力边界 | **VERIFIED（本轮新增）** | 非 local 启动即失败 |
 | 诊断（规则 + 可选 LLM） | VERIFIED | 60 样本评测、WP7 分析 |
-| 诊断"5xx 下 UI 确认"缺陷 | **已修复（本轮）** | `diagnosis_service.py` + 重放验证 |
+| 诊断"5xx 下 UI 确认"缺陷 | **已修复（本轮，A/B 中性）** | `diagnosis_service.py`；A/B 各 10 轮，命中场景 8/8 判 API，改动前后无差异 |
 | Evidence Graph / Active Probe | IMPLEMENTED / PARTIAL | 图谱可用；本轮实验未走探针回灌（见 §6） |
 | 修复提案 / 沙箱 / 审批 / 晋升 | VERIFIED | 14 项回归测试 |
 | 回归验证（独立 Run） | VERIFIED | 15 项 + CI PG16 专项 |
@@ -124,13 +124,13 @@ PostgreSQL 16**；SQLite 仅用于本地快速演示；Artifact 仅本地内容�
 
 | 指标 | 结果 |
 |---|---|
-| 样本 | 60（30 场景 × 2 轮；56 故障 + 4 对照） |
+| 样本 | **120**（30 场景 × 2 轮 × 2 次独立执行；每次 56 故障 + 4 对照） |
 | Fault Activation 覆盖率 | 100% |
-| UNKNOWN | 2（3.3%，均为 TF-TIME-003 无独立探针） |
-| Fault Effect 确认率 | 83.3%（CI 71.3%–91.0%） |
+| UNKNOWN | 4（3.3%，均为 TF-TIME-003 无独立探针） |
+| Fault Effect 确认率 | 84.3%（CI 76.2%–89.9%） |
 | False Pass / False Negative | 0 / 0 |
-| 诊断准确率 | CONFIRMED 93.75%（n=16）；方向性 83.33%（n=30） |
-| 23 场景子集 / 7 浏览器场景子集 | 92.5% / 57.1% 确认率，UNKNOWN 2 / **0** |
+| 诊断准确率 | CONFIRMED 90.6%（n=32）；方向性 81.7%（n=60） |
+| 7 浏览器场景子集 | UNKNOWN **0**（RUN-016 时为 100% UNKNOWN） |
 
 细节与逐场景分析见 `docs/RUN-017-WP2-BENCHMARK.md`。
 

@@ -1,3 +1,22 @@
+# 阶段状态（RUN-017 收口，2026-11-26 22:40 CST）
+
+| 阶段 | 状态 | 证据 |
+|---|---|---|
+| WP0 基线 | DONE | `docs/RUN-017-BASELINE.md` |
+| WP1 CI | DONE | PR #75 success；Nightly 见最终 run |
+| WP2 独立观测 + 实验 | DONE | 120 样本（2 次执行） |
+| WP3 重试 | DONE | 15 passed |
+| WP4.1 重入 | DONE | 6 passed（PG16） |
+| WP4.2 GC | DONE | 10k/50k/100k：0.058/0.198/0.383 s，内存 +0.1~0.3 MB |
+| WP4.3 能力边界 | DONE | 非 local 启动失败 |
+| WP4.4 长稳 | DONE | 62.05 min / 119 Run / 33 检查全 PASS / 0 NOTE |
+| WP5 备份 + doctor + 文档 | DONE | 各 12 项 true；doctor PASS=9 WARN=5 |
+| WP6 UI | DONE | 业务闭环 58/0；矩阵 128/128 |
+| WP7 诊断 | DONE | 合并准确率 90.6%（n=32）；A/B 证明改动中性 |
+| WP8 全量验收 | DONE | 932（SQLite）+ 28（PG16）+ 前端 + 供应链 |
+
+---
+
 # 阶段状态（RUN-017，2026-11-26 21:55 CST）
 
 | 阶段 | 状态 | 证据 |
