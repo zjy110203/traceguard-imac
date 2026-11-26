@@ -77,3 +77,8 @@ docs/assets/run014/**/_runtime/
 # ===== RUN-015 验收运行时产物（只保留 JSON/截图/日志证据） =====
 docs/assets/run015/**/_runtime/
 docs/assets/run015/wp5/smoke/
+
+# RUN-017：实验/长稳的运行时目录（数据库、产物、日志）不入库，只保留
+# samples.jsonl / metrics.json / browser-evidence 等可审计证据
+docs/assets/run017/**/run-env/
+docs/assets/run017/**/logs/
