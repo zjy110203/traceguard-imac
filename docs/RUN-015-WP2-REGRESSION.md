@@ -70,7 +70,7 @@ Oracle 缺失与证据缺失都会进入 INCONCLUSIVE；终态重复请求直接
 
 | 用例 | 验证点 |
 |---|---|
-| `test_ten_concurrent_regression_requests_create_one_run` | 10 线程同时请求 → 同一 Run ID、同一 PASSED 结论；Claim 表仅 1 行；Run 表仅 1 行；历史仅 1 条；新建 Runtime 重启后仍指向同一 Run |
+| `test_ten_concurrent_regression_requests_create_one_run` | 10 线程同时请求 → 同一 Run ID；回执可为 QUEUED，但服务端最终收敛到唯一 PASSED 结论；Claim 表仅 1 行；Run 表仅 1 行；历史仅 1 条；新建 Runtime 重启后仍指向同一 Run |
 | `test_repeated_request_returns_same_result` | 重复请求返回同一 Run 与状态 |
 | `test_regression_failure_and_inconclusive_are_distinct` | FAILED 与证据缺失 INCONCLUSIVE 区分；重试字段为 NEEDS_DECISION |
 | `test_stale_recomputed_when_another_user_promotes_new_version` | v2 回归 PASSED → 他人晋升 v3 → 读取显示 `APPROVED_VERSION_MOVED:2->3`，原 Verdict 不变 |

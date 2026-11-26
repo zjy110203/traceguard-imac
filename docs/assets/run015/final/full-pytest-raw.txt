@@ -35,7 +35,7 @@ tests/unit/test_event_concurrency.py::test_concurrent_duplicate_delivery_returns
 tests/unit/test_event_concurrency.py::test_concurrent_duplicate_delivery_returns_same_event
 tests/unit/test_event_concurrency.py::test_concurrent_duplicate_delivery_returns_same_event
 tests/unit/test_event_concurrency.py::test_concurrent_duplicate_delivery_returns_same_event
-  /Users/dlp--test/.workbuddy/binaries/python/versions/3.13.12/lib/python3.13/multiprocessing/popen_fork.py:67: DeprecationWarning: This process (pid=42124) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  /Users/dlp--test/.workbuddy/binaries/python/versions/3.13.12/lib/python3.13/multiprocessing/popen_fork.py:67: DeprecationWarning: This process (pid=64133) is multi-threaded, use of fork() may lead to deadlocks in the child.
     self.pid = os.fork()
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
@@ -56,5 +56,5 @@ SKIPPED [1] tests/integration/test_postgres_platform.py:484: TG_TEST_POSTGRES_UR
 SKIPPED [1] tests/integration/test_postgres_workspace_run012.py:74: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
 SKIPPED [1] tests/integration/test_postgres_workspace_run012.py:102: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
 SKIPPED [1] tests/integration/test_postgres_workspace_run012.py:119: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
-828 passed, 16 skipped, 22 warnings in 124.69s (0:02:04)
+828 passed, 16 skipped, 22 warnings in 124.86s (0:02:04)
 EXIT=0

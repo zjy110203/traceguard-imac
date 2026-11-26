@@ -6,5 +6,5 @@ tests/integration/test_sse_revocation_and_global_rbac_run014.py: 11 warnings
     return super().request(
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-114 passed, 11 warnings in 30.30s
+114 passed, 11 warnings in 32.53s
 EXIT=0
