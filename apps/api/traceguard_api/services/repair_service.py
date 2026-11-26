@@ -1153,8 +1153,11 @@ def _to_tc(doc: dict[str, Any]) -> TestCaseVersion:
 
 
 def _step_index(path: str, change: dict[str, Any]) -> int | None:
-    if "step_index" in change:
-        return int(change["step_index"])
+    # RUN-014 WP4：HTTP 层 `ChangeReq.model_dump()` 总会带上 step_index=None，
+    # 旧写法用 `"step_index" in change` 判断会执行 int(None) → TypeError → 500。
+    raw = change.get("step_index")
+    if raw is not None:
+        return int(raw)
     if path.startswith("steps[") and "]" in path:
         try:
             return int(path[6 : path.index("]")])

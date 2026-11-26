@@ -351,3 +351,28 @@ def test_regression_endpoint_permission_mapping() -> None:
     assert "repair.regression" not in PERMISSION_MATRIX["viewer"]
     assert has_permission(["qa-lead"], "repair.regression") is True
     assert has_permission(["qa-engineer"], "repair.regression") is False
+
+
+def test_run_config_change_with_explicit_none_step_index(rt: Runtime) -> None:
+    """RUN-014 WP4 实测缺陷：HTTP 层 model_dump() 总带 step_index=None。
+
+    旧 `_step_index` 用 `"step_index" in change` 判断，会执行 int(None) → TypeError → 500。
+    这里用与 HTTP 完全相同的载荷形状（step_index=None）验证不再抛错。
+    """
+    svc = RepairService(rt)
+    doc = svc.propose(
+        testcase_id="tcase_reg",
+        base_version=1,
+        changes=[
+            {
+                "path": "run_config.wait_timeout",
+                "step_index": None,
+                "value": 8000,
+                "reason": "等待上限",
+            }
+        ],
+        created_by="human:dev",
+        actor="human:dev",
+    )
+    assert doc["status"] == "VALIDATED"
+    assert doc["diff"][0]["step_index"] is None
