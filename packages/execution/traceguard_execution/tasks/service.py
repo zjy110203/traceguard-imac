@@ -16,12 +16,14 @@ from contextlib import contextmanager
 from typing import Any
 
 from sqlalchemy import func, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from traceguard_core.errors import AppError, ErrorCode
 from traceguard_core.ids import new_id
 from traceguard_persistence.db import Database, get_database
 from traceguard_persistence.fencing import WRITE_BLOCKED_STATES, db_now, fenced_guard
 from traceguard_persistence.models import (
+    RegressionClaimRow,
     RunRow,
     RunSubmissionRow,
     StepRow,
@@ -126,30 +128,48 @@ class TaskService:
                 "WORKSPACE_REQUIRED: Task 必须显式指定 workspace_id"
                 "（应继承 TestCase 的真实 Workspace，不得使用默认值）",
             )
-        with self.db.session() as s:
-            existing = s.scalar(select(TaskRow).where(TaskRow.idempotency_key == idempotency_key))
-            if existing:
-                if existing.workspace_id != ws:
-                    raise AppError(
-                        ErrorCode.CONFLICT,
-                        f"IDEMPOTENCY_KEY_REUSED: 幂等键已绑定 workspace "
-                        f"'{existing.workspace_id}'，与请求 '{ws}' 不一致",
-                    )
-                return {"task_id": existing.task_id, "idempotent_hit": True}
-            task_id = new_id("task")
-            s.add(
-                TaskRow(
-                    task_id=task_id,
-                    workspace_id=ws,
-                    testcase_ref=testcase_ref,
-                    testcase_version_id=testcase_version_id,
-                    application=application,
-                    status="CREATED",
-                    idempotency_key=idempotency_key,
-                    mode=mode,
+        try:
+            with self.db.session() as s:
+                existing = s.scalar(
+                    select(TaskRow).where(TaskRow.idempotency_key == idempotency_key)
                 )
+                if existing:
+                    self._assert_task_idempotency_workspace(existing, ws)
+                    return {"task_id": existing.task_id, "idempotent_hit": True}
+                task_id = new_id("task")
+                s.add(
+                    TaskRow(
+                        task_id=task_id,
+                        workspace_id=ws,
+                        testcase_ref=testcase_ref,
+                        testcase_version_id=testcase_version_id,
+                        application=application,
+                        status="CREATED",
+                        idempotency_key=idempotency_key,
+                        mode=mode,
+                    )
+                )
+                return {"task_id": task_id, "idempotent_hit": False}
+        except IntegrityError:
+            # RUN-015 WP2：并发请求同时通过 SELECT 后，UNIQUE(idempotency_key)
+            # 只会让一个插入成功；落败方必须复用赢家 Task，而不是向上传播 500。
+            with self.db.session() as s:
+                existing = s.scalar(
+                    select(TaskRow).where(TaskRow.idempotency_key == idempotency_key)
+                )
+            if existing is None:
+                raise
+            self._assert_task_idempotency_workspace(existing, ws)
+            return {"task_id": existing.task_id, "idempotent_hit": True}
+
+    @staticmethod
+    def _assert_task_idempotency_workspace(task: TaskRow, ws: str) -> None:
+        if task.workspace_id != ws:
+            raise AppError(
+                ErrorCode.CONFLICT,
+                f"IDEMPOTENCY_KEY_REUSED: 幂等键已绑定 workspace "
+                f"'{task.workspace_id}'，与请求 '{ws}' 不一致",
             )
-            return {"task_id": task_id, "idempotent_hit": False}
 
     def get_task(self, task_id: str) -> dict[str, Any] | None:
         with self.db.session() as s:
@@ -234,45 +254,89 @@ class TaskService:
         只校验字符串格式、不校验数据库归属一律拒绝。
         """
         with self.db.session() as s:
-            task = s.get(TaskRow, task_id)
-            if not task:
-                raise AppError(ErrorCode.NOT_FOUND, f"task {task_id} not found")
-            version_ref = (testcase_version_id or task.testcase_version_id or "").strip()
-            if not version_ref:
-                raise AppError(
-                    ErrorCode.VALIDATION_ERROR,
-                    "TESTCASE_VERSION_REQUIRED: Run 必须绑定具体 TestCase 版本",
-                )
-            self._assert_version_lineage(s, task, version_ref)
-            prev = s.scalar(
-                select(RunRow)
-                .where(RunRow.task_id == task_id)
-                .order_by(RunRow.attempt.desc())
-                .limit(1)
+            return self._create_run_in(
+                s, task_id, testcase_version_id, attempt=attempt, auto_queue=auto_queue
             )
-            next_attempt = attempt if attempt is not None else (prev.attempt + 1 if prev else 1)
-            run_id = new_id("run")
-            s.add(
-                RunRow(
-                    run_id=run_id,
-                    task_id=task_id,
-                    workspace_id=task.workspace_id,
-                    attempt=next_attempt,
-                    testcase_version_id=version_ref,
-                    execution_status="QUEUED",
-                    test_verdict="NOT_EVALUATED",
-                    fencing_token=0,
-                )
+
+    def _create_run_in(
+        self,
+        s: Session,
+        task_id: str,
+        testcase_version_id: str,
+        *,
+        attempt: int | None = None,
+        auto_queue: bool = True,
+    ) -> dict[str, Any]:
+        """在给定事务内创建 Run（血缘校验与 create_run 完全相同）。"""
+        task = s.get(TaskRow, task_id)
+        if not task:
+            raise AppError(ErrorCode.NOT_FOUND, f"task {task_id} not found")
+        version_ref = (testcase_version_id or task.testcase_version_id or "").strip()
+        if not version_ref:
+            raise AppError(
+                ErrorCode.VALIDATION_ERROR,
+                "TESTCASE_VERSION_REQUIRED: Run 必须绑定具体 TestCase 版本",
             )
-            if auto_queue and task.status == "CREATED":
-                task.status = "QUEUED"
-                task.updated_at = time.time()
-            return {
-                "run_id": run_id,
-                "attempt": next_attempt,
-                "execution_status": "QUEUED",
-                "observer_mode": task.mode,
-            }
+        self._assert_version_lineage(s, task, version_ref)
+        prev = s.scalar(
+            select(RunRow).where(RunRow.task_id == task_id).order_by(RunRow.attempt.desc()).limit(1)
+        )
+        next_attempt = attempt if attempt is not None else (prev.attempt + 1 if prev else 1)
+        run_id = new_id("run")
+        s.add(
+            RunRow(
+                run_id=run_id,
+                task_id=task_id,
+                workspace_id=task.workspace_id,
+                attempt=next_attempt,
+                testcase_version_id=version_ref,
+                execution_status="QUEUED",
+                test_verdict="NOT_EVALUATED",
+                fencing_token=0,
+            )
+        )
+        if auto_queue and task.status == "CREATED":
+            task.status = "QUEUED"
+            task.updated_at = time.time()
+        return {
+            "run_id": run_id,
+            "attempt": next_attempt,
+            "execution_status": "QUEUED",
+            "observer_mode": task.mode,
+        }
+
+    def create_run_once(
+        self, task_id: str, testcase_version_id: str, *, claim: str, proposal_id: str
+    ) -> dict[str, Any]:
+        """数据库级唯一创建：认领行与 Run 在同一事务落库。
+
+        RUN-015 WP2：并发回归请求可能同时看到"Task 已存在但还没有 Run"。
+        这里用 `tg_regression_claim.claim_key` 主键做 CAS——只有一个事务能提交
+        （PG 下行锁等待后唯一冲突，SQLite 下唯一约束冲突），落败事务整体回滚，
+        不会留下多余 Run；随后统一返回赢家的 run_id。
+        """
+        try:
+            with self.db.session() as s:
+                prior = s.get(RegressionClaimRow, claim)
+                if prior is not None:
+                    return {"run_id": prior.run_id, "created": False}
+                run = self._create_run_in(s, task_id, testcase_version_id)
+                s.add(
+                    RegressionClaimRow(
+                        claim_key=claim,
+                        proposal_id=proposal_id,
+                        task_id=task_id,
+                        run_id=run["run_id"],
+                        created_at=time.time(),
+                    )
+                )
+                return {"run_id": run["run_id"], "created": True, "attempt": run["attempt"]}
+        except IntegrityError:
+            with self.db.session() as s:
+                prior = s.get(RegressionClaimRow, claim)
+            if prior is None:
+                raise
+            return {"run_id": prior.run_id, "created": False}
 
     @staticmethod
     def _assert_version_lineage(session: Any, task: TaskRow, version_ref: str) -> None:

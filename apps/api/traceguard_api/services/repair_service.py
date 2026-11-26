@@ -876,34 +876,69 @@ class RepairService:
             mode="playwright",
             workspace_id=doc["workspace_id"],
         )
-        if task.get("idempotent_hit"):
-            # 崩溃恢复：Task 已存在时复用其已有 Run，绝不为同一提案重复建 Run
-            prior = self.rt.tasks.list_runs(task_id=task["task_id"], limit=1)
-            if prior:
-                run = prior[0]
-            else:
-                run = self.rt.tasks.create_run(task["task_id"], version_ref)
-        else:
-            run = self.rt.tasks.create_run(task["task_id"], version_ref)
+        # RUN-015 WP2：Task 幂等键只能保证"一个 Task"，不能保证"一个 Run"。
+        # 认领行主键 + Run 同事务插入，保证并发请求只有一个有效 Regression Run。
+        claim = f"repair-regression:{proposal_id}:v{promoted}:attempt1"
+        claimed = self.rt.tasks.create_run_once(
+            task["task_id"], version_ref, claim=claim, proposal_id=proposal_id
+        )
+        run_id = str(claimed["run_id"])
 
-        doc["regression_task_id"] = task["task_id"]
-        doc["regression_run_id"] = run["run_id"]
-        doc["regression_testcase_version_id"] = version_ref
-        doc["regression_status"] = "QUEUED"
-        doc["regression_verdict"] = ""
-        doc["regression_failure_reason"] = ""
-        doc["regression_evidence_ids"] = []
-        doc["regression_started_at"] = utc_now_iso()
-        doc["regression_finished_at"] = None
-        doc["regression_stale"] = False
-        self._save(doc)
-        return self._settle_regression(doc, self._wait_regression(run["run_id"], timeout_s))
+        fresh, version = self._fresh_doc(proposal_id)
+        already = str(fresh.get("regression_run_id") or "")
+        if already and already != run_id:
+            raise AppError(
+                ErrorCode.CONFLICT,
+                "REGRESSION_RUN_CONFLICT: 提案已绑定另一个回归 Run",
+            )
+        if already == run_id and fresh.get("regression_status") not in {
+            "NOT_STARTED",
+            "",
+            None,
+        }:
+            # 并发赢家已经写入并可能在途：直接收敛到同一个 Run
+            return self._settle_regression(fresh, self._wait_regression(run_id, timeout_s))
+
+        fresh["regression_task_id"] = task["task_id"]
+        fresh["regression_run_id"] = run_id
+        fresh["regression_testcase_version_id"] = version_ref
+        fresh["regression_status"] = "QUEUED"
+        fresh["regression_verdict"] = ""
+        fresh["regression_failure_reason"] = ""
+        fresh["regression_evidence_ids"] = []
+        fresh["regression_started_at"] = utc_now_iso()
+        fresh["regression_finished_at"] = None
+        fresh["regression_stale"] = False
+        try:
+            saved = self._save(fresh, expected_version=version)
+        except AppError as exc:
+            if exc.code != ErrorCode.CONFLICT:
+                raise
+            # 另一个并发请求先写了文档：回到它的 Run，不覆盖其状态
+            saved = self.get(proposal_id)
+        return self._settle_regression(saved, self._wait_regression(run_id, timeout_s))
 
     def regression_status(self, proposal_id: str) -> dict[str, Any]:
         """只读回归状态 + 实时 Run 快照（供 UI 刷新；不做任何写入）。"""
         doc = self.get(proposal_id)
         run_id = str(doc.get("regression_run_id") or "")
         run = self.rt.tasks.get_run(run_id) if run_id else None
+        # RUN-015 WP2：stale 必须在读取时按"当前正式批准版本 vs 回归版本"重算。
+        # 旧实现只在收敛/回滚时落库，别人晋升 v3 后 v2 的旧结论仍显示新鲜。
+        # 只改展示字段，不改原始 Run 的 Verdict，也不写回 Repair 文档。
+        regression_ref = str(doc.get("regression_testcase_version_id") or "")
+        regression_version = 0
+        if "@" in regression_ref:
+            raw_version = regression_ref.rsplit("@", 1)[1]
+            regression_version = int(raw_version) if raw_version.isdigit() else 0
+        approved_version = int(self.rt.catalog.approved_version_number(doc["testcase_id"]) or 0)
+        stale_reason = ""
+        stale = bool(doc.get("regression_stale"))
+        if stale:
+            stale_reason = "ROLLED_BACK_OR_MARKED_STALE"
+        elif regression_version and approved_version and regression_version != approved_version:
+            stale = True
+            stale_reason = f"APPROVED_VERSION_MOVED:{regression_version}->{approved_version}"
         return {
             "proposal_id": proposal_id,
             "regression_status": doc.get("regression_status") or "NOT_STARTED",
@@ -915,7 +950,13 @@ class RepairService:
             "regression_failure_reason": doc.get("regression_failure_reason") or "",
             "regression_evidence_ids": list(doc.get("regression_evidence_ids") or []),
             "regression_oracle_refs": list(doc.get("regression_oracle_refs") or []),
-            "regression_stale": bool(doc.get("regression_stale")),
+            "regression_stale": stale,
+            "regression_stale_reason": stale_reason,
+            "regression_approved_version": approved_version or None,
+            # NEEDS_DECISION：Oracle 缺失/证据缺失后的 INCONCLUSIVE 是否允许重新执行，
+            # 涉及状态机与人工授权，本轮不擅自改变；前端不得暗示可重试。
+            "regression_retry_allowed": False,
+            "regression_retry_decision": "NEEDS_DECISION",
             "regression_history": list(doc.get("regression_history") or []),
             "run": (
                 {
@@ -990,10 +1031,15 @@ class RepairService:
         return self._save(doc)
 
     def _settle_regression(self, doc: dict[str, Any], run: dict[str, Any] | None) -> dict[str, Any]:
-        """把真实 Run 结果收敛为 Regression 状态（绝不从 promotion_record 推导）。"""
+        """把真实 Run 结果收敛为 Regression 状态（绝不从 promotion_record 推导）。
+
+        RUN-015 WP2：并发请求都只能对同一个 Run 收敛；以文档 CAS 选出一个赢家，
+        并对同一 (run_id, status) 的历史项去重，避免重复请求产生多个相互竞争的结论。
+        """
+        doc, _version = self._fresh_doc(doc["proposal_id"])
         if not run:
             doc["regression_status"] = "RUNNING"
-            return self._save(doc)
+            return self._save_cas(doc)
         status = str(run.get("execution_status") or "")
         verdict = str(run.get("test_verdict") or "NOT_EVALUATED")
         report = run.get("report") or {}
@@ -1002,7 +1048,7 @@ class RepairService:
         if status not in TERMINAL_STATUSES:
             doc["regression_status"] = "RUNNING"
             doc["regression_verdict"] = verdict
-            return self._save(doc)
+            return self._save_cas(doc)
 
         reason = ""
         if verdict == "FAILED":
@@ -1028,7 +1074,14 @@ class RepairService:
         # 结果只对"当时晋升的版本"有效：之后被别人推进了新版本 → 明确标记 stale
         current = self.rt.catalog.approved_version_number(doc["testcase_id"])
         doc["regression_stale"] = bool(current) and current != int(doc.get("promoted_version") or 0)
-        doc["regression_history"] = list(doc.get("regression_history") or []) + [
+        history = list(doc.get("regression_history") or [])
+        if any(
+            item.get("run_id") == run.get("run_id") and item.get("status") == new_status
+            for item in history
+        ):
+            # 另一个并发请求已经写入同一结论：不重复追加历史、不改写其时间
+            return doc
+        history.append(
             {
                 "at": doc["regression_finished_at"],
                 "run_id": run.get("run_id"),
@@ -1039,8 +1092,9 @@ class RepairService:
                 "error": (report.get("errors") or [None])[0],
                 "evidence_count": len(evidence),
             }
-        ]
-        return self._save(doc)
+        )
+        doc["regression_history"] = history
+        return self._save_cas(doc)
 
     def rollback(
         self,
@@ -1132,7 +1186,7 @@ class RepairService:
             )
         doc["status"] = target.value
 
-    def _save(self, doc: dict[str, Any]) -> dict[str, Any]:
+    def _save(self, doc: dict[str, Any], *, expected_version: int | None = None) -> dict[str, Any]:
         return self.rt.docs.put(
             doc_id=doc["proposal_id"],
             kind="repair",
@@ -1140,7 +1194,25 @@ class RepairService:
             workspace_id=doc["workspace_id"],
             ref_id=doc["testcase_id"],
             status=doc["status"],
+            version=expected_version,
         ).to_dict()
+
+    def _fresh_doc(self, proposal_id: str) -> tuple[dict[str, Any], int]:
+        """读取权威文档与版本号（用于 Regression 并发 CAS）。"""
+        rec = self.rt.docs.get(proposal_id)
+        if not rec or rec.kind != "repair":
+            raise AppError(ErrorCode.NOT_FOUND, "repair proposal not found")
+        return rec.to_dict(), int(rec.version)
+
+    def _save_cas(self, doc: dict[str, Any]) -> dict[str, Any]:
+        """基于当前版本做一次 CAS 写入；冲突时返回赢家版本，不覆盖并发结果。"""
+        fresh, version = self._fresh_doc(doc["proposal_id"])
+        try:
+            return self._save(doc, expected_version=version)
+        except AppError as exc:
+            if exc.code == ErrorCode.CONFLICT:
+                return fresh
+            raise
 
     @staticmethod
     def _workspace_of(base_doc: dict[str, Any]) -> str:

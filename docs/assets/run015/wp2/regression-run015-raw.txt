@@ -1,0 +1,16 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.12, pytest-9.2.0, pluggy-1.7.0 -- /Users/dlp--test/Desktop/traceguard/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/dlp--test/Desktop/traceguard
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.16.0
+collecting ... collected 5 items
+
+tests/integration/test_repair_regression_run015.py::test_ten_concurrent_regression_requests_create_one_run PASSED [ 20%]
+tests/integration/test_repair_regression_run015.py::test_repeated_request_returns_same_result PASSED [ 40%]
+tests/integration/test_repair_regression_run015.py::test_regression_failure_and_inconclusive_are_distinct PASSED [ 60%]
+tests/integration/test_repair_regression_run015.py::test_stale_recomputed_when_another_user_promotes_new_version PASSED [ 80%]
+tests/integration/test_repair_regression_run015.py::test_rollback_marks_stale_and_keeps_history PASSED [100%]
+
+============================== 5 passed in 3.13s ===============================
+EXIT=0

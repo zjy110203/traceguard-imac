@@ -153,6 +153,22 @@ class RunSubmissionRow(Base):
     submitted_at: Mapped[float] = mapped_column(Float, default=_ts)
 
 
+class RegressionClaimRow(Base):
+    """RUN-015 WP2：Regression Run 的数据库级唯一认领回执。
+
+    主键即确定性幂等键 ``repair-regression:{proposal_id}:v{version}:attempt{n}``。
+    认领行与 Run 在**同一事务**插入：并发请求只有一个能提交，落败事务整体回滚，
+    因此不会产生无人认领的重复 Run（多进程部署不依赖 Python 锁）。
+    """
+
+    __tablename__ = "tg_regression_claim"
+    claim_key: Mapped[str] = mapped_column(String(180), primary_key=True)
+    proposal_id: Mapped[str] = mapped_column(String(64), index=True)
+    task_id: Mapped[str] = mapped_column(String(64), index=True)
+    run_id: Mapped[str] = mapped_column(String(64), index=True)
+    created_at: Mapped[float] = mapped_column(Float, default=_ts)
+
+
 class StepRow(Base):
     __tablename__ = "tg_step"
     # step_id 在同一用例的每次 Run 中会重复，因此主键必须是 run 范围的
