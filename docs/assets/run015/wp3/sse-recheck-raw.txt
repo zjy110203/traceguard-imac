@@ -1,0 +1,18 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.12, pytest-9.2.0, pluggy-1.7.0 -- /Users/dlp--test/Desktop/traceguard/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/dlp--test/Desktop/traceguard
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.16.0
+collecting ... collected 7 items
+
+tests/integration/test_sse_recheck_limit_run015.py::test_auth_recheck_clamp_values PASSED [ 14%]
+tests/integration/test_sse_recheck_limit_run015.py::test_malicious_interval_still_revokes_workspace[auth_recheck_seconds=1e9-huge] PASSED [ 28%]
+tests/integration/test_sse_recheck_limit_run015.py::test_malicious_interval_still_revokes_workspace[auth_recheck_seconds=nan-nan] PASSED [ 42%]
+tests/integration/test_sse_recheck_limit_run015.py::test_malicious_interval_still_revokes_workspace[auth_recheck_seconds=inf-inf] PASSED [ 57%]
+tests/integration/test_sse_recheck_limit_run015.py::test_malicious_interval_still_revokes_session[auth_recheck_seconds=1e9] PASSED [ 71%]
+tests/integration/test_sse_recheck_limit_run015.py::test_malicious_interval_still_revokes_session[auth_recheck_seconds=nan] PASSED [ 85%]
+tests/integration/test_sse_recheck_limit_run015.py::test_malicious_interval_still_closes_disabled_user PASSED [100%]
+
+============================== 7 passed in 5.51s ===============================
+EXIT=0

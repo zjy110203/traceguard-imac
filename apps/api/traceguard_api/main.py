@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import asyncio
+import math
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -28,6 +29,26 @@ from .auth_policy import apply_auth_policy
 logger = get_logger("traceguard.api")
 
 DIST_DIR = Path(__file__).resolve().parents[2] / "web" / "dist"
+
+#: RUN-015 WP3：SSE 活跃连接授权重核验的服务端硬上限。
+#: 客户端传入更大值、NaN / Infinity / 非法数值都不得延长撤权生效窗口。
+SSE_AUTH_RECHECK_MIN_SECONDS = 0.1
+SSE_AUTH_RECHECK_MAX_SECONDS = 10.0
+SSE_AUTH_RECHECK_DEFAULT_SECONDS = 2.0
+
+
+def effective_auth_recheck_seconds(requested: float) -> float:
+    """把客户端参数收敛到 [0.1s, 10s]，异常值回落到服务端默认值。"""
+    try:
+        value = float(requested)
+    except (TypeError, ValueError):
+        return SSE_AUTH_RECHECK_DEFAULT_SECONDS
+    if not math.isfinite(value):
+        return SSE_AUTH_RECHECK_DEFAULT_SECONDS
+    return min(
+        SSE_AUTH_RECHECK_MAX_SECONDS,
+        max(SSE_AUTH_RECHECK_MIN_SECONDS, value),
+    )
 
 
 @asynccontextmanager
@@ -178,6 +199,8 @@ def create_app() -> FastAPI:
         stream_workspaces = allowed
         #: 认证关闭时没有可撤销的会话，跳过重新核验（保持既有 dev 行为）
         auth_audit = bool(session_token)
+        # RUN-015 WP3：服务端强制上限，客户端不能把撤权窗口拖到无限长
+        auth_recheck = effective_auth_recheck_seconds(auth_recheck_seconds)
 
         rt = get_runtime()
         cursor = sse_util.decode_cursor(last_event_id or request.headers.get("last-event-id"))
@@ -199,7 +222,7 @@ def create_app() -> FastAPI:
                         break
                     # ---- RUN-014 WP3：活跃连接授权重新核验 ----
                     now_check = _time.monotonic()
-                    if auth_audit and now_check - last_auth_check >= max(0.1, auth_recheck_seconds):
+                    if auth_audit and now_check - last_auth_check >= auth_recheck:
                         last_auth_check = now_check
                         fresh = None
                         try:
@@ -276,6 +299,7 @@ def create_app() -> FastAPI:
                 "Cache-Control": "no-cache, no-transform",
                 "Connection": "keep-alive",
                 "X-Accel-Buffering": "no",
+                "X-TraceGuard-Auth-Recheck-Seconds": str(auth_recheck),
             },
         )
 
