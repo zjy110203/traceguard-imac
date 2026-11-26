@@ -13,7 +13,7 @@
 | WP1 | Worker Fencing 最终一致性 | `554a566` | PASS | `RUN-015-WP1-FENCING.md`；SQLite 10 + PG16 6 |
 | WP2 | Regression 并发幂等与时效 | `868743f` | PASS | `RUN-015-WP2-REGRESSION.md`；10 并发单 Run |
 | WP3 | SSE 重核验间隔上限 | `99fcda3` | PASS | `RUN-015-WP3-SSE-SECURITY.md`；7 专项 |
-| WP4 | CI 覆盖 | `b1291a6` | 配置 PASS | `RUN-015-WP4-CI.md`；真实 run 待最终推送核验 |
+| WP4 | CI 覆盖 | `b1291a6` + CI 证据提交 | PASS | PR `45781959624` / Nightly `45781958909` @ `c12ccab` 全 success |
 | WP5 | PG16 长稳与全链路 | 最终收口提交 | PASS | 两轮 60 分钟长稳；PG16 全链路 40/40；`RUN-015-WP5-PG16-SOAK.md` |
 | WP6 | Benchmark 证据 | `3fc9154` | PARTIAL | `RUN-015-WP6-BENCHMARK.md`；历史归档冻结 |
 | WP7 | 文档 / 台账 / 恢复状态 | 最终收口提交 | PASS | 本日志 + FINAL-REPORT + `.workbuddy-run/*` + CI 证据 |
@@ -51,7 +51,8 @@
 
 - PR Gate 纳入 RUN-014 三专项 + RUN-015 三专项，新增 `workbuddy/run015-*` 触发；
   Nightly 增加 push 触发与 PG16 fencing 两项；脚本支持 `TG_TEST_POSTGRES_URL` 且新证据独立落盘。
-- 本地等价快检 114 passed；Release 仍 dispatch-only，NOT_RUN。
+- 本地等价快检 114 passed；最终 HEAD `c12ccab` 的 PR Gate `45781959624` 与 Nightly `45781958909` 全 success；
+  Release 仍 dispatch-only，NOT_RUN。旧 HEAD `137433a` 的 Nightly 失败已被 timeout 修复与最终 run 取代。
 
 ### WP5
 

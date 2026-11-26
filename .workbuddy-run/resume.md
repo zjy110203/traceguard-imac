@@ -6,8 +6,8 @@
 - **状态**：WP0~WP7 已交付；BG 长稳任务 `tnMzbm`（首轮）与 `07Y1Eh`（复验轮）均已完成，
   最终证据为 `docs/assets/run015/wp5/soak-r2/soak-60min.json`（59.71 分钟 / 115 Run / 31 PASS / 0 FAIL）。
 - **PG16 全链路**：`docs/assets/run015/wp5/full-loop/full-loop.json`，40/40 PASS。
-- **CI**：最终 HEAD 推送后从 GitHub 公开 API 读取 PR Gate / Nightly run ID 与 conclusion；
-  无凭据不触发 Release，不伪造结果；run ID 写入 `docs/RUN-015-FINAL-REPORT.md` §7。
+- **CI**：最终代码 HEAD `c12ccab` 的 PR Gate `45781959624` / Nightly `45781958909` 均 success；
+  无凭据不触发 Release，不伪造结果；证据 `docs/assets/run015/final/ci-runs.json`。
 - **环境**：本机 PG16.16 在 `127.0.0.1:55432`（用户 `traceguard`）；无 psql CLI / Docker / gh CLI；
   curl 匿名访问 GitHub API 会 rate limit，可用 WebFetch 只读核验。
 - **已知不变量**：B-17 仍 BLOCKED，不绕过；Benchmark 历史归档 SHA 冻结；INCONCLUSIVE 重试为 NEEDS_DECISION。

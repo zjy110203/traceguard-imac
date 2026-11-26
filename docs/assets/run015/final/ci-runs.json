@@ -1,0 +1,48 @@
+{
+  "repository": "zjy110203/traceguard-imac",
+  "branch": "workbuddy/run015-execution-consistency",
+  "gate_head_sha": "c12ccab6f3c12460c29c167b15150daf4a59119e",
+  "note": "CI evidence is bound to the final code/workflow HEAD. Any subsequent commit is documentation-only and does not alter source, tests, or workflow configuration.",
+  "gates": [
+    {
+      "name": "PR Gate",
+      "run_id": 45781959624,
+      "run_number": 70,
+      "event": "push",
+      "head_sha": "c12ccab6f3c12460c29c167b15150daf4a59119e",
+      "status": "completed",
+      "conclusion": "success",
+      "updated_at": "2026-11-26T08:19:12Z",
+      "html_url": "https://github.com/zjy110203/traceguard-imac/actions/runs/45781959624",
+      "jobs": [
+        {"name": "backend", "status": "completed", "conclusion": "success"},
+        {"name": "frontend", "status": "completed", "conclusion": "success"}
+      ]
+    },
+    {
+      "name": "Nightly Gate",
+      "run_id": 45781958909,
+      "run_number": 22,
+      "event": "push",
+      "head_sha": "c12ccab6f3c12460c29c167b15150daf4a59119e",
+      "status": "completed",
+      "conclusion": "success",
+      "updated_at": "2026-11-26T08:21:03Z",
+      "html_url": "https://github.com/zjy110203/traceguard-imac/actions/runs/45781958909",
+      "jobs": [
+        {"name": "security", "status": "completed", "conclusion": "success"},
+        {"name": "postgres", "status": "completed", "conclusion": "success"},
+        {"name": "backend-full", "status": "completed", "conclusion": "success"},
+        {"name": "llm-smoke", "status": "completed", "conclusion": "success"},
+        {"name": "gate-verdict", "status": "completed", "conclusion": "success"}
+      ]
+    },
+    {
+      "name": "Release Gate",
+      "run_id": null,
+      "status": "NOT_RUN",
+      "reason": "Requires workflow_dispatch and credentials; no release tag created in this run."
+    }
+  ],
+  "verification_method": "GitHub public Actions API (read-only WebFetch); no gh CLI, no token, no fabricated check run."
+}

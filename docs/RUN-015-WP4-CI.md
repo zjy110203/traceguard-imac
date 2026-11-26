@@ -45,8 +45,10 @@ PG16 专项与 60 分钟长稳**不进 PR 快速门禁**（依赖 Service Contai
 
 | 门禁 | 结果 | 说明 |
 |---|---|---|
-| PR Gate | 待最终 HEAD 推送后核验（WP7/最终报告补录 run ID 与结论） | 本轮分支首次推送才会触发 |
-| Nightly Gate | 待最终 HEAD 推送后核验，或明确 NOT_RUN | 已配置 push 触发；无 workflow_dispatch 凭据不手工触发 |
+| PR Gate | **success**（run `45781959624` @ `c12ccab`） | backend + frontend 两 job success |
+| Nightly Gate | **success**（run `45781958909` @ `c12ccab`） | security / postgres / backend-full / llm-smoke / gate-verdict 全 success |
 | Release Gate | **NOT_RUN** | 需 `workflow_dispatch` + 凭据；本轮不创建 Tag，不以历史结果冒充 |
 
-不以历史 run（`45756471627` 等）标记本轮通过；最终报告必须写明本轮 HEAD 对应的真实 run。
+不以历史 run（`45756471627` 等）标记本轮通过。旧 HEAD `137433a` 的 Nightly `45767818061`
+曾在 backend-full 失败，原因是该 HEAD 尚未包含 Regression 并发 timeout 修复；最终 HEAD 已包含修复并以真实成功 run 取代。
+机器可读证据：`docs/assets/run015/final/ci-runs.json`。

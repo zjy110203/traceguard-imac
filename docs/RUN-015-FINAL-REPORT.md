@@ -25,8 +25,10 @@ RUN-015 针对 RUN-014 收尾后仍存在的“最后几个正确性缺陷”做
 10. 增强 Benchmark fault_state 记录能力，同时冻结 RUN-014 历史归档，False Pass 继续如实保留 PARTIAL；
 11. 修正 RUN-014 WORKLOG / FINAL REPORT / FEATURE-STATUS / 台账 / 恢复文件 / 证据路径的统计与口径问题。
 
-最终 HEAD：`<<PENDING:FINAL_HEAD>>`（提交信息：`<<PENDING:FINAL_COMMIT_MESSAGE>>`）
-推送状态：`<<PENDING:PUSH_STATUS>>`
+最终代码 / 门禁 HEAD：`c12ccab6f3c12460c29c167b15150daf4a59119e`
+（提交信息：`RUN-015 WP5-7: 完成 PG16 长稳全链路、最终质量门禁与交付文档`）
+推送状态：已推送至 `origin/workbuddy/run015-execution-consistency`；后续仅追加 CI 证据文档，
+不改源码、测试或工作流配置。
 
 ---
 
@@ -63,7 +65,7 @@ RUN-015 针对 RUN-014 收尾后仍存在的“最后几个正确性缺陷”做
 | 12 | 文档与项目台账准确 | **PASS** | `RUN-015-WORKLOG.md`、`FEATURE-STATUS.md`、`TraceGuard-持续开发任务台账.md` 已按真实证据对齐 |
 | 13 | WorkBuddy 本地恢复文件指向最新阶段 | **PASS** | `.workbuddy-run/{current-task,progress,resume,phase-status,blockers}.md` 已更新到 RUN-015 收口 |
 | 14 | Ruff、TypeScript、Build、全量测试通过 | **PASS** | 828 passed / 16 skipped；Ruff 235 文件 formatted；`vue-tsc + vite build` 通过 |
-| 15 | CI 真实证据与最终 HEAD 一致 | `<<PENDING:CI_STATUS>>` | `<<PENDING:CI_EVIDENCE>>` |
+| 15 | CI 真实证据与最终 HEAD 一致 | **PASS** | PR Gate `45781959624` / Nightly `45781958909` 均 @ `c12ccab`，`docs/assets/run015/final/ci-runs.json` |
 | 16 | 外部问题仍如实记录 | **PASS** | §9；B-17、宿主隔离、人工基线、LICENSE 等均未伪装为完成 |
 
 ---
@@ -165,7 +167,22 @@ RUN-015 针对 RUN-014 收尾后仍存在的“最后几个正确性缺陷”做
 
 ## 7. CI 真实运行证据（最终 HEAD）
 
-`<<PENDING:CI_DETAIL_SECTION>>`
+最终代码 / 工作流 HEAD `c12ccab6f3c12460c29c167b15150daf4a59119e` 已推送，GitHub 公开 Actions API 只读核验：
+
+| 门禁 | run ID | head_sha | 结论 | 关键 job |
+|---|---:|---|---|---|
+| PR Gate | `45781959624` | `c12ccab…` | **success** | backend success；frontend Typecheck + Build success |
+| Nightly Gate | `45781958909` | `c12ccab…` | **success** | security / postgres / backend-full / llm-smoke / gate-verdict 全 success |
+| Release Gate | — | — | **NOT_RUN** | 需 `workflow_dispatch` 与凭据；本轮不创建 Tag |
+
+Nightly postgres job 明确包含 RUN-015 新增两项：
+`PostgreSQL 16 lease-fencing lock-wait (RUN-015 WP1)` 与
+`PostgreSQL 16 fencing contract verification script (RUN-014/015)`。
+backend-full 的 `Full backend suite (SQLite)` 与 `Worker / event / inbox concurrency` 均 success。
+
+机器可读证据：`docs/assets/run015/final/ci-runs.json`。旧 HEAD `137433a` 的 Nightly run
+`45767818061` 曾在 backend-full 失败；该 HEAD 尚未包含 Regression 并发测试 timeout 修复，
+最终 HEAD 已包含并以真实成功 run 取代。
 
 ---
 
@@ -222,4 +239,11 @@ TG_TEST_POSTGRES_URL='postgresql+psycopg://traceguard@127.0.0.1:55432/<db>' \
 
 ## 11. 最终结论
 
-`<<PENDING:FINAL_CONCLUSION>>`
+RUN-015 的 16 条最终验收标准全部满足，其中：
+
+- INCONCLUSIVE 重试以 **NEEDS_DECISION** 明确策略，未擅自改状态机；
+- Benchmark 新一轮 23×2 **NOT_RUN**，False Pass 保持 **PARTIAL**，但 fault_state 记录能力已增强且历史归档冻结；
+- Release Gate **NOT_RUN**，B-17 / 宿主级隔离 / 真实人工基线 / LLM 四臂 / LICENSE / PR #1/#2 集成策略仍 BLOCKED 或 NEEDS_DECISION；
+- 长稳首轮与复验轮的 FAIL/NOTE 均保留原始证据，最终 PASS 建立在复验轮 0 FAIL 与跨轮故障证据合并之上。
+
+分支 `workbuddy/run015-execution-consistency` 已推送；未改 main，未合并/关闭 PR #1/#2，未强推。

@@ -5,7 +5,7 @@
 > - **Fencing**：`submit_result` 原子守卫 + Pipeline 全部 Run 事件 fence + PG16 锁后时钟（10 SQLite + 6 PG16 专项 PASS）。
 > - **Regression**：10 并发请求只建一个 Run；stale 在读取时重算；重试策略 NEEDS_DECISION（`RUN-015-WP2-REGRESSION.md`）。
 > - **SSE**：客户端参数收敛到 `[0.1, 10]s`，NaN/Infinity 回落默认 2s（`RUN-015-WP3-SSE-SECURITY.md`）。
-> - **CI**：PR Gate 纳入 RUN-014/015 专项；PG16 fencing 进 Nightly（`RUN-015-WP4-CI.md`）。
+> - **CI**：PR Gate `45781959624` 与 Nightly `45781958909` @ `c12ccab` 全 success；PG16 fencing 进 Nightly（`RUN-015-WP4-CI.md`）。
 > - **PG16 长稳 / 全链路**：复验轮 59.71 分钟 / 115 Run / 31 PASS / 0 FAIL；全链路 40/40 PASS
 >   （`RUN-015-WP5-PG16-SOAK.md`）。首轮 1 FAIL 与 2 NOTE 均如实保留。
 > - **Benchmark**：故障状态字段增强；新一轮 23×2 NOT_RUN，False Pass 仍 PARTIAL（`RUN-015-WP6-BENCHMARK.md`）。

@@ -4,8 +4,8 @@
 > - 真实人工诊断基线 / LLM 四臂成本实验：**BLOCKED / NOT_RUN**（无评审资源与计费授权）。
 > - INCONCLUSIVE 重试语义：**NEEDS_DECISION**（不改状态机；`regression_retry_allowed=false`）。
 > - Benchmark 23×2 新一轮：**NOT_RUN**（不与 60 分钟长稳共享资源）；False Pass 保持 PARTIAL。
-> - Release Gate：**NOT_RUN**（需 workflow_dispatch 与凭据）；Nightly 已配置分支 push 触发，
->   最终 HEAD 的真实 run 见 `docs/RUN-015-FINAL-REPORT.md` §7。
+> - Release Gate：**NOT_RUN**（需 workflow_dispatch 与凭据）；最终代码 HEAD `c12ccab` 的
+>   PR Gate `45781959624` 与 Nightly `45781958909` 均 success，见 `docs/RUN-015-FINAL-REPORT.md` §7。
 > - RUN-015 长稳首轮 1 FAIL / 1 NOTE 与复验轮 2 NOTE 均已在 WP5 报告如实披露，不改写原始证据。
 > - PR #1 / #2 集成策略、LICENSE：**NEEDS_DECISION**，未合并未关闭。
 
