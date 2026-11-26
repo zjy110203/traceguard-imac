@@ -1,0 +1,57 @@
+===== ROUND 1 =====
+[r1] FALSE-PASS: verdict=FAILED diag=PROBABLE probes=2 (8s)
+[r1] UI-MISSING: verdict=FAILED diag=CONFIRMED probes=0 (5s)
+[r1] API-500: verdict=FAILED diag=CONFIRMED probes=0 (4s)
+[r1] DB-DUP: verdict=FAILED diag=PROBABLE probes=2 (9s)
+[r1] DB-LAG-9S: verdict=FAILED diag=PROBABLE probes=2 (5s)
+[r1] UI-SILENT: verdict=FAILED diag=INCONCLUSIVE probes=3 (5s)
+[r1] UI-MISLEAD: verdict=FAILED diag=CONFIRMED probes=0 (5s)
+[r1] UI-DELAYED: verdict=PASSED diag=None probes=None (7s)
+[r1] API-503: verdict=FAILED diag=CONFIRMED probes=0 (5s)
+[r1] API-EDIT-500: verdict=PASSED diag=None probes=None (9s)
+[r1] API-EDIT-503: verdict=PASSED diag=None probes=None (9s)
+[r1] NET-TIMEOUT: verdict=FAILED diag=INCONCLUSIVE probes=3 (15s)
+[r1] LOC-SUBMIT: verdict=NOT_EVALUATED diag=PROBABLE probes=3 (12s)
+[r1] LOC-NAME: verdict=NOT_EVALUATED diag=INCONCLUSIVE probes=3 (13s)
+[r1] TIME-STRONG: verdict=PASSED diag=None probes=None (13s)
+[r1] TIME-RACE: verdict=NOT_EVALUATED diag=PROBABLE probes=3 (13s)
+[r1] SEC-CREATE-403: verdict=FAILED diag=CONFIRMED probes=0 (5s)
+[r1] SEC-LIST-403: verdict=FAILED diag=CONFIRMED probes=0 (7s)
+[r1] COMP-API-UI: verdict=FAILED diag=CONFIRMED probes=0 (5s)
+[r1] COMP-DB-TIME: verdict=FAILED diag=PROBABLE probes=2 (9s)
+[r1] COMP-LOC-UI: verdict=NOT_EVALUATED diag=PROBABLE probes=3 (12s)
+[r1] FLAKY-DB: verdict=FAILED diag=PROBABLE probes=2 (5s)
+[r1] FLAKY-API: verdict=FAILED diag=CONFIRMED probes=0 (5s)
+===== ROUND 2 =====
+[r2] FALSE-PASS: verdict=FAILED diag=PROBABLE probes=2 (6s)
+[r2] UI-MISSING: verdict=FAILED diag=CONFIRMED probes=0 (5s)
+[r2] API-500: verdict=FAILED diag=CONFIRMED probes=0 (4s)
+[r2] DB-DUP: verdict=FAILED diag=PROBABLE probes=2 (9s)
+[r2] DB-LAG-9S: verdict=FAILED diag=PROBABLE probes=2 (5s)
+[r2] UI-SILENT: verdict=FAILED diag=INCONCLUSIVE probes=3 (5s)
+[r2] UI-MISLEAD: verdict=FAILED diag=CONFIRMED probes=0 (5s)
+[r2] UI-DELAYED: verdict=PASSED diag=None probes=None (8s)
+[r2] API-503: verdict=FAILED diag=CONFIRMED probes=0 (5s)
+[r2] API-EDIT-500: verdict=PASSED diag=None probes=None (9s)
+[r2] API-EDIT-503: verdict=PASSED diag=None probes=None (9s)
+[r2] NET-TIMEOUT: verdict=FAILED diag=INCONCLUSIVE probes=3 (15s)
+[r2] LOC-SUBMIT: verdict=NOT_EVALUATED diag=PROBABLE probes=3 (12s)
+[r2] LOC-NAME: verdict=NOT_EVALUATED diag=INCONCLUSIVE probes=3 (12s)
+[r2] TIME-STRONG: verdict=PASSED diag=None probes=None (13s)
+[r2] TIME-RACE: verdict=NOT_EVALUATED diag=PROBABLE probes=3 (13s)
+[r2] SEC-CREATE-403: verdict=FAILED diag=CONFIRMED probes=0 (5s)
+[r2] SEC-LIST-403: verdict=FAILED diag=CONFIRMED probes=0 (7s)
+[r2] COMP-API-UI: verdict=FAILED diag=CONFIRMED probes=0 (5s)
+[r2] COMP-DB-TIME: verdict=FAILED diag=PROBABLE probes=2 (9s)
+[r2] COMP-LOC-UI: verdict=NOT_EVALUATED diag=PROBABLE probes=3 (13s)
+[r2] FLAKY-DB: verdict=FAILED diag=PROBABLE probes=2 (5s)
+[r2] FLAKY-API: verdict=FAILED diag=CONFIRMED probes=0 (5s)
+[PASS] V5 场景契约完整（期望/控制类别/故障触发条件）
+[PASS] V5 无未知故障触发状态记录
+[PASS] V5 样本量 ≥ 19 场景
+[PASS] V5 两轮独立执行
+[PASS] V5 探针执行真实且全 ID 绑定
+[out] /Users/dlp--test/Desktop/traceguard/docs/assets/run014/wp5/v5-2rounds.json
+{"total": 5, "passed": 5, "failed": []}
+
+--- stderr ---

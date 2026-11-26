@@ -1,0 +1,36 @@
+{"ts": "2026-11-26T03:29:30.253357+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "worker_started", "worker": "r14b-w3", "once": false, "poll": 0.4}
+{"ts": "2026-11-26T03:29:55.302248+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_claimed", "run_id": "run_1795663795260111c603bb0e1", "attempt": 1}
+{"ts": "2026-11-26T03:29:55.309473+00:00", "level": "INFO", "logger": "traceguard.browser.egress", "message": "egress_proxy_started", "url": "http://127.0.0.1:60788", "worker_id": "r14b-w3"}
+{"ts": "2026-11-26T03:29:55.321222+00:00", "level": "INFO", "logger": "traceguard.browser", "message": "egress_warmup_ok", "origins": 1, "proxy": "http://127.0.0.1:60788"}
+{"ts": "2026-11-26T03:29:55.764518+00:00", "level": "INFO", "logger": "traceguard.browser", "message": "browser_launched", "channel": "bundled-chromium", "egress": true, "proxy": "http://127.0.0.1:60788"}
+{"ts": "2026-11-26T03:30:00.135594+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_finished", "run_id": "run_1795663795260111c603bb0e1", "verdict": "FAILED", "status": "COMPLETED"}
+{"ts": "2026-11-26T03:30:05.812952+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_claimed", "run_id": "run_1795663805667be3901e702f9", "attempt": 1}
+{"ts": "2026-11-26T03:30:10.239665+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_finished", "run_id": "run_1795663805667be3901e702f9", "verdict": "FAILED", "status": "COMPLETED"}
+{"ts": "2026-11-26T03:30:10.647581+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_claimed", "run_id": "run_1795663810599ba04bcef2e6b", "attempt": 1}
+{"ts": "2026-11-26T03:30:17.723509+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_finished", "run_id": "run_1795663810599ba04bcef2e6b", "verdict": "PASSED", "status": "COMPLETED"}
+{"ts": "2026-11-26T03:30:23.388247+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_claimed", "run_id": "run_1795663823354b22d3870152c", "attempt": 1}
+{"ts": "2026-11-26T03:30:32.070790+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_finished", "run_id": "run_1795663823354b22d3870152c", "verdict": "PASSED", "status": "COMPLETED"}
+{"ts": "2026-11-26T03:31:21.936967+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_claimed", "run_id": "run_179566388193354eb46d799cc", "attempt": 1}
+{"ts": "2026-11-26T03:31:34.191334+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_finished", "run_id": "run_179566388193354eb46d799cc", "verdict": "PASSED", "status": "COMPLETED"}
+{"ts": "2026-11-26T03:31:47.586917+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_claimed", "run_id": "run_1795663907539b5f9c19d9a58", "attempt": 1}
+{"ts": "2026-11-26T03:31:51.959038+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_finished", "run_id": "run_1795663907539b5f9c19d9a58", "verdict": "FAILED", "status": "COMPLETED"}
+{"ts": "2026-11-26T03:31:59.266705+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_claimed", "run_id": "run_17956639191956022dccbb275", "attempt": 1}
+{"ts": "2026-11-26T03:32:03.629079+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_finished", "run_id": "run_17956639191956022dccbb275", "verdict": "FAILED", "status": "COMPLETED"}
+{"ts": "2026-11-26T03:32:13.366577+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_claimed", "run_id": "run_179566393330005a7c2d0807d", "attempt": 1}
+{"ts": "2026-11-26T03:32:25.422102+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_finished", "run_id": "run_179566393330005a7c2d0807d", "verdict": "NOT_EVALUATED", "status": "FAILED"}
+{"ts": "2026-11-26T03:32:35.563868+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_claimed", "run_id": "run_17956639553363b7ce4820269", "attempt": 1}
+{"ts": "2026-11-26T03:32:40.342074+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_finished", "run_id": "run_17956639553363b7ce4820269", "verdict": "FAILED", "status": "COMPLETED"}
+{"ts": "2026-11-26T03:32:46.016105+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_claimed", "run_id": "run_179566396578195d27ea97586", "attempt": 1}
+{"ts": "2026-11-26T03:32:48.994558+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_finished", "run_id": "run_179566396578195d27ea97586", "verdict": "FAILED", "status": "COMPLETED"}
+{"ts": "2026-11-26T03:32:58.724480+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_claimed", "run_id": "run_179566397865215d7c57afc7b", "attempt": 1}
+{"ts": "2026-11-26T03:33:03.117518+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_finished", "run_id": "run_179566397865215d7c57afc7b", "verdict": "FAILED", "status": "COMPLETED"}
+{"ts": "2026-11-26T03:34:24.266286+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_claimed", "run_id": "run_1795664064192ad51fb82fbff", "attempt": 1}
+{"ts": "2026-11-26T03:34:36.429326+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_finished", "run_id": "run_1795664064192ad51fb82fbff", "verdict": "PASSED", "status": "COMPLETED"}
+{"ts": "2026-11-26T03:35:06.445605+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_claimed", "run_id": "run_17956641064225e0c76fbf96b", "attempt": 1}
+{"ts": "2026-11-26T03:35:15.043084+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_finished", "run_id": "run_17956641064225e0c76fbf96b", "verdict": "FAILED", "status": "COMPLETED"}
+{"ts": "2026-11-26T03:35:15.859292+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_claimed", "run_id": "run_1795664115622c3decbc30d52", "attempt": 1}
+{"ts": "2026-11-26T03:35:27.921889+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_finished", "run_id": "run_1795664115622c3decbc30d52", "verdict": "NOT_EVALUATED", "status": "FAILED"}
+{"ts": "2026-11-26T03:35:39.213036+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "worker_shutdown_requested", "signal": 15}
+{"ts": "2026-11-26T03:35:39.268057+00:00", "level": "WARNING", "logger": "traceguard.browser", "message": "browser_disconnected"}
+{"ts": "2026-11-26T03:35:39.399482+00:00", "level": "INFO", "logger": "traceguard.browser.egress", "message": "egress_proxy_stopped", "worker_id": "r14b-w3"}
+{"ts": "2026-11-26T03:35:39.399600+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "worker_stopped", "executed": 14}

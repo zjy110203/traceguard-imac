@@ -1,0 +1,15 @@
+{
+  "exit_code": 0,
+  "out_file": "docs/assets/run014/wp5/v5-2rounds.json",
+  "env": {
+    "api": "http://127.0.0.1:60516",
+    "teamflow": "http://127.0.0.1:60517",
+    "database": "sqlite (isolated)",
+    "workers": [
+      "r14b-w1",
+      "r14b-w2",
+      "r14b-w3"
+    ],
+    "llm": "disabled (rule arm)"
+  }
+}

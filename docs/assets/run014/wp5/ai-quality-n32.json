@@ -1,0 +1,1559 @@
+{
+  "workpackage": "RUN-014 WP5",
+  "status": "COMPLETED",
+  "provider": "deepseek",
+  "model": [
+    "deepseek-flash"
+  ],
+  "cases": 32,
+  "domains": [
+    "TIMING",
+    "NETWORK",
+    "UI",
+    "LOCATOR",
+    "PERSISTENCE",
+    "ENVIRONMENT",
+    "API",
+    "JS"
+  ],
+  "statistical_limit": "n=32（每域 4 例），用于回归与相对比较；不等同于总体准确率",
+  "ground_truth_usage": "仅测试端打分，未进入模型上下文",
+  "rule_group": {
+    "domain_accuracy": 0.9688,
+    "macro_f1": 0.9683,
+    "per_class": {
+      "TIMING": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 4
+      },
+      "NETWORK": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 4
+      },
+      "UI": {
+        "precision": 0.8,
+        "recall": 1.0,
+        "f1": 0.8889,
+        "support": 4
+      },
+      "LOCATOR": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 4
+      },
+      "PERSISTENCE": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 4
+      },
+      "ENVIRONMENT": {
+        "precision": 1.0,
+        "recall": 0.75,
+        "f1": 0.8571,
+        "support": 4
+      },
+      "API": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 4
+      },
+      "JS": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 4
+      }
+    },
+    "rows": [
+      {
+        "case": "timing_banner",
+        "gt_domain": "TIMING",
+        "domain": "TIMING",
+        "hit": true
+      },
+      {
+        "case": "timing_api",
+        "gt_domain": "TIMING",
+        "domain": "TIMING",
+        "hit": true
+      },
+      {
+        "case": "timing_anim",
+        "gt_domain": "TIMING",
+        "domain": "TIMING",
+        "hit": true
+      },
+      {
+        "case": "timing_race",
+        "gt_domain": "TIMING",
+        "domain": "TIMING",
+        "hit": true
+      },
+      {
+        "case": "net_503",
+        "gt_domain": "NETWORK",
+        "domain": "NETWORK",
+        "hit": true
+      },
+      {
+        "case": "net_timeout",
+        "gt_domain": "NETWORK",
+        "domain": "NETWORK",
+        "hit": true
+      },
+      {
+        "case": "net_reset",
+        "gt_domain": "NETWORK",
+        "domain": "NETWORK",
+        "hit": true
+      },
+      {
+        "case": "net_cors",
+        "gt_domain": "NETWORK",
+        "domain": "NETWORK",
+        "hit": true
+      },
+      {
+        "case": "ui_hidden",
+        "gt_domain": "UI",
+        "domain": "UI",
+        "hit": true
+      },
+      {
+        "case": "ui_overlay",
+        "gt_domain": "UI",
+        "domain": "UI",
+        "hit": true
+      },
+      {
+        "case": "ui_text",
+        "gt_domain": "UI",
+        "domain": "UI",
+        "hit": true
+      },
+      {
+        "case": "ui_render",
+        "gt_domain": "UI",
+        "domain": "UI",
+        "hit": true
+      },
+      {
+        "case": "loc_submit",
+        "gt_domain": "LOCATOR",
+        "domain": "LOCATOR",
+        "hit": true
+      },
+      {
+        "case": "loc_name",
+        "gt_domain": "LOCATOR",
+        "domain": "LOCATOR",
+        "hit": true
+      },
+      {
+        "case": "loc_strict",
+        "gt_domain": "LOCATOR",
+        "domain": "LOCATOR",
+        "hit": true
+      },
+      {
+        "case": "loc_iframe",
+        "gt_domain": "LOCATOR",
+        "domain": "LOCATOR",
+        "hit": true
+      },
+      {
+        "case": "persist_missing",
+        "gt_domain": "PERSISTENCE",
+        "domain": "PERSISTENCE",
+        "hit": true
+      },
+      {
+        "case": "persist_dup",
+        "gt_domain": "PERSISTENCE",
+        "domain": "PERSISTENCE",
+        "hit": true
+      },
+      {
+        "case": "persist_lag",
+        "gt_domain": "PERSISTENCE",
+        "domain": "PERSISTENCE",
+        "hit": true
+      },
+      {
+        "case": "persist_rollback",
+        "gt_domain": "PERSISTENCE",
+        "domain": "PERSISTENCE",
+        "hit": true
+      },
+      {
+        "case": "env_refused",
+        "gt_domain": "ENVIRONMENT",
+        "domain": "UI",
+        "hit": false
+      },
+      {
+        "case": "env_dns",
+        "gt_domain": "ENVIRONMENT",
+        "domain": "ENVIRONMENT",
+        "hit": true
+      },
+      {
+        "case": "env_browser",
+        "gt_domain": "ENVIRONMENT",
+        "domain": "ENVIRONMENT",
+        "hit": true
+      },
+      {
+        "case": "env_disk",
+        "gt_domain": "ENVIRONMENT",
+        "domain": "ENVIRONMENT",
+        "hit": true
+      },
+      {
+        "case": "api_500",
+        "gt_domain": "API",
+        "domain": "API",
+        "hit": true
+      },
+      {
+        "case": "api_validation",
+        "gt_domain": "API",
+        "domain": "API",
+        "hit": true
+      },
+      {
+        "case": "api_contract",
+        "gt_domain": "API",
+        "domain": "API",
+        "hit": true
+      },
+      {
+        "case": "api_auth",
+        "gt_domain": "API",
+        "domain": "API",
+        "hit": true
+      },
+      {
+        "case": "js_typeerror",
+        "gt_domain": "JS",
+        "domain": "JS",
+        "hit": true
+      },
+      {
+        "case": "js_promise",
+        "gt_domain": "JS",
+        "domain": "JS",
+        "hit": true
+      },
+      {
+        "case": "js_syntax",
+        "gt_domain": "JS",
+        "domain": "JS",
+        "hit": true
+      },
+      {
+        "case": "js_infinite",
+        "gt_domain": "JS",
+        "domain": "JS",
+        "hit": true
+      }
+    ]
+  },
+  "llm_group": {
+    "structure_rate": 1.0,
+    "schema_pass_rate": 1.0,
+    "domain_accuracy_raw": 0.75,
+    "domain_accuracy_fine": 0.875,
+    "domain_accuracy_coarse": 0.875,
+    "macro_f1_fine": 0.6119,
+    "per_class_fine": {
+      "TIMING": {
+        "precision": 1.0,
+        "recall": 0.5,
+        "f1": 0.6667,
+        "support": 4
+      },
+      "NETWORK": {
+        "precision": 0.3333,
+        "recall": 0.25,
+        "f1": 0.2857,
+        "support": 4
+      },
+      "UI": {
+        "precision": 0.6667,
+        "recall": 1.0,
+        "f1": 0.8,
+        "support": 4
+      },
+      "LOCATOR": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 4
+      },
+      "PERSISTENCE": {
+        "precision": 0.6667,
+        "recall": 0.5,
+        "f1": 0.5714,
+        "support": 4
+      },
+      "ENVIRONMENT": {
+        "precision": 0,
+        "recall": 0.0,
+        "f1": 0,
+        "support": 4
+      },
+      "API": {
+        "precision": 0.4,
+        "recall": 1.0,
+        "f1": 0.5714,
+        "support": 4
+      },
+      "JS": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 4
+      }
+    },
+    "evidence_supported_ratio": 1.0,
+    "invalid_candidate_ratio": 0.0,
+    "duplicate_ratio": 0.0,
+    "false_positive_cases": 4,
+    "fallback_rate": 0.0,
+    "avg_latency_ms": 3590.5,
+    "p95_latency_ms": 5320.0,
+    "tokens_in": 10216,
+    "tokens_out": 13734,
+    "estimated_cost_usd": 0.006515,
+    "rows": [
+      {
+        "case": "timing_banner",
+        "gt_domain": "TIMING",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "UI",
+          "TIMEOUT",
+          "API"
+        ],
+        "domains_fine": [
+          "UI",
+          "TIMING",
+          "API"
+        ],
+        "domains_coarse": [
+          "UI",
+          "TIMING",
+          "NETWORK"
+        ],
+        "hit_raw": false,
+        "hit_fine": true,
+        "hit_coarse": true,
+        "latency_ms": 4107,
+        "tokens_in": 342,
+        "tokens_out": 378,
+        "cost_usd": 0.000185,
+        "gt_coarse": "TIMING"
+      },
+      {
+        "case": "timing_api",
+        "gt_domain": "TIMING",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "API",
+          "NETWORK",
+          "TIMEOUT"
+        ],
+        "domains_fine": [
+          "API",
+          "NETWORK",
+          "TIMING"
+        ],
+        "domains_coarse": [
+          "NETWORK",
+          "NETWORK",
+          "TIMING"
+        ],
+        "hit_raw": false,
+        "hit_fine": true,
+        "hit_coarse": true,
+        "latency_ms": 3132,
+        "tokens_in": 318,
+        "tokens_out": 418,
+        "cost_usd": 0.000199,
+        "gt_coarse": "TIMING"
+      },
+      {
+        "case": "timing_anim",
+        "gt_domain": "TIMING",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "TIMEOUT",
+          "UI",
+          "LOCATOR"
+        ],
+        "domains_fine": [
+          "TIMING",
+          "UI",
+          "LOCATOR"
+        ],
+        "domains_coarse": [
+          "TIMING",
+          "UI",
+          "LOCATOR"
+        ],
+        "hit_raw": false,
+        "hit_fine": true,
+        "hit_coarse": true,
+        "latency_ms": 3552,
+        "tokens_in": 345,
+        "tokens_out": 514,
+        "cost_usd": 0.000241,
+        "gt_coarse": "TIMING"
+      },
+      {
+        "case": "timing_race",
+        "gt_domain": "TIMING",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "TIMEOUT",
+          "API",
+          "UI"
+        ],
+        "domains_fine": [
+          "TIMING",
+          "API",
+          "UI"
+        ],
+        "domains_coarse": [
+          "TIMING",
+          "NETWORK",
+          "UI"
+        ],
+        "hit_raw": false,
+        "hit_fine": true,
+        "hit_coarse": true,
+        "latency_ms": 3960,
+        "tokens_in": 344,
+        "tokens_out": 336,
+        "cost_usd": 0.000168,
+        "gt_coarse": "TIMING"
+      },
+      {
+        "case": "net_503",
+        "gt_domain": "NETWORK",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "API",
+          "NETWORK",
+          "UI"
+        ],
+        "domains_fine": [
+          "API",
+          "NETWORK",
+          "UI"
+        ],
+        "domains_coarse": [
+          "NETWORK",
+          "NETWORK",
+          "UI"
+        ],
+        "hit_raw": true,
+        "hit_fine": true,
+        "hit_coarse": true,
+        "latency_ms": 2644,
+        "tokens_in": 304,
+        "tokens_out": 340,
+        "cost_usd": 0.000167,
+        "gt_coarse": "NETWORK"
+      },
+      {
+        "case": "net_timeout",
+        "gt_domain": "NETWORK",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "API",
+          "NETWORK",
+          "TIMEOUT"
+        ],
+        "domains_fine": [
+          "API",
+          "NETWORK",
+          "TIMING"
+        ],
+        "domains_coarse": [
+          "NETWORK",
+          "NETWORK",
+          "TIMING"
+        ],
+        "hit_raw": true,
+        "hit_fine": true,
+        "hit_coarse": true,
+        "latency_ms": 2454,
+        "tokens_in": 305,
+        "tokens_out": 313,
+        "cost_usd": 0.000155,
+        "gt_coarse": "NETWORK"
+      },
+      {
+        "case": "net_reset",
+        "gt_domain": "NETWORK",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "NETWORK",
+          "API",
+          "UI"
+        ],
+        "domains_fine": [
+          "NETWORK",
+          "API",
+          "UI"
+        ],
+        "domains_coarse": [
+          "NETWORK",
+          "NETWORK",
+          "UI"
+        ],
+        "hit_raw": true,
+        "hit_fine": true,
+        "hit_coarse": true,
+        "latency_ms": 3565,
+        "tokens_in": 299,
+        "tokens_out": 338,
+        "cost_usd": 0.000166,
+        "gt_coarse": "NETWORK"
+      },
+      {
+        "case": "net_cors",
+        "gt_domain": "NETWORK",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "API",
+          "NETWORK",
+          "JS"
+        ],
+        "domains_fine": [
+          "API",
+          "NETWORK",
+          "JS"
+        ],
+        "domains_coarse": [
+          "NETWORK",
+          "NETWORK",
+          "UI"
+        ],
+        "hit_raw": true,
+        "hit_fine": true,
+        "hit_coarse": true,
+        "latency_ms": 3450,
+        "tokens_in": 307,
+        "tokens_out": 544,
+        "cost_usd": 0.000248,
+        "gt_coarse": "NETWORK"
+      },
+      {
+        "case": "ui_hidden",
+        "gt_domain": "UI",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "UI",
+          "JS",
+          "LOCATOR"
+        ],
+        "domains_fine": [
+          "UI",
+          "JS",
+          "LOCATOR"
+        ],
+        "domains_coarse": [
+          "UI",
+          "UI",
+          "LOCATOR"
+        ],
+        "hit_raw": true,
+        "hit_fine": true,
+        "hit_coarse": true,
+        "latency_ms": 3460,
+        "tokens_in": 331,
+        "tokens_out": 477,
+        "cost_usd": 0.000224,
+        "gt_coarse": "UI"
+      },
+      {
+        "case": "ui_overlay",
+        "gt_domain": "UI",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "UI",
+          "TIMEOUT",
+          "LOCATOR"
+        ],
+        "domains_fine": [
+          "UI",
+          "TIMING",
+          "LOCATOR"
+        ],
+        "domains_coarse": [
+          "UI",
+          "TIMING",
+          "LOCATOR"
+        ],
+        "hit_raw": true,
+        "hit_fine": true,
+        "hit_coarse": true,
+        "latency_ms": 4818,
+        "tokens_in": 331,
+        "tokens_out": 442,
+        "cost_usd": 0.00021,
+        "gt_coarse": "UI"
+      },
+      {
+        "case": "ui_text",
+        "gt_domain": "UI",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "UI",
+          "LOCATOR",
+          "TIMEOUT"
+        ],
+        "domains_fine": [
+          "UI",
+          "LOCATOR",
+          "TIMING"
+        ],
+        "domains_coarse": [
+          "UI",
+          "LOCATOR",
+          "TIMING"
+        ],
+        "hit_raw": true,
+        "hit_fine": true,
+        "hit_coarse": true,
+        "latency_ms": 4600,
+        "tokens_in": 311,
+        "tokens_out": 414,
+        "cost_usd": 0.000196,
+        "gt_coarse": "UI"
+      },
+      {
+        "case": "ui_render",
+        "gt_domain": "UI",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "UI",
+          "TIMEOUT",
+          "JS"
+        ],
+        "domains_fine": [
+          "UI",
+          "TIMING",
+          "JS"
+        ],
+        "domains_coarse": [
+          "UI",
+          "TIMING",
+          "UI"
+        ],
+        "hit_raw": true,
+        "hit_fine": true,
+        "hit_coarse": true,
+        "latency_ms": 2905,
+        "tokens_in": 340,
+        "tokens_out": 386,
+        "cost_usd": 0.000189,
+        "gt_coarse": "UI"
+      },
+      {
+        "case": "loc_submit",
+        "gt_domain": "LOCATOR",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "LOCATOR",
+          "UI",
+          "TIMEOUT"
+        ],
+        "domains_fine": [
+          "LOCATOR",
+          "UI",
+          "TIMING"
+        ],
+        "domains_coarse": [
+          "LOCATOR",
+          "UI",
+          "TIMING"
+        ],
+        "hit_raw": true,
+        "hit_fine": true,
+        "hit_coarse": true,
+        "latency_ms": 6067,
+        "tokens_in": 307,
+        "tokens_out": 596,
+        "cost_usd": 0.000269,
+        "gt_coarse": "LOCATOR"
+      },
+      {
+        "case": "loc_name",
+        "gt_domain": "LOCATOR",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "LOCATOR",
+          "UI",
+          "TIMEOUT"
+        ],
+        "domains_fine": [
+          "LOCATOR",
+          "UI",
+          "TIMING"
+        ],
+        "domains_coarse": [
+          "LOCATOR",
+          "UI",
+          "TIMING"
+        ],
+        "hit_raw": true,
+        "hit_fine": true,
+        "hit_coarse": true,
+        "latency_ms": 3106,
+        "tokens_in": 303,
+        "tokens_out": 439,
+        "cost_usd": 0.000206,
+        "gt_coarse": "LOCATOR"
+      },
+      {
+        "case": "loc_strict",
+        "gt_domain": "LOCATOR",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "LOCATOR",
+          "UI",
+          "TIMEOUT"
+        ],
+        "domains_fine": [
+          "LOCATOR",
+          "UI",
+          "TIMING"
+        ],
+        "domains_coarse": [
+          "LOCATOR",
+          "UI",
+          "TIMING"
+        ],
+        "hit_raw": true,
+        "hit_fine": true,
+        "hit_coarse": true,
+        "latency_ms": 2122,
+        "tokens_in": 307,
+        "tokens_out": 313,
+        "cost_usd": 0.000156,
+        "gt_coarse": "LOCATOR"
+      },
+      {
+        "case": "loc_iframe",
+        "gt_domain": "LOCATOR",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "LOCATOR",
+          "TIMEOUT",
+          "UI"
+        ],
+        "domains_fine": [
+          "LOCATOR",
+          "TIMING",
+          "UI"
+        ],
+        "domains_coarse": [
+          "LOCATOR",
+          "TIMING",
+          "UI"
+        ],
+        "hit_raw": true,
+        "hit_fine": true,
+        "hit_coarse": true,
+        "latency_ms": 3407,
+        "tokens_in": 309,
+        "tokens_out": 325,
+        "cost_usd": 0.000161,
+        "gt_coarse": "LOCATOR"
+      },
+      {
+        "case": "persist_missing",
+        "gt_domain": "PERSISTENCE",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "UI",
+          "PERSISTENCE",
+          "NETWORK"
+        ],
+        "domains_fine": [
+          "UI",
+          "PERSISTENCE",
+          "NETWORK"
+        ],
+        "domains_coarse": [
+          "UI",
+          "PRODUCT",
+          "NETWORK"
+        ],
+        "hit_raw": true,
+        "hit_fine": true,
+        "hit_coarse": true,
+        "latency_ms": 6712,
+        "tokens_in": 337,
+        "tokens_out": 668,
+        "cost_usd": 0.0003,
+        "gt_coarse": "PRODUCT"
+      },
+      {
+        "case": "persist_dup",
+        "gt_domain": "PERSISTENCE",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "API",
+          "UI",
+          "PERSISTENCE"
+        ],
+        "domains_fine": [
+          "API",
+          "UI",
+          "PERSISTENCE"
+        ],
+        "domains_coarse": [
+          "NETWORK",
+          "UI",
+          "PRODUCT"
+        ],
+        "hit_raw": true,
+        "hit_fine": true,
+        "hit_coarse": true,
+        "latency_ms": 3217,
+        "tokens_in": 334,
+        "tokens_out": 357,
+        "cost_usd": 0.000177,
+        "gt_coarse": "PRODUCT"
+      },
+      {
+        "case": "persist_lag",
+        "gt_domain": "PERSISTENCE",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "PERSISTENCE",
+          "TIMEOUT",
+          "API"
+        ],
+        "domains_fine": [
+          "PERSISTENCE",
+          "TIMING",
+          "API"
+        ],
+        "domains_coarse": [
+          "PRODUCT",
+          "TIMING",
+          "NETWORK"
+        ],
+        "hit_raw": true,
+        "hit_fine": true,
+        "hit_coarse": true,
+        "latency_ms": 3754,
+        "tokens_in": 343,
+        "tokens_out": 498,
+        "cost_usd": 0.000233,
+        "gt_coarse": "PRODUCT"
+      },
+      {
+        "case": "persist_rollback",
+        "gt_domain": "PERSISTENCE",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "PERSISTENCE",
+          "API",
+          "TIMEOUT"
+        ],
+        "domains_fine": [
+          "PERSISTENCE",
+          "API",
+          "TIMING"
+        ],
+        "domains_coarse": [
+          "PRODUCT",
+          "NETWORK",
+          "TIMING"
+        ],
+        "hit_raw": true,
+        "hit_fine": true,
+        "hit_coarse": true,
+        "latency_ms": 2132,
+        "tokens_in": 331,
+        "tokens_out": 313,
+        "cost_usd": 0.000158,
+        "gt_coarse": "PRODUCT"
+      },
+      {
+        "case": "env_refused",
+        "gt_domain": "ENVIRONMENT",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "NETWORK",
+          "API",
+          "PERSISTENCE"
+        ],
+        "domains_fine": [
+          "NETWORK",
+          "API",
+          "PERSISTENCE"
+        ],
+        "domains_coarse": [
+          "NETWORK",
+          "NETWORK",
+          "PRODUCT"
+        ],
+        "hit_raw": false,
+        "hit_fine": false,
+        "hit_coarse": false,
+        "latency_ms": 2864,
+        "tokens_in": 309,
+        "tokens_out": 395,
+        "cost_usd": 0.000189,
+        "gt_coarse": "ENVIRONMENT"
+      },
+      {
+        "case": "env_dns",
+        "gt_domain": "ENVIRONMENT",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "NETWORK",
+          "API",
+          "TIMEOUT"
+        ],
+        "domains_fine": [
+          "NETWORK",
+          "API",
+          "TIMING"
+        ],
+        "domains_coarse": [
+          "NETWORK",
+          "NETWORK",
+          "TIMING"
+        ],
+        "hit_raw": false,
+        "hit_fine": false,
+        "hit_coarse": false,
+        "latency_ms": 1932,
+        "tokens_in": 301,
+        "tokens_out": 271,
+        "cost_usd": 0.000139,
+        "gt_coarse": "ENVIRONMENT"
+      },
+      {
+        "case": "env_browser",
+        "gt_domain": "ENVIRONMENT",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "API",
+          "NETWORK",
+          "API"
+        ],
+        "domains_fine": [
+          "API",
+          "NETWORK",
+          "API"
+        ],
+        "domains_coarse": [
+          "NETWORK",
+          "NETWORK",
+          "NETWORK"
+        ],
+        "hit_raw": false,
+        "hit_fine": false,
+        "hit_coarse": false,
+        "latency_ms": 3996,
+        "tokens_in": 302,
+        "tokens_out": 658,
+        "cost_usd": 0.000293,
+        "gt_coarse": "ENVIRONMENT"
+      },
+      {
+        "case": "env_disk",
+        "gt_domain": "ENVIRONMENT",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "PERSISTENCE",
+          "PERSISTENCE",
+          "PERSISTENCE"
+        ],
+        "domains_fine": [
+          "PERSISTENCE",
+          "PERSISTENCE",
+          "PERSISTENCE"
+        ],
+        "domains_coarse": [
+          "PRODUCT",
+          "PRODUCT",
+          "PRODUCT"
+        ],
+        "hit_raw": false,
+        "hit_fine": false,
+        "hit_coarse": false,
+        "latency_ms": 5320,
+        "tokens_in": 309,
+        "tokens_out": 550,
+        "cost_usd": 0.000251,
+        "gt_coarse": "ENVIRONMENT"
+      },
+      {
+        "case": "api_500",
+        "gt_domain": "API",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "API",
+          "UI",
+          "PERSISTENCE"
+        ],
+        "domains_fine": [
+          "API",
+          "UI",
+          "PERSISTENCE"
+        ],
+        "domains_coarse": [
+          "NETWORK",
+          "UI",
+          "PRODUCT"
+        ],
+        "hit_raw": true,
+        "hit_fine": true,
+        "hit_coarse": true,
+        "latency_ms": 2958,
+        "tokens_in": 331,
+        "tokens_out": 488,
+        "cost_usd": 0.000228,
+        "gt_coarse": "NETWORK"
+      },
+      {
+        "case": "api_validation",
+        "gt_domain": "API",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "API",
+          "UI",
+          "TIMEOUT"
+        ],
+        "domains_fine": [
+          "API",
+          "UI",
+          "TIMING"
+        ],
+        "domains_coarse": [
+          "NETWORK",
+          "UI",
+          "TIMING"
+        ],
+        "hit_raw": true,
+        "hit_fine": true,
+        "hit_coarse": true,
+        "latency_ms": 2159,
+        "tokens_in": 299,
+        "tokens_out": 340,
+        "cost_usd": 0.000166,
+        "gt_coarse": "NETWORK"
+      },
+      {
+        "case": "api_contract",
+        "gt_domain": "API",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "API",
+          "JS",
+          "UI"
+        ],
+        "domains_fine": [
+          "API",
+          "JS",
+          "UI"
+        ],
+        "domains_coarse": [
+          "NETWORK",
+          "UI",
+          "UI"
+        ],
+        "hit_raw": true,
+        "hit_fine": true,
+        "hit_coarse": true,
+        "latency_ms": 4668,
+        "tokens_in": 335,
+        "tokens_out": 432,
+        "cost_usd": 0.000207,
+        "gt_coarse": "NETWORK"
+      },
+      {
+        "case": "api_auth",
+        "gt_domain": "API",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "API",
+          "UI",
+          "PERSISTENCE"
+        ],
+        "domains_fine": [
+          "API",
+          "UI",
+          "PERSISTENCE"
+        ],
+        "domains_coarse": [
+          "NETWORK",
+          "UI",
+          "PRODUCT"
+        ],
+        "hit_raw": true,
+        "hit_fine": true,
+        "hit_coarse": true,
+        "latency_ms": 3533,
+        "tokens_in": 329,
+        "tokens_out": 360,
+        "cost_usd": 0.000177,
+        "gt_coarse": "NETWORK"
+      },
+      {
+        "case": "js_typeerror",
+        "gt_domain": "JS",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "JS",
+          "UI",
+          "TIMEOUT"
+        ],
+        "domains_fine": [
+          "JS",
+          "UI",
+          "TIMING"
+        ],
+        "domains_coarse": [
+          "UI",
+          "UI",
+          "TIMING"
+        ],
+        "hit_raw": true,
+        "hit_fine": true,
+        "hit_coarse": true,
+        "latency_ms": 4819,
+        "tokens_in": 305,
+        "tokens_out": 412,
+        "cost_usd": 0.000195,
+        "gt_coarse": "UI"
+      },
+      {
+        "case": "js_promise",
+        "gt_domain": "JS",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "JS",
+          "API",
+          "TIMEOUT"
+        ],
+        "domains_fine": [
+          "JS",
+          "API",
+          "TIMING"
+        ],
+        "domains_coarse": [
+          "UI",
+          "NETWORK",
+          "TIMING"
+        ],
+        "hit_raw": true,
+        "hit_fine": true,
+        "hit_coarse": true,
+        "latency_ms": 2662,
+        "tokens_in": 307,
+        "tokens_out": 371,
+        "cost_usd": 0.000179,
+        "gt_coarse": "UI"
+      },
+      {
+        "case": "js_syntax",
+        "gt_domain": "JS",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "JS",
+          "NETWORK",
+          "PERSISTENCE"
+        ],
+        "domains_fine": [
+          "JS",
+          "NETWORK",
+          "PERSISTENCE"
+        ],
+        "domains_coarse": [
+          "UI",
+          "NETWORK",
+          "PRODUCT"
+        ],
+        "hit_raw": true,
+        "hit_fine": true,
+        "hit_coarse": true,
+        "latency_ms": 2971,
+        "tokens_in": 310,
+        "tokens_out": 433,
+        "cost_usd": 0.000204,
+        "gt_coarse": "UI"
+      },
+      {
+        "case": "js_infinite",
+        "gt_domain": "JS",
+        "called": true,
+        "fallback": false,
+        "error": "",
+        "model": "deepseek-flash",
+        "candidates": 3,
+        "supported": 3,
+        "dropped": 0,
+        "duplicates": 0,
+        "domains_raw": [
+          "JS",
+          "UI",
+          "TIMEOUT"
+        ],
+        "domains_fine": [
+          "JS",
+          "UI",
+          "TIMING"
+        ],
+        "domains_coarse": [
+          "UI",
+          "UI",
+          "TIMING"
+        ],
+        "hit_raw": true,
+        "hit_fine": true,
+        "hit_coarse": true,
+        "latency_ms": 3851,
+        "tokens_in": 331,
+        "tokens_out": 615,
+        "cost_usd": 0.000279,
+        "gt_coarse": "UI"
+      }
+    ],
+    "macro_f1_coarse": 0.6481,
+    "per_class_coarse": {
+      "ENVIRONMENT": {
+        "precision": 0,
+        "recall": 0.0,
+        "f1": 0,
+        "support": 4
+      },
+      "LOCATOR": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 4
+      },
+      "NETWORK": {
+        "precision": 0.6154,
+        "recall": 1.0,
+        "f1": 0.7619,
+        "support": 8
+      },
+      "PRODUCT": {
+        "precision": 0.6667,
+        "recall": 0.5,
+        "f1": 0.5714,
+        "support": 4
+      },
+      "TIMING": {
+        "precision": 1.0,
+        "recall": 0.5,
+        "f1": 0.6667,
+        "support": 4
+      },
+      "UI": {
+        "precision": 0.8,
+        "recall": 1.0,
+        "f1": 0.8889,
+        "support": 8
+      }
+    }
+  },
+  "advisors": {
+    "compiler_advisor": {
+      "called": true,
+      "fallback": false,
+      "error": "",
+      "steps": 2,
+      "assertions": 1,
+      "dropped_steps": 1,
+      "warnings": [
+        "llm_step_dropped: navigate 缺少合法 URL",
+        "llm: 轨迹未提供创建成功后的页面 UI 元素，故未生成 ui 断言",
+        "llm: 轨迹未提供 /api/state/projects 的响应结构，业务状态断言采用通用期望：接口结果包含项目名称 X",
+        "llm: 填充值 X 直接来自探索轨迹 action_sequence[1]"
+      ],
+      "latency_ms": 7094,
+      "tokens": [
+        386,
+        784,
+        0.000352
+      ]
+    },
+    "probe_planner": {
+      "called": true,
+      "fallback": false,
+      "error": "",
+      "probe_id": "http_state",
+      "selections": 3,
+      "dropped": 0,
+      "valid": true,
+      "latency_ms": 2873,
+      "tokens": [
+        421,
+        260,
+        0.000146
+      ],
+      "note": "仅在本次评估进程内直接调用顾问类；生产默认开关未被修改"
+    },
+    "repair_planner": {
+      "called": true,
+      "fallback": false,
+      "error": "",
+      "changes": 2,
+      "warnings": [
+        "llm: 未提供 DOM，无法确认 create-submit 是否真实存在；若仍失败需核对 data-testid 是否变更或元素是否位于 iframe/shadow DOM。",
+        "llm: 未修改断言 a1 或任何预期值。"
+      ],
+      "latency_ms": 11943,
+      "tokens": [
+        252,
+        1169,
+        0.000493
+      ]
+    }
+  },
+  "budget": {
+    "day": "2026-11-26",
+    "spent_before_usd": 0.0,
+    "spent_after_usd": 0.007151,
+    "daily_budget_usd": 1.0,
+    "advisors_only_spent_usd": 0.000991
+  }
+}
