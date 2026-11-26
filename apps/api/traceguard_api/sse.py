@@ -67,11 +67,22 @@ def format_retry(ms: int = RETRY_MS) -> bytes:
     return f"retry: {ms}\n\n".encode()
 
 
+def format_notice(name: str, data: dict[str, Any]) -> bytes:
+    """服务端控制帧（授权失效等）。
+
+    与业务事件区分：使用独立 event 名 + 稳定 id 前缀，客户端可据此
+    停止重连/提示重新登录，而不是把它当成业务事件写入本地状态。
+    """
+    payload = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+    return f"id: notice:{name}\nevent: {name}\ndata: {payload}\n\n".encode()
+
+
 __all__ = [
     "RETRY_MS",
     "decode_cursor",
     "encode_cursor",
     "format_event",
     "format_heartbeat",
+    "format_notice",
     "format_retry",
 ]

@@ -157,20 +157,25 @@ async def list_artifacts(
 
 @router.get("/artifacts/{artifact_id}/download")
 async def download_artifact(artifact_id: str, request: Request) -> Response:
+    """产物下载：授权判定与内容读取使用**同一份**元数据（RUN-014 WP3）。
+
+    旧实现先 `get_meta()` 授权、再 `read()` 读文件（两个事务）：
+    元数据缺失时完全跳过对象级授权，只靠 read 的 404 兜底——一旦出现
+    "文件存在但元数据缺失/延迟可见"，授权链路就断在中间。现在只读一次，
+    用 read 返回的权威 meta 做 Workspace 校验，不存在"未授权先读内容"的路径。
+    """
     rt = get_services().rt
-    meta_probe = rt.artifacts.get_meta(artifact_id)
-    if meta_probe:
-        require_entity_workspace(
-            principal_of(request),
-            meta_probe.get("workspace_id"),
-            resource_type="artifact",
-            resource_id=artifact_id,
-            request=request,
-        )
     try:
         data, meta = rt.artifacts.read(artifact_id)
     except AppError as exc:
         raise HTTPException(404, detail={"code": exc.code.value, "message": exc.message}) from exc
+    require_entity_workspace(
+        principal_of(request),
+        meta.get("workspace_id"),
+        resource_type="artifact",
+        resource_id=artifact_id,
+        request=request,
+    )
     return Response(
         content=data,
         media_type=meta["media_type"],

@@ -360,6 +360,13 @@ async def queue_stats(request: Request) -> dict[str, Any]:
     return {
         "by_status": counts,
         "total": total,
+        # RUN-014 WP3：显式声明统计范围。普通用户拿到的是**授权 Workspace 并集**，
+        # 不是全局队列；不声明会被误读为全局运维数据（RUN-013 WP6 的描述即如此）。
+        "scope": {
+            "mode": "global" if allowed is None else "authorized_workspaces",
+            "global": allowed is None,
+            "authorized_workspaces": allowed,
+        },
         "counting": {
             "source": "SQL COUNT(*) / GROUP BY 直接查询 tg_run",
             "list_limit": None,

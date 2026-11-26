@@ -57,9 +57,22 @@ const busy = ref('')
 async function load(probe = false): Promise<boolean> {
   loading.value = !health.value
   try {
+    // RUN-014 WP3：浏览器自检属系统级运维动作（system.observe），
+    // 非管理员应看到明确的权限提示，而不是整页加载失败。
+    const browserPromise = api
+      .get<BrowserHealth>(`/system/browser?probe=${probe}`)
+      .catch((e) => ({
+        available: false,
+        error:
+          (e as { status?: number })?.status === 403
+            ? '需要 platform-admin 的 system.observe 权限才能执行浏览器自检'
+            : e instanceof Error
+              ? e.message
+              : String(e),
+      }) as BrowserHealth)
     const [h, b, c, m, a] = await Promise.all([
       api.get<SystemHealth>('/system/health'),
-      api.get<BrowserHealth>(`/system/browser?probe=${probe}`),
+      browserPromise,
       api.get<Record<string, unknown>>('/system/config'),
       api.get<SystemMetrics>('/system/metrics'),
       api.get<{ artifact_id: string; media_type: string; size: number; original_name: string }[]>('/artifacts?limit=20'),

@@ -24,11 +24,15 @@ SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 PUBLIC_PATHS = {"/api/v1/auth/login", "/api/v1/auth/csrf", "/api/v1/auth/status"}
 
 #: RUN-011-R1.2：三个无 Workspace 过滤的全局运维观测接口。
+#: RUN-014 WP3：追加 `/system/llm/summary`（全局模型运行摘要，含跨 Workspace 调用/成本）
+#: 与 `/system/browser`（可触发真实浏览器自检，属系统级运维动作）。
 #: 必须先于通用 SAFE_METHODS → read 映射判定，避免普通 read 角色越权读取。
 GLOBAL_OBSERVATION_PATHS = {
     "/api/v1/events/conflicts",
     "/api/v1/probes/audit",
     "/api/v1/inbox/stats",
+    "/api/v1/system/llm/summary",
+    "/api/v1/system/browser",
 }
 
 

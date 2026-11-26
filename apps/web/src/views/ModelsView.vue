@@ -20,7 +20,14 @@ async function load() {
     data.value = await endpoints.llmSummary()
     error.value = ''
   } catch (e) {
-    error.value = e instanceof Error ? e.message : String(e)
+    // RUN-014 WP3：全局模型运行摘要仅 platform-admin（system.observe）可读
+    const status = (e as { status?: number })?.status
+    error.value =
+      status === 403
+        ? '需要 platform-admin 的 system.observe 权限才能查看全局模型运行摘要'
+        : e instanceof Error
+          ? e.message
+          : String(e)
     notifyError(e)
   } finally {
     loading.value = false

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
 from traceguard_core.errors import AppError
@@ -504,7 +504,17 @@ async def probe_executions(
 
 
 @router.get("/probes/audit")
-async def probe_audit() -> list[dict[str, Any]]:
+async def probe_audit(response: Response) -> list[dict[str, Any]]:
+    """探针引擎的**进程内**调用/拒绝轨迹（运维观测）。
+
+    RUN-014 WP3：这不是正式审计记录。正式的探针执行事实在持久化的
+    `probe_execution` 文档里（含 workspace / run / 证据 / 预算），重启后仍可回读；
+    本接口只反映当前进程内的 `ProbeEngine._audit` 列表，进程重启即清空。
+    通过响应头显式声明边界，避免调用方误当作不可篡改审计。
+    """
+    response.headers["X-TraceGuard-Audit-Persistent"] = "false"
+    response.headers["X-TraceGuard-Audit-Scope"] = "in-memory-process"
+    response.headers["X-TraceGuard-Audit-Formal-Source"] = "probe_execution"
     return get_services().probe.audit_log()
 
 

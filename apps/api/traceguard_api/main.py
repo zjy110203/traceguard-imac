@@ -127,6 +127,7 @@ def create_app() -> FastAPI:
         heartbeat_seconds: float = 15.0,
         poll_interval: float = 1.0,
         limit: int = 0,
+        auth_recheck_seconds: float = 2.0,
     ):
         """真实业务事件流（SSE）。
 
@@ -135,34 +136,48 @@ def create_app() -> FastAPI:
         - 支持 workspace / run / event_type 过滤、心跳、客户端断开、轮询降级；
         - `sequence` 是 producer 实例内序号，不对外宣称跨 producer 全局顺序；
         - SSE 只做实时展示，业务状态权威来源仍是 API / 数据库。
+
+        RUN-014 WP3：**活跃连接的授权重新核验**。
+        连接建立时算出的 Workspace 范围不能一直用到断开：每次轮询（默认每 2s）
+        重新解析会话——用户是否仍 active、会话是否被撤销/过期、Workspace 授权是否仍成立。
+        一旦失效：先发 `auth.revoked` 控制帧（说明原因），再立即关闭连接；
+        不再发送任何业务事件。
         """
         from . import sse as sse_util
         from .auth import _effective_auth_enabled, get_auth_manager
         from .runtime import get_runtime
-        from .workspace import principal_of, scope_filter
+        from .workspace import principal_of, scope_filter, visible_workspaces
 
         # RUN-013 WP2：`/events/stream` 不在 `/api/v1` 下，认证中间件不会覆盖它。
         # 必须在此显式完成身份解析 + Workspace 作用域校验，否则匿名用户可订阅
         # 任意 Workspace 的事件流（跨空间泄露）。
         principal = principal_of(request)
-        if _effective_auth_enabled() and principal is None:
-            token = request.cookies.get(settings.auth_cookie_name, "")
-            principal = get_auth_manager(request).resolve(token) if token else None
+        session_token = ""
+        if _effective_auth_enabled():
             if principal is None:
-                return JSONResponse(
-                    status_code=401,
-                    content={
-                        "detail": {
-                            "code": "UNAUTHENTICATED",
-                            "message": "authentication required",
-                        }
-                    },
-                )
-            request.state.principal = principal
+                token = request.cookies.get(settings.auth_cookie_name, "")
+                principal = get_auth_manager(request).resolve(token) if token else None
+                if principal is None:
+                    return JSONResponse(
+                        status_code=401,
+                        content={
+                            "detail": {
+                                "code": "UNAUTHENTICATED",
+                                "message": "authentication required",
+                            }
+                        },
+                    )
+                request.state.principal = principal
+            session_token = principal.session_token
         allowed = scope_filter(principal, workspace_id, resource_type="event", request=request)
         # allowed=None：管理员 / 认证关闭 → 不限制；否则按授权 Workspace 并集过滤。
-        stream_workspace = workspace_id if allowed is None else None
+        # 显式请求的 workspace 与"可见集合"分开记录：撤权判定必须针对**用户请求的那个空间**，
+        # 否则非管理员传入 workspace_id 时 stream_workspace 会退化成 None（撤权永远不触发）。
+        requested_ws = workspace_id.strip() if workspace_id and workspace_id.strip() else None
+        stream_workspace = requested_ws
         stream_workspaces = allowed
+        #: 认证关闭时没有可撤销的会话，跳过重新核验（保持既有 dev 行为）
+        auth_audit = bool(session_token)
 
         rt = get_runtime()
         cursor = sse_util.decode_cursor(last_event_id or request.headers.get("last-event-id"))
@@ -172,14 +187,56 @@ def create_app() -> FastAPI:
         async def generate() -> AsyncIterator[bytes]:
             import time as _time
 
+            nonlocal stream_workspaces, principal
             at, eid = start_at, start_eid
             sent = 0
             last_beat = _time.monotonic()
+            last_auth_check = _time.monotonic()
             yield sse_util.format_retry()
             try:
                 while True:
                     if await request.is_disconnected():
                         break
+                    # ---- RUN-014 WP3：活跃连接授权重新核验 ----
+                    now_check = _time.monotonic()
+                    if auth_audit and now_check - last_auth_check >= max(0.1, auth_recheck_seconds):
+                        last_auth_check = now_check
+                        fresh = None
+                        try:
+                            fresh = await asyncio.to_thread(
+                                get_auth_manager(request).resolve, session_token
+                            )
+                        except Exception as exc:  # noqa: BLE001 - DB 抖动不等于撤权
+                            logger.warning("sse_auth_recheck_failed", error=str(exc)[:200])
+                        if fresh is None:
+                            yield sse_util.format_notice(
+                                "auth.revoked", {"reason": "SESSION_INVALID"}
+                            )
+                            logger.info("sse_closed_session_invalid", user=principal.username)
+                            return
+                        if fresh.user_id != principal.user_id:
+                            yield sse_util.format_notice(
+                                "auth.revoked", {"reason": "SESSION_REBOUND"}
+                            )
+                            return
+                        new_allowed = visible_workspaces(fresh)
+                        if requested_ws is not None and not fresh.workspace_allowed(requested_ws):
+                            yield sse_util.format_notice(
+                                "auth.revoked",
+                                {
+                                    "reason": "WORKSPACE_REVOKED",
+                                    "workspace_id": requested_ws,
+                                },
+                            )
+                            logger.info(
+                                "sse_closed_workspace_revoked",
+                                user=fresh.username,
+                                workspace=requested_ws,
+                            )
+                            return
+                        # 授权变更（授予/撤销其它 Workspace）立即生效，不必重连
+                        stream_workspaces = new_allowed
+                        principal = fresh
                     try:
                         events = await asyncio.to_thread(
                             rt.events.list_events_after,

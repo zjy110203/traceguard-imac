@@ -201,13 +201,19 @@ async def llm_summary() -> dict[str, Any]:
     summary = tracker.summary()
 
     # 规则兜底来自真实探索/诊断文档，不从用量文件臆测。
+    # RUN-014 WP3：旧实现用 `docs.list(limit=1000/500)` 遍历——文档数超过 limit 时
+    # 统计会被静默截断却仍标称全量。现改为按键集分页完整读取（`iter_all`），
+    # 并在响应中声明实际扫描量与是否有截断。
     fallback_calls = 0
     llm_calls = 0
     rule_decisions = 0
     advisor_called = 0
     advisor_skipped = 0
-    for rec in rt.docs.list(kind="exploration", limit=1000):
+    compiler_llm = compiler_fallback = 0
+    scanned = {"exploration": 0, "diagnosis": 0, "probe_plan": 0, "repair": 0}
+    for rec in rt.docs.iter_all(kind="exploration"):
         doc = rec.doc or {}
+        scanned["exploration"] += 1
         engine = str(doc.get("engine") or "")
         stats = doc.get("llm_stats") or {}
         if isinstance(stats, dict):
@@ -216,8 +222,14 @@ async def llm_summary() -> dict[str, Any]:
         if engine and not engine.startswith("llm:"):
             # engine 只表示规划器配置，不把 engine=llm:* 的动作都算作 LLM 成功。
             rule_decisions += 1
-    for rec in rt.docs.list(kind="diagnosis", limit=1000):
+        meta = ((doc.get("compiled") or {}).get("llm_meta")) or {}
+        if meta.get("called"):
+            compiler_llm += 1
+        if meta.get("fallback"):
+            compiler_fallback += 1
+    for rec in rt.docs.iter_all(kind="diagnosis"):
         doc = rec.doc or {}
+        scanned["diagnosis"] += 1
         advisor = doc.get("llm_advisor") or {}
         if isinstance(advisor, dict):
             if advisor.get("called"):
@@ -226,22 +238,17 @@ async def llm_summary() -> dict[str, Any]:
                 advisor_skipped += 1
 
     # RUN-005 WP2：三类扩展顾问的真实调用/兜底统计（来自文档，不臆测）
-    compiler_llm = compiler_fallback = 0
-    for rec in rt.docs.list(kind="exploration", limit=1000):
-        meta = ((rec.doc or {}).get("compiled") or {}).get("llm_meta") or {}
-        if meta.get("called"):
-            compiler_llm += 1
-        if meta.get("fallback"):
-            compiler_fallback += 1
     probe_llm = probe_fallback = 0
-    for rec in rt.docs.list(kind="probe_plan", limit=500):
+    for rec in rt.docs.iter_all(kind="probe_plan"):
         notes = (rec.doc or {}).get("llm_planner") or {}
+        scanned["probe_plan"] += 1
         if notes.get("called"):
             probe_llm += 1
         if notes.get("fallback"):
             probe_fallback += 1
     repair_llm = 0
-    for rec in rt.docs.list(kind="repair", limit=500):
+    for rec in rt.docs.iter_all(kind="repair"):
+        scanned["repair"] += 1
         if str((rec.doc or {}).get("created_by", "")).startswith("agent:llm"):
             repair_llm += 1
 
@@ -274,6 +281,14 @@ async def llm_summary() -> dict[str, Any]:
                 "probe_planner_fallbacks": probe_fallback,
                 "repair_planner_proposals": repair_llm,
                 "note": "engine 标记规划器配置，不等于每个动作都由 LLM 决策；成本为应用侧估算。",
+            },
+            # RUN-014 WP3：统计口径可核验——全量按键集分页读取，不静默截断
+            "coverage": {
+                "method": "keyset_pagination (DocStore.iter_all)",
+                "documents_scanned": scanned,
+                "truncated": False,
+                "limits_used": None,
+                "previous_behavior": "旧实现 limit=1000/500，超出即静默截断",
             },
         }
     )

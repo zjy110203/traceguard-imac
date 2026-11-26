@@ -1061,6 +1061,46 @@ class DocStore:
             rows = s.scalars(q.order_by(DocRow.created_at.desc()).offset(offset).limit(limit)).all()
             return [_to_doc(r) for r in rows]
 
+    def iter_all(
+        self, *, kind: str, page_size: int = 500, workspace_ids: Sequence[str] | None = None
+    ) -> Iterable[DocRecord]:
+        """按键集分页遍历某类文档（RUN-014 WP3：避免 `limit=N` 静默截断统计）。
+
+        以主键 `id` 作为游标翻页，**完整读完**才停止；调用方可据此计算全量聚合，
+        也可以据 `len()` 与分页次数判断是否真的全量。不做一次性 `limit=1000` 截断。
+        """
+        last_id = ""
+        while True:
+            with self.db.session() as s:
+                q = select(DocRow).where(DocRow.kind == kind)
+                if workspace_ids is not None:
+                    q = q.where(DocRow.workspace_id.in_(list(workspace_ids)))
+                if last_id:
+                    q = q.where(DocRow.id > last_id)
+                rows = s.scalars(q.order_by(DocRow.id).limit(max(1, page_size))).all()
+                docs = [_to_doc(r) for r in rows]
+                last_id = rows[-1].id if rows else last_id
+            yield from docs
+            if len(docs) < page_size:
+                return
+
+    def count(
+        self,
+        *,
+        kind: str | None = None,
+        workspace_ids: Sequence[str] | None = None,
+    ) -> int:
+        """SQL COUNT(*)：不读文档体，不受任何 limit 影响。"""
+        from sqlalchemy import func
+
+        with self.db.session() as s:
+            q = select(func.count()).select_from(DocRow)
+            if kind:
+                q = q.where(DocRow.kind == kind)
+            if workspace_ids is not None:
+                q = q.where(DocRow.workspace_id.in_(list(workspace_ids)))
+            return int(s.scalar(q) or 0)
+
     def delete(self, doc_id: str) -> bool:
         with self.db.session() as s:
             row = s.get(DocRow, doc_id)
