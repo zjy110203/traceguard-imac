@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 from traceguard_core.errors import AppError, ErrorCode
 from traceguard_core.ids import new_id
 from traceguard_persistence.db import Database, get_database
-from traceguard_persistence.fencing import WRITE_BLOCKED_STATES, fenced_guard
+from traceguard_persistence.fencing import WRITE_BLOCKED_STATES, db_now, fenced_guard
 from traceguard_persistence.models import (
     RunRow,
     RunSubmissionRow,
@@ -354,8 +354,10 @@ class TaskService:
         复活，与 claim 的接管条件形成竞态。现在过期即不可续；
         续租语句本身也是条件 UPDATE，不存在"读到空闲 → 再写"的窗口。
         """
-        now = time.time()
         with self.db.session() as s:
+            # RUN-015 WP1.3：用数据库时钟。若 UPDATE 等待行锁，拿锁后重新求值
+            # 的 WHERE 用的是真实时刻，已过期的租约不会用调用时的旧时间复活。
+            now = db_now(s, run_id=run_id)
             result = s.execute(
                 update(RunRow)
                 .where(
@@ -546,28 +548,54 @@ class TaskService:
                         "IDEMPOTENCY_KEY_REUSED: key belongs to another run",
                     )
                 return self._submission_receipt(existing, replayed=True)
-            # 2) 主体不符（别人持有租约）：无论 Run 是否终态都是代次失效
+            # 1a) 终态是单调的：这里若读到终态，真实行也一定终态。先按既有语义
+            #     返回 FINAL_STATE_FROZEN / STALE，避免普通终态重试被误报为租约失效。
+            if r.execution_status in FINAL_RUN_STATES:
+                raise self._terminal_conflict(r, worker_id, fencing_token)
+            # 2) RUN-015 WP1.1：原子 fencing。提交事务内对 run 行做条件 UPDATE：
+            #    只有 owner/token/租期/状态全部命中才持有行锁并继续写 RunSubmission。
+            #    旧代码只用 Python 比对 s.get 得到的（可能是旧的）ORM 对象，
+            #    A 暂停 → B 接管提交 → A 恢复后会把旧对象写回，覆盖 B 的终态。
+            #    allow_own_submission 保留"同 worker/同代次已提交终态"的收尾语义。
+            if not fenced_guard(
+                s,
+                run_id=run_id,
+                worker_id=worker_id,
+                fencing_token=int(fencing_token),
+                allow_own_submission=True,
+                allow_finalizing=True,
+            ):
+                raise AppError(
+                    ErrorCode.CONFLICT,
+                    "STALE_FENCING_TOKEN: old/expired worker submit rejected (fenced)",
+                )
+            # 3) 取锁后刷新：此前 s.get 的对象可能是接管前的旧版本
+            s.refresh(r)
+            # 3a) 并发同键提交：拿锁后再次查回执，命中即返回原回执（不重复插入）
+            existing = s.get(RunSubmissionRow, key)
+            if existing is not None:
+                if existing.run_id != run_id:
+                    raise AppError(
+                        ErrorCode.CONFLICT,
+                        "IDEMPOTENCY_KEY_REUSED: key belongs to another run",
+                    )
+                return self._submission_receipt(existing, replayed=True)
+            # 4) 终态冻结语义：终态 Run 只允许同键重放（上面已处理）。
+            #    任何新键/新状态提交都拒绝，不允许覆盖 verdict/report。
+            if r.execution_status in FINAL_RUN_STATES:
+                raise self._terminal_conflict(r, worker_id, fencing_token)
+            # 5) 代次/属主/租期复核（权威判定已在 guard 内以数据库时钟完成）
             if r.lease_owner != worker_id:
                 raise AppError(
                     ErrorCode.CONFLICT,
                     "STALE_FENCING_TOKEN: old/expired worker submit rejected",
                 )
-            # 3) 终态冻结语义：终态 Run 只允许同键重放（上面已处理）。
-            #    任何新键/新状态提交都拒绝，不允许覆盖 verdict/report。
-            if r.execution_status in FINAL_RUN_STATES:
-                raise AppError(
-                    ErrorCode.CONFLICT,
-                    f"FINAL_STATE_FROZEN: run {run_id} already "
-                    f"{r.execution_status}; duplicate final submissions are rejected "
-                    "(replay the original idempotency key to obtain the receipt)",
-                )
-            # 4) fencing + 租期校验（旧 token / 已过期租约一律拒绝）
             if r.fencing_token != fencing_token or float(r.lease_expires_at or 0.0) <= time.time():
                 raise AppError(
                     ErrorCode.CONFLICT,
                     "STALE_FENCING_TOKEN: old/expired worker submit rejected",
                 )
-            # 5) 状态转换检查
+            # 6) 状态转换检查
             if (
                 execution_status != r.execution_status
                 and execution_status not in RUN_TRANSITIONS.get(r.execution_status, set())
@@ -577,7 +605,7 @@ class TaskService:
                     ErrorCode.CONFLICT,
                     f"illegal run transition {r.execution_status}->{execution_status}",
                 )
-            # 6) 状态变更 + 回执原子写入（同一事务）
+            # 7) 状态变更 + 回执原子写入（同一事务）
             previous_status = r.execution_status
             r.execution_status = execution_status
             r.test_verdict = test_verdict
@@ -617,6 +645,21 @@ class TaskService:
             )
 
     @staticmethod
+    def _terminal_conflict(r: RunRow, worker_id: str, fencing_token: int) -> AppError:
+        """终态冲突语义：同 owner+同代次=冻结；旧 owner/旧代次=代次失效。"""
+        if r.lease_owner == worker_id and int(r.fencing_token) == int(fencing_token):
+            return AppError(
+                ErrorCode.CONFLICT,
+                f"FINAL_STATE_FROZEN: run {r.run_id} already "
+                f"{r.execution_status}; duplicate final submissions are rejected "
+                "(replay the original idempotency key to obtain the receipt)",
+            )
+        return AppError(
+            ErrorCode.CONFLICT,
+            "STALE_FENCING_TOKEN: old/expired worker submit rejected",
+        )
+
+    @staticmethod
     def _auto_idempotency_key(
         run_id: str, worker_id: str, fencing_token: int, execution_status: str
     ) -> str:
@@ -645,13 +688,13 @@ class TaskService:
         self, run_id: str, worker_id: str, fencing_token: int, observer_mode: str
     ) -> None:
         """PREPARING → RUNNING：条件 UPDATE（代次 + 属主 + 未过期 + 非终态）。"""
-        now = time.time()
         with self.db.session() as s:
+            now = db_now(s, run_id=run_id)
             r = s.get(RunRow, run_id)
             if not r or r.fencing_token != fencing_token or r.lease_owner != worker_id:
                 raise AppError(ErrorCode.CONFLICT, "STALE_FENCING_TOKEN")
-            if float(r.lease_expires_at or 0.0) <= now:
-                raise AppError(ErrorCode.CONFLICT, "LEASE_LOST: 租约已过期，不能开始执行")
+            # 租期判定完全交给下面的条件 UPDATE（db_now 已在取得行锁后读取时钟）；
+            # 不用 SELECT 到的旧 ORM 值做早退，否则会误判并发续租。
             values: dict[str, Any] = {"observer_mode": observer_mode}
             if "RUNNING" in RUN_TRANSITIONS.get(r.execution_status, set()):
                 values["execution_status"] = "RUNNING"

@@ -1,0 +1,17 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.12, pytest-9.2.0, pluggy-1.7.0 -- /Users/dlp--test/Desktop/traceguard/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/dlp--test/Desktop/traceguard
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.16.0
+collecting ... collected 6 items
+
+tests/integration/test_fencing_pg_run015.py::test_lock_wait_past_expiry_never_revives_lease[renew] PASSED [ 16%]
+tests/integration/test_fencing_pg_run015.py::test_lock_wait_past_expiry_never_revives_lease[mark_running] PASSED [ 33%]
+tests/integration/test_fencing_pg_run015.py::test_lock_wait_past_expiry_never_revives_lease[step] PASSED [ 50%]
+tests/integration/test_fencing_pg_run015.py::test_lock_wait_past_expiry_never_revives_lease[submit] PASSED [ 66%]
+tests/integration/test_fencing_pg_run015.py::test_pg_submit_result_takeover_preserves_b_receipt PASSED [ 83%]
+tests/integration/test_fencing_pg_run015.py::test_pg_concurrent_claim_has_single_owner PASSED [100%]
+
+============================== 6 passed in 15.01s ==============================
+EXIT=0

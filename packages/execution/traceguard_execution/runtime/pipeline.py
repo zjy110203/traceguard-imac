@@ -458,6 +458,8 @@ class RunPipeline:
                     "evidence_ids": ev_ids,
                 },
                 idem=f"{run['run_id']}:step:{step.step_id}",
+                # RUN-015 WP1.2：Run 业务事件同样受 fencing 保护
+                fence=(self.worker_id, token),
             )
             if rec.error:
                 interrupted = True
@@ -506,6 +508,8 @@ class RunPipeline:
                     "reason": outcome.reason,
                 },
                 idem=f"{run['run_id']}:assert:{spec.assertion_id}",
+                # RUN-015 WP1.2：Run 业务事件同样受 fencing 保护
+                fence=(self.worker_id, token),
             )
 
         verdict = aggregate(
