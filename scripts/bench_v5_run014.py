@@ -5,11 +5,13 @@
 
 用法：
     .venv/bin/python scripts/bench_v5_run014.py
+    .venv/bin/python scripts/bench_v5_run014.py --out docs/assets/run015/wp6/v5-2rounds
 退出码：0 完成（统计仍可能含失败样本，如实记录）；3 环境不可达。
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import subprocess
 import sys
@@ -27,11 +29,17 @@ from business_loop_ui_acceptance_run012 import (  # noqa: E402
     _wait_health,
 )
 
-OUT = ROOT / "docs/assets/run014/wp5"
+DEFAULT_OUT = ROOT / "docs/assets/run014/wp5"
 PASSWORD = "Bench-v5-2026!"
 
 
 def main() -> int:
+    ap = argparse.ArgumentParser()
+    # RUN-015 WP6：新实验写到独立目录，绝不覆盖 RUN-014 原始归档
+    ap.add_argument("--out", default=str(DEFAULT_OUT))
+    args = ap.parse_args()
+    out_arg = Path(args.out)
+    OUT = out_arg if out_arg.is_absolute() else ROOT / out_arg
     OUT.mkdir(parents=True, exist_ok=True)
     work = OUT / "_runtime"
     work.mkdir(parents=True, exist_ok=True)

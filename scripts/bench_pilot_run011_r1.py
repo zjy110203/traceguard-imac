@@ -37,7 +37,14 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from full_loop_run011 import CHECKS, Http, TeamFlow, WorkerRun, check  # noqa: E402
+from full_loop_run011 import (  # noqa: E402
+    CHECKS,
+    Http,
+    TeamFlow,
+    WorkerRun,
+    _extract_evidence_refs,
+    check,
+)
 
 #: 三场景：testcase（种子内受控故障注入）→ GT 主因机制
 PILOT_SCENARIOS: list[dict[str, Any]] = [
@@ -232,9 +239,27 @@ def run_scenario(
         sample["fault_activation_status"] = (
             "CONFIRMED" if fault_ids.intersection(active) else "UNKNOWN"
         )
+        # RUN-015 WP6：记录客户端观测到激活状态的时刻（TeamFlow API 不提供服务端时间戳）。
+        sample["fault_activation_timestamp"] = time.time()
     except Exception as exc:  # noqa: BLE001 - 快照失败只降低证据等级，不伪造成功
         sample["fault_state_snapshot"] = {"error": f"{type(exc).__name__}: {exc}"}
         sample["fault_activation_status"] = "UNKNOWN"
+        sample["fault_activation_timestamp"] = None
+
+    # RUN-015 WP6：故障效果用"真实 Run 终态 + 已确认的激活快照"共同记录，
+    # 不用 GT 反推，也不把答案写进模型 Prompt。原始字段保留供评测端独立复核。
+    activation_confirmed = sample.get("fault_activation_status") == "CONFIRMED"
+    run_terminal = str(run.get("execution_status") or "")
+    sample["run_execution_status"] = run_terminal
+    sample["run_verdict_observed"] = verdict
+    sample["run_ended_at"] = run.get("ended_at")
+    sample["fault_effect_timestamp"] = time.time()
+    if activation_confirmed and verdict in {"FAILED", "NOT_EVALUATED"}:
+        sample["fault_effect_status"] = "CONFIRMED"
+    elif not activation_confirmed:
+        sample["fault_effect_status"] = "NOT_TRIGGERED"
+    else:
+        sample["fault_effect_status"] = "UNKNOWN"
 
     # ---- 规则诊断（LLM 固定关闭，对照组口径纯净）----
     diag_t0 = time.perf_counter()
@@ -255,6 +280,8 @@ def run_scenario(
     sample["diagnosis_id"] = diag_id
     sample["diagnosis_latency_ms"] = diag_latency_ms
     sample["diagnosis_outcome"] = diag.get("outcome")
+    # RUN-015 WP6：诊断真实证据引用（评测端用于独立判断 False Pass）
+    sample["evidence_refs"] = _extract_evidence_refs(diag)["union"]
 
     # ---- 真实探针执行（不是重建信号）----
     probe_t0 = time.perf_counter()

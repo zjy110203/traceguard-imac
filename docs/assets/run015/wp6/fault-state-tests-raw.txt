@@ -1,0 +1,36 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.12, pytest-9.2.0, pluggy-1.7.0 -- /Users/dlp--test/Desktop/traceguard/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/dlp--test/Desktop/traceguard
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.16.0
+collecting ... collected 25 items
+
+tests/unit/test_benchmark_fault_state_run015.py::test_fault_state_fields_survive_enrichment PASSED [  4%]
+tests/unit/test_benchmark_fault_state_run015.py::test_run014_archives_are_unchanged PASSED [  8%]
+tests/unit/test_benchmark_scenario_contract_run012.py::test_01_normal_positive_control_passed PASSED [ 12%]
+tests/unit/test_benchmark_scenario_contract_run012.py::test_02_deterministic_fault_triggered_run_failed PASSED [ 16%]
+tests/unit/test_benchmark_scenario_contract_run012.py::test_03_deterministic_fault_triggered_run_passed_is_false_pass PASSED [ 20%]
+tests/unit/test_benchmark_scenario_contract_run012.py::test_04_flaky_fault_not_triggered PASSED [ 24%]
+tests/unit/test_benchmark_scenario_contract_run012.py::test_05_flaky_fault_triggered_run_passed_is_false_pass PASSED [ 28%]
+tests/unit/test_benchmark_scenario_contract_run012.py::test_06_generic_execution_exception PASSED [ 32%]
+tests/unit/test_benchmark_scenario_contract_run012.py::test_07_diagnosis_412_does_not_exclude_expected_failure PASSED [ 36%]
+tests/unit/test_benchmark_scenario_contract_run012.py::test_08_positive_control_flag_conflicting_with_failed PASSED [ 40%]
+tests/unit/test_benchmark_scenario_contract_run012.py::test_09_missing_ground_truth PASSED [ 44%]
+tests/unit/test_benchmark_scenario_contract_run012.py::test_10_missing_fault_activation_evidence PASSED [ 48%]
+tests/unit/test_benchmark_scenario_contract_run012.py::test_historical_nine_errors_are_split_not_forced PASSED [ 52%]
+tests/unit/test_benchmark_scenario_contract_run012.py::test_historical_false_pass_status_is_partial PASSED [ 56%]
+tests/unit/test_benchmark_scenario_contract_run012.py::test_v5_scenarios_have_explicit_contracts PASSED [ 60%]
+tests/unit/test_benchmark_scenario_contract_run012.py::test_complete_context_preserved_on_error PASSED [ 64%]
+tests/unit/test_benchmark_v5_statistics_run011_r1_2.py::test_archives_sha256_unchanged PASSED [ 68%]
+tests/unit/test_benchmark_v5_statistics_run011_r1_2.py::test_raw_archive_statistics_split_counts PASSED [ 72%]
+tests/unit/test_benchmark_v5_statistics_run011_r1_2.py::test_positive_controls_excluded_from_diagnosis_denominator PASSED [ 76%]
+tests/unit/test_benchmark_v5_statistics_run011_r1_2.py::test_generic_errors_are_not_positive_controls PASSED [ 80%]
+tests/unit/test_benchmark_v5_statistics_run011_r1_2.py::test_false_pass_counts_gt_failure_but_verdict_passed PASSED [ 84%]
+tests/unit/test_benchmark_v5_statistics_run011_r1_2.py::test_normal_positive_control_passed_is_not_false_pass PASSED [ 88%]
+tests/unit/test_benchmark_v5_statistics_run011_r1_2.py::test_historical_false_pass_rate_is_zero PASSED [ 92%]
+tests/unit/test_benchmark_v5_statistics_run011_r1_2.py::test_legacy_f_and_g_arm_aliases_still_supported PASSED [ 96%]
+tests/unit/test_benchmark_v5_statistics_run011_r1_2.py::test_llm_probe_and_time_statistics_unchanged PASSED [100%]
+
+============================== 25 passed in 0.40s ==============================
+EXIT=0

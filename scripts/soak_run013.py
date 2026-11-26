@@ -273,6 +273,8 @@ def main() -> int:
     ap.add_argument("--out", default="docs/assets/run013/soak")
     ap.add_argument("--lease-ttl", type=float, default=6.0)
     ap.add_argument("--skip-faults", action="store_true", help="仅用于冒烟：不注入故障")
+    # RUN-015 WP5：独立 Worker 数量可配置（本轮要求 3 个独立进程）
+    ap.add_argument("--workers", type=int, default=2)
     args = ap.parse_args()
 
     out = (ROOT / args.out).resolve()
@@ -379,6 +381,8 @@ def main() -> int:
 
         fleet.start("r13-soak-w1")
         fleet.start("r13-soak-w2")
+        for index in range(3, args.workers + 1):
+            fleet.start(f"r15-soak-w{index}")
         if not _wait_health(base + "/health", 30):
             rep.check("环境：Worker 启动后 API 仍健康", False, "")
             return 3
@@ -670,8 +674,8 @@ def main() -> int:
     )
     rep.check("数据库：事件序号无重复", dup_events == 0, f"dup={dup_events}", server_verified=True)
     rep.check(
-        "数据库：活跃 Worker 数 ≥ 2",
-        final_active_workers >= 2,
+        f"数据库：活跃 Worker 数 ≥ {args.workers}",
+        final_active_workers >= args.workers,
         f"active={final_active_workers}",
     )
 
@@ -679,6 +683,7 @@ def main() -> int:
         "workpackage": "RUN-013 WP4",
         "database": "PostgreSQL 16.16",
         "inline_worker": False,
+        "workers": args.workers,
         "minutes_requested": args.minutes,
         "minutes_observed": round(duration_min, 2),
         "interval_s": args.interval,
