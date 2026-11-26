@@ -35,6 +35,9 @@ class RecordClass(str, Enum):
     NORMAL_POSITIVE_CONTROL = "NORMAL_POSITIVE_CONTROL"
     FAULT_NOT_TRIGGERED = "FAULT_NOT_TRIGGERED"
     FALSE_PASS = "FALSE_PASS"
+    #: RUN-016 WP3：故障已激活、测试却 PASSED，但缺少独立的业务影响证据——
+    #: 不能算 False Pass，单独成类，避免把"未证实"混进 False Pass 分子。
+    FALSE_PASS_UNVERIFIED = "FALSE_PASS_UNVERIFIED"
     EXECUTION_EXCEPTION = "EXECUTION_EXCEPTION"
     UNKNOWN_FAULT_ACTIVATION = "UNKNOWN_FAULT_ACTIVATION"
 
@@ -470,6 +473,17 @@ def classify_record(sample: dict[str, Any]) -> dict[str, Any]:
     if effect in {"TRIGGERED", "TRUE", "YES", "OBSERVED"}:
         effect = TriState.CONFIRMED.value
     confidence = "STRUCTURED_EVIDENCE" if activation or effect else "UNKNOWN"
+    # RUN-016 WP3：样本结构版本。v2 起故障效果必须来自独立观测（不读 Test Verdict）；
+    # v1 是历史归档，保留原语义，不重新解释、不改写。
+    schema_version = str(sample.get("benchmark_schema_version") or "benchmark-fault-v1")
+    schema_v2 = schema_version.startswith("benchmark-fault-v2")
+    effect_source = str(sample.get("fault_effect_source") or "")
+    effect_refs = list(sample.get("fault_effect_evidence_refs") or [])
+    independent_effect = bool(effect_source.startswith("INDEPENDENT") or effect_refs)
+    if schema_v2 and effect == TriState.CONFIRMED.value and not independent_effect:
+        # 声称生效但拿不出独立证据 → 降级为 UNKNOWN，不能据此判 False Pass
+        effect = TriState.UNKNOWN.value
+        confidence = "EFFECT_WITHOUT_INDEPENDENT_EVIDENCE"
     historical_key = (str(sample.get("scenario") or ""), int(sample.get("round") or 0))
     historical = HISTORICAL_ERROR_CLASSIFICATION.get(historical_key, {}) if has_error else {}
 
@@ -512,15 +526,34 @@ def classify_record(sample: dict[str, Any]) -> dict[str, Any]:
         and not has_error
     ):
         # Run 失败与确定性故障的预期效果一致，作为「故障生效」的推断证据；
-        # 历史归档没有 fault_state 快照，证据级别只能是 INFERRED_FROM_VERDICT。
+        # 历史归档（v1）没有 fault_state 快照，证据级别只能是 INFERRED_FROM_VERDICT。
+        # v2 起不再用 Verdict 推断效果：效果要么来自独立探针，要么保持 UNKNOWN。
         record_class = RecordClass.EXPECTED_FAILURE_CONFIRMED
-        activation = activation or (
-            TriState.CONFIRMED.value
-            if contract and contract.deterministic_activation
-            else TriState.INFERRED_FROM_VERDICT.value
-        )
-        effect = effect or TriState.INFERRED_FROM_VERDICT.value
-        confidence = "VERDICT_INFERRED_NO_FAULT_SNAPSHOT"
+        if schema_v2:
+            effect = effect or TriState.UNKNOWN.value
+            confidence = (
+                "INDEPENDENT_EFFECT_CONFIRMED"
+                if effect == TriState.CONFIRMED.value
+                else "EFFECT_NOT_INDEPENDENTLY_OBSERVED"
+            )
+        else:
+            activation = activation or (
+                TriState.CONFIRMED.value
+                if contract and contract.deterministic_activation
+                else TriState.INFERRED_FROM_VERDICT.value
+            )
+            effect = effect or TriState.INFERRED_FROM_VERDICT.value
+            confidence = "VERDICT_INFERRED_NO_FAULT_SNAPSHOT"
+    elif expected is ExpectedRunOutcome.FAILED and verdict == "PASSED" and schema_v2:
+        # v2：False Pass 必须同时具备「故障激活」+「独立观测到业务影响」；
+        # 只有激活、没有业务影响证据 → FALSE_PASS_UNVERIFIED（不计入 False Pass）。
+        if effect == TriState.CONFIRMED.value:
+            record_class = RecordClass.FALSE_PASS
+            confidence = "INDEPENDENT_EFFECT_CONFIRMED"
+        else:
+            record_class = RecordClass.FALSE_PASS_UNVERIFIED
+            if confidence != "EFFECT_WITHOUT_INDEPENDENT_EVIDENCE":
+                confidence = "NO_INDEPENDENT_EFFECT_EVIDENCE"
     elif (
         expected is ExpectedRunOutcome.FAILED
         and verdict == "PASSED"
@@ -560,9 +593,13 @@ def classify_record(sample: dict[str, Any]) -> dict[str, Any]:
         "fault_effect_status": effect
         or (
             TriState.INFERRED_FROM_VERDICT.value
-            if record_class is RecordClass.NORMAL_POSITIVE_CONTROL
+            if record_class is RecordClass.NORMAL_POSITIVE_CONTROL and not schema_v2
             else TriState.UNKNOWN.value
         ),
+        # RUN-016 WP3：效果证据来源与引用必须随结论一起保留，便于离线复核
+        "fault_effect_source": effect_source or None,
+        "fault_effect_evidence_refs": effect_refs,
+        "benchmark_schema_version": schema_version,
         "diagnosis_status": (
             "ERROR" if has_error else str(sample.get("diagnosis_outcome") or "NOT_ATTEMPTED")
         ),
@@ -575,18 +612,31 @@ def classify_record(sample: dict[str, Any]) -> dict[str, Any]:
 
 
 def is_confirmed_failing_sample(classified: dict[str, Any]) -> bool:
-    """是否可纳入「预期失败且故障确实生效」的诊断样本/False Pass 口径。"""
+    """是否可纳入「预期失败且故障确实生效」的诊断样本/False Pass 口径。
+
+    RUN-016 WP3：v2 样本只接受 `CONFIRMED`（独立观测）。
+    `INFERRED_FROM_VERDICT` 只对 v1 历史样本保留——历史数据不重新解释，
+    但也绝不把它当成新样本的证据。
+    """
+    schema_v2 = str(classified.get("benchmark_schema_version") or "").startswith(
+        "benchmark-fault-v2"
+    )
+    allowed_effect = (
+        {TriState.CONFIRMED.value}
+        if schema_v2
+        else {TriState.CONFIRMED.value, TriState.INFERRED_FROM_VERDICT.value}
+    )
     return (
         classified["expected_run_outcome"]
         in {ExpectedRunOutcome.FAILED.value, ExpectedRunOutcome.NOT_EVALUATED.value}
         and bool(classified["gt_mechanism"])
-        and classified["fault_effect_status"]
-        in {TriState.CONFIRMED.value, TriState.INFERRED_FROM_VERDICT.value}
+        and classified["fault_effect_status"] in allowed_effect
         and classified["record_class"]
         not in {
             RecordClass.FAULT_NOT_TRIGGERED.value,
             RecordClass.EXECUTION_EXCEPTION.value,
             RecordClass.NORMAL_POSITIVE_CONTROL.value,
+            RecordClass.FALSE_PASS_UNVERIFIED.value,
         }
     )
 

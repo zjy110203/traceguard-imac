@@ -66,6 +66,9 @@ def action_for_request(method: str, path: str) -> str | None:
     if "/repairs" in path and (path == "/api/v1/repairs" or path.startswith("/api/v1/repairs/")):
         if path.endswith("/promote"):
             return "repair.promote"
+        if path.endswith("/promote-recover"):
+            # RUN-016 WP2.3：晋升恢复与晋升同级，不能落到 repair.submit
+            return "repair.promote"
         if path.endswith("/rollback"):
             return "repair.rollback"
         if path.endswith("/regression-run") or path.endswith("/regression"):

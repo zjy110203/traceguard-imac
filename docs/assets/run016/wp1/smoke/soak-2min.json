@@ -1,0 +1,902 @@
+{
+  "workpackage": "RUN-016 WP1 SMOKE",
+  "run_tag": "run016",
+  "database": "PostgreSQL 16.16",
+  "database_name": "traceguard_run016_smoke",
+  "inline_worker": false,
+  "workers": 3,
+  "minutes_requested": 2.0,
+  "minutes_required": 2.0,
+  "minutes_observed": 1.75,
+  "wall_clock_minutes": 2.0,
+  "started_at_iso": "2026-11-26T17:26:50+0800",
+  "ended_at_iso": "2026-11-26T17:28:50+0800",
+  "started_at_epoch": 1795685210.38883,
+  "ended_at_epoch": 1795685330.415183,
+  "interval_s": 20.0,
+  "runs": 6,
+  "completed": 6,
+  "failed": 0,
+  "verdicts": {
+    "PASSED": 6
+  },
+  "total_runs_in_db": 6,
+  "faults": [],
+  "samples": [
+    {
+      "at": 1795685217.1084359,
+      "api_ok": true,
+      "api_latency_ms": 6.0,
+      "api_process": {
+        "pid": 15885,
+        "rss_bytes": 104710144,
+        "cpu_user_s": 0.815,
+        "cpu_sys_s": 0.118
+      },
+      "counts": {
+        "intents": 5,
+        "testcases": 30,
+        "tasks": 1,
+        "runs": 1
+      },
+      "queue": {
+        "by_status": {
+          "COMPLETED": 1
+        },
+        "total": 1,
+        "scope": {
+          "mode": "global",
+          "global": true,
+          "authorized_workspaces": null
+        },
+        "counting": {
+          "source": "SQL COUNT(*) / GROUP BY 直接查询 tg_run",
+          "list_limit": null,
+          "time_range": "ALL_TIME"
+        },
+        "worker": {
+          "id": "204deiMac.local-15885",
+          "inline_running": false
+        }
+      },
+      "workers": [
+        {
+          "worker_id": "r13-soak-w1",
+          "pid": 15936,
+          "rss_bytes": 98910208,
+          "cpu_user_s": 0.648,
+          "cpu_sys_s": 0.12,
+          "at": 1795685216.984482
+        },
+        {
+          "worker_id": "r13-soak-w2",
+          "pid": 15937,
+          "rss_bytes": 86179840,
+          "cpu_user_s": 0.467,
+          "cpu_sys_s": 0.09,
+          "at": 1795685216.764322
+        },
+        {
+          "worker_id": "r15-soak-w3",
+          "pid": 15938,
+          "rss_bytes": 86736896,
+          "cpu_user_s": 0.465,
+          "cpu_sys_s": 0.086,
+          "at": 1795685216.764321
+        }
+      ],
+      "db": {
+        "db_bytes": 9821207,
+        "wal_files": 2,
+        "wal_bytes": 33554432
+      },
+      "alive": {
+        "r13-soak-w1": true,
+        "r13-soak-w2": true,
+        "r15-soak-w3": true
+      }
+    },
+    {
+      "at": 1795685255.051593,
+      "api_ok": true,
+      "api_latency_ms": 4.4,
+      "api_process": {
+        "pid": 15885,
+        "rss_bytes": 104906752,
+        "cpu_user_s": 0.929,
+        "cpu_sys_s": 0.133
+      },
+      "counts": {
+        "intents": 5,
+        "testcases": 30,
+        "tasks": 3,
+        "runs": 3
+      },
+      "queue": {
+        "by_status": {
+          "COMPLETED": 3
+        },
+        "total": 3,
+        "scope": {
+          "mode": "global",
+          "global": true,
+          "authorized_workspaces": null
+        },
+        "counting": {
+          "source": "SQL COUNT(*) / GROUP BY 直接查询 tg_run",
+          "list_limit": null,
+          "time_range": "ALL_TIME"
+        },
+        "worker": {
+          "id": "204deiMac.local-15885",
+          "inline_running": false
+        }
+      },
+      "workers": [
+        {
+          "worker_id": "r13-soak-w1",
+          "pid": 15936,
+          "rss_bytes": 99401728,
+          "cpu_user_s": 1.082,
+          "cpu_sys_s": 0.264,
+          "at": 1795685254.9471948
+        },
+        {
+          "worker_id": "r13-soak-w2",
+          "pid": 15937,
+          "rss_bytes": 99483648,
+          "cpu_user_s": 0.939,
+          "cpu_sys_s": 0.249,
+          "at": 1795685254.642393
+        },
+        {
+          "worker_id": "r15-soak-w3",
+          "pid": 15938,
+          "rss_bytes": 87097344,
+          "cpu_user_s": 0.711,
+          "cpu_sys_s": 0.208,
+          "at": 1795685254.846103
+        }
+      ],
+      "db": {
+        "db_bytes": 10058775,
+        "wal_files": 2,
+        "wal_bytes": 33554432
+      },
+      "alive": {
+        "r13-soak-w1": true,
+        "r13-soak-w2": true,
+        "r15-soak-w3": true
+      }
+    },
+    {
+      "at": 1795685295.5596669,
+      "api_ok": true,
+      "api_latency_ms": 6.2,
+      "api_process": {
+        "pid": 15885,
+        "rss_bytes": 104923136,
+        "cpu_user_s": 1.051,
+        "cpu_sys_s": 0.149
+      },
+      "counts": {
+        "intents": 5,
+        "testcases": 30,
+        "tasks": 5,
+        "runs": 5
+      },
+      "queue": {
+        "by_status": {
+          "COMPLETED": 5
+        },
+        "total": 5,
+        "scope": {
+          "mode": "global",
+          "global": true,
+          "authorized_workspaces": null
+        },
+        "counting": {
+          "source": "SQL COUNT(*) / GROUP BY 直接查询 tg_run",
+          "list_limit": null,
+          "time_range": "ALL_TIME"
+        },
+        "worker": {
+          "id": "204deiMac.local-15885",
+          "inline_running": false
+        }
+      },
+      "workers": [
+        {
+          "worker_id": "r13-soak-w1",
+          "pid": 15936,
+          "rss_bytes": 99500032,
+          "cpu_user_s": 1.437,
+          "cpu_sys_s": 0.411,
+          "at": 1795685295.338202
+        },
+        {
+          "worker_id": "r13-soak-w2",
+          "pid": 15937,
+          "rss_bytes": 99696640,
+          "cpu_user_s": 1.283,
+          "cpu_sys_s": 0.387,
+          "at": 1795685295.338202
+        },
+        {
+          "worker_id": "r15-soak-w3",
+          "pid": 15938,
+          "rss_bytes": 99893248,
+          "cpu_user_s": 1.328,
+          "cpu_sys_s": 0.385,
+          "at": 1795685295.492486
+        }
+      ],
+      "db": {
+        "db_bytes": 10222615,
+        "wal_files": 2,
+        "wal_bytes": 33554432
+      },
+      "alive": {
+        "r13-soak-w1": true,
+        "r13-soak-w2": true,
+        "r15-soak-w3": true
+      }
+    }
+  ],
+  "runs_detail": [
+    {
+      "run_id": "run_1795685210418ca35b71aa5e1",
+      "execution_status": "COMPLETED",
+      "test_verdict": "PASSED",
+      "observer_mode": "playwright",
+      "created_at": 1795685210.3888488,
+      "ended_at": 1795685217.080995,
+      "duration_s": 6.692,
+      "lease_owner": "r13-soak-w1",
+      "fencing_token": 1,
+      "status_history": [
+        {
+          "at": 1795685210.424908,
+          "execution_status": "QUEUED",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": null,
+          "fencing_token": 0
+        },
+        {
+          "at": 1795685210.938159,
+          "execution_status": "QUEUED",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": null,
+          "fencing_token": 0
+        },
+        {
+          "at": 1795685211.45213,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685211.963727,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685212.469975,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685212.9772742,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685213.49001,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685214.005014,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685214.519198,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685215.033561,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685215.544374,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685216.0515552,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685216.567013,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685217.080992,
+          "execution_status": "COMPLETED",
+          "test_verdict": "PASSED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        }
+      ]
+    },
+    {
+      "run_id": "run_1795685230414e164c19aeea8",
+      "execution_status": "COMPLETED",
+      "test_verdict": "PASSED",
+      "observer_mode": "playwright",
+      "created_at": 1795685230.398444,
+      "ended_at": 1795685235.542018,
+      "duration_s": 5.144,
+      "lease_owner": "r13-soak-w2",
+      "fencing_token": 1,
+      "status_history": [
+        {
+          "at": 1795685230.421767,
+          "execution_status": "QUEUED",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": null,
+          "fencing_token": 0
+        },
+        {
+          "at": 1795685230.935039,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w2",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685231.4418712,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w2",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685231.953289,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w2",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685232.4634051,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w2",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685232.97597,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w2",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685233.4890938,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w2",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685234.003653,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w2",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685234.520608,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w2",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685235.0256698,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w2",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685235.541991,
+          "execution_status": "COMPLETED",
+          "test_verdict": "PASSED",
+          "lease_owner": "r13-soak-w2",
+          "fencing_token": 1
+        }
+      ]
+    },
+    {
+      "run_id": "run_1795685250417181d9be42063",
+      "execution_status": "COMPLETED",
+      "test_verdict": "PASSED",
+      "observer_mode": "playwright",
+      "created_at": 1795685250.401535,
+      "ended_at": 1795685255.028646,
+      "duration_s": 4.627,
+      "lease_owner": "r13-soak-w1",
+      "fencing_token": 1,
+      "status_history": [
+        {
+          "at": 1795685250.4241312,
+          "execution_status": "QUEUED",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": null,
+          "fencing_token": 0
+        },
+        {
+          "at": 1795685250.939321,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685251.4528,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685251.964231,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685252.47014,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685252.979179,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685253.488684,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685254.00648,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685254.522253,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685255.028633,
+          "execution_status": "COMPLETED",
+          "test_verdict": "PASSED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        }
+      ]
+    },
+    {
+      "run_id": "run_179568527042296d0282d29ad",
+      "execution_status": "COMPLETED",
+      "test_verdict": "PASSED",
+      "observer_mode": "playwright",
+      "created_at": 1795685270.404396,
+      "ended_at": 1795685275.514126,
+      "duration_s": 5.11,
+      "lease_owner": "r15-soak-w3",
+      "fencing_token": 1,
+      "status_history": [
+        {
+          "at": 1795685270.428811,
+          "execution_status": "QUEUED",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": null,
+          "fencing_token": 0
+        },
+        {
+          "at": 1795685270.9351401,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r15-soak-w3",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685271.443726,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r15-soak-w3",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685271.951923,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r15-soak-w3",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685272.462944,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r15-soak-w3",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685272.969275,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r15-soak-w3",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685273.478113,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r15-soak-w3",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685273.9883342,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r15-soak-w3",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685274.499579,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r15-soak-w3",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685275.005111,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r15-soak-w3",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685275.514051,
+          "execution_status": "COMPLETED",
+          "test_verdict": "PASSED",
+          "lease_owner": "r15-soak-w3",
+          "fencing_token": 1
+        }
+      ]
+    },
+    {
+      "run_id": "run_179568529042688368395c904",
+      "execution_status": "COMPLETED",
+      "test_verdict": "PASSED",
+      "observer_mode": "playwright",
+      "created_at": 1795685290.4092212,
+      "ended_at": 1795685295.522532,
+      "duration_s": 5.113,
+      "lease_owner": "r15-soak-w3",
+      "fencing_token": 1,
+      "status_history": [
+        {
+          "at": 1795685290.4331899,
+          "execution_status": "QUEUED",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": null,
+          "fencing_token": 0
+        },
+        {
+          "at": 1795685290.942131,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r15-soak-w3",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685291.4547882,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r15-soak-w3",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685291.9639611,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r15-soak-w3",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685292.471284,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r15-soak-w3",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685292.979228,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r15-soak-w3",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685293.4866838,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r15-soak-w3",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685293.996982,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r15-soak-w3",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685294.503915,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r15-soak-w3",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685295.011523,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r15-soak-w3",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685295.522511,
+          "execution_status": "COMPLETED",
+          "test_verdict": "PASSED",
+          "lease_owner": "r15-soak-w3",
+          "fencing_token": 1
+        }
+      ]
+    },
+    {
+      "run_id": "run_17956853104277361e310eceb",
+      "execution_status": "COMPLETED",
+      "test_verdict": "PASSED",
+      "observer_mode": "playwright",
+      "created_at": 1795685310.411139,
+      "ended_at": 1795685315.523529,
+      "duration_s": 5.112,
+      "lease_owner": "r13-soak-w1",
+      "fencing_token": 1,
+      "status_history": [
+        {
+          "at": 1795685310.435101,
+          "execution_status": "QUEUED",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": null,
+          "fencing_token": 0
+        },
+        {
+          "at": 1795685310.945305,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685311.4508858,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685311.959878,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685312.4720798,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685312.978911,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685313.4869661,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685313.998615,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685314.509314,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685315.0124779,
+          "execution_status": "RUNNING",
+          "test_verdict": "NOT_EVALUATED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        },
+        {
+          "at": 1795685315.5235,
+          "execution_status": "COMPLETED",
+          "test_verdict": "PASSED",
+          "lease_owner": "r13-soak-w1",
+          "fencing_token": 1
+        }
+      ]
+    }
+  ],
+  "results": [
+    {
+      "check": "环境：API 独立进程可启动",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "http://127.0.0.1:60953"
+    },
+    {
+      "check": "环境：认证与三个角色就绪",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "admin/lead/engineer"
+    },
+    {
+      "check": "环境：API 不启动内嵌 Worker",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "worker={'id': '204deiMac.local-15885', 'inline': False}"
+    },
+    {
+      "check": "环境：选定已审核真实用例",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "tcase_bench_normal2"
+    },
+    {
+      "check": "长稳：实际运行时长 ≥ 2 分钟（严格，无容差）",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "wall_clock=2.00 min / required=2 min"
+    },
+    {
+      "check": "长稳：真实 Run 周期数 ≥ 100",
+      "status": "FAIL",
+      "server_verified": false,
+      "detail": "runs=6"
+    },
+    {
+      "check": "长稳：所有 Run 到达终态",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "terminal=6/6"
+    },
+    {
+      "check": "长稳：无状态倒退 / 无重复业务结果",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "terminal 后不再出现非终态"
+    },
+    {
+      "check": "数据库：无重复步骤",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "duplicates=0"
+    },
+    {
+      "check": "数据库：无孤儿步骤",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "orphan=0"
+    },
+    {
+      "check": "数据库：无孤儿证据",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "orphan=0"
+    },
+    {
+      "check": "数据库：终态 Run 无残留租约",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "stale=0"
+    },
+    {
+      "check": "数据库：每个 Run 至多一份提交回执",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "dup=0"
+    },
+    {
+      "check": "数据库：完成 Run 均有证据",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "missing=0"
+    },
+    {
+      "check": "数据库：事件序号无重复",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "dup=0"
+    },
+    {
+      "check": "数据库：活跃 Worker 数 ≥ 3",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "active=3"
+    }
+  ],
+  "passed": 15,
+  "failed_checks": 1
+}

@@ -128,7 +128,10 @@ class RunPipeline:
                 raise AppError(ErrorCode.PRECONDITION_FAILED, "TESTCASE_VERSION_NOT_FOUND")
             self._guard_reviewed(tc, task)
             oracles = self._load_oracles(tc)
-            observer, observer_mode = self._build_observer(task, run, workspace_id)
+            # RUN-016 WP1：产物登记与执行代次绑定，旧 Worker 不能登记新产物
+            observer, observer_mode = self._build_observer(
+                task, run, workspace_id, fence=(self.worker_id, token)
+            )
             self.tasks.mark_running(run_id, self.worker_id, token, observer_mode)
 
             report = self._run_with_observer(
@@ -317,10 +320,15 @@ class RunPipeline:
         return out
 
     def _build_observer(
-        self, task: dict[str, Any], run: dict[str, Any], workspace_id: str
+        self,
+        task: dict[str, Any],
+        run: dict[str, Any],
+        workspace_id: str,
+        *,
+        fence: tuple[str, int] | None = None,
     ) -> tuple[Observer, str]:
         mode = (task.get("mode") or "playwright").lower()
-        sink = self._artifact_sink(workspace_id, run["run_id"])
+        sink = self._artifact_sink(workspace_id, run["run_id"], fence=fence)
 
         def artifact_sink(data: bytes, media_type: str, name: str) -> dict[str, Any]:
             return sink(data, media_type, name)
@@ -340,10 +348,17 @@ class RunPipeline:
         )
         return observer, "playwright"
 
-    def _artifact_sink(self, workspace_id: str, run_id: str):
+    def _artifact_sink(
+        self, workspace_id: str, run_id: str, *, fence: tuple[str, int] | None = None
+    ):
         def sink(data: bytes, media_type: str, name: str) -> dict[str, Any]:
             meta = self.artifacts.put(
-                data, workspace_id=workspace_id, media_type=media_type, original_name=name
+                data,
+                workspace_id=workspace_id,
+                media_type=media_type,
+                original_name=name,
+                fence=fence,
+                run_id=run_id,
             )
             return meta
 

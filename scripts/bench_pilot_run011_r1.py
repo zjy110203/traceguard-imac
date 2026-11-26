@@ -36,6 +36,8 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
+# RUN-016 WP3：独立故障效果观测模块在 benchmark 包内，脚本直跑时需显式加入路径
+sys.path.insert(0, str(ROOT / "benchmark"))
 
 from full_loop_run011 import (  # noqa: E402
     CHECKS,
@@ -239,27 +241,41 @@ def run_scenario(
         sample["fault_activation_status"] = (
             "CONFIRMED" if fault_ids.intersection(active) else "UNKNOWN"
         )
+        sample["fault_activation_source"] = "teamflow:/api/faults"
         # RUN-015 WP6：记录客户端观测到激活状态的时刻（TeamFlow API 不提供服务端时间戳）。
         sample["fault_activation_timestamp"] = time.time()
     except Exception as exc:  # noqa: BLE001 - 快照失败只降低证据等级，不伪造成功
         sample["fault_state_snapshot"] = {"error": f"{type(exc).__name__}: {exc}"}
         sample["fault_activation_status"] = "UNKNOWN"
+        sample["fault_activation_source"] = "teamflow:/api/faults (unavailable)"
         sample["fault_activation_timestamp"] = None
 
-    # RUN-015 WP6：故障效果用"真实 Run 终态 + 已确认的激活快照"共同记录，
-    # 不用 GT 反推，也不把答案写进模型 Prompt。原始字段保留供评测端独立复核。
-    activation_confirmed = sample.get("fault_activation_status") == "CONFIRMED"
+    # RUN-016 WP3：故障效果必须由**独立观测**给出，不得再用 Run verdict 推断。
+    # 探针直接打 TeamFlow 业务 API / 状态接口，与本轮 Test Verdict 无关；
+    # 纯 UI / 定位器类故障没有独立业务探针 → 保持 UNKNOWN，不构成 False Pass。
+    from traceguard_benchmark.fault_effect import observe_fault_effect
+
     run_terminal = str(run.get("execution_status") or "")
     sample["run_execution_status"] = run_terminal
     sample["run_verdict_observed"] = verdict
     sample["run_ended_at"] = run.get("ended_at")
-    sample["fault_effect_timestamp"] = time.time()
-    if activation_confirmed and verdict in {"FAILED", "NOT_EVALUATED"}:
-        sample["fault_effect_status"] = "CONFIRMED"
-    elif not activation_confirmed:
-        sample["fault_effect_status"] = "NOT_TRIGGERED"
-    else:
-        sample["fault_effect_status"] = "UNKNOWN"
+    try:
+        effect = observe_fault_effect(tf.base, [plan_def["fault"]], timeout=6.0)
+    except Exception as exc:  # noqa: BLE001 - 观测失败按 UNKNOWN 处理，绝不回退到 verdict
+        effect = {
+            "fault_effect_status": "UNKNOWN",
+            "fault_effect_source": f"PROBE_ERROR:{type(exc).__name__}",
+            "fault_effect_evidence_refs": [],
+            "fault_effect_timestamp": time.time(),
+            "fault_effect_probes": [],
+            "benchmark_schema_version": "benchmark-fault-v2",
+        }
+    sample.update(effect)
+    # 未激活时不应把探针的"业务正常"当成 NOT_TRIGGERED 之外的结论
+    if sample.get("fault_activation_status") != "CONFIRMED" and (
+        sample.get("fault_effect_status") == "NOT_TRIGGERED"
+    ):
+        sample["fault_effect_note"] = "故障未确认激活；业务探针结果仅作参考"
 
     # ---- 规则诊断（LLM 固定关闭，对照组口径纯净）----
     diag_t0 = time.perf_counter()

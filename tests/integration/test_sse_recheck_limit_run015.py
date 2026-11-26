@@ -1,8 +1,8 @@
-"""RUN-015 WP3：SSE 授权重核验间隔的服务端上限与异常参数处理。
+"""RUN-015 WP3 / RUN-016 WP4：SSE 授权重核验间隔的服务端上限与异常参数处理。
 
 客户端传入超大间隔、NaN、Infinity 都不得延长撤权生效窗口。
-参数收敛用单元测试逐值验证；端到端用缩小后的服务端上限（0.4s）做快速验证，
-并断言生产上限常量本身为 10s。
+RUN-016 把服务端上限从 10s 收紧到 5s（默认 2s / 最小 0.1s），本文件断言新口径；
+参数收敛用单元测试逐值验证，端到端用缩小后的服务端上限（0.4s）做快速验证。
 """
 
 from __future__ import annotations
@@ -22,12 +22,13 @@ def test_auth_recheck_clamp_values(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert api_main.SSE_AUTH_RECHECK_DEFAULT_SECONDS == 2.0
     assert api_main.SSE_AUTH_RECHECK_MIN_SECONDS == 0.1
-    assert api_main.SSE_AUTH_RECHECK_MAX_SECONDS == 10.0
+    # RUN-016 WP4：撤权窗口上限 10s → 5s
+    assert api_main.SSE_AUTH_RECHECK_MAX_SECONDS == 5.0
 
     assert api_main.effective_auth_recheck_seconds(2.0) == 2.0  # 默认值
     assert api_main.effective_auth_recheck_seconds(0.01) == 0.1  # 最小值
     assert api_main.effective_auth_recheck_seconds(1.5) == 1.5  # 正常值
-    assert api_main.effective_auth_recheck_seconds(1e9) == 10.0  # 超大值
+    assert api_main.effective_auth_recheck_seconds(1e9) == 5.0  # 超大值
     for bad in (float("inf"), float("-inf"), float("nan"), "abc", None):
         assert api_main.effective_auth_recheck_seconds(bad) == 2.0  # type: ignore[arg-type]
 

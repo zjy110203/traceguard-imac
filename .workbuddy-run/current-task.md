@@ -1,3 +1,21 @@
+# 当前任务（RUN-016 收口，2026-11-26 19:30）
+
+> **RUN-016 已完成本轮全部可独立完成的工作**，分支 `workbuddy/run016-finalization`，起点 `73e4fe6`。
+> - 长稳：PG16 严格 **62.14 分钟**（要求 ≥60，无容差）/ 113 Run 全 PASSED / 31 PASS 0 FAIL 1 NOTE（SIGSTOP 未触发）。
+> - Regression：10 个 OS 进程 + PG16，13/13 判定通过（唯一 Claim/Run/History）。
+> - Promotion：新增失败恢复（plan + 人工 confirm），7 项测试；INCONCLUSIVE 只出决策稿。
+> - Artifact：put 纳入 Fencing + 原子写 + 巡检/孤儿回收；729 文件 ↔ 729 登记一致，孤儿 0。
+> - Benchmark：故障效果改独立探针；v2 False Pass 必须有独立证据；GT 路径被 TargetPolicy 阻断；23×2 NOT_RUN。
+> - 权限/SSE/前端：/system/config 脱敏；SSE 上限 5s；UI 全链路 58 PASS / 0 FAIL（15 截图）。
+> - 质量门禁：895 passed / 0 failed / 0 skipped；Ruff / vue-tsc / vite build 通过。
+> - CI：Nightly 汇总拆列 + Release Gate 强制 LLM 证据 PASSED；GitHub Actions 本轮 NOT_RUN（无凭据）。
+> 权威文档：`docs/RUN-016-FINAL-REPORT.md`；日志 `docs/RUN-016-WORKLOG.md`；证据 `docs/assets/run016/`。
+> 禁止：改 main、自动合并 PR、关闭 PR #1/#2、强推、reset --hard、git clean。
+> B-17 / 宿主隔离 / 外部站点 / 人工基线 / LLM 四臂 / Release Gate / 23×2 仍 BLOCKED 或 NOT_RUN。
+> 待决策：INCONCLUSIVE 重试、LICENSE、PR 合并、23×2 实验窗口、纯 UI 故障观测投入。
+
+---
+
 # 当前任务（RUN-015 执行中，2026-11-26 追加；下方历史保留）
 
 > **当前阶段**：RUN-015 `workbuddy/run015-execution-consistency` 收口完成，基线 `438c54a`。

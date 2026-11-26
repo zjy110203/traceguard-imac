@@ -188,3 +188,26 @@
 | — | Benchmark LLM/人工基线臂 | **BLOCKED**：无 Secret / 无真实人类工程师，未伪造 |
 | — | 真实身份认证 / RBAC | **NOT_IMPLEMENTED**：主体类型门禁 ≠ 认证 |
 | — | dev-only moderate ×3 | **已登记**：high=0/critical=0，semver-major 未实施 |
+
+---
+
+## RUN-016（2026-11-26）阻塞与决策
+
+| 项 | 状态 | 依赖 |
+|---|---|---|
+| B-17 Worker 补充故障注入 | BLOCKED | 安全负责人批准（未绕过、未换工具规避） |
+| 宿主级网络隔离 | BLOCKED | 宿主安全策略授权 |
+| 外部真实站点 | BLOCKED | 授权目标清单 |
+| 人工诊断基线 | BLOCKED | 真实人工标注 |
+| LLM 四臂计费实验 / LLM Smoke | BLOCKED | 明确授权使用凭据与预算（本轮未读取 .env 密钥） |
+| GitHub Actions 三级门禁 | NOT_RUN | `gh`/token + 推送权限 |
+| Release Gate | NOT_RUN | 发布授权 |
+| 23×2 新 Benchmark 实验 | NOT_RUN | 独占窗口 + LLM 臂预算 + 人工基线 |
+| INCONCLUSIVE 重试 | NEEDS_DECISION | 决策稿已提交 |
+| LICENSE / PR #1-#2 | NEEDS_DECISION | 负责人决策 |
+
+本轮新增已知限制：
+1. 纯 UI/定位器类故障无法独立确认业务影响（新口径下为 UNKNOWN）。
+2. `fenced_session` 同 Run 不可重入（误用会挂死，非产品路径）。
+3. Artifact S3 后端无孤儿回收。
+4. 长稳 SIGSTOP 场景因脚本未补位 victim 而 NOTE（脚本已修，等待下次长稳复验）。

@@ -710,6 +710,47 @@ async def promote_repair(proposal_id: str, req: PromoteReq, request: Request) ->
         raise _http(exc) from exc
 
 
+class PromotionRecoverReq(BaseModel):
+    idempotency_key: str
+    #: 人工确认（必须显式为 true，否则拒绝）
+    confirm: bool = False
+    operator: str = ""
+
+
+@router.get("/repairs/{proposal_id}/promotion-recovery")
+async def promotion_recovery_plan(proposal_id: str, request: Request) -> dict[str, Any]:
+    """只读：晋升失败后的恢复评估（能否重试 / 是否已实际晋升 / 为什么被阻塞）。"""
+    _doc_or_404(proposal_id, request, kind="repair")
+    try:
+        return get_services().repair.promotion_recovery_plan(proposal_id)
+    except AppError as exc:
+        raise _http(exc) from exc
+
+
+@router.post("/repairs/{proposal_id}/promote-recover")
+async def promotion_recover(
+    proposal_id: str, req: PromotionRecoverReq, request: Request
+) -> dict[str, Any]:
+    """人工确认后的安全恢复：不绕过 Oracle / 审批，不重复创建版本。"""
+    _doc_or_404(proposal_id, request, kind="repair")
+    operator = trusted_actor(
+        request,
+        req.operator or "user:dev-operator",
+        "repair.promote",
+        resource_type="repair",
+        resource_id=proposal_id,
+    )
+    try:
+        return get_services().repair.promote_recover(
+            proposal_id,
+            idempotency_key=req.idempotency_key,
+            confirm=req.confirm,
+            actor=operator,
+        )
+    except AppError as exc:
+        raise _http(exc) from exc
+
+
 class RollbackReq(BaseModel):
     operator: str
     reason: str

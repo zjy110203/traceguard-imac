@@ -679,6 +679,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     ap.add_argument("--lease-ttl", type=float, default=6.0, help="独立 Worker 租约 TTL（秒）")
     ap.add_argument("--faults", action="store_true", help="执行独立 Worker 故障场景")
+    # RUN-016 WP4.3：追加证据图 / 探针建议 / 回归验证三段 UI 校验（不影响 RUN-012/013 口径）
+    ap.add_argument(
+        "--extended",
+        action="store_true",
+        help="RUN-016：追加证据图、探针建议、回归验证的 UI 校验",
+    )
     args = ap.parse_args(argv)
     out = (ROOT / args.out).resolve()
     out.mkdir(parents=True, exist_ok=True)
@@ -1078,6 +1084,33 @@ def main(argv: list[str] | None = None) -> int:
                 diagnosis_id = str((dl[0] or {}).get("diagnosis_id")) if dl else ""
                 rep.note("诊断 ID", diagnosis_id)
                 rep.screenshot(eng_p, "08-diagnosis")
+                if args.extended:
+                    # ---- RUN-016 WP4.3 追加：证据图 / 探针建议（真实数据渲染）----
+                    eng_p.click("button:has-text('证据图')")
+                    eng_p.wait_for_timeout(1500)
+                    graph_doc = eng.post(f"/api/v1/runs/{fail_run_id}/graph", {})
+                    graph_nodes = int(((graph_doc or {}).get("stats") or {}).get("nodes") or 0)
+                    graph_dom = eng_p.locator("text=Evidence Graph").count()
+                    graph_svg = eng_p.locator("svg").count()
+                    rep.check(
+                        "⑭a UI 证据图 → 服务端图节点可渲染",
+                        graph_nodes > 0 and graph_dom >= 1 and graph_svg >= 1,
+                        f"api_nodes={graph_nodes} dom={graph_dom} svg={graph_svg}",
+                        server_verified=True,
+                    )
+                    rep.screenshot(eng_p, "08a-evidence-graph")
+                    eng_p.click("button:has-text('诊断')")
+                    eng_p.wait_for_timeout(1200)
+                    probe_list = eng.get(f"/api/v1/runs/{fail_run_id}/probe-suggestions")
+                    probe_rows = eng_p.locator("button:has-text('执行（只读）')").count()
+                    rep.check(
+                        "⑭b UI 探针建议来自服务端并可执行",
+                        isinstance(probe_list, list) and len(probe_list) >= 1 and probe_rows >= 1,
+                        f"api_probes={len(probe_list) if isinstance(probe_list, list) else 'n/a'} "
+                        f"ui_rows={probe_rows}",
+                        server_verified=True,
+                    )
+                    rep.screenshot(eng_p, "08b-probe-suggestions")
                 # sticky=true：跨 Run 的 RESET_DATA 预清理保留故障（RUN-011-R1 WP1 语义）。
                 _post_fault(teamflow, "TF-UI-002", {"sticky": True})
 
@@ -1217,6 +1250,30 @@ def main(argv: list[str] | None = None) -> int:
                         server_verified=True,
                     )
                     rep.screenshot(admin_p, "11-repair-promoted")
+
+                    if args.extended:
+                        # ---- RUN-016 WP4.3 追加：UI 发起回归验证（真实 Run + Worker 执行）----
+                        admin_p.click("button:has-text('运行回归验证')")
+                        admin_p.wait_for_timeout(2500)
+                        reg_doc = admin.get(f"/api/v1/repairs/{proposal_id}/regression")
+                        deadline_reg = time.time() + 40
+                        while (
+                            str(reg_doc.get("regression_status")) in {"QUEUED", "RUNNING"}
+                            and time.time() < deadline_reg
+                        ):
+                            time.sleep(1.0)
+                            reg_doc = admin.get(f"/api/v1/repairs/{proposal_id}/regression")
+                        rep.check(
+                            "㉒a UI 运行回归验证 → 服务端创建真实回归 Run 并给出结论",
+                            bool(reg_doc.get("regression_run_id"))
+                            and str(reg_doc.get("regression_status"))
+                            in {"PASSED", "FAILED", "INCONCLUSIVE"},
+                            f"status={reg_doc.get('regression_status')} "
+                            f"verdict={reg_doc.get('regression_verdict')} "
+                            f"run={reg_doc.get('regression_run_id')}",
+                            server_verified=True,
+                        )
+                        rep.screenshot(admin_p, "11a-repair-regression")
 
                     admin_p.click("button:has-text('回滚')")
                     admin_p.wait_for_timeout(800)

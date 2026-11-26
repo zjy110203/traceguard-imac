@@ -168,20 +168,39 @@ def _fault_kill_worker(
 ) -> dict[str, Any]:
     run_id, _ = _execute(api, tc_id)
     claimed = None
-    deadline = time.time() + 60
+    attempted = [run_id]
+    # RUN-016 WP1：窗口从 60s → 240s，重试到 victim 真正持租约为止。
+    # **必须串行**：本用例会先清空 TeamFlow 测试数据再创建，两个 Run 并发会互相清空，
+    # 使"业务状态计数"断言假失败（RUN-016 第一次长稳已实证：并发突发导致 54 个 FAILED）。
+    deadline = time.time() + 240
     while time.time() < deadline:
         doc = _run_doc(api, run_id)
-        if str(doc.get("lease_owner") or "").startswith(victim):
+        owner = str(doc.get("lease_owner") or "")
+        status = str(doc.get("execution_status"))
+        if owner.startswith(victim) and status in {"PREPARING", "RUNNING"}:
             claimed = doc
             break
+        if status in TERMINAL or (owner and not owner.startswith(victim)):
+            _wait_terminal_local(api, run_id, [], timeout_s=120)
+            run_id, _ = _execute(api, tc_id)
+            attempted.append(run_id)
+            continue
         time.sleep(0.3)
     if not claimed:
-        rep.note(f"故障：{victim} 强杀", "未在 60s 内观察到该 Worker 持租约，跳过强杀")
+        rep.note(
+            f"故障：{victim} 强杀",
+            f"未在 240s 内观察到该 Worker 持运行中租约（尝试 {len(attempted)} 个 Run），跳过强杀",
+        )
         return {"run_id": run_id, "skipped": True}
     token = int(claimed.get("fencing_token") or 0)
     fleet.kill(victim)
     after = _run_doc(api, run_id)
-    fleet.start(replacement)
+    # 只补位**未运行**的进程：replacement 通常已在跑，重复 start 不会真正拉起 victim，
+    # 会让后续针对 victim 的 SIGSTOP 场景永远等不到租约（RUN-016 实测：pause 场景因此 NOTE）。
+    if not fleet.procs.get(replacement) or fleet.procs[replacement].poll() is not None:
+        fleet.start(replacement)
+    if not fleet.procs.get(victim) or fleet.procs[victim].poll() is not None:
+        fleet.start(victim)
     takeover = None
     deadline = time.time() + lease_ttl + 90
     while time.time() < deadline:
@@ -218,16 +237,16 @@ def _fault_pause_worker(
     run_id, _ = _execute(api, tc_id)
     claimed = None
     attempted = [run_id]
-    deadline = time.time() + 180
+    deadline = time.time() + 240
     while time.time() < deadline and claimed is None:
         doc = _run_doc(api, run_id)
-        if str(doc.get("lease_owner") or "").startswith(victim) and doc.get("execution_status") in {
-            "PREPARING",
-            "RUNNING",
-        }:
+        owner = str(doc.get("lease_owner") or "")
+        status = str(doc.get("execution_status"))
+        if owner.startswith(victim) and status in {"PREPARING", "RUNNING"}:
             claimed = doc
             break
-        if str(doc.get("execution_status")) in TERMINAL:
+        if status in TERMINAL or (owner and not owner.startswith(victim)):
+            # RUN-016 WP1：串行等待（原因同 _fault_kill_worker：并发 Run 会互相清空测试数据）
             _wait_terminal_local(api, run_id, [], timeout_s=120)
             run_id, _ = _execute(api, tc_id)
             attempted.append(run_id)
@@ -278,13 +297,26 @@ def _fault_pause_worker(
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--minutes", type=float, default=60.0)
+    # RUN-016 WP1：严格时长口径。默认要求 wall clock >= --minutes，不留 95% 容差。
+    # --min-minutes 显式给出验收下限；未给出时下限 == --minutes（严格相等，无容差）。
+    ap.add_argument(
+        "--min-minutes",
+        type=float,
+        default=None,
+        help="验收要求的实际运行时长下限（分钟）；缺省与 --minutes 相同，不使用任何容差",
+    )
     ap.add_argument("--interval", type=float, default=30.0)
     ap.add_argument("--out", default="docs/assets/run013/soak")
     ap.add_argument("--lease-ttl", type=float, default=6.0)
     ap.add_argument("--skip-faults", action="store_true", help="仅用于冒烟：不注入故障")
     # RUN-015 WP5：独立 Worker 数量可配置（本轮要求 3 个独立进程）
     ap.add_argument("--workers", type=int, default=2)
+    # RUN-016 WP1：证据归属标记，避免把本轮证据记成 RUN-013/014/015。
+    ap.add_argument("--workpackage", default="RUN-016 WP1")
+    ap.add_argument("--run-tag", default="run016")
+    ap.add_argument("--min-runs", type=int, default=100)
     args = ap.parse_args()
+    required_minutes = args.min_minutes if args.min_minutes is not None else args.minutes
 
     out = (ROOT / args.out).resolve()
     out.mkdir(parents=True, exist_ok=True)
@@ -335,6 +367,9 @@ def main() -> int:
     teamflow = f"http://127.0.0.1:{teamflow_port}"
     fleet = WorkerFleet(env, out, args.lease_ttl)
     api_holder: dict[str, Any] = {"proc": api_proc}
+    # RUN-016 WP1：真实墙钟起止时间（不依赖 Run 生命周期推算）
+    started_at: float | None = None
+    ended_at: float | None = None
 
     try:
         if not _wait_health(teamflow + "/health", 30):
@@ -397,6 +432,7 @@ def main() -> int:
             return 3
 
         start_at = time.time()
+        started_at = start_at
         deadline = start_at + args.minutes * 60
         cycle = 0
         fault_plan = {
@@ -575,9 +611,13 @@ def main() -> int:
             sleep_for = args.interval - (time.time() - created)
             if sleep_for > 0:
                 time.sleep(sleep_for)
+        # 循环退出即本轮长稳结束（可能晚于 deadline 最后一个周期）
+        ended_at = time.time()
     except Exception as exc:  # noqa: BLE001
         rep.check("长稳脚本执行", False, f"{type(exc).__name__}: {exc}")
     finally:
+        if ended_at is None:
+            ended_at = time.time()
         final_active_workers = sum(1 for proc in fleet.procs.values() if proc.poll() is None)
         fleet.close()
         for proc in (api_holder.get("proc"), tf_proc):
@@ -591,12 +631,14 @@ def main() -> int:
 
     # ------------------------------------------------------------ final checks
     duration_min = (runs[-1]["ended_at"] - runs[0]["created_at"]) / 60 if runs else 0.0
+    # RUN-016 WP1：实际墙钟时长（首次 Run 创建前 → 最后一个周期结束），作为严格验收口径。
+    wall_clock_min = ((ended_at - started_at) / 60) if started_at and ended_at else 0.0
     rep.check(
-        "长稳：运行时长达到要求",
-        duration_min >= args.minutes * 0.95,
-        f"{duration_min:.2f} / {args.minutes} 分钟",
+        f"长稳：实际运行时长 ≥ {required_minutes:g} 分钟（严格，无容差）",
+        wall_clock_min >= required_minutes,
+        f"wall_clock={wall_clock_min:.2f} min / required={required_minutes:g} min",
     )
-    rep.check("长稳：真实 Run 周期数 ≥ 100", len(runs) >= 100, f"runs={len(runs)}")
+    rep.check("长稳：真实 Run 周期数 ≥ 100", len(runs) >= args.min_runs, f"runs={len(runs)}")
     completed = [r for r in runs if r["execution_status"] == "COMPLETED"]
     rep.check(
         "长稳：所有 Run 到达终态",
@@ -689,12 +731,26 @@ def main() -> int:
     )
 
     summary = {
-        "workpackage": "RUN-013 WP4",
+        "workpackage": args.workpackage,
+        "run_tag": args.run_tag,
         "database": "PostgreSQL 16.16",
+        "database_name": PG_NAME,
         "inline_worker": False,
         "workers": args.workers,
         "minutes_requested": args.minutes,
+        "minutes_required": required_minutes,
         "minutes_observed": round(duration_min, 2),
+        "wall_clock_minutes": round(wall_clock_min, 3),
+        "started_at_iso": (
+            time.strftime("%Y-%m-%dT%H:%M:%S%z", time.localtime(started_at))
+            if started_at
+            else None
+        ),
+        "ended_at_iso": (
+            time.strftime("%Y-%m-%dT%H:%M:%S%z", time.localtime(ended_at)) if ended_at else None
+        ),
+        "started_at_epoch": started_at,
+        "ended_at_epoch": ended_at,
         "interval_s": args.interval,
         "runs": len(runs),
         "completed": len(completed),
@@ -719,7 +775,8 @@ def main() -> int:
     )
     print(
         f"[out] {out / f'soak-{int(round(args.minutes))}min.json'} runs={len(runs)} checks_pass={summary['passed']} "
-        f"checks_fail={summary['failed_checks']} minutes={duration_min:.1f}"
+        f"checks_fail={summary['failed_checks']} wall_clock={wall_clock_min:.1f}min "
+        f"(required={required_minutes:g}min)"
     )
     return 1 if rep.failed else 0
 

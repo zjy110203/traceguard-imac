@@ -165,7 +165,7 @@ def test_pipeline_run_events_are_fenced(
     token_a = int(lease_a["fencing_token"])
     pipeline: RunPipeline = rt.pipeline("worker-A")
 
-    def fake_build_observer(task, run, workspace_id):  # type: ignore[no-untyped-def]
+    def fake_build_observer(task, run, workspace_id, **kwargs):  # type: ignore[no-untyped-def]
         return _StubObserver(), "stub"
 
     monkeypatch.setattr(pipeline, "_build_observer", fake_build_observer)

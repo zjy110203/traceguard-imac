@@ -296,18 +296,40 @@ async def llm_summary() -> dict[str, Any]:
 
 
 @router.get("/config")
-async def config() -> dict[str, Any]:
+async def config(request: Request) -> dict[str, Any]:
+    """运行配置只读视图（RUN-016 WP4 权限边界）。
+
+    权限口径：
+    - 运行期**没有任何写入口**：配置由环境变量注入、重启生效，因此不存在
+      "普通用户修改全局安全配置"的路径，也不需要写审计；
+    - 读：所有已认证角色可见**非敏感子集**（environment / teamflow_base_url /
+      browser / worker.inline），用于页面展示与联调；
+    - 宿主级细节（数据库方言、产物目录绝对路径、Worker 宿主标识）仅
+      platform-admin 可见，其余角色显式返回 null——不靠前端隐藏，服务端决定；
+    - 认证关闭的本地开发模式（无 principal）保持完整视图，避免影响既有联调。
+    """
     rt = get_services().rt
     s = rt.settings
-    return {
-        "database": s.database_url.split(":")[0],
+    principal = principal_of(request)
+    is_admin = ("platform-admin" in principal.roles) if principal is not None else not s.auth_enabled
+
+    payload: dict[str, Any] = {
+        "environment": s.environment,
         "teamflow_base_url": s.teamflow_base_url,
         "browser": {
             "headless": s.browser_headless,
             "channel": s.browser_channel or "bundled-chromium",
             "timeout_ms": s.browser_timeout_ms,
         },
-        "worker": {"id": rt.worker_id, "inline": s.inline_worker},
-        "artifact_dir": s.artifact_dir,
-        "environment": s.environment,
+        "worker": {"inline": s.inline_worker},
+        "access_level": "admin" if is_admin else "restricted",
+        # 敏感字段在非管理员视图里保持键存在但值为 null：前端无需分支，
+        # 也便于权限测试直接断言"字段被脱敏而不是被隐藏"。
+        "database": s.database_url.split(":")[0] if is_admin else None,
+        "artifact_dir": s.artifact_dir if is_admin else None,
     }
+    if is_admin:
+        payload["worker"]["id"] = rt.worker_id
+    else:
+        payload["worker"]["id"] = None
+    return payload

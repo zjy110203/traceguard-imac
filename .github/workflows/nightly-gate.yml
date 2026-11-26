@@ -268,6 +268,7 @@ jobs:
         run: |
           if [ -z "${DEEPSEEK_API_KEY:-}" ]; then
             echo "status=BLOCKED" >> "$GITHUB_OUTPUT"
+            printf '{"status":"BLOCKED","reason":"DEEPSEEK_API_KEY 未配置","real_llm_executed":false}\n' > llm-status.json
             {
               echo "### LLM Smoke: BLOCKED"
               echo "DEEPSEEK_API_KEY 未配置，真实 LLM 夜间测试未执行。"
@@ -279,7 +280,16 @@ jobs:
           # 有凭据：真实执行，失败必须真实失败（不吞异常、不降级为"通过"）
           .venv/bin/python scripts/llm_smoke.py
           echo "status=PASSED" >> "$GITHUB_OUTPUT"
+          printf '{"status":"PASSED","reason":"","real_llm_executed":true}\n' > llm-status.json
           echo "### LLM Smoke: PASSED" >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload LLM status attestation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: llm-smoke-status
+          path: llm-status.json
+          retention-days: 30
+          if-no-files-found: error
 
   gate-verdict:
     # 汇总门禁结论：任一关键 Job 失败即失败；LLM 缺凭据显式标 BLOCKED（不算通过）。
@@ -289,15 +299,29 @@ jobs:
     steps:
       - name: Summarize and enforce
         run: |
+          llm_status="${{ needs.llm-smoke.outputs.llm_status }}"
+          # RUN-016 WP5：把"Job 执行成功"与"真实 LLM 测试是否执行"分开写清楚，
+          # 不再用一行 `success / BLOCKED` 混合表述掩盖证据缺失。
+          case "$llm_status" in
+            PASSED) llm_text="真实 LLM 测试已执行并通过" ;;
+            BLOCKED) llm_text="Job 正常结束，但真实 LLM 测试**未执行**（缺 Secret）" ;;
+            *) llm_text="真实 LLM 测试状态未知：$llm_status" ;;
+          esac
           {
             echo "### Nightly Gate 结论（commit ${{ github.sha }}）"
             echo ""
-            echo "| Job | 结果 |"
-            echo "| --- | --- |"
-            echo "| backend-full | ${{ needs.backend-full.result }} |"
-            echo "| postgres (PG16) | ${{ needs.postgres.result }} |"
-            echo "| security | ${{ needs.security.result }} |"
-            echo "| llm-smoke | ${{ needs.llm-smoke.result }} / ${{ needs.llm-smoke.outputs.llm_status }} |"
+            echo "| Job | Job 结果 | 真实测试证据 |"
+            echo "| --- | --- | --- |"
+            echo "| backend-full | ${{ needs.backend-full.result }} | 全量 pytest |"
+            echo "| postgres (PG16) | ${{ needs.postgres.result }} | PG16 专项 |"
+            echo "| security | ${{ needs.security.result }} | 供应链/密钥扫描 |"
+            echo "| llm-smoke | ${{ needs.llm-smoke.result }} | $llm_status |"
+            echo ""
+            echo "LLM 证据口径：$llm_text"
+            if [ "$llm_status" != "PASSED" ]; then
+              echo ""
+              echo "> 本次 Nightly **不能**作为 Release 的 LLM 证据；Release Gate 会下载 \`llm-smoke-status\` 工件并要求 PASSED。"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
           failed=0
           for r in "${{ needs.backend-full.result }}" "${{ needs.postgres.result }}" "${{ needs.security.result }}"; do
@@ -306,7 +330,11 @@ jobs:
           if [ "${{ needs.llm-smoke.result }}" != "success" ]; then
             echo "LLM smoke 真实失败（有凭据时不允许掩盖）"; failed=1
           fi
-          if [ "${{ needs.llm-smoke.outputs.llm_status }}" = "BLOCKED" ]; then
+          if [ "$llm_status" = "BLOCKED" ]; then
             echo "::warning::LLM smoke BLOCKED（缺 Secret）；该证据不得用于 Release 放行"
+          fi
+          if [ "$llm_status" = "" ]; then
+            echo "::error::LLM smoke 未产出状态，视为证据缺失"
+            failed=1
           fi
           exit $failed

@@ -1,0 +1,248 @@
+{
+  "workpackage": "RUN-016 WP1 (aborted attempt)",
+  "reason": "长稳脚本的故障探测改成「被别的 Worker 抢到就立即再发一个 Run」后 Run 变并发；用例 cleanup_policy=RESET_DATA 在每次 Run 前 POST /api/test/reset，并发 Run 互相清空 TeamFlow 测试数据，导致 business_state 计数断言假失败。",
+  "evidence": "按分钟统计的 verdict 分布（FAILED 集中在并发探测窗口 17:44-17:48）",
+  "per_minute": [
+    {
+      "min_bucket": "17:29",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "17:30",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "17:31",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "17:32",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "17:33",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "17:34",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "17:35",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "17:36",
+      "test_verdict": "PASSED",
+      "runs": 3
+    },
+    {
+      "min_bucket": "17:37",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "17:38",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "17:39",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "17:40",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "17:41",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "17:42",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "17:43",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "17:44",
+      "test_verdict": "FAILED",
+      "runs": 11
+    },
+    {
+      "min_bucket": "17:44",
+      "test_verdict": "PASSED",
+      "runs": 11
+    },
+    {
+      "min_bucket": "17:45",
+      "test_verdict": "FAILED",
+      "runs": 13
+    },
+    {
+      "min_bucket": "17:45",
+      "test_verdict": "PASSED",
+      "runs": 14
+    },
+    {
+      "min_bucket": "17:46",
+      "test_verdict": "FAILED",
+      "runs": 12
+    },
+    {
+      "min_bucket": "17:46",
+      "test_verdict": "PASSED",
+      "runs": 14
+    },
+    {
+      "min_bucket": "17:47",
+      "test_verdict": "FAILED",
+      "runs": 14
+    },
+    {
+      "min_bucket": "17:47",
+      "test_verdict": "PASSED",
+      "runs": 14
+    },
+    {
+      "min_bucket": "17:48",
+      "test_verdict": "FAILED",
+      "runs": 4
+    },
+    {
+      "min_bucket": "17:48",
+      "test_verdict": "PASSED",
+      "runs": 5
+    },
+    {
+      "min_bucket": "17:49",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "17:50",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "17:51",
+      "test_verdict": "PASSED",
+      "runs": 3
+    },
+    {
+      "min_bucket": "17:52",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "17:53",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "17:54",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "17:55",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "17:56",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "17:57",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "17:58",
+      "test_verdict": "PASSED",
+      "runs": 3
+    },
+    {
+      "min_bucket": "17:59",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "18:00",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "18:01",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "18:02",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "18:03",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "18:04",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "18:05",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "18:06",
+      "test_verdict": "PASSED",
+      "runs": 3
+    },
+    {
+      "min_bucket": "18:07",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "18:08",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "18:09",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "18:10",
+      "test_verdict": "PASSED",
+      "runs": 2
+    },
+    {
+      "min_bucket": "18:11",
+      "test_verdict": "PASSED",
+      "runs": 1
+    }
+  ],
+  "conclusion": "脚本缺陷，不是产品缺陷；已恢复串行探测（保留 240s 窗口）后重启长稳。"
+}

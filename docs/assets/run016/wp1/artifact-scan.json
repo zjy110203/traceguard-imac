@@ -1,0 +1,25 @@
+{
+  "scan": {
+    "root": "docs/assets/run016/wp1/soak/_runtime/artifacts",
+    "retention_days": 7.0,
+    "cutoff_iso": "2026-11-19T19:17:51+0800",
+    "scanned_rows": 729,
+    "scanned_files": 729,
+    "referenced_artifacts": 729,
+    "orphan_files": [],
+    "orphan_rows": [],
+    "protected_fresh": [],
+    "missing_files": []
+  },
+  "gc": {
+    "apply": false,
+    "dry_run": true,
+    "note": "未执行任何删除"
+  },
+  "consistency": {
+    "checked": 729,
+    "missing": [],
+    "hash_mismatch": [],
+    "consistent": true
+  }
+}

@@ -26,6 +26,7 @@ import socket
 import time
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
+from typing import Any
 from urllib.parse import urljoin, urlparse
 
 from traceguard_core.errors import AppError, ErrorCode
@@ -132,6 +133,9 @@ class TargetPolicy:
     pinned_dns: dict[str, frozenset[str]] = field(default_factory=dict)
     #: host -> (解析时刻, 结果)，短期缓存避免每请求一次 DNS
     _dns_cache: dict[str, tuple[float, frozenset[str]]] = field(default_factory=dict, repr=False)
+    #: RUN-016 WP3.3：评测标签路径——即使 host 已授权也不允许执行/Agent 链路访问，
+    #: 防止诊断过程读取 Ground Truth 形成数据泄漏。评测端脚本不走该策略，不受影响。
+    deny_path_prefixes: tuple[str, ...] = ("/api/ground-truth", "/ground-truth")
 
     # ------------------------------------------------------------------ 构造
     @classmethod
@@ -230,6 +234,9 @@ class TargetPolicy:
         if parsed.username or parsed.password:
             return TargetCheck(False, "URL_USERINFO_FORBIDDEN", raw)
 
+        if self._path_denied(parsed):
+            return TargetCheck(False, "GROUND_TRUTH_PATH_BLOCKED", raw)
+
         host = (parsed.hostname or "").lower()
         if not host:
             return TargetCheck(False, "MALFORMED_URL", raw)
@@ -269,6 +276,10 @@ class TargetPolicy:
                         continue
             return TargetCheck(False, "HOST_NOT_ALLOWED", raw, origin)
         return TargetCheck(False, "PORT_NOT_ALLOWED", raw, origin)
+
+    def _path_denied(self, parsed: Any) -> bool:
+        path = (parsed.path or "").lower()
+        return any(path.startswith(prefix) for prefix in self.deny_path_prefixes)
 
     def _rebinding_check(self, host: str) -> str:
         """授权主机的解析结果与钉住结果无交集 → 判定为 DNS Rebinding。"""

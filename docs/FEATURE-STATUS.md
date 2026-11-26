@@ -1,3 +1,22 @@
+# 功能状态矩阵（更新至 2026-11-26 RUN-016）
+
+> **RUN-016 状态（2026-11-26，收口）**：分支 `workbuddy/run016-finalization`，基线 `73e4fe6`。
+> 主题：核心可靠性最终验收、Regression 多进程并发、Artifact 生命周期、Benchmark 独立故障观测、
+> 权限与前端闭环。**不重新设计架构，只修真实缺陷。**
+> - **长稳**：严格墙钟 ≥60 分钟（去掉 95% 容差），真实 PG16 + 独立 API + 3 Worker，见 `RUN-016-WP1-SOAK.md`。
+> - **Fencing**：全链路逐条复核 + AST 审计（每个事件/产物写入必须带 fence）；Artifact 登记纳入守卫。
+> - **Artifact**：`put(fence=)`、原子落盘、一致性巡检、孤儿扫描/隔离回收（默认 dry-run + 审计）。
+> - **Regression**：10 个**操作系统进程** + PG16 并发，13/13 判定通过（唯一 Claim/Run/History）。
+> - **Promotion**：新增失败恢复（计划 + 人工确认重试），版本漂移/缺审批/缺 Oracle 一律 BLOCKED。
+> - **Benchmark**：故障效果改为**独立探针观测**；v2 样本 False Pass 必须有独立证据，否则 `FALSE_PASS_UNVERIFIED`；
+>   GT 路径在 TargetPolicy 层阻断。23×2 新一轮 **NOT_RUN**（LLM 臂 BLOCKED）。
+> - **权限/SSE/前端**：`/system/config` 非管理员脱敏；SSE 重核验上限 5s；UI 全链路 **58 PASS / 0 FAIL**（15 截图）。
+> - **CI**：Nightly 汇总拆列，Release Gate 强制 `llm-smoke-status=PASSED`；GitHub Actions 本轮 **NOT_RUN**（无凭据）。
+> - **质量门禁**：894 passed（含真实 PG）；Ruff / vue-tsc / vite build 通过。
+> 最终权威结论见 `docs/RUN-016-FINAL-REPORT.md`。
+
+---
+
 # 功能状态矩阵（更新至 2026-11-26 RUN-015）
 
 > **RUN-015 状态（2026-11-26，收口）**：分支 `workbuddy/run015-execution-consistency`，

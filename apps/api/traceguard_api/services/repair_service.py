@@ -800,6 +800,170 @@ class RepairService:
             return doc
         return self._settle_promoted(doc, receipt, receipt["idempotency_key"], recovered=True)
 
+    # ------------------------------------------------- RUN-016 WP2.3 失败恢复
+    def promotion_recovery_plan(self, proposal_id: str) -> dict[str, Any]:
+        """只读恢复评估：晋升失败后到底该重试、还是已经成功、还是必须重开提案。
+
+        设计原则（fail-closed）：
+        - 先读**当前真实 TestCase 版本**与本次提案的回执，判断实际晋升结果，
+          不以前端/上一次请求的返回值为准；
+        - 重新执行必要前置检查（候选文档 Oracle 绑定、人工审批主体）；
+        - 任何判断不确定 → `BLOCKED_*`，不给出"可以重试"的结论。
+        """
+        doc = self.get(proposal_id)
+        status = str(doc["status"])
+        testcase_id = doc["testcase_id"]
+        base_version = int(doc.get("base_version") or 0)
+        current_approved = self.rt.catalog.approved_version_number(testcase_id)
+        receipt = self.rt.catalog.find_promotion_receipt(proposal_id, kind="PROMOTE")
+        candidate = doc.get("candidate_doc") or {}
+        oracle_refs, oracle_problems = self._regression_oracles(candidate)
+        approved_by = str(doc.get("approved_by") or "")
+        approval_ref = str(doc.get("approval_ref") or "")
+
+        plan: dict[str, Any] = {
+            "proposal_id": proposal_id,
+            "status": status,
+            "testcase_id": testcase_id,
+            "base_version": base_version,
+            "current_approved_version": current_approved,
+            "promoted_version": int(doc.get("promoted_version") or 0),
+            "receipt": receipt,
+            "oracle_refs": oracle_refs,
+            "oracle_problems": oracle_problems,
+            "approved_by": approved_by,
+            "approval_ref": approval_ref,
+            "promotion_record": doc.get("promotion_record") or {},
+            "checked_at": utc_now_iso(),
+        }
+
+        if status == "PROMOTED":
+            plan.update(
+                action="NOOP_ALREADY_PROMOTED",
+                reason="提案已处于 PROMOTED，无需恢复",
+                requires_confirmation=False,
+            )
+            return plan
+        if status not in {"PROMOTION_FAILED", "PROMOTING"}:
+            plan.update(
+                action="BLOCKED_ILLEGAL_STATE",
+                reason=f"状态 {status} 不在可恢复集合（PROMOTION_FAILED / PROMOTING）",
+                requires_confirmation=False,
+            )
+            return plan
+        if receipt is not None:
+            # CAS 已提交但提案没落库：实际晋升已完成，只能收敛，不能重复晋升
+            plan.update(
+                action="NOOP_ALREADY_PROMOTED",
+                reason="存在本次提案的晋升回执：实际晋升已完成，应收敛状态而不是重试",
+                requires_confirmation=False,
+            )
+            return plan
+        if not approved_by or not approval_ref:
+            plan.update(
+                action="BLOCKED_NEEDS_APPROVAL",
+                reason="缺少人类审批记录：不允许绕过 Human Approval 恢复晋升",
+                requires_confirmation=False,
+            )
+            return plan
+        if oracle_problems:
+            plan.update(
+                action="BLOCKED_ORACLE",
+                reason="候选版本 Oracle 不满足要求：" + "; ".join(oracle_problems),
+                requires_confirmation=False,
+            )
+            return plan
+        if current_approved != base_version:
+            plan.update(
+                action="BLOCKED_VERSION_DRIFT",
+                reason=(
+                    f"当前正式版本 v{current_approved} 与提案基线 v{base_version} 不一致："
+                    "重试只会再次 CAS 冲突，必须基于最新版本重开提案"
+                ),
+                requires_confirmation=False,
+            )
+            return plan
+
+        plan.update(
+            action="RETRY_PROMOTE",
+            reason="前置条件全部满足，可在人工确认后以新的幂等键重试 CAS 晋升",
+            requires_confirmation=True,
+            previous_failure=self._last_promotion_failure(doc),
+        )
+        return plan
+
+    @staticmethod
+    def _last_promotion_failure(doc: dict[str, Any]) -> dict[str, Any] | None:
+        record = doc.get("promotion_record") or {}
+        if not record:
+            return None
+        return {
+            "result": record.get("result"),
+            "current_version": record.get("current_version"),
+            "base_version": record.get("base_version"),
+            "detail": record.get("detail"),
+            "at": record.get("at"),
+        }
+
+    def promote_recover(
+        self,
+        proposal_id: str,
+        *,
+        idempotency_key: str,
+        confirm: bool,
+        actor: str,
+    ) -> dict[str, Any]:
+        """人工确认后的安全恢复。
+
+        - `confirm != True` 一律拒绝（人工确认是显式动作，不能默认执行）；
+        - 已有回执 / 已 PROMOTED → 只收敛，不重复创建版本；
+        - 前置条件不满足 → 抛前置失败，不改任何状态；
+        - 允许重试时：PROMOTION_FAILED → APPROVED（审计留痕）→ 用**新的**幂等键走原 CAS 晋升。
+        """
+        if confirm is not True:
+            raise AppError(
+                ErrorCode.PRECONDITION_FAILED,
+                "PROMOTION_RECOVERY_REQUIRES_HUMAN_CONFIRMATION: 必须显式 confirm=true",
+            )
+        if not idempotency_key:
+            raise AppError(ErrorCode.VALIDATION_ERROR, "idempotency_key 不能为空")
+        operator = require_human_actor(actor, field="operator")
+        plan = self.promotion_recovery_plan(proposal_id)
+        action = plan["action"]
+        if action == "NOOP_ALREADY_PROMOTED":
+            doc = self.reconcile(proposal_id)
+            return {**doc, "recovery": {**plan, "executed": "RECONCILED", "operator": operator}}
+        if action != "RETRY_PROMOTE":
+            raise AppError(
+                ErrorCode.PRECONDITION_FAILED,
+                f"PROMOTION_RECOVERY_BLOCKED: {action}: {plan['reason']}",
+            )
+        doc = self.get(proposal_id)
+        if doc["status"] == "PROMOTION_FAILED":
+            # 状态机允许 PROMOTION_FAILED -> APPROVED；每一步都留痕
+            self._transition(doc, RepairStatus.APPROVED)
+            doc["promotion_recovery_history"] = list(doc.get("promotion_recovery_history") or []) + [
+                {
+                    "at": utc_now_iso(),
+                    "operator": operator,
+                    "from": "PROMOTION_FAILED",
+                    "to": "APPROVED",
+                    "idempotency_key": idempotency_key,
+                    "plan_action": action,
+                }
+            ]
+            doc["failure_reason"] = ""
+            self._save(doc)
+        promoted = self.promote(proposal_id, idempotency_key=idempotency_key)
+        promoted["recovery"] = {
+            **plan,
+            "executed": "RETRY_PROMOTE",
+            "operator": operator,
+            "idempotency_key": idempotency_key,
+            "result_status": promoted.get("status"),
+        }
+        return promoted
+
     # ------------------------------------------------------------- regression
     def regression_run(self, proposal_id: str, *, timeout_s: float | None = None) -> dict[str, Any]:
         """晋升后的真实回归验证（RUN-014 WP1）。

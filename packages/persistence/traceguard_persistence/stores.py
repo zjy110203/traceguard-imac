@@ -8,10 +8,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import threading
+import time
 import uuid
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -33,7 +36,21 @@ from .models import (
     EventRow,
     EvidenceRow,
     InboxRow,
+    RunRow,
 )
+
+#: Evidence `doc` JSON 中可能出现的产物引用（artifact_id = art_ + sha256[:20]）
+_ARTIFACT_REF_RE = re.compile(r"art_[0-9a-f]{20}")
+
+
+def _iso_epoch(value: str | None) -> float:
+    """ISO 时间戳 → epoch；解析失败按 0 处理（视为很旧，交由上层保留期判定）。"""
+    if not value:
+        return 0.0
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        return 0.0
 
 
 # --------------------------------------------------------------------------- Event
@@ -1163,29 +1180,60 @@ class ArtifactStore:
         workspace_id: str,
         media_type: str = "application/octet-stream",
         original_name: str = "",
+        fence: tuple[str, int] | None = None,
+        run_id: str | None = None,
     ) -> dict[str, Any]:
+        """写入内容寻址产物。
+
+        RUN-016 WP1：新增可选 fencing。
+        - `fence=(worker_id, fencing_token)` 时，**文件落盘与数据库登记之间**先做租约守卫；
+          失去执行权的旧 Worker 不能登记新的产物记录（否则会产生无人引用的孤儿产物）。
+        - 文件先原子落盘（临时文件 + rename），守卫失败时若本次新建且库中仍无登记，
+          立即删掉自己刚写的文件——不留孤儿，也不误删他人已登记的同哈希文件。
+        """
         digest = hashlib.sha256(data).hexdigest()
         artifact_id = f"art_{digest[:20]}"
         path = self._local_path(digest)
-        path.parent.mkdir(parents=True, exist_ok=True)
+        created_file = False
         if not path.exists():
-            path.write_bytes(data)
-        with self.db.session() as s:
-            row = s.get(ArtifactRow, artifact_id)
-            if row is None:
-                s.add(
-                    ArtifactRow(
-                        artifact_id=artifact_id,
-                        workspace_id=workspace_id,
-                        sha256=digest,
-                        size=len(data),
-                        media_type=media_type,
-                        path=str(path),
-                        backend="local",
-                        original_name=original_name,
-                        created_at=utc_now_iso(),
+            path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = path.with_name(f".{digest}.{uuid.uuid4().hex}.tmp")
+            tmp.write_bytes(data)
+            # os.replace 同分区原子；并发同哈希写入时后者覆盖前者，内容一致因此无害
+            tmp.replace(path)
+            created_file = True
+        try:
+            with self.db.session() as s:
+                if fence is not None:
+                    if not fenced_guard(
+                        s,
+                        run_id=str(run_id or ""),
+                        worker_id=str(fence[0]),
+                        fencing_token=int(fence[1]),
+                    ):
+                        raise AppError(
+                            ErrorCode.CONFLICT,
+                            "LEASE_LOST: 租约已失效，产物登记被拒绝（fencing guard）",
+                        )
+                row = s.get(ArtifactRow, artifact_id)
+                if row is None:
+                    s.add(
+                        ArtifactRow(
+                            artifact_id=artifact_id,
+                            workspace_id=workspace_id,
+                            sha256=digest,
+                            size=len(data),
+                            media_type=media_type,
+                            path=str(path),
+                            backend="local",
+                            original_name=original_name,
+                            created_at=utc_now_iso(),
+                        )
                     )
-                )
+        except Exception:
+            if created_file:
+                self._remove_unregistered_file(artifact_id, path)
+            raise
         return {
             "artifact_id": artifact_id,
             "sha256": digest,
@@ -1194,6 +1242,20 @@ class ArtifactStore:
             "path": f"artifacts/{digest[:2]}/{digest}",
             "original_name": original_name,
         }
+
+    def _remove_unregistered_file(self, artifact_id: str, path: Path) -> None:
+        """删除本次新建但未成功登记的产物文件；若已有登记则保留（他人可能正在引用）。"""
+        try:
+            with self.db.session() as s:
+                registered = s.get(ArtifactRow, artifact_id) is not None
+        except Exception:  # noqa: BLE001 - 数据库不可用时宁可留文件给 GC，也不误删
+            return
+        if registered:
+            return
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            return
 
     def _local_path(self, digest: str) -> Path:
         return self.root / digest[:2] / digest
@@ -1257,6 +1319,223 @@ class ArtifactStore:
                 }
                 for r in rows
             ]
+
+    # ------------------------------------------------------------ RUN-016 WP1 治理
+    def verify_consistency(self, *, limit: int = 0) -> dict[str, Any]:
+        """逐个校验「数据库登记 ↔ 落盘文件」一致性（文件存在 + 内容哈希匹配）。
+
+        `limit>0` 时只抽查前 N 条（大库巡检用）；返回结构化报告，供运维/测试断言。
+        """
+        missing: list[dict[str, Any]] = []
+        mismatched: list[dict[str, Any]] = []
+        checked = 0
+        with self.db.session() as s:
+            q = select(ArtifactRow).order_by(ArtifactRow.created_at)
+            if limit:
+                q = q.limit(limit)
+            rows = s.scalars(q).all()
+            for row in rows:
+                checked += 1
+                path = Path(row.path)
+                if not path.is_file():
+                    missing.append({"artifact_id": row.artifact_id, "path": row.path})
+                    continue
+                digest = hashlib.sha256(path.read_bytes()).hexdigest()
+                if digest != row.sha256:
+                    mismatched.append(
+                        {
+                            "artifact_id": row.artifact_id,
+                            "path": row.path,
+                            "expected": row.sha256,
+                            "actual": digest,
+                        }
+                    )
+        return {
+            "checked": checked,
+            "missing": missing,
+            "hash_mismatch": mismatched,
+            "consistent": not missing and not mismatched,
+        }
+
+    def _referenced_artifact_ids(self, s: Any) -> set[str]:
+        """收集仍被业务引用的产物 ID。
+
+        三个来源都要看，否则会误删真实引用：
+        1. `tg_evidence.attachment_ref`（管道写入的截图/DOM/ARIA 附件）；
+        2. Evidence `doc` JSON 内嵌的 `art_*` 引用（探针/诊断等派生证据）；
+        3. `tg_run.report_json` 内嵌的引用（trace_artifact 等只在 Run 报告里出现，
+           不属于任何一条 Evidence——RUN-016 实测：729 个产物中 181 个只被报告引用）。
+        """
+        refs = {str(r) for r in s.scalars(select(EvidenceRow.attachment_ref).distinct()) if r}
+        for doc in s.scalars(select(EvidenceRow.doc)):
+            if not isinstance(doc, dict):
+                continue
+            refs.update(_ARTIFACT_REF_RE.findall(json.dumps(doc, ensure_ascii=False)))
+        for report in s.scalars(select(RunRow.report_json)):
+            if isinstance(report, dict) and report:
+                refs.update(_ARTIFACT_REF_RE.findall(json.dumps(report, ensure_ascii=False)))
+        return refs
+
+    def scan(
+        self,
+        *,
+        retention_days: float = 7.0,
+        now: float | None = None,
+    ) -> dict[str, Any]:
+        """只读扫描：孤儿文件 / 孤儿登记 / 缺文件 / 哈希不一致（不删除任何东西）。"""
+        now_ts = time.time() if now is None else now
+        cutoff = now_ts - retention_days * 86400
+        orphan_files: list[dict[str, Any]] = []
+        orphan_rows: list[dict[str, Any]] = []
+        missing_files: list[dict[str, Any]] = []
+        fresh_orphans: list[dict[str, Any]] = []
+        with self.db.session() as s:
+            refs = self._referenced_artifact_ids(s)
+            rows = s.scalars(select(ArtifactRow)).all()
+            by_sha = {row.sha256: row for row in rows}
+            for row in rows:
+                path = Path(row.path)
+                if not path.is_file():
+                    missing_files.append({"artifact_id": row.artifact_id, "path": row.path})
+                if row.artifact_id in refs:
+                    continue
+                item = {
+                    "artifact_id": row.artifact_id,
+                    "sha256": row.sha256,
+                    "path": row.path,
+                    "created_at": row.created_at,
+                    "size": row.size,
+                }
+                if _iso_epoch(row.created_at) >= cutoff:
+                    fresh_orphans.append(item)
+                else:
+                    orphan_rows.append(item)
+            scanned_files = 0
+            if self.root.is_dir():
+                for path in sorted(self.root.glob("*/*")):
+                    if not path.is_file() or path.parent.name.startswith("_"):
+                        continue
+                    name = path.name
+                    if len(name) != 64:
+                        continue
+                    scanned_files += 1
+                    if name in by_sha:
+                        continue
+                    if f"art_{name[:20]}" in refs:
+                        continue
+                    mtime = path.stat().st_mtime
+                    item = {"sha256": name, "path": str(path), "mtime": mtime}
+                    if mtime < cutoff:
+                        orphan_files.append(item)
+                    else:
+                        fresh_orphans.append(item)
+        return {
+            "root": str(self.root),
+            "retention_days": retention_days,
+            "cutoff_iso": time.strftime("%Y-%m-%dT%H:%M:%S%z", time.localtime(cutoff)),
+            "scanned_rows": len(by_sha),
+            "scanned_files": scanned_files,
+            "referenced_artifacts": len(refs),
+            "orphan_files": orphan_files,
+            "orphan_rows": orphan_rows,
+            "protected_fresh": fresh_orphans,
+            "missing_files": missing_files,
+        }
+
+    def collect_garbage(
+        self,
+        scan: dict[str, Any],
+        *,
+        apply: bool = False,
+        audit_path: Path | None = None,
+        actor: str = "artifact-gc",
+    ) -> dict[str, Any]:
+        """按扫描报告回收孤儿产物。
+
+        安全约束（任一不满足即跳过，不删）：
+        - 默认 dry-run；只有 `apply=True` 才真正移动文件/删除登记；
+        - 文件移动而非 `unlink`：统一放入 `root/_quarantine/<ts>/`，可人工回滚；
+        - 删除前**重新校验**引用关系，扫描后被引用的对象自动跳过；
+        - 每条动作都写审计记录（JSONL），包含 sha256/大小/原因/操作者/时间。
+        """
+        ts = time.strftime("%Y%m%dT%H%M%S")
+        stamp_iso = utc_now_iso()
+        actions: list[dict[str, Any]] = []
+        skipped: list[dict[str, Any]] = []
+        with self.db.session() as s:
+            refs = self._referenced_artifact_ids(s)
+            for item in scan.get("orphan_rows", []):
+                if item["artifact_id"] in refs:
+                    skipped.append({**item, "reason": "referenced_at_apply_time"})
+                    continue
+                actions.append({"op": "delete_row", **item, "reason": "no_business_reference"})
+            for item in scan.get("orphan_files", []):
+                if f"art_{item['sha256'][:20]}" in refs:
+                    skipped.append({**item, "reason": "referenced_at_apply_time"})
+                    continue
+                actions.append({"op": "quarantine_file", **item, "reason": "unregistered_file"})
+        if not apply:
+            return {
+                "apply": False,
+                "dry_run": True,
+                "actions": actions,
+                "skipped": skipped,
+                "audit_path": None,
+            }
+        quarantine = self.root / "_quarantine" / ts
+        done: list[dict[str, Any]] = []
+        for action in actions:
+            record = {"at": stamp_iso, "actor": actor, **action}
+            try:
+                if action["op"] == "quarantine_file":
+                    src = Path(action["path"])
+                    if not src.is_file():
+                        record["result"] = "gone"
+                    else:
+                        quarantine.mkdir(parents=True, exist_ok=True)
+                        dest = quarantine / f"{action['sha256']}"
+                        src.replace(dest)
+                        record["result"] = "quarantined"
+                        record["quarantine_path"] = str(dest)
+                else:
+                    deleted = False
+                    with self.db.session() as s:
+                        row = s.get(ArtifactRow, action["artifact_id"])
+                        if row is None:
+                            record["result"] = "gone"
+                        elif row.artifact_id in self._referenced_artifact_ids(s):
+                            record["result"] = "skipped_referenced"
+                        else:
+                            s.delete(row)
+                            deleted = True
+                    if deleted:
+                        # 登记删除后必须同步处理落盘文件，否则会立刻变成下一轮的孤儿文件
+                        src = Path(action.get("path") or "")
+                        if src.is_file():
+                            quarantine.mkdir(parents=True, exist_ok=True)
+                            dest = quarantine / f"{action['sha256']}"
+                            src.replace(dest)
+                            record["quarantine_path"] = str(dest)
+                        record["result"] = "deleted"
+            except Exception as exc:  # noqa: BLE001 - 单条失败不得中断整批
+                record["result"] = "error"
+                record["error"] = f"{type(exc).__name__}: {exc}"[:300]
+            done.append(record)
+        applied = [d for d in done if d.get("result") != "gone"]
+        audit_file = audit_path or (self.root / "_gc-audit.jsonl")
+        if applied:
+            audit_file.parent.mkdir(parents=True, exist_ok=True)
+            with audit_file.open("a", encoding="utf-8") as fh:
+                for record in applied:
+                    fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+        return {
+            "apply": True,
+            "dry_run": False,
+            "actions": done,
+            "skipped": skipped,
+            "quarantine_dir": str(quarantine),
+            "audit_path": str(audit_file),
+        }
 
 
 def save_json_artifact(store: ArtifactStore, obj: Any, workspace_id: str, name: str) -> dict:

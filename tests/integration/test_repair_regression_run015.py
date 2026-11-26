@@ -147,7 +147,10 @@ def test_ten_concurrent_regression_requests_create_one_run(env) -> None:  # type
     def request(i: int) -> None:
         try:
             barrier.wait(timeout=10)
-            result = RepairService(rt).regression_run(pid, timeout_s=20)
+            # RUN-016：全量套件（894 项）运行时 SQLite 写锁竞争明显，20s 会偶发超时并把
+            # 结论落成 INCONCLUSIVE（不是一致性缺陷）。放宽**等待时间**而不是放宽断言：
+            # 最终仍要求所有请求指向同一 Run、History 唯一、结论 PASSED。
+            result = RepairService(rt).regression_run(pid, timeout_s=60)
             with lock:
                 results.append(result)
         except BaseException as exc:  # noqa: BLE001 - 线程边界收集

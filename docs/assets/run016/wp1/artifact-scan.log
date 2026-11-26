@@ -1,0 +1,2 @@
+[out] /Users/dlp--test/Desktop/traceguard/docs/assets/run016/wp1/artifact-scan.json
+[scan] files=729 rows=729 orphan_files=0 orphan_rows=0 protected_fresh=181 missing=0 apply=False

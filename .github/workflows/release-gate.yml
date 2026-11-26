@@ -221,6 +221,44 @@ jobs:
               sys.exit(1)
           print("Nightly jobs all successful:", sorted(jobs))
           PY
+      - name: Nightly LLM evidence must be PASSED (not BLOCKED)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          run_id=$(cat nightly_run_id.txt)
+          # RUN-016 WP5：Job conclusion=success 只说明"脚本正常结束"，
+          # 不能证明真实 LLM 测试执行过。必须读取 llm-smoke-status 工件。
+          curl -fsS -H "Authorization: Bearer ${GH_TOKEN}" \
+                    -H "Accept: application/vnd.github+json" \
+                    "https://api.github.com/repos/${REPO}/actions/runs/${run_id}/artifacts?per_page=100" > artifacts.json
+          python3 - <<'PY'
+          import json, sys
+          doc = json.load(open("artifacts.json", encoding="utf-8"))
+          arts = [a for a in doc.get("artifacts") or [] if a.get("name") == "llm-smoke-status"]
+          if not arts:
+              print("BLOCKED: Nightly 未上传 llm-smoke-status 工件（无法区分 BLOCKED 与 PASSED）")
+              sys.exit(1)
+          art = max(arts, key=lambda a: a.get("created_at") or "")
+          open("llm_artifact_url.txt", "w").write(art["archive_download_url"])
+          print(f"llm-smoke-status artifact id={art['id']}")
+          PY
+          curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" \
+                    -H "Accept: application/vnd.github+json" \
+                    "$(cat llm_artifact_url.txt)" -o llm-status.zip
+          unzip -o -q llm-status.zip -d llm-status
+          test -s llm-status/llm-status.json || { echo "BLOCKED: LLM 状态工件为空"; exit 1; }
+          python3 - <<'PY'
+          import json, sys
+          doc = json.load(open("llm-status/llm-status.json", encoding="utf-8"))
+          status = str(doc.get("status") or "").upper()
+          executed = bool(doc.get("real_llm_executed"))
+          print(f"LLM evidence: status={status} real_llm_executed={executed}")
+          if status != "PASSED" or not executed:
+              print("BLOCKED: 真实 LLM 测试未执行或未通过，Release 不得放行")
+              sys.exit(1)
+          PY
       - name: Upload attestation
         if: always()
         uses: actions/upload-artifact@v4
@@ -229,6 +267,8 @@ jobs:
           path: |
             nightly.json
             jobs.json
+            artifacts.json
+            llm-status/llm-status.json
             nightly_run_id.txt
           retention-days: 30
 

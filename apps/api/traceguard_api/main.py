@@ -30,15 +30,16 @@ logger = get_logger("traceguard.api")
 
 DIST_DIR = Path(__file__).resolve().parents[2] / "web" / "dist"
 
-#: RUN-015 WP3：SSE 活跃连接授权重核验的服务端硬上限。
+#: RUN-015 WP3 / RUN-016 WP4：SSE 活跃连接授权重核验的服务端硬上限。
 #: 客户端传入更大值、NaN / Infinity / 非法数值都不得延长撤权生效窗口。
+#: RUN-016 收紧：最大 5s（原 10s），默认 2s，最小 0.1s——撤权窗口与心跳解耦。
 SSE_AUTH_RECHECK_MIN_SECONDS = 0.1
-SSE_AUTH_RECHECK_MAX_SECONDS = 10.0
+SSE_AUTH_RECHECK_MAX_SECONDS = 5.0
 SSE_AUTH_RECHECK_DEFAULT_SECONDS = 2.0
 
 
 def effective_auth_recheck_seconds(requested: float) -> float:
-    """把客户端参数收敛到 [0.1s, 10s]，异常值回落到服务端默认值。"""
+    """把客户端参数收敛到 [0.1s, 5s]，异常值回落到服务端默认值。"""
     try:
         value = float(requested)
     except (TypeError, ValueError):
