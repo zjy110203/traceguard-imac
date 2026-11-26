@@ -171,9 +171,13 @@ def test_ten_concurrent_regression_requests_create_one_run(env) -> None:  # type
     run_ids = {r.get("regression_run_id") for r in results}
     assert len(run_ids) == 1 and None not in run_ids, run_ids
     only_run = next(iter(run_ids))
-    # 并发请求在 CI 负载下可能先拿到 QUEUED 回执；真正的不变量是它们都指向同一 Run、
-    # 且服务端最终收敛到唯一 PASSED 结论。逐请求强制立即终态会把调度延迟误判为一致性缺陷。
-    assert all(r.get("regression_verdict") in (None, "PASSED") for r in results), results
+    # 并发请求在 CI 负载下可能先拿到 QUEUED/RUNNING 回执（此时 verdict 为空，表示"尚无结论"）；
+    # 真正的不变量是它们都指向同一 Run、且服务端最终收敛到唯一 PASSED 结论。
+    # 逐请求强制立即终态会把调度延迟误判为一致性缺陷。
+    # RUN-017：在途 Run 的空 verdict 用 "" 表示（不再误写成 NOT_EVALUATED）。
+    assert all(r.get("regression_verdict") in (None, "", "PASSED") for r in results), [
+        (r.get("regression_status"), r.get("regression_verdict")) for r in results
+    ]
     deadline = time.time() + 30
     settled = svc.regression_status(pid)
     while settled.get("regression_status") == "QUEUED" and time.time() < deadline:

@@ -942,7 +942,9 @@ class RepairService:
         if doc["status"] == "PROMOTION_FAILED":
             # 状态机允许 PROMOTION_FAILED -> APPROVED；每一步都留痕
             self._transition(doc, RepairStatus.APPROVED)
-            doc["promotion_recovery_history"] = list(doc.get("promotion_recovery_history") or []) + [
+            doc["promotion_recovery_history"] = list(
+                doc.get("promotion_recovery_history") or []
+            ) + [
                 {
                     "at": utc_now_iso(),
                     "operator": operator,
@@ -1210,8 +1212,11 @@ class RepairService:
         evidence = [str(x) for x in (report.get("evidence_ids") or [])]
         doc["regression_verdict"] = verdict
         if status not in TERMINAL_STATUSES:
+            # RUN-017：在途 Run 没有"判定结论"。旧实现把空 verdict 归一成 NOT_EVALUATED
+            # 并写进文档，UI 会显示"已评估但未出结论"，与事实不符；并发请求也会因此
+            # 看到 NOT_EVALUATED 而不是"尚无结论"。终态才允许落 NOT_EVALUATED。
             doc["regression_status"] = "RUNNING"
-            doc["regression_verdict"] = verdict
+            doc["regression_verdict"] = str(run.get("test_verdict") or "")
             return self._save_cas(doc)
 
         reason = ""

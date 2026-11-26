@@ -196,7 +196,7 @@ async def list_projects(workspace: str = "default") -> dict[str, Any]:
         raise HTTPException(status_code=403, detail="read permission denied (TF-SEC-002)")
     session = get_session()
     try:
-        rows = session.query(Project).filter_by(workspace_slug=workspace).all()
+        rows = session.query(Project).filter_by(workspace_slug=workspace).order_by(Project.id).all()
         return {
             "ok": True,
             "items": [
@@ -265,6 +265,10 @@ async def state_projects(workspace: str = "default") -> dict[str, Any]:
 
     TF-DB-003 / TF-DB-004：最终一致性滞后——状态查询返回滞后快照（Flaky 来源）。
     滞后语义：本次创建后 count 需要等 lag_ms 才反映真实值。
+
+    RUN-017 WP2：额外返回 `projects`（key/name/status）。独立探针需要按**业务名称**
+    回读"这次写入是否真的落库"；旧版本只返回 keys，探针只能拿 name 去 grep 整段
+    文本，永远匹配不到 → persistence 探针在健康环境也会误判为"未持久化"。
     """
     import time as _time
 
@@ -277,31 +281,43 @@ async def state_projects(workspace: str = "default") -> dict[str, Any]:
         )
         session = get_session()
         try:
-            rows = session.query(Project).filter_by(workspace_slug=workspace).all()
+            rows = (
+                session.query(Project)
+                .filter_by(workspace_slug=workspace)
+                .order_by(Project.id)
+                .all()
+            )
             real_count = len(rows)
             within_lag = (
                 last_create is not None and (_time.time() - float(last_create)) * 1000 < lag_ms
             )
             count = real_count - 1 if (within_lag and real_count > 0) else real_count
             keys = [r.key for r in rows]
+            visible = rows if not within_lag else rows[:-1]
             return {
                 "ok": True,
                 "source": "authoritative-state",
                 "workspace": workspace,
                 "count": count,
                 "keys": keys if not within_lag else keys[:-1],
+                "lag_active": True,
+                "lag_ms": lag_ms,
+                "within_lag_window": within_lag,
+                "projects": [{"key": r.key, "name": r.name, "status": r.status} for r in visible],
             }
         finally:
             session.close()
     session = get_session()
     try:
-        rows = session.query(Project).filter_by(workspace_slug=workspace).all()
+        rows = session.query(Project).filter_by(workspace_slug=workspace).order_by(Project.id).all()
         return {
             "ok": True,
             "source": "authoritative-state",
             "workspace": workspace,
             "count": len(rows),
             "keys": [r.key for r in rows],
+            "lag_active": False,
+            "projects": [{"key": r.key, "name": r.name, "status": r.status} for r in rows],
         }
     finally:
         session.close()
@@ -359,6 +375,92 @@ async def seed_test_data() -> dict[str, Any]:
             )
             session.commit()
         return {"ok": True, "seeded": ["workspace:default", "account:tester"]}
+    finally:
+        session.close()
+
+
+# ---------------- 独立探针数据隔离（仅测试侧） ----------------
+#: 探针专用 Workspace：所有 Benchmark 探针写入只落在这里，用户/业务数据在 `default`
+#: 或其它 workspace，探针永远不会读写它们。
+PROBE_WORKSPACE = "tg-benchmark-probe"
+
+
+class ProbeCleanupReq(BaseModel):
+    #: 探针令牌：探针创建的项目名以 `bp:<token>:` 开头，只有这些行会被删除
+    token: str
+    workspace: str = PROBE_WORKSPACE
+    #: 浏览器观测会通过真实 UI 创建项目，而 UI 表单固定写 default workspace；
+    #: 只有显式声明 `allow_default=true` 且 token 足够长时才允许清理 default 里的
+    #: **本探针行**（名称前缀必须完全匹配），不会触及任何其它数据。
+    allow_default: bool = False
+
+
+@router.post("/api/test/probe-cleanup")
+async def probe_cleanup(req: ProbeCleanupReq) -> dict[str, Any]:
+    """只清理**本探针自己创建**的数据（RUN-017 WP2.3）。
+
+    安全边界（任一不满足即拒绝，不做部分删除）：
+
+    - 清理 `default` 需要显式 `allow_default=true`，且 token ≥ 12 位；
+    - 只删除名称以 `bp:<token>:` 开头的项目，token 由调用方随机生成并持有；
+    - 返回删除前后计数，调用方可据此判断"清理是否真的成功"。
+
+    为什么需要这个入口：探针必须真实写入才能验证持久化，而 `/api/test/reset`
+    会清空**全部**项目（含用户数据），不能用于探针回收。
+    """
+    token = (req.token or "").strip()
+    if req.workspace == PROBE_WORKSPACE:
+        min_len = 8
+    elif req.workspace == "default" and req.allow_default:
+        min_len = 12
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"probe-cleanup 不允许 workspace={req.workspace}"
+                f"（只支持 {PROBE_WORKSPACE}，或 allow_default=true 的 default）"
+            ),
+        )
+    if len(token) < min_len:
+        raise HTTPException(
+            status_code=400,
+            detail=f"token 长度不足 {min_len}，拒绝清理以免误删",
+        )
+    prefix = f"bp:{token}:"
+    session = get_session()
+    try:
+        before = session.query(Project).filter_by(workspace_slug=req.workspace).count()
+        matched = (
+            session.query(Project)
+            .filter(
+                Project.workspace_slug == req.workspace,
+                Project.name.like(prefix + "%"),
+            )
+            .all()
+        )
+        matched_keys = [r.key for r in matched]
+        for row in matched:
+            session.delete(row)
+        session.commit()
+        after = session.query(Project).filter_by(workspace_slug=req.workspace).count()
+        remaining_matched = (
+            session.query(Project)
+            .filter(
+                Project.workspace_slug == req.workspace,
+                Project.name.like(prefix + "%"),
+            )
+            .count()
+        )
+        return {
+            "ok": remaining_matched == 0,
+            "workspace": req.workspace,
+            "prefix": prefix,
+            "before": before,
+            "deleted": len(matched_keys),
+            "deleted_keys": matched_keys,
+            "after": after,
+            "remaining_matched": remaining_matched,
+        }
     finally:
         session.close()
 
