@@ -138,15 +138,41 @@ PostgreSQL 16**；SQLite 仅用于本地快速演示；Artifact 仅本地内容�
 
 ## 5. GitHub Actions（WP1）
 
-| Run | 结论 |
-|---|---|
-| PR Gate #74 @ `8a0fe48` | **failed**（真实暴露 1 处旧契约断言，已修） |
-| Nightly #26 @ `8a0fe48` | **failed**（同一根因） |
-| PR Gate #75 @ `1faebec` | **success**（backend + frontend，2m22s） |
-| Nightly #27 @ `1faebec` | 见 §5.1 |
+| Run | head_sha | 结论 |
+|---|---|---|
+| PR Gate #74 | `8a0fe48` | **failed**（真实暴露 1 处旧契约断言，已修） |
+| Nightly #26 | `8a0fe48` | **failed**（同一根因） |
+| PR Gate **#75** | `1faebec` | **success**（2m22s） |
+| PR Gate **#76** | `1315a2f` | **success**（2m24s，最终代码 HEAD） |
+| Nightly #27 | `1faebec` | **failed**（39m33s：`backend-full` 被 UI 全链路挤满 45 分钟上限） |
+| Nightly #28 | `1315a2f` | **failed**（33m48s：拆分后 `backend-full` 7m50s 通过；`ui-acceptance` 独立 job 在 CI runner 上未在时限内完成） |
+| Nightly #29 | `2d35998` | 见 §5.1（UI 验收拆 `core`/`full` profile + 25 分钟硬超时后重跑） |
 
-§5.1 最终 Nightly 结论
-（本节在最终 HEAD 推送后填写，含各 Job 结论与 head_sha）。
+### 5.1 门禁结论的口径说明
+
+- **PR Gate 在最终代码 HEAD 上真实通过**（#76，`1315a2f`）：backend（Ruff + format + 单测/契约 +
+  9 个集成专项）与 frontend（`npm ci` + `npm run build`）全绿；
+- **Nightly 的两次失败都被门禁如实暴露**（#27、#28），没有被掩盖：
+  `gate-verdict` 在有 Job 失败时正确返回非 0；
+- 本机无 `gh`、无 API 凭据，**无法导出 CI 日志**，因此这里只记录
+  可核对的事实（run 号、head_sha、Job 结论与耗时），不臆测失败细节；
+- Nightly 的 UI 验收已按 profile 拆分（Nightly=`core`，Reliability Gate=`full`）
+  并加硬超时，详见 `docs/RUN-017-WP1-CI.md` §4。
+
+### 5.2 本地质量门禁（最终 HEAD）
+
+| 项 | 结果 |
+|---|---|
+| `pytest -q`（SQLite，无 PG 环境变量） | **932 passed / 0 failed / 16 skipped**（跳过项全部是 PG 专项） |
+| PG16 专项（本地 `127.0.0.1:55432`，真实 16.16） | **28 passed** |
+| Ruff check / format（packages apps tests benchmark scripts） | 全绿（264 files already formatted） |
+| `npm run build`（vue-tsc + vite） | 通过 |
+| `npm audit` | 0 vulnerabilities（high/critical = 0） |
+| 密钥模式扫描 | 无命中 |
+| `git diff --check` | clean |
+| PG16 迁移幂等 | 通过（版本 2–13，与代码一致、无重复） |
+| Regression 10 进程并发（PG16） | 13 / 13 PASS |
+| 依赖锁定 | `requirements.lock.txt` 可完整安装（CI 同路径） |
 
 ---
 

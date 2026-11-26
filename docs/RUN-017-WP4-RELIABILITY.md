@@ -110,9 +110,18 @@ SQL 查询数 = 批次数 + 常数（每批 500 条），扫描期间的业务�
 
 - 脚本：`scripts/regression_multiprocess_run016.py`（10 个 OS 进程 + PG16）；
 - PG 端点已参数化（`TG_R16_PG_ADMIN`），不再硬编码本机端口；
-- RUN-016 的 13/13 判定基线在本轮保持（该专项随 Nightly / Reliability Gate 执行）。
+- **本轮实测：13 / 13 PASS**（10 进程并发 → 唯一 Claim / 唯一 Run / 唯一 History /
+  唯一提交回执 / 结论 PASSED / 新 Runtime 可恢复 / 重复请求不再建 Run /
+  失败请求不破坏赢家状态），证据：`docs/assets/run017/wp4/regression-multiprocess.json`。
 
-## 6. 仍未覆盖
+## 6. 迁移幂等与依赖锁定（本轮本地复核）
+
+- PostgreSQL 16 上重复 `create_schema()` **幂等**：`tg_schema_migration` 版本
+  `[2,3,4,5,6,7,8,9,10,11,12,13]`，与代码 `MIGRATIONS` 完全一致且无重复；
+- `requirements.lock.txt`（ruff 固定 0.17.6）在干净环境可完整安装（CI 用它装依赖）；
+  `requirements.txt` 为范围声明，lock 为全量固定集——两者角色不同，不做文本等同比较。
+
+## 7. 仍未覆盖
 
 - **多 API 实例**压测（v1 明确不支持多 API 实例部署）；
 - **WAL/PITR** 级备份（当前只验证逻辑备份 `pg_dump --format=custom` + 产物目录）；
