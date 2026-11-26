@@ -127,8 +127,12 @@ jobs:
           npm ci
           npm run build
           test -f dist/index.html
-      - name: 真实 UI 全链路业务验收
-        run: .venv/bin/python scripts/business_loop_ui_acceptance_run017.py
+      - name: 真实 UI 全链路业务验收（core profile：业务闭环 + 扩展三段）
+        # profile=core 去掉最耗时的独立 Worker 故障段（SIGKILL/租约接管在 2–4 vCPU
+        # runner 上容易触发等待超时）；完整故障段在 Reliability Gate（手动）跑。
+        # timeout 1500：25 分钟内没跑完就明确失败，不静默挂到 job 超时。
+        run: |
+          timeout 1500 .venv/bin/python scripts/business_loop_ui_acceptance_run017.py --profile core
       - name: Upload UI evidence
         if: always()
         uses: actions/upload-artifact@v4

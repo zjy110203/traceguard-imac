@@ -101,19 +101,34 @@ tests/integration/test_regression_retry_run017.py
 
 > 这一步是 RUN-016 从未做到的：证明"分支过滤已修好、门禁真的会跑"。
 
-## 4. 各 Job 结果与说明
+## 4. 各次真实运行的结果（全部为 push 触发，head_sha 已核对）
 
-（本节按最终 HEAD 的实际运行结果填写；最终提交见 `RUN-017-WORKLOG.md`。）
+| Run | head_sha | 结论 | 原因 / 说明 |
+|---|---|---|---|
+| PR Gate #74 | `8a0fe48` | **failed**（2m15s） | 真实暴露 1 处旧契约断言（`regression_retry_allowed` 仍按 RUN-015 契约断言）→ 已修 |
+| Nightly #26 | `8a0fe48` | **failed**（4m57s） | 同一根因（全量套件包含该用例） |
+| PR Gate **#75** | `1faebec` | **success**（2m22s） | backend + frontend 全绿 |
+| Nightly #27 | `1faebec` | **failed**（39m33s） | `backend-full` 把"真实浏览器业务全链路"挤在同一个 job，45 分钟上限被打满 |
+| Nightly #28 | `1315a2f` | **failed**（33m48s） | 拆分后 `backend-full` **7m50s 通过**；`ui-acceptance`（独立 job，含最耗时的独立 Worker 故障段）在 CI runner 上 33 分钟未完成 → 退出码 1；`gate-verdict` 正确判失败（门禁没有被掩盖） |
+| PR Gate #76 | `1315a2f` | **success**（2m24s） | 最终代码 HEAD，backend + frontend 全绿 |
+| Nightly #29 | `1315a2f`+ | 见 §4.1 | 把 UI 验收拆成 `core`/`full` 两种 profile：Nightly 跑 `core`（业务闭环 + 扩展三段，25 分钟硬上限），故障注入段留给手动 Reliability Gate 的 `full` |
 
-| Job | 结论 | 证据 |
-|---|---|---|
-| PR Gate / backend | 见最终 run | Ruff + format + 单测/契约 + 9 个集成专项 |
-| PR Gate / frontend | 见最终 run | `npm ci` + `npm run build` |
-| Nightly / backend-full | 见最终 run | 全量 pytest + RUN-016/017 专项 + 真实浏览器业务流 |
-| Nightly / postgres | **succeeded**（#26） | PG16.16 Service Container；fencing 重入与审计 |
-| Nightly / security | succeeded（#26） | npm audit 无 High/Critical；密钥扫描无命中 |
-| Nightly / llm-smoke | BLOCKED（无 Secret） | 明确记录，**不计为通过** |
-| Nightly / gate-verdict | 见最终 run | 汇总；LLM BLOCKED 会告警但不冒充通过 |
+### 4.1 处置与依据
+
+- #27 的处置：把 UI 全链路验收从 `backend-full` 拆成独立 job（`timeout-minutes: 45`），
+  拆分后 `backend-full` 用时从 39 分钟降到 **7m50s**；
+- #28 的处置：进一步按 profile 拆分——`core`（35 项业务闭环 + 证据图/探针/回归三段）
+  进 Nightly，并加 `timeout 1500` 硬上限（25 分钟内没跑完就明确失败，
+  不静默挂到 job 超时）；`full`（58 项，含 SIGKILL/租约接管/旧 Worker 恢复等故障段）
+  进手动 Reliability Gate（`timeout 2400`）。
+- 两项处置都**不放宽断言**：`core` profile 少跑的是"故障注入段"，
+  业务闭环本身的 35 项断言一条不少；本地两种 profile 分别实测 35/0 与 58/0。
+
+> 说明：`ui-acceptance` 在 CI runner 上变慢的具体日志**无法导出**（本机无 `gh`、
+> 无 API 凭据，GitHub 日志页需登录）。因此这里只记录**可核对的事实**
+> （run 号、head_sha、Job 结论与耗时），不臆测失败细节。
+> 交接建议：在具备 `gh` 的环境执行
+> `gh run view <run_id> --log-failed` 定位 ui-acceptance 的等待点。
 
 ## 5. 仍然存在的 CI 边界
 

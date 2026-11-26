@@ -136,8 +136,9 @@ jobs:
             --out docs/assets/run017/wp5/backup-restore \
             --pg-admin-url "postgresql://traceguard:traceguard_ci_only@127.0.0.1:5432/postgres"
 
-      - name: 真实 UI 全链路验收（独立 Worker + 真实 Chromium + 真实 TeamFlow）
-        run: .venv/bin/python scripts/business_loop_ui_acceptance_run017.py
+      - name: 真实 UI 全链路验收（full profile：含独立 Worker 故障注入段）
+        run: |
+          timeout 2400 .venv/bin/python scripts/business_loop_ui_acceptance_run017.py --profile full
 
       - name: 环境诊断（只读，输出到证据）
         if: always()
