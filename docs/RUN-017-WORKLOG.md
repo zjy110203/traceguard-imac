@@ -80,8 +80,42 @@
 - 重放 TF-FLAKY-002 ×2：第二轮预测由 UI_RENDERING 修正为 API。
 - 明确不做：不写样本级规则、不调阈值凑指标。
 
-## 待补
+## 22:00–22:30｜WP4.4 长稳与 WP6 UI
 
-- WP4.4 长稳结果（62 分钟）。
-- WP6 真实 UI 全链路 + 响应式/主题全视图验收。
-- WP8 最终 HEAD 全量回归与最终报告。
+- **PG16 严格长稳**：`soak_run013.py --minutes 62 --workers 3 --min-runs 100`
+  → **62.05 分钟 / 119 Run 全 PASSED / 33 检查全 PASS / 0 NOTE**（RUN-016 为 1 NOTE）。
+  覆盖 SIGTERM、SIGKILL+接管、SIGSTOP+租约过期接管、旧 Worker 恢复不覆盖终态、
+  API 强杀重启、DB 断连恢复、SSE 游标续传、全部 Worker 重启。
+- **UI 业务闭环**：`business_loop_ui_acceptance_run017.py` → **58 PASS / 0 FAIL**（1m45s）。
+- **UI 矩阵**：`ui_matrix_run017.py` → 16 视图 × 4 断点 × 双主题 = **128/128 PASS**。
+  - 第一版判定把"表格在滚动容器内"和"SVG 图元几何"误判为 28 处失败；
+  - 收紧口径（页面级溢出 + 非滚动容器内的越界 + SVG 宿主边界）后复测两次均 128/128。
+- **GC 规模实测**：1 万/5 万/10 万 Evidence → scan 0.058 / 0.198 / 0.383 s，
+  内存 +0.1~0.3 MB，并发写延迟 3.5~6.5 ms，引用保护 0 违规。
+- **Regression 10 进程并发（PG16）**：13/13 PASS。
+- **迁移幂等（PG16）**：重复 `create_schema()` 版本 2–13 与代码一致、无重复。
+
+## 22:30–23:00｜WP7 诊断复核与 CI 迭代
+
+- 发现两次完整实验的准确率差异（93.75% → 87.5%）**不是规则改动造成**：
+  TF-FLAKY-002（50% 概率）是否命中该 Run 不同。
+- 针对性 A/B（各 10 轮）：故障命中时 8/8 都判 API，改动前后**无差异** → 如实报告"中性"。
+- CI 迭代：
+  - `8a0fe48`：PR #74 / Nightly #26 **failed**（暴露 1 处旧契约断言）→ 修；
+  - `1faebec`：PR #75 **success**；Nightly #27 **failed**（backend-full 39m33s 被 UI 验收挤满）→
+    把 UI 验收拆成独立 job；
+  - `1315a2f`：PR #76 **success**；Nightly #28 **failed**（backend-full 7m50s 通过，
+    ui-acceptance 独立 job 33m39s 退出码 1）→ 拆 core/full profile + 硬超时；
+  - `2d35998`：PR #77 **success**；Nightly #29 **failed**（ui-acceptance core 11m42s 退出码 1）；
+  - `4c2f851`：PR #78 **success**；Nightly #30 **failed**（同上）。
+- 本机无 `gh`/凭据 → **无法导出 CI 日志**，无法定位 ui-acceptance 的失败检查；
+  已把验收结果写入 Job Summary（便于有 `gh` 的环境直接看），并如实记为未闭环项 B-28。
+
+## 最终状态
+
+- 全量测试：SQLite **932 passed / 0 failed / 16 skipped**；PG16 专项 **28 passed**；
+- 质量门禁：Ruff / format / vue-tsc / vite / npm audit(0) / 密钥扫描 / git diff --check 全绿；
+- 交付物：`docs/RUN-017-{BASELINE,WP1-CI,WP2-BENCHMARK,WP3-REGRESSION-RETRY,WP4-RELIABILITY,
+  WP5-PRODUCT,WP6-PRODUCT,WP7-DIAGNOSIS,WORKLOG,FINAL-REPORT,PR3-DESCRIPTION}.md`
+  + `docs/assets/run017/**`（原始样本 / 截图 / 指标 JSON）；
+- 分支 `workbuddy/run017-product-maturity` 已推送；PR #3 **NOT_RUN**（无 `gh`，描述已生成）。

@@ -111,7 +111,10 @@ tests/integration/test_regression_retry_run017.py
 | Nightly #27 | `1faebec` | **failed**（39m33s） | `backend-full` 把"真实浏览器业务全链路"挤在同一个 job，45 分钟上限被打满 |
 | Nightly #28 | `1315a2f` | **failed**（33m48s） | 拆分后 `backend-full` **7m50s 通过**；`ui-acceptance`（独立 job，含最耗时的独立 Worker 故障段）在 CI runner 上 33 分钟未完成 → 退出码 1；`gate-verdict` 正确判失败（门禁没有被掩盖） |
 | PR Gate #76 | `1315a2f` | **success**（2m24s） | 最终代码 HEAD，backend + frontend 全绿 |
-| Nightly #29 | `1315a2f`+ | 见 §4.1 | 把 UI 验收拆成 `core`/`full` 两种 profile：Nightly 跑 `core`（业务闭环 + 扩展三段，25 分钟硬上限），故障注入段留给手动 Reliability Gate 的 `full` |
+| PR Gate **#77** | `2d35998` | **success**（2m29s） |
+| PR Gate **#78** | `4c2f851` | **success**（2m20s，最新 HEAD） |
+| Nightly #29 | `2d35998` | **failed**（11m52s）：`backend-full` 7m33s / postgres 1m2s / security 16s / llm-smoke 19s 均通过；`ui-acceptance`（core profile）11m42s 后退出码 1 |
+| Nightly #30 | `4c2f851` | **failed**（11m48s）：`backend-full` 7m39s / postgres 1m2s / security 17s / llm-smoke 22s 均通过；`ui-acceptance` 11m40s 后退出码 1（与 #29 相同） |
 
 ### 4.1 处置与依据
 
@@ -124,11 +127,36 @@ tests/integration/test_regression_retry_run017.py
 - 两项处置都**不放宽断言**：`core` profile 少跑的是"故障注入段"，
   业务闭环本身的 35 项断言一条不少；本地两种 profile 分别实测 35/0 与 58/0。
 
-> 说明：`ui-acceptance` 在 CI runner 上变慢的具体日志**无法导出**（本机无 `gh`、
-> 无 API 凭据，GitHub 日志页需登录）。因此这里只记录**可核对的事实**
-> （run 号、head_sha、Job 结论与耗时），不臆测失败细节。
-> 交接建议：在具备 `gh` 的环境执行
-> `gh run view <run_id> --log-failed` 定位 ui-acceptance 的等待点。
+### 4.2 已知未闭环项：Nightly 的 `ui-acceptance`
+
+**事实**：
+
+- 本地：同一脚本 `core` profile **35 PASS / 0 FAIL**、`full` profile **58 PASS / 0 FAIL**；
+- CI（GitHub runner）：`ui-acceptance` 两种 profile 都**失败**（退出码 1），
+  耗时明显长于本地（#28 full 33m39s / #29 core 11m42s / #30 core 11m40s）；
+- 同一 Nightly 里其它 Job（backend-full / postgres / security / llm-smoke）**全部通过**；
+- `gate-verdict` 在 `ui-acceptance` 失败时**正确判失败**（退出码 1）——门禁没有被掩盖。
+
+**为什么本轮无法定位根因**：本机没有 `gh`、没有 GitHub API 凭据；
+匿名 API 已 403 限流，GitHub 的 job 日志与 Step Summary 都需要登录后查看。
+因此这里只记录**可核对的事实**，不臆测失败原因，也**不**把该 Job 改成"不阻断"。
+
+**已做的处置**：
+
+1. 把该 Job 从 `backend-full` 拆出（`backend-full` 用时从 39 分钟降到 7m33s）；
+2. 拆 `core` / `full` profile：Nightly 跑 `core`（业务闭环 + 扩展三段），
+   故障注入段留给手动 Reliability Gate 的 `full`；
+3. UI 步骤加 `timeout 1500` 硬上限（25 分钟内没跑完就明确失败，不静默挂起）；
+4. 增加"把 UI 验收结果写入 Job Summary"的步骤，使**有 `gh` 的环境**能直接看到失败项。
+
+**交接建议（下一轮第一步）**：
+
+```bash
+gh run view 45849709837 --log-failed                      # 第一个失败检查
+gh run download 45849709837 -n ui-acceptance-evidence     # 报告 JSON 与截图
+```
+
+拿到日志后按"失败检查 → 等待点 → 是否环境差异"三步定位，再决定是修脚本还是调 CI 配置。
 
 ## 5. 仍然存在的 CI 边界
 

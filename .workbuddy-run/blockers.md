@@ -2,6 +2,8 @@
 
 | 编号 | 事项 | 状态 |
 |---|---|---|
+| B-28 | Nightly `ui-acceptance` 在 GitHub runner 失败（本地同脚本 35/35、58/58 通过） | NOT_CLOSED：定位需 `gh run view --log-failed`（本机无凭据）；已拆 profile + 硬超时 + Job Summary，下轮第一步取日志 |
+
 | B-17 | Worker 补充故障注入 | BLOCKED（沿用历史决定，不绕过） |
 | B-21 | 宿主级网络隔离（pf/防火墙） | BLOCKED（安全边界禁止） |
 | B-22 | 真实外部站点验收 | BLOCKED（仅本地目标） |

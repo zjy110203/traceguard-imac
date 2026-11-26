@@ -146,7 +146,10 @@ PostgreSQL 16**；SQLite 仅用于本地快速演示；Artifact 仅本地内容�
 | PR Gate **#76** | `1315a2f` | **success**（2m24s，最终代码 HEAD） |
 | Nightly #27 | `1faebec` | **failed**（39m33s：`backend-full` 被 UI 全链路挤满 45 分钟上限） |
 | Nightly #28 | `1315a2f` | **failed**（33m48s：拆分后 `backend-full` 7m50s 通过；`ui-acceptance` 独立 job 在 CI runner 上未在时限内完成） |
-| Nightly #29 | `2d35998` | 见 §5.1（UI 验收拆 `core`/`full` profile + 25 分钟硬超时后重跑） |
+| PR Gate **#77** | `2d35998` | **success**（2m29s） |
+| PR Gate **#78** | `4c2f851` | **success**（2m20s，最新 HEAD） |
+| Nightly #29 | `2d35998` | **failed**（11m52s）：除 `ui-acceptance` 外全部 Job 通过 |
+| Nightly #30 | `4c2f851` | **failed**（11m48s）：同上（`ui-acceptance` 退出码 1） |
 
 ### 5.1 门禁结论的口径说明
 
@@ -157,7 +160,10 @@ PostgreSQL 16**；SQLite 仅用于本地快速演示；Artifact 仅本地内容�
 - 本机无 `gh`、无 API 凭据，**无法导出 CI 日志**，因此这里只记录
   可核对的事实（run 号、head_sha、Job 结论与耗时），不臆测失败细节；
 - Nightly 的 UI 验收已按 profile 拆分（Nightly=`core`，Reliability Gate=`full`）
-  并加硬超时，详见 `docs/RUN-017-WP1-CI.md` §4。
+  并加硬超时，详见 `docs/RUN-017-WP1-CI.md` §4；
+- **未闭环**：Nightly 的 `ui-acceptance` 在 CI runner 上仍失败（本地同脚本
+  35/35、58/58 通过）。原因定位需要 CI 日志（`gh run view --log-failed`），
+  本轮无凭据，故**如实记为未闭环**，不做"改成不阻断"的粉饰。
 
 ### 5.2 本地质量门禁（最终 HEAD）
 
@@ -185,6 +191,7 @@ PostgreSQL 16**；SQLite 仅用于本地快速演示；Artifact 仅本地内容�
 | 概率故障采样噪声 | PARTIAL | FLAKY-001/002 单轮结论有噪声（两轮已可见差异） |
 | 探针写入副作用 | IMPLEMENTED | 限定在探针 Workspace + token 前缀 + 自清理；清理失败即 UNKNOWN |
 | 运行态目录曾误入 Git | 已修复 | 已 untrack + gitignore（历史未重写） |
+| Nightly `ui-acceptance` 在 CI runner 失败 | **未闭环** | 本地 35/35、58/58 通过；CI 退出码 1，定位需要 job 日志（本机无 `gh`/凭据）；已加 Job Summary 与硬超时便于下轮定位 |
 
 ---
 
