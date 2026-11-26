@@ -6,7 +6,7 @@ import { computed, onMounted, onUnmounted, ref, watch, type Component } from 'vu
 import { useRoute, useRouter } from 'vue-router'
 import {
   ArrowRight, Bot, ChevronRight, CircleCheck, CircleX, Command, Cpu, Database,
-  FileCode2, GitCompare, KeyRound, LayoutDashboard, ListChecks, LoaderCircle, LogOut, Menu, Moon,
+  FileCode2, Gauge, GitCompare, KeyRound, LayoutDashboard, ListChecks, LoaderCircle, LogOut, Menu, Moon,
   PanelLeftClose, PanelLeftOpen, PlayCircle, Search, Settings2, ShieldCheck,
   Stethoscope, Sun, UserRound, Users, Wrench, X,
 } from '@lucide/vue'
@@ -96,6 +96,8 @@ const groups = computed<NavGroup[]>(() => [
     title: '运行',
     items: [
       { label: '系统与浏览器', to: '/system', icon: Settings2 },
+      // RUN-018 WP8：运行监控与告警（活跃告警数做角标）
+      { label: '运行监控', to: '/monitoring', icon: Gauge },
       // platform-admin 专属菜单（路由守卫与服务端双重校验）
       ...(can('user.manage') ? [{ label: '用户与角色', to: '/users', icon: Users, adminOnly: true } satisfies NavItem] : []),
     ],
@@ -197,6 +199,7 @@ const staticSearch = [
   { label: '诊断中心', sub: '/diagnoses', to: '/diagnoses' },
   { label: '修复中心', sub: '/repairs', to: '/repairs' },
   { label: 'Benchmark 实验对照', sub: '/benchmark', to: '/benchmark' },
+  { label: '运行监控与告警', sub: '/monitoring', to: '/monitoring' },
 ]
 async function runSearch() {
   const q = query.value.trim().toLowerCase()

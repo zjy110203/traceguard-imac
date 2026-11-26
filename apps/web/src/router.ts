@@ -16,6 +16,7 @@ const routes = [
   { path: '/repairs', name: 'repairs', component: () => import('./views/RepairsView.vue'), meta: { title: '修复中心', crumb: '修复中心' } },
   { path: '/benchmark', name: 'benchmark', component: () => import('./views/BenchmarkView.vue'), meta: { title: 'Benchmark', crumb: 'Benchmark' } },
   { path: '/system', name: 'system', component: () => import('./views/SystemView.vue'), meta: { title: '系统与运行环境', crumb: '系统与运行环境' } },
+  { path: '/monitoring', name: 'monitoring', component: () => import('./views/MonitoringView.vue'), meta: { title: '运行监控与告警', crumb: '运行 / 运行监控与告警' } },
   { path: '/users', name: 'users', component: () => import('./views/UsersView.vue'), meta: { title: '用户与角色', crumb: '运行 / 用户与角色', adminOnly: true } },
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ]

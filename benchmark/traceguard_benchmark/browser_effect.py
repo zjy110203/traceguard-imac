@@ -17,6 +17,12 @@
 - 独立 BrowserContext + 独立会话（不复用被测 Run 的 Cookie/存储）；
 - 业务结果以 TeamFlow 权威状态接口回读为准，不以 Toast/文案作为成功证据。
 
+回读三态（RUN-018 WP2）：业务记录是否存在只允许三态判定——HTTP 200 + ok=true +
+合法 projects 列表才允许判 PRESENT / ABSENT；状态接口 500 / 403 / 连接失败 / 超时 /
+非法 JSON / 缺少必要字段一律 UNKNOWN 并给出观测失败原因。UNKNOWN 时分类器不得进入
+MISLEADING_SUCCESS_ON_FAILURE / SILENT_IGNORE / OPERATION_FAILED_ERROR_SURFACED
+（读取失败 ≠ 业务没有落库）。截图 / DOM / 网络与清理记录在任何路径下都保留。
+
 注意：test_id 只用于**观测"定位器资产是否变化"**（这是待回答的问题之一），
 不用于定位控件。所有点击/输入都走 `get_by_role` / `get_by_label`。
 """
@@ -25,12 +31,13 @@ from __future__ import annotations
 
 import json
 import time
+import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .fault_effect import EffectStatus, new_probe_token
+from .fault_effect import EffectStatus, ReadVerdict, network_error_reason, new_probe_token
 
 #: UI 表单固定写入 default workspace（产品行为，不为测试改动）
 UI_WORKSPACE = "default"
@@ -62,27 +69,74 @@ class BrowserObservation:
         }
 
 
-def _get_json(url: str, timeout: float = 5.0) -> tuple[int, dict[str, Any]]:
-    req = urllib.request.Request(url)
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310 - 受控内网
-            return resp.status, json.loads(resp.read().decode("utf-8", "replace"))
-    except Exception as exc:  # noqa: BLE001 - 观测失败要如实返回
-        return 0, {"error": f"{type(exc).__name__}: {exc}"[:200]}
+def _request_json(
+    method: str,
+    url: str,
+    *,
+    body: dict[str, Any] | None = None,
+    timeout: float = 5.0,
+) -> dict[str, Any]:
+    """最小 HTTP 客户端：完整保留 HTTP 状态码 / 原始响应 / 失败原因（RUN-018 WP2）。
 
-
-def _post_json(url: str, body: dict[str, Any], timeout: float = 8.0) -> tuple[int, dict[str, Any]]:
+    返回：`http_status`（0 = 没拿到 HTTP 响应）、`payload`（合法 JSON 对象，否则 None）、
+    `raw`、`error`（网络错误归类 / HTTP_x / NON_JSON_RESPONSE / ""）、`elapsed_ms`。
+    """
+    data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(
         url,
-        data=json.dumps(body).encode(),
-        headers={"Content-Type": "application/json"},
-        method="POST",
+        data=data,
+        headers={"Content-Type": "application/json"} if data is not None else {},
+        method=method,
     )
+    started = time.perf_counter()
+    raw = ""
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
-            return resp.status, json.loads(resp.read().decode("utf-8", "replace"))
-    except Exception as exc:  # noqa: BLE001
-        return 0, {"error": f"{type(exc).__name__}: {exc}"[:200]}
+        with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310 - 受控内网
+            status = resp.status
+            raw = resp.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as exc:
+        # HTTP 错误也是真实状态码：必须如实记录（旧实现会吞成 status=0）
+        return {
+            "http_status": exc.code,
+            "payload": None,
+            "raw": exc.read(8192).decode("utf-8", "replace")[:2000],
+            "error": f"HTTP_{exc.code}",
+            "elapsed_ms": round((time.perf_counter() - started) * 1000, 1),
+        }
+    except Exception as exc:  # noqa: BLE001 - 观测失败要如实返回
+        return {
+            "http_status": 0,
+            "payload": None,
+            "raw": "",
+            "error": network_error_reason(str(exc)),
+            "error_detail": f"{type(exc).__name__}: {exc}"[:300],
+            "elapsed_ms": round((time.perf_counter() - started) * 1000, 1),
+        }
+    try:
+        payload = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return {
+            "http_status": status,
+            "payload": None,
+            "raw": raw[:2000],
+            "error": "NON_JSON_RESPONSE",
+            "elapsed_ms": round((time.perf_counter() - started) * 1000, 1),
+        }
+    if not isinstance(payload, dict):
+        return {
+            "http_status": status,
+            "payload": None,
+            "raw": raw[:2000],
+            "error": "NON_OBJECT_JSON",
+            "elapsed_ms": round((time.perf_counter() - started) * 1000, 1),
+        }
+    return {
+        "http_status": status,
+        "payload": payload,
+        "raw": raw[:2000],
+        "error": "",
+        "elapsed_ms": round((time.perf_counter() - started) * 1000, 1),
+    }
 
 
 class BrowserEffectObserver:
@@ -278,11 +332,20 @@ class BrowserEffectObserver:
             }
 
             business_after = self._business_state()
-            persisted = self._persisted(business_after, name)
+            persisted, persisted_reason = self._persisted(business_after, name)
             detail["business_state"] = {
-                "before_count": business_before.get("count"),
-                "after_count": business_after.get("count"),
-                "persisted": persisted,
+                "before_count": (business_before.get("payload") or {}).get("count"),
+                "before_http_status": business_before.get("http_status"),
+                "after_count": (business_after.get("payload") or {}).get("count"),
+                "after_http_status": business_after.get("http_status"),
+                "persisted": (
+                    None if persisted is ReadVerdict.UNKNOWN else persisted is ReadVerdict.PRESENT
+                ),
+                "persisted_state": persisted.value,
+                "persisted_reason": persisted_reason,
+                "read_error": business_after.get("error", ""),
+                "read_error_detail": business_after.get("error_detail", ""),
+                "read_raw": business_after.get("raw", "")[:300],
                 "source": "teamflow:/api/state/projects?workspace=default",
             }
 
@@ -302,10 +365,13 @@ class BrowserEffectObserver:
             aria = self._aria(page)
             if aria:
                 artifacts.append(aria)
-            evidence.append(f"browser:{token}:persisted={persisted}:success={success_visible}")
+            evidence.append(
+                f"browser:{token}:persisted={persisted.value}:success={success_visible}"
+            )
 
             status, classification, note = self._classify(
                 persisted=persisted,
+                persisted_reason=persisted_reason,
                 success_visible=success_visible,
                 error_visible=error_visible,
                 navigated=navigated,
@@ -374,20 +440,39 @@ class BrowserEffectObserver:
         return navigated, feedback, elapsed_ms
 
     def _business_state(self) -> dict[str, Any]:
-        status, payload = _get_json(
-            f"{self.base_url}/api/state/projects?workspace={DEFAULT_WORKSPACE}"
+        return _request_json(
+            "GET",
+            f"{self.base_url}/api/state/projects?workspace={DEFAULT_WORKSPACE}",
         )
-        payload = dict(payload)
-        payload["http_status"] = status
-        return payload
 
     @staticmethod
-    def _persisted(state: dict[str, Any], name: str) -> bool:
-        projects = state.get("projects")
-        if isinstance(projects, list):
-            return any(isinstance(p, dict) and str(p.get("name")) == name for p in projects)
-        # 兼容旧版 TeamFlow（只有 keys）：无法按名称确认 → 不得当作已持久化
-        return False
+    def _persisted(state: dict[str, Any], name: str) -> tuple[ReadVerdict, str]:
+        """三态判定业务记录是否存在（RUN-018 WP2）。
+
+        只有 HTTP 200 + ok=true + 合法 projects 列表才允许判定 PRESENT / ABSENT；
+        500 / 403 / 连接失败 / 超时 / 非法 JSON / 缺少必要字段一律 UNKNOWN，
+        并返回明确的观测失败原因（读取失败 ≠ 业务没有落库）。
+        """
+        status = state.get("http_status")
+        if status != 200:
+            reason = str(state.get("error") or f"HTTP_{status or 0}")
+            return ReadVerdict.UNKNOWN, f"STATE_READ_HTTP_{status or 0}:{reason}"
+        if state.get("error"):
+            return ReadVerdict.UNKNOWN, f"STATE_READ_INVALID:{state['error']}"
+        payload = state.get("payload")
+        if not isinstance(payload, dict):
+            return ReadVerdict.UNKNOWN, "STATE_READ_INVALID:NO_PAYLOAD"
+        if "ok" not in payload:
+            return ReadVerdict.UNKNOWN, "STATE_READ_MALFORMED:MISSING_OK_FIELD"
+        if payload.get("ok") is not True:
+            return ReadVerdict.UNKNOWN, "STATE_READ_MALFORMED:OK_NOT_TRUE"
+        projects = payload.get("projects")
+        if not isinstance(projects, list) or any(not isinstance(p, dict) for p in projects):
+            return ReadVerdict.UNKNOWN, "STATE_READ_MALFORMED:MISSING_OR_MALFORMED_PROJECTS"
+        if any(str(p.get("name")) == name for p in projects):
+            return ReadVerdict.PRESENT, "OK"
+        # 有效权威读取明确表示记录不在列表里：才允许判 ABSENT
+        return ReadVerdict.ABSENT, "OK"
 
     def _screenshot(self, page: Any) -> str:
         if not self.out_dir:
@@ -408,12 +493,20 @@ class BrowserEffectObserver:
 
     def _cleanup(self, token: str) -> dict[str, Any]:
         """回收 UI 写入 default workspace 的探针数据（名称带随机 token 前缀）。"""
-        status, payload = _post_json(
+        read = _request_json(
+            "POST",
             f"{self.base_url}/api/test/probe-cleanup",
-            {"token": token, "workspace": DEFAULT_WORKSPACE, "allow_default": True},
+            body={"token": token, "workspace": DEFAULT_WORKSPACE, "allow_default": True},
+            timeout=8.0,
         )
-        ok = status == 200 and bool(payload.get("ok"))
-        return {"ok": ok, "http_status": status, "response": payload}
+        payload = read.get("payload") or {}
+        ok = read.get("http_status") == 200 and bool(payload.get("ok"))
+        return {
+            "ok": ok,
+            "http_status": read.get("http_status"),
+            "response": payload or read.get("raw", "")[:300],
+            "error": read.get("error", ""),
+        }
 
     def _fail_closed(
         self,
@@ -436,16 +529,29 @@ class BrowserEffectObserver:
     @staticmethod
     def _classify(
         *,
-        persisted: bool,
+        persisted: ReadVerdict,
+        persisted_reason: str,
         success_visible: bool,
         error_visible: bool,
         navigated: bool,
         settle_ms: float,
         testid_presence: dict[str, bool],
     ) -> tuple[str, str, str]:
-        """把"页面行为 + 业务回读"映射成效果结论（保守优先）。"""
+        """把"页面行为 + 业务回读（三态）"映射成效果结论（保守优先）。
+
+        RUN-018 WP2：业务回读 UNKNOWN 时**不得**进入 MISLEADING_SUCCESS_ON_FAILURE /
+        SILENT_IGNORE / OPERATION_FAILED_ERROR_SURFACED——独立状态接口 500/403/超时/
+        连接失败是观测失败，不是"业务没有落库"的证据。
+        """
+        if persisted is ReadVerdict.UNKNOWN:
+            return (
+                EffectStatus.UNKNOWN.value,
+                "BUSINESS_STATE_READ_UNAVAILABLE",
+                f"独立业务状态回读不可用（{persisted_reason}）：无法确认业务记录是否落库，"
+                "不判定业务受影响或未受影响（观测失败 ≠ 业务失效证据）",
+            )
         locator_only = not all(testid_presence.values())
-        if persisted and success_visible and not error_visible:
+        if persisted is ReadVerdict.PRESENT and success_visible and not error_visible:
             if locator_only:
                 return (
                     EffectStatus.NOT_TRIGGERED.value,
@@ -464,31 +570,35 @@ class BrowserEffectObserver:
                 "OPERATION_OK",
                 "用户可见操作成功且业务已持久化",
             )
-        if persisted and error_visible:
+        if persisted is ReadVerdict.PRESENT and error_visible:
             return (
                 EffectStatus.CONFIRMED.value,
                 "UI_FEEDBACK_CONTRADICTS_BUSINESS",
                 "业务已持久化，但页面显示失败提示：用户无法正确判断操作结果",
             )
-        if persisted and not success_visible and not error_visible:
+        if persisted is ReadVerdict.PRESENT and not success_visible and not error_visible:
             return (
                 EffectStatus.CONFIRMED.value,
                 "UI_FEEDBACK_MISSING",
                 "业务已持久化，但页面没有任何成功反馈：用户可见功能受影响",
             )
-        if (not persisted) and success_visible:
+        if persisted is ReadVerdict.ABSENT and success_visible:
             return (
                 EffectStatus.CONFIRMED.value,
                 "MISLEADING_SUCCESS_ON_FAILURE",
                 "页面显示成功，但独立业务状态确认未落库（False Pass 型用户可见影响）",
             )
-        if (not persisted) and (not success_visible) and (not error_visible):
+        if (
+            persisted is ReadVerdict.ABSENT
+            and (not success_visible)
+            and (not error_visible)
+        ):
             return (
                 EffectStatus.CONFIRMED.value,
                 "SILENT_IGNORE",
                 "用户提交后既无反馈也无业务结果：操作被静默忽略",
             )
-        if (not persisted) and error_visible:
+        if persisted is ReadVerdict.ABSENT and error_visible:
             if locator_only and not navigated:
                 return (
                     EffectStatus.NOT_TRIGGERED.value,

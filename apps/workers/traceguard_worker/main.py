@@ -103,6 +103,44 @@ def run(once: bool = False, poll_interval: float | None = None) -> int:
     tasks, pipeline = build_worker(worker_id)
     logger.info("worker_started", worker=worker_id, once=once, poll=interval)
 
+    # RUN-018 WP8：心跳 + 告警评估（观测失败绝不影响执行主循环）
+    from traceguard_persistence.alerts import AlertEngine
+    from traceguard_persistence.monitoring import (
+        MetricsCollector,
+        upsert_worker_heartbeat,
+    )
+    from traceguard_persistence.db import get_database
+
+    db = get_database()
+    engine = AlertEngine(db, min_evaluate_interval_s=30.0)
+    collector = MetricsCollector(db, worker_id=worker_id)
+    counters = {"claims": 0, "takeovers": 0, "failures": 0}
+
+    def beat(
+        status: str,
+        run_id: str | None = None,
+        task_id: str | None = None,
+        lease_expires_at: float = 0.0,
+    ) -> None:
+        try:
+            upsert_worker_heartbeat(
+                db,
+                worker_id=worker_id,
+                mode="standalone",
+                status=status,
+                hostname=socket.gethostname(),
+                pid=os.getpid(),
+                current_run_id=run_id,
+                current_task_id=task_id,
+                lease_expires_at=lease_expires_at,
+                claims_delta=counters["claims"],
+                takeovers_delta=counters["takeovers"],
+                failures_delta=counters["failures"],
+            )
+            counters["claims"] = counters["takeovers"] = counters["failures"] = 0
+        except Exception:  # noqa: BLE001 - 心跳失败不得影响 Worker 主循环
+            pass
+
     executed = 0
     try:
         while not _stop:
@@ -113,14 +151,31 @@ def run(once: bool = False, poll_interval: float | None = None) -> int:
                     logger.warning("expired_leases_reaped", count=len(reaped))
                 claimed = tasks.claim_next_run(worker_id, ttl_seconds=settings.worker_lease_ttl_s)
                 if not claimed:
+                    beat("IDLE")
+                    try:
+                        engine.evaluate(collector.collect())
+                    except Exception:  # noqa: BLE001
+                        pass
                     if once:
                         logger.info("worker_no_task")
                         return 0
                     time.sleep(interval)
                     continue
                 logger.info("run_claimed", run_id=claimed["run_id"], attempt=claimed["attempt"])
+                counters["claims"] += 1
+                if str(claimed.get("previous_status") or "QUEUED") != "QUEUED":
+                    counters["takeovers"] += 1
+                beat(
+                    "RUNNING",
+                    run_id=claimed["run_id"],
+                    task_id=claimed.get("task_id"),
+                    lease_expires_at=float(claimed.get("lease_expires_at") or 0.0),
+                )
                 outcome = pipeline.execute(claimed["run_id"], lease=claimed)
                 executed += 1
+                if outcome.execution_status in ("FAILED", "TIMED_OUT"):
+                    counters["failures"] += 1
+                beat("IDLE")
                 _write_metrics(worker_id, settings.worker_metrics_dir)
                 logger.info(
                     "run_finished",
@@ -134,10 +189,13 @@ def run(once: bool = False, poll_interval: float | None = None) -> int:
                 break
             except Exception:  # noqa: BLE001 - Worker 不得因单任务失败退出
                 logger.exception("worker_iteration_failed")
+                counters["failures"] += 1
+                beat("IDLE")
                 if once:
                     return 1
                 time.sleep(max(1.0, interval))
     finally:
+        beat("STOPPED")
         close_current_thread_browser()
         logger.info("worker_stopped", executed=executed)
     return 0

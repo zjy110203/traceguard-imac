@@ -122,6 +122,42 @@ export const endpoints = {
   browserHealth: (probe = false) => api.get<BrowserHealth>(`/system/browser?probe=${probe}`),
   llmSummary: () => api.get<LLMUsageSummary>('/system/llm/summary'),
   queueStats: () => api.get<{ by_status: Record<string, number>; total: number; worker: Record<string, unknown> }>('/queue/stats'),
+  // RUN-018 WP8：运行监控与告警
+  monitoringMetrics: (workspaceId?: string, artifactHashLimit?: number) =>
+    api.get<Record<string, unknown>>(
+      `/monitoring/metrics${qs({ workspace_id: workspaceId, artifact_hash_limit: artifactHashLimit })}`,
+    ),
+  monitoringAlerts: (status?: string, alertType?: string, limit = 100) =>
+    api.get<{ alerts: AlertRecord[]; total: number; evaluation: Record<string, unknown> }>(
+      `/monitoring/alerts${qs({ status, alert_type: alertType, limit })}`,
+    ),
+  alertAcknowledge: (alertId: string, note?: string) =>
+    api.post<AlertRecord>(`/monitoring/alerts/${alertId}/acknowledge`, { note: note ?? null }),
+  alertResolve: (alertId: string, reason: string) =>
+    api.post<AlertRecord>(`/monitoring/alerts/${alertId}/resolve`, { reason }),
+}
+
+/** RUN-018 WP8 告警记录（前端展示用）。 */
+export interface AlertRecord {
+  alert_id: string
+  fingerprint: string
+  alert_type: string
+  severity: string
+  status: string
+  title: string
+  message: string
+  detail: Record<string, unknown>
+  scope_workspace: string | null
+  ref_run_id: string | null
+  ref_worker_id: string | null
+  occurrences: number
+  first_seen: number
+  last_seen: number
+  acknowledged_by: string | null
+  acknowledged_at: number | null
+  resolved_by: string | null
+  resolved_at: number | null
+  resolution_reason: string
 }
 
 export function fmtNumber(n: number | null | undefined): string {

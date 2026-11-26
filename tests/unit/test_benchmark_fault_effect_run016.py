@@ -161,9 +161,16 @@ def _make_server(state: _State) -> ThreadingHTTPServer:
                     stale = state.mode == "stale" and (time.time() - state.last_create_ts < 2.5)
                 if stale and items:
                     items = items[:-1]
+                # "ok": True 对齐真实 TeamFlow /api/state/projects 契约（该接口恒返回 ok）；
+                # RUN-018 WP2 起状态读取三态要求 ok=true 才是有效权威读取。
                 self._send(
                     200,
-                    {"count": len(items), "keys": [i["key"] for i in items], "projects": items},
+                    {
+                        "ok": True,
+                        "count": len(items),
+                        "keys": [i["key"] for i in items],
+                        "projects": items,
+                    },
                 )
                 return
             if self.path.startswith("/api/state/project/"):

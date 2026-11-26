@@ -282,6 +282,26 @@ async def get_diagnosis(diagnosis_id: str, request: Request) -> dict[str, Any]:
     return doc
 
 
+@router.get("/diagnoses/{diagnosis_id}/revisions")
+async def list_diagnosis_revisions(diagnosis_id: str, request: Request) -> list[dict[str, Any]]:
+    """诊断版本链（RUN-018 WP5）：v1 = 原始诊断，每次重诊断追加一个不可变版本。
+
+    每个版本记录：原 Diagnosis（before）、新 Diagnosis（after）、新增证据、
+    假设变化、置信度变化、最终裁决原因（为什么确认或为什么弃权）。
+    """
+    doc = get_services().diagnosis.get(diagnosis_id)
+    if not doc:
+        raise HTTPException(404, detail={"code": "NOT_FOUND", "message": "diagnosis not found"})
+    require_entity_workspace(
+        principal_of(request),
+        doc.get("workspace_id"),
+        resource_type="diagnosis",
+        resource_id=diagnosis_id,
+        request=request,
+    )
+    return get_services().diagnosis.list_revisions(diagnosis_id)
+
+
 @router.get("/dispositions")
 async def list_dispositions(
     request: Request,

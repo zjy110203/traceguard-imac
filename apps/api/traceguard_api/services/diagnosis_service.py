@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 from traceguard_core.errors import AppError, ErrorCode
@@ -22,6 +23,7 @@ from traceguard_evidence.diagnosis.engine import (
     FailureMechanism,
     Hypothesis,
     HypothesisStatus,
+    hypothesis_confidence,
 )
 from traceguard_evidence.probe.feedback import ProbeSignal, merge_signals
 
@@ -406,6 +408,19 @@ class DiagnosisService:
             "strategy_version": "v2",
             "created_at": utc_now_iso(),
         }
+        # RUN-018 WP5 §5.3：初始诊断也入版本链（revision 1 = 原始诊断快照，
+        # 追加写、不可改写；后续重诊断各占一个 revision，原诊断不得被覆盖）。
+        revision = self._record_revision(
+            doc,
+            trigger="initial",
+            before=None,
+            probe_ids=[],
+            probe_execution_ids=[],
+            new_evidence_ids=list(doc.get("evidence_refs") or []),
+        )
+        doc["revision_no"] = revision["revision_no"]
+        doc["revision_ids"] = [revision["revision_id"]]
+        doc["final_reason"] = revision["final_reason"]
         self.rt.docs.put(
             doc_id=result.diagnosis_id,
             kind="diagnosis",
@@ -437,11 +452,14 @@ class DiagnosisService:
         if not rec or rec.kind != "diagnosis":
             raise AppError(ErrorCode.NOT_FOUND, "diagnosis not found")
         doc = dict(rec.doc or {})
+        # RUN-018 WP5 §5.3：重诊断前先留存"原 Diagnosis"完整快照（不可变基线）。
+        before_state = self._diagnosis_state(doc)
         before = {
             "outcome": doc.get("outcome"),
             "root_causes": list(doc.get("root_causes") or []),
             "disposition": doc.get("disposition"),
             "unresolved_conflicts": list(doc.get("unresolved_conflicts") or []),
+            "hypotheses": before_state["hypotheses"],
         }
         run = self.rt.tasks.get_run(doc.get("run_id", "")) or {}
         report = run_report if run_report is not None else (run.get("report") or {})
@@ -502,15 +520,57 @@ class DiagnosisService:
         )
         doc["engine"] = "rule-v1+probe-feedback"
         doc["updated_at"] = utc_now_iso()
+        # ---- RUN-018 WP5 §5.3：每次重诊断完整留存（原诊断 / 新诊断 / 新增证据 /
+        # 假设变化 / 置信度变化 / 最终裁决原因），追加写入版本链，不覆盖历史。
+        after_state = self._diagnosis_state(doc)
+        hypothesis_changes = _hypothesis_changes(before_state["hypotheses"], after_state["hypotheses"])
+        confidence_changes = [
+            {
+                "hypothesis_id": c["hypothesis_id"],
+                "description": c["description"],
+                "confidence_before": c["confidence_before"],
+                "confidence_after": c["confidence_after"],
+            }
+            for c in hypothesis_changes
+            if c["confidence_before"] != c["confidence_after"]
+        ]
+        new_evidence_ids = list(
+            dict.fromkeys(eid for r in results for u in r.updates for eid in u.evidence_ids)
+        )
+        final_reason = _final_reason(doc, results)
+        revision = self._record_revision(
+            doc,
+            trigger="probe_evidence",
+            before=before_state,
+            probe_ids=[r.probe_id for r in results],
+            probe_execution_ids=[r.execution_id for r in results],
+            new_evidence_ids=new_evidence_ids,
+            hypothesis_changes=hypothesis_changes,
+            confidence_changes=confidence_changes,
+            final_reason=final_reason,
+        )
+        doc["revision_no"] = revision["revision_no"]
+        doc["revision_ids"] = list(doc.get("revision_ids") or []) + [revision["revision_id"]]
+        doc["final_reason"] = final_reason
         doc["evaluation_history"] = list(doc.get("evaluation_history") or []) + [
             {
                 "at": doc["updated_at"],
                 "trigger": "probe_evidence",
                 "probes": [r.probe_id for r in results],
+                "probe_execution_ids": [r.execution_id for r in results],
                 "outcome_before": before["outcome"],
                 "outcome_after": doc["outcome"],
                 "root_causes_after": list(result.root_causes),
                 "unresolved_conflicts": list(result.unresolved_conflicts),
+                # RUN-018 WP5：原/新诊断版本、假设与置信度变化、新增证据、裁决原因
+                "revision_id": revision["revision_id"],
+                "revision_no": revision["revision_no"],
+                "diagnosis_before": before_state,
+                "diagnosis_after": after_state,
+                "new_evidence_ids": new_evidence_ids,
+                "hypothesis_changes": hypothesis_changes,
+                "confidence_changes": confidence_changes,
+                "final_reason": final_reason,
             }
         ]
         self.rt.docs.put(
@@ -530,7 +590,13 @@ class DiagnosisService:
                 "outcome": doc["outcome"],
                 "root_causes": list(doc["root_causes"]),
                 "unresolved_conflicts": list(doc["unresolved_conflicts"]),
+                "hypotheses": after_state["hypotheses"],
             },
+            "revision": revision,
+            "hypothesis_changes": hypothesis_changes,
+            "confidence_changes": confidence_changes,
+            "new_evidence_ids": new_evidence_ids,
+            "final_reason": final_reason,
         }
 
     def _refresh_disposition(self, diagnosis: dict[str, Any]) -> str:
@@ -607,7 +673,8 @@ class DiagnosisService:
             # 证据摘要（真实 ID + 类型 + 截断摘要，不含 GT）
             evidence_summary = []
             for e in evidence_list[:60]:
-                content = e.content or {}
+                # RUN-018 WP5 §5.5：Ground Truth 键递归剔除后才进入任何诊断输入
+                content = _strip_ground_truth(e.content or {})
                 brief = json.dumps(content, ensure_ascii=False, default=str)[:220]
                 evidence_summary.append(
                     {"evidence_id": e.evidence_id, "source_type": e.source_type, "brief": brief}
@@ -780,6 +847,94 @@ class DiagnosisService:
         rec = self.rt.docs.get(diagnosis_id)
         return rec.to_dict() if rec else None
 
+    # ------------------------------------------------------- 版本链（RUN-018 WP5）
+    def _diagnosis_state(self, doc: dict[str, Any]) -> dict[str, Any]:
+        """诊断状态快照（原/新 Diagnosis 的可比对形态：状态 + 置信度 + 证据计数）。"""
+        hypotheses = []
+        for h in doc.get("hypotheses") or []:
+            hypotheses.append(
+                {
+                    "hypothesis_id": h.get("hypothesis_id"),
+                    "description": h.get("description", ""),
+                    "failure_domain": h.get("failure_domain", ""),
+                    "failure_mechanism": h.get("failure_mechanism", ""),
+                    "status": h.get("status", "CANDIDATE"),
+                    "confidence": hypothesis_confidence(h),
+                    "supporting_count": len(h.get("supporting") or []),
+                    "contradicting_count": len(h.get("contradicting") or []),
+                    "suggested_by": h.get("suggested_by", "rule"),
+                }
+            )
+        return {
+            "diagnosis_id": doc.get("diagnosis_id"),
+            "outcome": doc.get("outcome"),
+            "disposition": doc.get("disposition"),
+            "root_causes": list(doc.get("root_causes") or []),
+            "unresolved_conflicts": list(doc.get("unresolved_conflicts") or []),
+            "hypotheses": hypotheses,
+        }
+
+    def _record_revision(
+        self,
+        doc: dict[str, Any],
+        *,
+        trigger: str,
+        before: dict[str, Any] | None,
+        probe_ids: list[str],
+        probe_execution_ids: list[str],
+        new_evidence_ids: list[str],
+        hypothesis_changes: list[dict[str, Any]] | None = None,
+        confidence_changes: list[dict[str, Any]] | None = None,
+        final_reason: str = "",
+    ) -> dict[str, Any]:
+        """把一次诊断/重诊断写成**不可变**版本记录（追加写，原诊断不得覆盖）。"""
+        existing = self.rt.docs.list(
+            kind="diagnosis_revision", ref_id=str(doc.get("diagnosis_id") or ""), limit=200
+        )
+        revision_no = 1 + max((int((r.doc or {}).get("revision_no") or 0) for r in existing), default=0)
+        revision_id = new_id("diagrev")
+        after = self._diagnosis_state(doc)
+        record = {
+            "revision_id": revision_id,
+            "diagnosis_id": doc.get("diagnosis_id"),
+            "revision_no": revision_no,
+            "trigger": trigger,
+            "probe_ids": list(probe_ids),
+            "probe_execution_ids": list(probe_execution_ids),
+            "new_evidence_ids": list(new_evidence_ids),
+            "before": before,
+            "after": after,
+            "hypothesis_changes": list(hypothesis_changes or []),
+            "confidence_changes": list(confidence_changes or []),
+            "final_reason": final_reason
+            or _final_reason(
+                {
+                    **doc,
+                    "outcome": after["outcome"],
+                    "root_causes": after["root_causes"],
+                    "unresolved_conflicts": after["unresolved_conflicts"],
+                },
+                [],
+            ),
+            "created_at": utc_now_iso(),
+        }
+        self.rt.docs.put(
+            doc_id=revision_id,
+            kind="diagnosis_revision",
+            doc=record,
+            workspace_id=str(doc.get("workspace_id") or "default"),
+            ref_id=str(doc.get("diagnosis_id") or ""),
+            status=str(after.get("outcome") or ""),
+        )
+        return record
+
+    def list_revisions(self, diagnosis_id: str) -> list[dict[str, Any]]:
+        """诊断版本链（按 revision_no 升序：v1 = 原始诊断）。"""
+        recs = self.rt.docs.list(kind="diagnosis_revision", ref_id=diagnosis_id, limit=200)
+        records = [dict(r.doc or {}) for r in recs]
+        records.sort(key=lambda r: int(r.get("revision_no") or 0))
+        return records
+
 
 def _route_target(kind: str) -> str:
     return {
@@ -864,3 +1019,97 @@ def _parse_epoch(value: Any) -> float:
         return datetime.fromisoformat(str(value).replace("Z", "+00:00")).timestamp()
     except ValueError:
         return 0.0
+
+
+# ------------------------------------------------ RUN-018 WP5 重诊断留痕 helpers
+def _hypothesis_changes(
+    before: list[dict[str, Any]], after: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """假设变化：状态/置信度 before → after（含探针新增假设，before=None）。"""
+    before_by_id = {str(h["hypothesis_id"]): h for h in before}
+    changes: list[dict[str, Any]] = []
+    for h in after:
+        hid = str(h["hypothesis_id"])
+        prev = before_by_id.get(hid)
+        status_before = (prev or {}).get("status")
+        confidence_before = (prev or {}).get("confidence")
+        changes.append(
+            {
+                "hypothesis_id": hid,
+                "description": h.get("description", ""),
+                "status_before": status_before,
+                "status_after": h.get("status"),
+                "confidence_before": confidence_before,
+                "confidence_after": h.get("confidence"),
+                "added_by_probe": prev is None,
+                "changed": prev is None
+                or status_before != h.get("status")
+                or confidence_before != h.get("confidence"),
+            }
+        )
+    return changes
+
+
+def _final_reason(doc: dict[str, Any], results: list[Any]) -> str:
+    """最终裁决原因（确定性文案）：为什么确认，或为什么弃权。"""
+    outcome = str(doc.get("outcome") or "")
+    conflicts = list(doc.get("unresolved_conflicts") or [])
+    root_ids = list(doc.get("root_causes") or [])
+    hypotheses = {str(h.get("hypothesis_id")): h for h in doc.get("hypotheses") or []}
+    parts: list[str] = []
+    if conflicts:
+        parts.append(
+            f"弃权（证据冲突）：假设 {conflicts} 同时存在权威支持与权威反驳，"
+            "按 P03 不自动裁决，交人工复核"
+        )
+    elif outcome == "CONFIRMED":
+        for hid in root_ids:
+            h = hypotheses.get(hid, {})
+            confirming = [
+                r.get("id")
+                for r in h.get("supporting") or []
+                if r.get("confirming") and r.get("trust") == "TRUSTED"
+            ]
+            parts.append(
+                f"确认：{hid}（{h.get('failure_mechanism', '?')}）持有 TRUSTED 直接确认证据 "
+                f"{confirming} 且无未解决反驳 → 列为根因"
+            )
+    elif outcome == "PROBABLE":
+        supported = [
+            str(h.get("hypothesis_id"))
+            for h in doc.get("hypotheses") or []
+            if h.get("status") == "SUPPORTED"
+        ]
+        parts.append(
+            f"弃权确认（PROBABLE）：假设 {supported} 仅有方向性支持"
+            "（单点查询/时间未对齐/非直接确认），不足以权威确认根因"
+        )
+    else:
+        parts.append(
+            "弃权（INCONCLUSIVE）：无假设达到确认门槛（TRUSTED + directly_confirming），"
+            "探针补充证据不足以改变结论"
+        )
+    if results:
+        probe_ids = []
+        alignments = []
+        for r in results:
+            d = r.to_dict() if hasattr(r, "to_dict") else dict(r)
+            probe_ids.append(str(d.get("probe_id")))
+            alignments.append(str(d.get("time_alignment", "")))
+        parts.append(
+            f"本轮探针 {list(dict.fromkeys(probe_ids))} 的时间对齐 {list(dict.fromkeys(alignments))}"
+            "（POST_HOC/UNKNOWN 不作权威依据）"
+        )
+    return "；".join(parts)
+
+
+_GT_KEY_PATTERN = re.compile(r"ground[_\-]?truth", re.IGNORECASE)
+
+
+def _strip_ground_truth(obj: Any) -> Any:
+    """递归剔除 Ground Truth 相关键（RUN-018 WP5 §5.5：GT 永不进入 Runtime Diagnosis）。"""
+    if isinstance(obj, dict):
+        return {k: _strip_ground_truth(v) for k, v in obj.items() if not _GT_KEY_PATTERN.search(str(k))}
+    if isinstance(obj, list):
+        return [_strip_ground_truth(v) for v in obj]
+    return obj

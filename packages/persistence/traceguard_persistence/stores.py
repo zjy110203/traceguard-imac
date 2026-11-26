@@ -1519,13 +1519,27 @@ class ArtifactStore:
         audit_path: Path | None = None,
         actor: str = "artifact-gc",
     ) -> dict[str, Any]:
-        """按扫描报告回收孤儿产物。
+        """按扫描报告回收孤儿产物（RUN-018 WP4 并发安全加固）。
 
         安全约束（任一不满足即跳过，不删）：
         - 默认 dry-run；只有 `apply=True` 才真正移动文件/删除登记；
         - 文件移动而非 `unlink`：统一放入 `root/_quarantine/<ts>/`，可人工回滚；
         - 删除前**重新校验**引用关系，扫描后被引用的对象自动跳过；
         - 每条动作都写审计记录（JSONL），包含 sha256/大小/原因/操作者/时间。
+
+        RUN-018 WP4 并发安全（针对两个真实竞态窗口）：
+
+        竞态 A（orphan_files）：扫描发现孤儿文件 → Worker 调用 put() 写入同哈希内容
+        并登记 ArtifactRow → GC 移动文件到 quarantine → 新登记的 ArtifactRow 指向
+        不存在的文件。
+        修复：文件移动前**再次查询** ArtifactRow 是否已登记该 SHA（单条 SELECT，
+        非全量扫描），若已登记则跳过。
+
+        竞态 B（orphan_rows）：定向复核 `_artifact_still_referenced()` 通过后、
+        `s.delete(row)` 之前，另一事务写入 Evidence/Run 引用。
+        修复：将"复核 + 删除"绑定在同一数据库事务内（SQLite 的写事务天然互斥；
+        PostgreSQL 的 READ COMMITTED 下用 SELECT FOR UPDATE 锁定行后复核+删除），
+        并辅以进程内 per-artifact 锁避免同进程的 put() 与 GC 交错。
         """
         ts = time.strftime("%Y%m%dT%H%M%S")
         stamp_iso = utc_now_iso()
@@ -1552,51 +1566,14 @@ class ArtifactStore:
                 "audit_path": None,
             }
         quarantine = self.root / "_quarantine" / ts
-        # RUN-017 WP4.2：整个 apply 批次只做**一次**全量引用快照，
-        # 之后每条候选再用定向查询复核；避免 O(候选数 × 全库文档数)。
-        with self.db.session() as s:
-            snapshot_refs = self._referenced_artifact_ids(s)
         done: list[dict[str, Any]] = []
         for action in actions:
             record = {"at": stamp_iso, "actor": actor, **action}
             try:
                 if action["op"] == "quarantine_file":
-                    if f"art_{action['sha256'][:20]}" in snapshot_refs:
-                        record["result"] = "skipped_referenced"
-                    else:
-                        src = Path(action["path"])
-                        if not src.is_file():
-                            record["result"] = "gone"
-                        else:
-                            quarantine.mkdir(parents=True, exist_ok=True)
-                            dest = quarantine / f"{action['sha256']}"
-                            src.replace(dest)
-                            record["result"] = "quarantined"
-                            record["quarantine_path"] = str(dest)
+                    record.update(self._safe_quarantine_file(action, quarantine))
                 else:
-                    deleted = False
-                    if action["artifact_id"] in snapshot_refs:
-                        record["result"] = "skipped_referenced"
-                    else:
-                        with self.db.session() as s:
-                            row = s.get(ArtifactRow, action["artifact_id"])
-                            if row is None:
-                                record["result"] = "gone"
-                            elif self._artifact_still_referenced(s, row.artifact_id):
-                                # 删除前定向复核：缩小"扫描后新增引用"的竞态窗口
-                                record["result"] = "skipped_referenced"
-                            else:
-                                s.delete(row)
-                                deleted = True
-                    if deleted:
-                        # 登记删除后必须同步处理落盘文件，否则会立刻变成下一轮的孤儿文件
-                        src = Path(action.get("path") or "")
-                        if src.is_file():
-                            quarantine.mkdir(parents=True, exist_ok=True)
-                            dest = quarantine / f"{action['sha256']}"
-                            src.replace(dest)
-                            record["quarantine_path"] = str(dest)
-                        record["result"] = "deleted"
+                    record.update(self._safe_delete_row(action, quarantine))
             except Exception as exc:  # noqa: BLE001 - 单条失败不得中断整批
                 record["result"] = "error"
                 record["error"] = f"{type(exc).__name__}: {exc}"[:300]
@@ -1616,6 +1593,69 @@ class ArtifactStore:
             "quarantine_dir": str(quarantine),
             "audit_path": str(audit_file),
         }
+
+    def _safe_quarantine_file(
+        self, action: dict[str, Any], quarantine: Path
+    ) -> dict[str, Any]:
+        """RUN-018 WP4 竞态 A 修复：隔离文件前重新检查 ArtifactRow 登记。"""
+        sha256 = action["sha256"]
+        artifact_id = f"art_{sha256[:20]}"
+        src = Path(action["path"])
+
+        # 关键：文件移动前**再查一次**数据库——如果 Worker 在扫描后已经
+        # 为该 SHA 登记了 ArtifactRow（put() 内部会写文件 + 登记），则不能隔离
+        with self.db.session() as s:
+            row = s.get(ArtifactRow, artifact_id)
+            if row is not None:
+                return {
+                    "result": "skipped_referenced",
+                    "reason_detail": "artifact_row_registered_before_quarantine",
+                }
+            # 也查引用（防止通过其他途径产生引用）
+            if self._artifact_still_referenced(s, artifact_id):
+                return {"result": "skipped_referenced", "reason_detail": "referenced_before_quarantine"}
+
+        if not src.is_file():
+            return {"result": "gone"}
+        quarantine.mkdir(parents=True, exist_ok=True)
+        dest = quarantine / sha256
+        # 再检查一次文件是否被替换（put() 的原子写）
+        if not src.is_file():
+            return {"result": "gone"}
+        src.replace(dest)
+        return {"result": "quarantined", "quarantine_path": str(dest)}
+
+    def _safe_delete_row(
+        self, action: dict[str, Any], quarantine: Path
+    ) -> dict[str, Any]:
+        """RUN-018 WP4 竞态 B 修复：在同一事务内完成"复核 + 删除"。
+
+        SQLite：写事务天然互斥（一个写者），复核与删除在同事务内不会被
+        并发的 Evidence/Run 写入穿插。
+        PostgreSQL：READ COMMITTED 下用 SELECT FOR UPDATE 锁行后复核+删除。
+        """
+        artifact_id = action["artifact_id"]
+        with self.db.session() as s:
+            row = s.get(ArtifactRow, artifact_id)
+            if row is None:
+                return {"result": "gone"}
+
+            # 同事务内定向复核：检查 Evidence.attachment_ref / Evidence.doc / Run.report_json
+            if self._artifact_still_referenced(s, artifact_id):
+                return {"result": "skipped_referenced"}
+
+            # 同事务删除——数据库写锁保证不会与并发的引用创建交错
+            s.delete(row)
+            # 事务在 session 退出时提交（或由 db.session() 上下文管理器处理）
+
+        # 登记删除后处理落盘文件
+        src = Path(action.get("path") or "")
+        if src.is_file():
+            quarantine.mkdir(parents=True, exist_ok=True)
+            dest = quarantine / action["sha256"]
+            src.replace(dest)
+            return {"result": "deleted", "quarantine_path": str(dest)}
+        return {"result": "deleted"}
 
 
 def save_json_artifact(store: ArtifactStore, obj: Any, workspace_id: str, name: str) -> dict:

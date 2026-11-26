@@ -129,6 +129,7 @@ onMounted(() => load())
     <PageHeader eyebrow="Runtime / System" title="系统与运行环境"
       subtitle="数据库、浏览器、Worker、产物存储的真实状态（不是配置文件的自我描述）。浏览器状态需主动自检，配置成功不等于连通成功。">
       <template #actions>
+        <router-link class="button ghost" to="/monitoring">运行监控与告警</router-link>
         <button :disabled="busy === 'browser'" @click="probeBrowser">真实启动浏览器自检</button>
         <button :disabled="busy === 'seed'" @click="seed">写入演示资产</button>
         <button @click="load()">刷新</button>

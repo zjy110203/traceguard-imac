@@ -114,9 +114,12 @@ tests/integration/test_regression_retry_run017.py
 | PR Gate **#77** | `2d35998` | **success**（2m29s） |
 | PR Gate **#78** | `4c2f851` | **success**（2m20s，最新 HEAD） |
 | Nightly #29 | `2d35998` | **failed**（11m52s）：`backend-full` 7m33s / postgres 1m2s / security 16s / llm-smoke 19s 均通过；`ui-acceptance`（core profile）11m42s 后退出码 1 |
+| Nightly #30 | `4c2f851` | **failed**（11m48s）：`backend-full` 7m39s / postgres 1m2s / security 17s / llm-smoke 22s 均通过；`ui-acceptance` 11m40s 后退出码 1（与 #29 相同） |
 | Nightly #31 | `f34f6b4` | **failed**（11m54s）：`backend-full` 6m50s 通过；`ui-acceptance` 11m46s 退出码 1（与 #29/#30 相同，可复现） |
-| PR Gate **#80** | `feae308` | **success**（2m43s，最终 HEAD） |
-：`backend-full` 7m39s / postgres 1m2s / security 17s / llm-smoke 22s 均通过；`ui-acceptance` 11m40s 后退出码 1（与 #29 相同） |
+| PR Gate **#80** | `feae308` | **success**（2m43s） |
+| Nightly #32 | `feae308` | **failed**（23m38s）：`ui-acceptance` 失败 |
+| Nightly #33 | `c807284` | **failed**（22m11s）：`ui-acceptance` 失败 |
+| PR Gate **#81** | `c807284` | **success**（2m28s，**最终 HEAD**） |
 
 ### 4.1 处置与依据
 

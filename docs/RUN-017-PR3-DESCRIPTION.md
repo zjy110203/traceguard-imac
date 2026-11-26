@@ -81,7 +81,7 @@ Event 序号、迁移版本、**恢复后继续写入**）。新增只读环境�
 | 严格长稳 | 62.05 分钟 / 119 Run / 33 检查全 PASS / **0 NOTE** |
 | Benchmark 资格实验 | 120 样本 / UNKNOWN 4（3.3%）/ 确认率 84.3% / **False Pass 0** |
 | UI 业务闭环 | 58 PASS / 0 FAIL |
-| UI 矩阵（15 视图 × 4 断点 × 双主题） | 128 / 128 PASS |
+| UI 矩阵（16 个路由/视图 × 4 断点 × 双主题） | 128 / 128 PASS |
 | 备份恢复 | SQLite + PG16 各 12 项 true |
 | 供应链 | npm audit 0 漏洞；密钥扫描无命中；Ruff/vue-tsc/vite 全绿 |
 

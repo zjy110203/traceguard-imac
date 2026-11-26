@@ -272,9 +272,19 @@ class ProbeService:
         # "探针不存在"与"探针被策略拒绝"，也会污染执行历史。
         if probe_id not in self.engine.definitions:
             raise AppError(ErrorCode.NOT_FOUND, f"UNKNOWN_PROBE: {probe_id}")
+        # RUN-018 WP5 §5.2 幂等键：显式 idempotency_key 的重复请求只执行一次
+        # （返回已有执行记录，不重复扣预算）；自动键唯一，延迟复测不会被误去重。
+        explicit_idem = str(params.get("idempotency_key") or "").strip()
+        if explicit_idem:
+            replay = self._find_idempotent_execution(
+                probe_id, explicit_idem, run_id=run_id, diagnosis_id=diagnosis_id
+            )
+            if replay is not None:
+                return {**replay, "idempotent_replay": True}
         b = budget or self.budget_for(
             run_id=run_id or "", diagnosis_id=diagnosis_id or "", workspace_id=workspace_id
         )
+        definition = self.engine.definitions[probe_id]
         # 预算占位由 Registry 完成（跨进程 CAS + 故障即阻断），探针执行前必须已落库
         result: ProbeResult = self.engine.execute(
             probe_id, params, workspace_id, budget=b, reserve=self.budgets.reserve
@@ -283,7 +293,34 @@ class ProbeService:
         execution_id = new_id("probeexec")
         collected_at = time.time()
         ingested_at = utc_now_iso()
+        observed_at = result.observed_at or collected_at
+        run_ended_at = self._run_ended_at(run_id)
+        idempotency_key = derive_idempotency_key(
+            probe_id,
+            run_id=run_id,
+            diagnosis_id=diagnosis_id,
+            params=params,
+            explicit=explicit_idem or None,
+            execution_id=execution_id,
+        )
         evidence_ids: list[str] = []
+        contract = build_probe_evidence_contract(
+            probe_id=probe_id,
+            probe_execution_id=execution_id,
+            run_id=run_id,
+            diagnosis_id=diagnosis_id,
+            workspace_id=workspace_id,
+            probe_status=result.status,
+            observed_at=observed_at,
+            captured_at=collected_at,
+            evidence_refs=evidence_ids,
+            failure_reason="" if result.status == "SUCCEEDED" else result.reason,
+            duration_ms=result.duration_ms,
+            cost=definition.estimated_cost,
+            idempotency_key=idempotency_key,
+            run_scope=False,
+            run_ended_at=run_ended_at,
+        )
         if result.status == "SUCCEEDED":
             evd_id = new_id("evd")
             try:
@@ -308,12 +345,17 @@ class ProbeService:
                         "run_id": run_id,
                         "diagnosis_id": diagnosis_id,
                         "workspace_id": workspace_id,
-                        "observed_at": result.observed_at or collected_at,
-                        "observed_at_iso": _iso(result.observed_at or collected_at),
+                        "observed_at": observed_at,
+                        "observed_at_iso": _iso(observed_at),
                         "collected_at": collected_at,
                         "collected_at_iso": _iso(collected_at),
                         "ingested_at": ingested_at,
                         "budget_scope": b.scope_key,
+                        # RUN-018 WP5 §5.2 探针证据契约（与 probe_execution 文档同构）
+                        "probe_evidence_contract": {
+                            **contract,
+                            "evidence_refs": [evd_id],
+                        },
                     },
                     source_trust="TRUSTED",
                     do_redact=True,
@@ -322,6 +364,7 @@ class ProbeService:
                 evidence_ids.append(evd_id)
             except Exception as exc:  # noqa: BLE001
                 logger.warning("probe_evidence_failed", error=str(exc))
+        contract["evidence_refs"] = list(evidence_ids)
 
         doc = {
             "execution_id": execution_id,
@@ -340,10 +383,23 @@ class ProbeService:
             "duration_ms": result.duration_ms,
             "budget_scope": b.scope_key,
             "budget": b.snapshot(),
-            "observed_at": result.observed_at or collected_at,
+            "observed_at": observed_at,
             "collected_at": collected_at,
             "ingested_at": ingested_at,
             "executed_at": ingested_at,
+            # RUN-018 WP5 §5.2 探针证据契约字段（别名与新增字段，向后兼容）
+            "probe_execution_id": execution_id,
+            "probe_status": result.status,
+            "captured_at": _iso(collected_at),
+            "source_type": "probe",
+            "source_trust": contract["source_trust"],
+            "time_alignment": contract["time_alignment"],
+            "raw_result_ref": contract["raw_result_ref"],
+            "failure_reason": contract["failure_reason"],
+            "cost": contract["cost"],
+            "idempotency_key": idempotency_key,
+            "contract": contract,
+            "params_hash": canonical_params_hash(params),
         }
         self.rt.docs.put(
             doc_id=execution_id,
@@ -354,6 +410,45 @@ class ProbeService:
             status=result.status,
         )
         return doc
+
+    # ------------------------------------------------------- idempotent replay
+    def _find_idempotent_execution(
+        self,
+        probe_id: str,
+        idempotency_key: str,
+        *,
+        run_id: str | None,
+        diagnosis_id: str | None,
+    ) -> dict[str, Any] | None:
+        """同一 (probe_id, run_id, diagnosis_id, idempotency_key) 的已有执行记录。"""
+        recs = self.rt.docs.list(kind="probe_execution", ref_id=run_id, limit=200)
+        for rec in recs:
+            doc = rec.doc or {}
+            if (
+                doc.get("idempotency_key") == idempotency_key
+                and doc.get("probe_id") == probe_id
+                and doc.get("run_id") == run_id
+                and doc.get("diagnosis_id") == diagnosis_id
+            ):
+                return dict(doc)
+        return None
+
+    def _run_ended_at(self, run_id: str | None) -> float | None:
+        """Run 结束时刻（epoch 秒）；未知返回 None（时间对齐三态判 UNKNOWN）。"""
+        if not run_id:
+            return None
+        run = self.rt.tasks.get_run(run_id) or {}
+        ended = run.get("ended_at")
+        if ended in (None, "", 0):
+            return None
+        if isinstance(ended, (int, float)):
+            return float(ended)
+        from datetime import datetime
+
+        try:
+            return datetime.fromisoformat(str(ended).replace("Z", "+00:00")).timestamp()
+        except ValueError:
+            return None
 
     # ------------------------------------------------------------- suggestions
     def suggest(self, run_id: str, diagnosis_id: str | None = None) -> list[dict[str, Any]]:
@@ -525,9 +620,13 @@ class ProbeService:
                 "info_gain": gap["info_gain"],
                 "score": score,
                 "status": result_doc["status"],
+                "probe_status": result_doc.get("probe_status", result_doc["status"]),
                 "reason": result_doc.get("reason") or "",
                 "evidence_ids": result_doc.get("evidence_refs") or [],
                 "duration_ms": result_doc.get("duration_ms", 0),
+                "cost": result_doc.get("cost", 0.0),
+                "time_alignment": result_doc.get("time_alignment", ""),
+                "idempotency_key": result_doc.get("idempotency_key", ""),
                 "execution_id": result_doc["execution_id"],
                 "budget": result_doc["budget"],
                 "applied_to_diagnosis": False,
@@ -576,8 +675,9 @@ class ProbeService:
             if result_doc["status"] == "BLOCKED":
                 stop_reason, stop_detail = _blocked_stop(result_doc.get("reason") or "")
                 break
-            # 探针自身失败/超时：保留失败事实，但绝不当作目标系统故障证据
-            if result_doc["status"] in {"FAILED", "TIMED_OUT"}:
+            # 探针自身失败/超时/不可用（UNKNOWN）：保留失败事实，
+            # 但绝不当作目标系统故障证据（RUN-018 WP5 §5.3）
+            if result_doc["status"] in {"FAILED", "TIMED_OUT", "UNKNOWN"}:
                 continue
         else:
             stop_reason, stop_detail = "STOP_ITERATION_LIMIT", f"达到最大迭代 {max_iterations}"
@@ -891,6 +991,12 @@ class ProbeService:
                 data = json.loads(resp.read().decode())
         except TimeoutError as exc:
             raise TimeoutError("TEAMFLOW_STATE_QUERY_TIMEOUT") from exc
+        except urllib.error.HTTPError as exc:
+            # RUN-018 WP5 §5.4 场景 E：状态服务 502/503/504 = 探针不可用/无法判定，
+            # 记为 UNKNOWN（零证据），不冒充目标系统故障（也不是探针自身 FAIL）。
+            if exc.code in (502, 503, 504):
+                raise ProbeUnavailable(f"PROBE_TARGET_UNAVAILABLE: HTTP {exc.code}") from exc
+            raise ConnectionError(f"TEAMFLOW_STATE_QUERY_FAILED: HTTP {exc.code}") from exc
         except urllib.error.URLError as exc:
             raise ConnectionError(f"TEAMFLOW_STATE_QUERY_FAILED: {exc.reason}") from exc
         return {"template": template, "response": data}

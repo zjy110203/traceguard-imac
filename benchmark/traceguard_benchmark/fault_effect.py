@@ -23,6 +23,11 @@ RUN-016 版本的分类缺陷（本轮修复）：
 - 基线健康且观测到业务正常 → `NOT_TRIGGERED`
 - 缺基线 / 基线不健康 / 结果不确定 / 清理失败 → `UNKNOWN`
 
+状态读取三态（RUN-018 WP2）：只有**有效权威读取**（HTTP 200 + ok=true + 合法响应结构）
+才能证明记录存在（PRESENT）/ 不存在（ABSENT）；403 / 5xx / 超时 / 连接失败 /
+非法 JSON / 缺少必要字段一律 UNKNOWN——读取不可用绝不能被当作"数据不存在"的证据，
+也不得据此判 ACCEPTED_NOT_PERSISTED / STALE_READ。
+
 `UNKNOWN` 不构成 False Pass 证据，也不允许用 Run verdict 补洞。
 """
 
@@ -50,6 +55,10 @@ PROBE_NAME_TAG = "bp"
 
 #: 状态滞后探针的工程参考阈值（不是产品 SLA，不得对外宣称）
 STATE_LAG_REFERENCE_MS = 1500.0
+
+#: state_consistency 探针"写入后立即不可见 → 等待最终一致"的复测窗口（秒）。
+#: TF-DB-004 的强滞后是 9000ms，窗口必须显著大于它。
+STATE_CONSISTENCY_RETEST_S = 12.0
 
 
 class EffectStatus(str, Enum):
@@ -1254,7 +1263,7 @@ def _probe_state_consistency(
     waited_s = 0.0
     if eventual_present is None:
         started_wait = time.time()
-        deadline = started_wait + 12.0
+        deadline = started_wait + STATE_CONSISTENCY_RETEST_S
         saw_valid_absent = False
         while time.time() < deadline:
             time.sleep(0.5)
