@@ -1,7 +1,7 @@
 # TraceGuard 持续开发任务台账
 
-> **RUN-015 台账（2026-11-26，执行中；历史条目保留）**：分支 `workbuddy/run015-execution-consistency`，
-> 基线 `438c54a`，代码 HEAD `3fc9154`（WP6 收口，后续提交继续追加）。
+> **RUN-015 台账（2026-11-26，收口；历史条目保留）**：分支 `workbuddy/run015-execution-consistency`，
+> 基线 `438c54a`；最终权威结论见 `docs/RUN-015-FINAL-REPORT.md`。
 >
 > | 编号 | 任务 | 状态 | 证据 / 交付 |
 > |---|---|---|---|
@@ -9,10 +9,11 @@
 > | R15-01 | WP1 Fencing 最终一致性 | PASS | `RUN-015-WP1-FENCING.md`；SQLite 10 + PG16 6；submit_result 原子守卫、事件全 fence、锁后 DB 时钟 |
 > | R15-02 | WP2 Regression 幂等与时效 | PASS | `RUN-015-WP2-REGRESSION.md`；10 并发单 Run、读取时 stale 重算；重试策略 NEEDS_DECISION |
 > | R15-03 | WP3 SSE 间隔上限 | PASS | `RUN-015-WP3-SSE-SECURITY.md`；上限 10s、NaN/Infinity 回落、撤权 7 项专项 |
-> | R15-04 | WP4 CI 覆盖 | PASS（配置）/ 待最终 HEAD 真实 run | `RUN-015-WP4-CI.md`；PR Gate 纳入 6 个专项，PG16 fencing 进 Nightly |
-> | R15-05 | WP5 PG16 长稳 | 进行中 | `docs/assets/run015/wp5/soak/`；3 独立 Worker、60 分钟、DB `traceguard_run015_soak`；完成前不标 PASS |
+> | R15-04 | WP4 CI 覆盖 | PASS（配置）/ CI run 见最终报告 | `RUN-015-WP4-CI.md`；PR Gate 纳入 6 个专项，PG16 fencing 进 Nightly |
+> | R15-05 | WP5 PG16 长稳 / 全链路 | PASS | `RUN-015-WP5-PG16-SOAK.md`；复验 59.71 分钟 / 115 Run / 31 PASS / 0 FAIL；全链路 40/40 |
 > | R15-06 | WP6 Benchmark 证据 | PARTIAL（如实） | `RUN-015-WP6-BENCHMARK.md`；故障状态字段 + 归档 SHA 冻结；23×2 新一轮 NOT_RUN（不与长稳并行） |
-> | R15-07 | WP7 文档 / 台账 / 恢复状态 | 进行中 | 本台账 + `RUN-015-WORKLOG.md` + `RUN-015-FINAL-REPORT.md` + `.workbuddy-run/*` |
+> | R15-07 | WP7 文档 / 台账 / 恢复状态 | PASS | 本台账 + `RUN-015-WORKLOG.md` + `RUN-015-FINAL-REPORT.md` + `.workbuddy-run/*` |
+> | R15-08 | 全量质量门禁 | PASS | 828 passed / 16 skipped；Ruff / vue-tsc / vite build 通过 |
 >
 > 仍 BLOCKED / NOT_RUN / NEEDS_DECISION：B-17、宿主级隔离、真实人工基线、LLM 四臂、Release Gate、
 > Benchmark 新一轮、INCONCLUSIVE 重试策略、LICENSE、PR #1/#2 集成策略。

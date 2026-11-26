@@ -1,9 +1,8 @@
 # TraceGuard 阶段与里程碑验收状态（RUN-015 更新，2026-11-26）
 
-> RUN-015（基线 `438c54a`）：WP0~WP4、WP6 已交付；WP5 60 分钟 PG16 长稳运行中；
-> WP7 收口中。Fencing / Regression / SSE 专项与 CI 配置已完成；
-> Benchmark False Pass 仍 PARTIAL，INCONCLUSIVE 重试 NEEDS_DECISION。
-> 以 `docs/RUN-015-FINAL-REPORT.md`（收口后）为权威，以下历史表格保留。
+> RUN-015（基线 `438c54a`）：WP0~WP7 已交付。Fencing / Regression / SSE 专项、CI 配置、
+> PG16 长稳与全链路均完成；Benchmark False Pass 仍 PARTIAL，INCONCLUSIVE 重试 NEEDS_DECISION。
+> 以 `docs/RUN-015-FINAL-REPORT.md` 为权威，以下历史表格保留。
 
 ---
 

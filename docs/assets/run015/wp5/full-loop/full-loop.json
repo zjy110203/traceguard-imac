@@ -1,0 +1,302 @@
+{
+  "workpackage": "RUN-014 WP4",
+  "engine": "Playwright Chromium + real API(auth+CSRF) + real TeamFlow + 2 independent Workers",
+  "deployment": {
+    "inline_worker": false,
+    "independent_workers": 2,
+    "database": "postgresql+psycopg",
+    "teamflow_database": "sqlite"
+  },
+  "lineage": {
+    "intent_id": "intent_179568068111679d7e8d23218",
+    "exploration_id": "exploration_17956806831198a77bf48bf29",
+    "testcase_id": "tcase_1795680685530ab4e63a595b8",
+    "testcase_version": 1,
+    "oracle_id": "oracle_r14_cand_a_create_ui",
+    "replay_id": "replay_1795680685779ec54402d6e86",
+    "run_id": "run_17956806939596cd93a67d5c9",
+    "diagnosis_id": "diagnosis_1795680699299bb5eaa73637f",
+    "probe_execution_id": "probeexec_1795680702853ceb2206dbe3b",
+    "repair_proposal_id": "repair_179568070288928072653ab89",
+    "sandbox_run_id": "run_1795680704285cac80d550991",
+    "promotion_receipt": {
+      "idempotency_key": "promo-repair_179568070288928072653ab89",
+      "target_version": 2,
+      "operator": "system:promotion",
+      "check": "CAS_OK",
+      "atomic": true,
+      "receipt_recovered": false,
+      "at": "2026-11-26T08:11:55.443833Z"
+    },
+    "regression_run_id": "run_17956807194028726361f8905",
+    "rollback_receipt": {
+      "target_version": "tcase_1795680685530ab4e63a595b8:v2",
+      "restored_version": 3,
+      "operator": "user:r14-admin",
+      "reason": "控制台回滚",
+      "receipt_recovered": false,
+      "at": "2026-11-26T08:12:04.884439Z"
+    },
+    "regression_run_id_failed": "run_17956807295608a811648b8b4"
+  },
+  "total": 40,
+  "passed": 40,
+  "failed": 0,
+  "screenshots": [
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run015/wp5/full-loop/01-intent.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run015/wp5/full-loop/02-exploration.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run015/wp5/full-loop/03-compiled-candidate.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run015/wp5/full-loop/04-oracle-bound.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run015/wp5/full-loop/05-stability-replay.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run015/wp5/full-loop/06-approved.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run015/wp5/full-loop/07-run-passed.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run015/wp5/full-loop/08-diagnosis.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run015/wp5/full-loop/09-sandbox.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run015/wp5/full-loop/10-promoted.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run015/wp5/full-loop/11-regression-passed.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run015/wp5/full-loop/12-rolled-back.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run015/wp5/full-loop/13-negative-regression-rollback.png"
+  ],
+  "results": [
+    {
+      "check": "环境：真实 TeamFlow 可启动",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "http://127.0.0.1:49967"
+    },
+    {
+      "check": "环境：真实 API 可启动",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "http://127.0.0.1:49966"
+    },
+    {
+      "check": "环境：2 个独立 Worker 进程（API 内嵌 Worker 关闭）",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "r14-w1:40965, r14-w2:40966"
+    },
+    {
+      "check": "环境：三角色登录（身份来自服务端会话）",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "['qa-engineer']/['qa-lead']"
+    },
+    {
+      "check": "① UI 创建 Intent → 服务端真实落库",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "匹配 1 条"
+    },
+    {
+      "check": "② Explorer 真实探索 → 轨迹落库（动作序列 + 网关决策）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "exploration_id=exploration_17956806831198a77bf48bf29 actions=3 engine=rule-based-v1 stop=目标完成"
+    },
+    {
+      "check": "③ 每个动作都经目标策略网关放行（无越权/静默跳过）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "audit=3 tools=['navigate', 'fill', 'click']"
+    },
+    {
+      "check": "④ 轨迹可回读且归属同一 Intent",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "intent_ref=intent_179568068111679d7e8d23218"
+    },
+    {
+      "check": "⑤ Explorer 页面可查看真实轨迹（服务端数据渲染）",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "cards=0 text_len=994 has_id=True"
+    },
+    {
+      "check": "⑥ Compiler 产出 TestCase 候选（PENDING，需人工审核）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "testcase=tcase_1795680685530ab4e63a595b8 v1 status=PENDING compiler=compiler-v1 llm={'mode': 'rule_only', 'called': False, 'fallback': False}"
+    },
+    {
+      "check": "⑥a 编译告警如实保留（不把 UI 行为当成持久化已验证）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "warnings=['NO_BUSINESS_STATE_API: 只能验证 UI 行为，不能宣称持久化已验证']"
+    },
+    {
+      "check": "⑦ 候选版本断言完整且来源可追溯（intent_ref 指向同一 Intent）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "assertions=1 intent_ref=intent_179568068111679d7e8d23218"
+    },
+    {
+      "check": "⑧ 全断言绑定已审批 Oracle（服务端门禁依据）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "bindings=['cand_a_create_ui'] oracles=1"
+    },
+    {
+      "check": "⑨ 未完成 Stability Replay 时审核被服务端门禁拒绝（未绕过）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "detail={\"detail\": {\"code\": \"PRECONDITION_FAILED\", \"message\": \"STABILITY_REPLAY_GATE_FAILED: STABILITY_REPLAY_REQUIRED: tcase_1795680685530ab4e63a595b8@1 没有任何稳定性回放记录（co"
+    },
+    {
+      "check": "⑩ Stability Replay 真实执行多轮并给出结论",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "replay=replay_1795680685779ec54402d6e86 status=COMPLETED records=3 conclusion=STABLE_PASS"
+    },
+    {
+      "check": "⑪ 回放结论来自真实 Run（记录数=重复次数且可晋升）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "records=3 promotable=True"
+    },
+    {
+      "check": "⑫ UI 人工审核 → APPROVED（Oracle 门禁 + 回放门禁真实通过）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=APPROVED"
+    },
+    {
+      "check": "⑬ 审核通过时固定 Oracle 版本（执行端不得静默用最新版）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "pinned={'cand_a_create_ui': 1}"
+    },
+    {
+      "check": "⑬ 正向 Run 由独立 Worker 执行到终态并通过",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=COMPLETED verdict=PASSED observer=playwright owner=r14-w2 fencing=1"
+    },
+    {
+      "check": "⑭ Run 产出真实步骤与证据",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "steps=4 evidence=15"
+    },
+    {
+      "check": "⑮ 注入真实故障后 Run FAILED（verdict=FAILED）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=COMPLETED verdict=FAILED"
+    },
+    {
+      "check": "⑯ UI 诊断 → 服务端生成 Diagnosis（挂在同一 Run 上）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "diagnosis=diagnosis_1795680699299bb5eaa73637f count=1"
+    },
+    {
+      "check": "⑰a 真实探针执行 → SUCCEEDED 并产生证据",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "probe=http_state status=SUCCEEDED evidence=1 execution=probeexec_1795680702853ceb2206dbe3b"
+    },
+    {
+      "check": "⑰ Active Probe 计划真实执行（有执行记录，或诊断已确认而合法停止）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "plan=probeplan_1795680702863817fc1e9572b executions=0 stop=STOP_CONFIRMED"
+    },
+    {
+      "check": "⑰b 探针证据回灌后再诊断可回读（假设/证据计数真实变化）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "hypotheses=1 evidence_refs=3 outcome=CONFIRMED"
+    },
+    {
+      "check": "⑱ 证据回灌后再诊断（同一 Run 的诊断可回读）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "diagnoses=1"
+    },
+    {
+      "check": "⑲ 修复提案携带真实 Diagnosis/Run 血缘并通过规则校验",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=VALIDATED diag=diagnosis_1795680699299bb5eaa73637f source_run=run_17956806971002c48d418923a"
+    },
+    {
+      "check": "⑳ UI 沙箱真实执行 → 服务端 PASSED",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "sandbox_run=run_1795680704285cac80d550991 verdict=PASSED"
+    },
+    {
+      "check": "㉑ UI 提交审批 → PENDING_APPROVAL（沙箱未过不得提交）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=PENDING_APPROVAL"
+    },
+    {
+      "check": "㉒ UI 人工审批 → APPROVED（Agent 不能自批）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=APPROVED"
+    },
+    {
+      "check": "㉓ UI 晋升 → PROMOTED 且拿到有效新版本号",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=PROMOTED v2 check=CAS_OK"
+    },
+    {
+      "check": "㉔ 晋升成功 ≠ 回归完成（Regression 仍为 NOT_STARTED）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "regression_status=NOT_STARTED"
+    },
+    {
+      "check": "㉕ UI 触发回归 → 真实 Regression Run PASSED（版本=v2）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=PASSED verdict=PASSED run=run_17956807194028726361f8905 version=tcase_1795680685530ab4e63a595b8@2"
+    },
+    {
+      "check": "㉖ 回归证据可回读（Run 关联 + evidence 非空）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "evidence=15"
+    },
+    {
+      "check": "㉗ UI 生命周期显示 Promotion + Regression 均已完成（真实服务端状态）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "lifecycle='Proposal\\n→\\nRule Validation\\n→\\nSandbox Run\\n→\\nHuman Approval\\n→\\nPromotion\\n→\\nRegression\\n→\\nRollback'"
+    },
+    {
+      "check": "㉘ UI 人工回滚 → ROLLED_BACK 且回执版本正确、回归结论失效",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=ROLLED_BACK record={'target_version': 'tcase_1795680685530ab4e63a595b8:v2', 'restored_version': 3, 'operator': 'user:r14-admin', 'reason': '控制台回滚', 'receipt_recovered': False, 'at': '2026-11-26T08:12:04.884439Z'} stale=True"
+    },
+    {
+      "check": "㉙ 负向：提案 #2 沙箱真实执行 PASSED",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "sandbox=PASSED"
+    },
+    {
+      "check": "㉚ 负向：晋升后注入真实故障 → 回归 FAILED（不得标记通过）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=FAILED reason=REGRESSION_ASSERTION_FAILED run=run_17956807295608a811648b8b4"
+    },
+    {
+      "check": "㉛ 负向：回归失败后人工回滚 → ROLLED_BACK 且保留证据",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=ROLLED_BACK restored=5"
+    },
+    {
+      "check": "㉜ 负向：未审批 Oracle 存在时审核门禁可被真实回读（不伪造通过）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "unapproved=oracle_r14_unapproved_1795680735 gate_keys=['testcase_id', 'version', 'satisfied', 'problems', 'evidence']"
+    }
+  ]
+}

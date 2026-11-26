@@ -77,7 +77,7 @@ A 恢复 → 旧 ORM 对象被 flush → B 的 verdict/report 被覆盖
 |---|---|---|
 | `pytest tests/integration/test_worker_fencing_run015.py tests/integration/test_worker_fencing_run014.py -q` | **10 passed** | `docs/assets/run015/wp1/fencing-sqlite-raw.txt` |
 | `pytest tests/integration/test_fencing_pg_run015.py -v`（PG16.16） | **6 passed** | `docs/assets/run015/wp1/fencing-pg16-raw.txt` |
-| `pytest tests/unit ... test_full_pipeline.py test_api_flow.py test_sandbox_worker_queue.py test_repair_regression_run014.py -q` | **409 passed** | 本轮终端记录（WP9 全量复跑） |
+| `pytest -q`（全量最终复跑） | **828 passed / 16 skipped** | `docs/assets/run015/final/full-pytest-raw.txt` |
 
 新增测试内容：
 

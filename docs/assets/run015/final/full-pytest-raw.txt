@@ -1,0 +1,60 @@
+........................................................................ [  8%]
+........................................................................ [ 17%]
+........................................................................ [ 25%]
+..................................................ssssssssssssssss...... [ 34%]
+........................................................................ [ 42%]
+........................................................................ [ 51%]
+........................................................................ [ 59%]
+........................................................................ [ 68%]
+........................................................................ [ 76%]
+........................................................................ [ 85%]
+........................................................................ [ 93%]
+....................................................                     [100%]
+=============================== warnings summary ===============================
+packages/contracts/traceguard_contracts/models.py:69
+  /Users/dlp--test/Desktop/traceguard/packages/contracts/traceguard_contracts/models.py:69: PytestCollectionWarning: cannot collect test class 'TestCaseVersion' because it has a __init__ constructor (from: tests/integration/test_oracle_binding_gate.py)
+    class TestCaseVersion(ContractBase):
+
+packages/contracts/traceguard_contracts/models.py:69
+  /Users/dlp--test/Desktop/traceguard/packages/contracts/traceguard_contracts/models.py:69: PytestCollectionWarning: cannot collect test class 'TestCaseVersion' because it has a __init__ constructor (from: tests/unit/test_diagnosis_rules.py)
+    class TestCaseVersion(ContractBase):
+
+packages/contracts/traceguard_contracts/models.py:50
+  /Users/dlp--test/Desktop/traceguard/packages/contracts/traceguard_contracts/models.py:50: PytestCollectionWarning: cannot collect test class 'TestStep' because it has a __init__ constructor (from: tests/unit/test_diagnosis_rules.py)
+    class TestStep(ContractBase):
+
+tests/integration/test_sse_revocation_and_global_rbac_run014.py: 11 warnings
+  /Users/dlp--test/Desktop/traceguard/.venv/lib/python3.13/site-packages/starlette/testclient.py:518: DeprecationWarning: Setting per-request cookies=<...> is being deprecated, because the expected behaviour on cookie persistence is ambiguous. Set cookies directly on the client instance instead.
+    return super().request(
+
+tests/unit/test_event_concurrency.py::test_multiprocess_sequence_allocation_is_unique
+tests/unit/test_event_concurrency.py::test_multiprocess_sequence_allocation_is_unique
+tests/unit/test_event_concurrency.py::test_multiprocess_sequence_allocation_is_unique
+tests/unit/test_event_concurrency.py::test_multiprocess_sequence_allocation_is_unique
+tests/unit/test_event_concurrency.py::test_concurrent_duplicate_delivery_returns_same_event
+tests/unit/test_event_concurrency.py::test_concurrent_duplicate_delivery_returns_same_event
+tests/unit/test_event_concurrency.py::test_concurrent_duplicate_delivery_returns_same_event
+tests/unit/test_event_concurrency.py::test_concurrent_duplicate_delivery_returns_same_event
+  /Users/dlp--test/.workbuddy/binaries/python/versions/3.13.12/lib/python3.13/multiprocessing/popen_fork.py:67: DeprecationWarning: This process (pid=42124) is multi-threaded, use of fork() may lead to deadlocks in the child.
+    self.pid = os.fork()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [1] tests/integration/test_postgres_parity.py:40: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_parity.py:72: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_parity.py:90: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_parity.py:118: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_parity.py:128: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_platform.py:109: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_platform.py:157: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_platform.py:189: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_platform.py:218: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_platform.py:292: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_platform.py:359: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_platform.py:396: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_platform.py:484: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_workspace_run012.py:74: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_workspace_run012.py:102: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_workspace_run012.py:119: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+828 passed, 16 skipped, 22 warnings in 124.69s (0:02:04)
+EXIT=0

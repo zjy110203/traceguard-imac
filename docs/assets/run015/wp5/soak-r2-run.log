@@ -1,0 +1,35 @@
+[PASS] 环境：API 独立进程可启动 — http://127.0.0.1:55864
+[PASS] 环境：认证与三个角色就绪 — admin/lead/engineer
+[PASS] 环境：API 不启动内嵌 Worker — worker={'id': '204deiMac.local-84990', 'inline': False}
+[PASS] 环境：选定已审核真实用例 — tcase_bench_normal2
+[PASS] 故障计划：触发 graceful — cycle=7
+[PASS] 故障：Worker-2 正常退出（SIGTERM） — exit=0
+[PASS] 故障计划：触发 kill_w1 — cycle=16
+[NOTE] 故障：r13-soak-w1 强杀 — 未在 60s 内观察到该 Worker 持租约，跳过强杀
+[PASS] 故障计划：触发 pause_w1 — cycle=28
+[PASS] 故障：r13-soak-w1 暂停→租约过期→存活 Worker 接管 — run=run_179567792544216293618eb92 owner=r13-soak-w2 fencing=2
+[PASS] 故障：r13-soak-w1 恢复后不覆盖终态/不追加证据 — status=COMPLETED evidence=25->25
+[PASS] 故障计划：触发 api_restart — cycle=42
+[PASS] 故障：API 重启期间 Worker 继续消费，重启后可回读终态 — run=run_179567836280157ed05310f4c status=COMPLETED
+[PASS] 故障计划：触发 db_reconnect — cycle=56
+[PASS] 故障：数据库连接被中断后恢复（API + Worker 继续） — run=run_1795678787914773f2190ba8f status=COMPLETED
+[PASS] 故障计划：触发 sse — cycle=70
+[PASS] 故障：SSE 断开后可用游标续传（不重复已读事件） — run=run_1795679216143fcddc3aeec40 cursor=True resumed=True
+[PASS] 故障计划：触发 kill_w2 — cycle=85
+[NOTE] 故障：r13-soak-w2 强杀 — 未在 60s 内观察到该 Worker 持租约，跳过强杀
+[PASS] 故障计划：触发 graceful_all — cycle=97
+[PASS] 故障：全部 Worker 重启后恢复消费 — w1/w2 restarted
+[PASS] 长稳：运行时长达到要求 — 59.71 / 60.0 分钟
+[PASS] 长稳：真实 Run 周期数 ≥ 100 — runs=115
+[PASS] 长稳：所有 Run 到达终态 — terminal=115/115
+[PASS] 长稳：无状态倒退 / 无重复业务结果 — terminal 后不再出现非终态
+[PASS] 数据库：无重复步骤 — duplicates=0
+[PASS] 数据库：无孤儿步骤 — orphan=0
+[PASS] 数据库：无孤儿证据 — orphan=0
+[PASS] 数据库：终态 Run 无残留租约 — stale=0
+[PASS] 数据库：每个 Run 至多一份提交回执 — dup=0
+[PASS] 数据库：完成 Run 均有证据 — missing=0
+[PASS] 数据库：事件序号无重复 — dup=0
+[PASS] 数据库：活跃 Worker 数 ≥ 3 — active=3
+[out] /Users/dlp--test/Desktop/traceguard/docs/assets/run015/wp5/soak-r2/soak-60min.json runs=115 checks_pass=31 checks_fail=0 minutes=59.7
+EXIT=0

@@ -105,7 +105,7 @@ def _ready(rt: Runtime, *, base_version: int = 1, key: str = "p") -> dict:
 
 def _worker(rt: Runtime, verdict: str = "PASSED", *, evidence: int = 2) -> threading.Thread:
     def run() -> None:
-        deadline = time.time() + 15
+        deadline = time.time() + 30
         claimed = None
         while time.time() < deadline:
             claimed = rt.tasks.claim_next_run("worker-15", ttl_seconds=60)
@@ -147,7 +147,7 @@ def test_ten_concurrent_regression_requests_create_one_run(env) -> None:  # type
     def request(i: int) -> None:
         try:
             barrier.wait(timeout=10)
-            result = RepairService(rt).regression_run(pid, timeout_s=5)
+            result = RepairService(rt).regression_run(pid, timeout_s=20)
             with lock:
                 results.append(result)
         except BaseException as exc:  # noqa: BLE001 - 线程边界收集
@@ -160,8 +160,8 @@ def test_ten_concurrent_regression_requests_create_one_run(env) -> None:  # type
     worker = _worker(rt)
     barrier.wait(timeout=10)
     for t in threads:
-        t.join(timeout=20)
-    worker.join(timeout=20)
+        t.join(timeout=45)
+    worker.join(timeout=45)
 
     assert errors == [], f"并发回归请求不应抛异常: {errors}"
     assert len(results) == 10

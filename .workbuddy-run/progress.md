@@ -6,10 +6,11 @@
 | WP1 | Fencing 最终一致性 | ✅ | 10 SQLite + 6 PG16 专项；原子 submit、事件全 fence、锁后 DB 时钟 |
 | WP2 | Regression 幂等与时效 | ✅ | 10 并发单 Run、CAS 收敛、读取时 stale；重试 NEEDS_DECISION |
 | WP3 | SSE 间隔上限 | ✅ | 7 专项 + 20 项 SSE/RBAC 影响面；上限 10s |
-| WP4 | CI 覆盖 | ✅（配置）/ 待真实 run | PR Gate + Nightly 配置；本地快检 114 passed |
-| WP5 | PG16 60 分钟长稳 | 🔄 进行中 | 3 独立 Worker，DB `traceguard_run015_soak`，日志 `docs/assets/run015/wp5/soak-run.log` |
+| WP4 | CI 覆盖 | ✅ 配置 / run 见最终报告 | PR Gate + Nightly 配置；本地快检 114 passed |
+| WP5 | PG16 60 分钟长稳 / 全链路 | ✅ | 复验 59.71 分钟 / 115 Run / 31 PASS / 0 FAIL；全链路 40/40 |
 | WP6 | Benchmark 证据 | ⚠️ PARTIAL | 脚本字段增强 + 历史 SHA 冻结；23×2 新一轮 NOT_RUN |
-| WP7 | 文档 / 台账 / 恢复状态 | 🔄 进行中 | 本文件与台账、WORKLOG、FINAL-REPORT 待收口 |
+| WP7 | 文档 / 台账 / 恢复状态 | ✅ | FINAL-REPORT / WORKLOG / 台账 / 本目录状态已收口 |
+| 最终门禁 | 全量 / Ruff / Build | ✅ | 828 passed / 16 skipped；Ruff 235 文件；vue-tsc + vite build |
 
 ---
 

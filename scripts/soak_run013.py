@@ -186,16 +186,16 @@ def _fault_kill_worker(
     deadline = time.time() + lease_ttl + 90
     while time.time() < deadline:
         doc = _run_doc(api, run_id)
-        if (
-            str(doc.get("lease_owner") or "").startswith(replacement)
-            and int(doc.get("fencing_token") or 0) > token
-        ):
+        owner = str(doc.get("lease_owner") or "")
+        # RUN-015 WP5：合法接管者可以是任一存活 Worker，不强制等于本轮补位的进程名。
+        # 判定仍要求 owner 改变且 fencing_token 严格递增，避免把原 Worker 误判成接管。
+        if owner and not owner.startswith(victim) and int(doc.get("fencing_token") or 0) > token:
             takeover = doc
             break
         time.sleep(0.5)
     final = _wait_terminal_local(api, run_id, [])
     rep.check(
-        f"故障：{victim} 执行中被 SIGKILL，{replacement} 租约接管并执行到终态",
+        f"故障：{victim} 执行中被 SIGKILL，存活 Worker 租约接管并执行到终态",
         bool(takeover) and str(final.get("execution_status")) in TERMINAL,
         f"run={run_id} after_kill={after.get('execution_status')} "
         f"owner={(takeover or {}).get('lease_owner')} "
@@ -217,8 +217,9 @@ def _fault_pause_worker(
 ) -> dict[str, Any]:
     run_id, _ = _execute(api, tc_id)
     claimed = None
-    deadline = time.time() + 60
-    while time.time() < deadline:
+    attempted = [run_id]
+    deadline = time.time() + 180
+    while time.time() < deadline and claimed is None:
         doc = _run_doc(api, run_id)
         if str(doc.get("lease_owner") or "").startswith(victim) and doc.get("execution_status") in {
             "PREPARING",
@@ -226,9 +227,17 @@ def _fault_pause_worker(
         }:
             claimed = doc
             break
+        if str(doc.get("execution_status")) in TERMINAL:
+            _wait_terminal_local(api, run_id, [], timeout_s=120)
+            run_id, _ = _execute(api, tc_id)
+            attempted.append(run_id)
+            continue
         time.sleep(0.2)
     if not claimed:
-        rep.note(f"故障：{victim} 暂停接管", "未在 60s 内观察到该 Worker 持有运行中租约")
+        rep.note(
+            f"故障：{victim} 暂停接管",
+            f"未在 180s 内观察到该 Worker 持有运行中租约（尝试 {len(attempted)} 个 Run）",
+        )
         return {"run_id": run_id, "skipped": True}
     token = int(claimed.get("fencing_token") or 0)
     fleet.send(victim, signal.SIGSTOP)
@@ -238,10 +247,9 @@ def _fault_pause_worker(
     deadline = time.time() + lease_ttl + 90
     while time.time() < deadline:
         doc = _run_doc(api, run_id)
-        if (
-            str(doc.get("lease_owner") or "").startswith(replacement)
-            and int(doc.get("fencing_token") or 0) > token
-        ):
+        owner = str(doc.get("lease_owner") or "")
+        # RUN-015 WP5：暂停的旧 Worker 不得复活；由任一存活 Worker 接管即满足故障契约。
+        if owner and not owner.startswith(victim) and int(doc.get("fencing_token") or 0) > token:
             takeover = doc
             break
         time.sleep(0.5)
@@ -252,9 +260,10 @@ def _fault_pause_worker(
     after = _run_doc(api, run_id)
     after_evi = len(api.get(f"/api/v1/runs/{run_id}/evidence") or [])
     rep.check(
-        f"故障：{victim} 暂停→租约过期→{replacement} 接管",
+        f"故障：{victim} 暂停→租约过期→存活 Worker 接管",
         bool(takeover) and str(final.get("execution_status")) in TERMINAL,
-        f"run={run_id} fencing={(takeover or {}).get('fencing_token')}",
+        f"run={run_id} owner={(takeover or {}).get('lease_owner')} "
+        f"fencing={(takeover or {}).get('fencing_token')}",
         server_verified=True,
     )
     rep.check(

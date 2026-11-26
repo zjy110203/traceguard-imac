@@ -16,11 +16,15 @@
 
 用法：
     .venv/bin/python scripts/full_loop_run014.py
+    .venv/bin/python scripts/full_loop_run014.py \
+      --out docs/assets/run015/wp5/full-loop \
+      --db-url 'postgresql+psycopg://traceguard@127.0.0.1:55432/traceguard_run015_full_loop'
 退出码：0 全通过；1 有失败；3 环境不可达。
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import subprocess
 import sys
@@ -86,6 +90,21 @@ def _poll(fn: Any, timeout_s: float, interval: float = 1.5) -> dict[str, Any]:
 
 
 def main() -> int:
+    global OUT
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--out", default="docs/assets/run014/wp4")
+    ap.add_argument(
+        "--db-url",
+        default="",
+        help="可选：外部数据库 DSN（如 PostgreSQL 16）；为空时沿用 RUN-014 SQLite 行为",
+    )
+    ap.add_argument(
+        "--tf-db-url",
+        default="",
+        help="可选：TeamFlow 独立数据库 DSN；为空时沿用 RUN-014 SQLite 行为",
+    )
+    args = ap.parse_args()
+    OUT = (ROOT / args.out).resolve()
     OUT.mkdir(parents=True, exist_ok=True)
     rep = Reporter(OUT)
     api_port = _free_port()
@@ -97,10 +116,9 @@ def main() -> int:
     for f in (db_file, tf_db_file):
         if f.exists():
             f.unlink()
-    db = f"sqlite:///{db_file}"
-    env = _child_env(
-        db, api_port, teamflow_port, f"sqlite:///{tf_db_file}", inline_worker=False, lease_ttl_s=30
-    )
+    db = args.db_url or f"sqlite:///{db_file}"
+    tf_db = args.tf_db_url or f"sqlite:///{tf_db_file}"
+    env = _child_env(db, api_port, teamflow_port, tf_db, inline_worker=False, lease_ttl_s=30)
     fleet = WorkerFleet(env, OUT, 30)
     api_holder: dict[str, Any] = {"proc": None}
 
@@ -851,7 +869,12 @@ def main() -> int:
     summary = {
         "workpackage": "RUN-014 WP4",
         "engine": "Playwright Chromium + real API(auth+CSRF) + real TeamFlow + 2 independent Workers",
-        "deployment": {"inline_worker": False, "independent_workers": 2, "database": "sqlite"},
+        "deployment": {
+            "inline_worker": False,
+            "independent_workers": 2,
+            "database": db.split("://", 1)[0] if "://" in db else db,
+            "teamflow_database": tf_db.split("://", 1)[0] if "://" in tf_db else tf_db,
+        },
         "lineage": lineage,
         "total": len(rep.results),
         "passed": sum(1 for r in rep.results if r["status"] == "PASS"),

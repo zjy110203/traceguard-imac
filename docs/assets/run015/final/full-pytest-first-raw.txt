@@ -1,0 +1,108 @@
+........................................................................ [  8%]
+........................................................................ [ 17%]
+........................................................................ [ 25%]
+..................................................ssssssssssssssss...... [ 34%]
+...........................................................F............ [ 42%]
+........................................................................ [ 51%]
+........................................................................ [ 59%]
+........................................................................ [ 68%]
+........................................................................ [ 76%]
+........................................................................ [ 85%]
+........................................................................ [ 93%]
+....................................................                     [100%]
+=================================== FAILURES ===================================
+____________ test_ten_concurrent_regression_requests_create_one_run ____________
+
+env = (<traceguard_api.runtime.Runtime object at 0x11b0cc670>, <traceguard_persistence.db.Database object at 0x107419e10>)
+
+    def test_ten_concurrent_regression_requests_create_one_run(env) -> None:  # type: ignore[no-untyped-def]
+        rt, db = env
+        proposal = _ready(rt)
+        pid = proposal["proposal_id"]
+        svc = RepairService(rt)
+        barrier = threading.Barrier(11)
+        results: list[dict] = []
+        errors: list[BaseException] = []
+        lock = threading.Lock()
+    
+        def request(i: int) -> None:
+            try:
+                barrier.wait(timeout=10)
+                result = RepairService(rt).regression_run(pid, timeout_s=5)
+                with lock:
+                    results.append(result)
+            except BaseException as exc:  # noqa: BLE001 - 线程边界收集
+                with lock:
+                    errors.append(exc)
+    
+        threads = [threading.Thread(target=request, args=(i,)) for i in range(10)]
+        for t in threads:
+            t.start()
+        worker = _worker(rt)
+        barrier.wait(timeout=10)
+        for t in threads:
+            t.join(timeout=20)
+        worker.join(timeout=20)
+    
+        assert errors == [], f"并发回归请求不应抛异常: {errors}"
+        assert len(results) == 10
+        run_ids = {r.get("regression_run_id") for r in results}
+        assert len(run_ids) == 1 and None not in run_ids, run_ids
+        only_run = next(iter(run_ids))
+>       assert {r["regression_status"] for r in results} == {"PASSED"}
+E       AssertionError: assert {'PASSED', 'QUEUED'} == {'PASSED'}
+E         
+E         Extra items in the left set:
+E         'QUEUED'
+E         Use -v to get more diff
+
+tests/integration/test_repair_regression_run015.py:171: AssertionError
+=============================== warnings summary ===============================
+packages/contracts/traceguard_contracts/models.py:69
+  /Users/dlp--test/Desktop/traceguard/packages/contracts/traceguard_contracts/models.py:69: PytestCollectionWarning: cannot collect test class 'TestCaseVersion' because it has a __init__ constructor (from: tests/integration/test_oracle_binding_gate.py)
+    class TestCaseVersion(ContractBase):
+
+packages/contracts/traceguard_contracts/models.py:69
+  /Users/dlp--test/Desktop/traceguard/packages/contracts/traceguard_contracts/models.py:69: PytestCollectionWarning: cannot collect test class 'TestCaseVersion' because it has a __init__ constructor (from: tests/unit/test_diagnosis_rules.py)
+    class TestCaseVersion(ContractBase):
+
+packages/contracts/traceguard_contracts/models.py:50
+  /Users/dlp--test/Desktop/traceguard/packages/contracts/traceguard_contracts/models.py:50: PytestCollectionWarning: cannot collect test class 'TestStep' because it has a __init__ constructor (from: tests/unit/test_diagnosis_rules.py)
+    class TestStep(ContractBase):
+
+tests/integration/test_sse_revocation_and_global_rbac_run014.py: 11 warnings
+  /Users/dlp--test/Desktop/traceguard/.venv/lib/python3.13/site-packages/starlette/testclient.py:518: DeprecationWarning: Setting per-request cookies=<...> is being deprecated, because the expected behaviour on cookie persistence is ambiguous. Set cookies directly on the client instance instead.
+    return super().request(
+
+tests/unit/test_event_concurrency.py::test_multiprocess_sequence_allocation_is_unique
+tests/unit/test_event_concurrency.py::test_multiprocess_sequence_allocation_is_unique
+tests/unit/test_event_concurrency.py::test_multiprocess_sequence_allocation_is_unique
+tests/unit/test_event_concurrency.py::test_multiprocess_sequence_allocation_is_unique
+tests/unit/test_event_concurrency.py::test_concurrent_duplicate_delivery_returns_same_event
+tests/unit/test_event_concurrency.py::test_concurrent_duplicate_delivery_returns_same_event
+tests/unit/test_event_concurrency.py::test_concurrent_duplicate_delivery_returns_same_event
+tests/unit/test_event_concurrency.py::test_concurrent_duplicate_delivery_returns_same_event
+  /Users/dlp--test/.workbuddy/binaries/python/versions/3.13.12/lib/python3.13/multiprocessing/popen_fork.py:67: DeprecationWarning: This process (pid=36198) is multi-threaded, use of fork() may lead to deadlocks in the child.
+    self.pid = os.fork()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [1] tests/integration/test_postgres_parity.py:40: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_parity.py:72: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_parity.py:90: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_parity.py:118: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_parity.py:128: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_platform.py:109: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_platform.py:157: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_platform.py:189: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_platform.py:218: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_platform.py:292: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_platform.py:359: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_platform.py:396: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_platform.py:484: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_workspace_run012.py:74: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_workspace_run012.py:102: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+SKIPPED [1] tests/integration/test_postgres_workspace_run012.py:119: TG_TEST_POSTGRES_URL 未配置（本地无 PG）
+FAILED tests/integration/test_repair_regression_run015.py::test_ten_concurrent_regression_requests_create_one_run
+1 failed, 827 passed, 16 skipped, 22 warnings in 123.44s (0:02:03)
+EXIT=1

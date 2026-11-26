@@ -1,13 +1,16 @@
 # 功能状态矩阵（更新至 2026-11-26 RUN-015）
 
-> **RUN-015 状态（2026-11-26，执行中）**：分支 `workbuddy/run015-execution-consistency`，
-> 基线 `438c54a`。WP1~WP4、WP6 已交付；WP5 60 分钟 PG16 长稳运行中；WP7 收口中。
+> **RUN-015 状态（2026-11-26，收口）**：分支 `workbuddy/run015-execution-consistency`，
+> 基线 `438c54a`。WP0~WP7 已交付；PG16 长稳与全链路已复验；最终 HEAD CI 见 `RUN-015-FINAL-REPORT.md` §7。
 > - **Fencing**：`submit_result` 原子守卫 + Pipeline 全部 Run 事件 fence + PG16 锁后时钟（10 SQLite + 6 PG16 专项 PASS）。
 > - **Regression**：10 并发请求只建一个 Run；stale 在读取时重算；重试策略 NEEDS_DECISION（`RUN-015-WP2-REGRESSION.md`）。
 > - **SSE**：客户端参数收敛到 `[0.1, 10]s`，NaN/Infinity 回落默认 2s（`RUN-015-WP3-SSE-SECURITY.md`）。
 > - **CI**：PR Gate 纳入 RUN-014/015 专项；PG16 fencing 进 Nightly（`RUN-015-WP4-CI.md`）。
+> - **PG16 长稳 / 全链路**：复验轮 59.71 分钟 / 115 Run / 31 PASS / 0 FAIL；全链路 40/40 PASS
+>   （`RUN-015-WP5-PG16-SOAK.md`）。首轮 1 FAIL 与 2 NOTE 均如实保留。
 > - **Benchmark**：故障状态字段增强；新一轮 23×2 NOT_RUN，False Pass 仍 PARTIAL（`RUN-015-WP6-BENCHMARK.md`）。
-> 最终权威结论见 `docs/RUN-015-FINAL-REPORT.md`（收口后）。
+> - **全量质量门禁**：828 passed / 16 skipped；Ruff / vue-tsc / vite build 通过。
+> 最终权威结论见 `docs/RUN-015-FINAL-REPORT.md`。
 
 > **RUN-014 状态（2026-11-26，历史）**：`docs/RUN-014-FINAL-REPORT.md` 为准。
 > 基线 `85f18c1`；主题：产品闭环补全、安全可靠性强化与发布就绪。
