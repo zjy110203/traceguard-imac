@@ -13,6 +13,7 @@ import threading
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import Any
 
 from sqlalchemy import func, select, update
@@ -52,6 +53,30 @@ RUN_TRANSITIONS: dict[str, set[str]] = {
     "CANCELLED": set(),
 }
 FINAL_RUN_STATES = {"COMPLETED", "FAILED", "TIMED_OUT", "CANCELLED"}
+
+#: RUN-017 WP4.1：当前上下文已持有的 fenced_session（按 run_id 记录）。
+#:
+#: 用 ContextVar 而不是线程局部变量，原因：
+#: - asyncio 任务之间天然隔离，不会被同线程的其他任务误判/误清；
+#: - 新线程不会继承父线程的令牌（默认值 = 空集），因此"子线程里开新事务"仍是合法路径；
+#: - `reset(token)` 保证异常路径也能精确回滚到进入前的集合，不会污染后续调用。
+_FENCED_SCOPE: ContextVar[frozenset[str]] = ContextVar(
+    "traceguard_fenced_runs", default=frozenset()
+)
+
+
+class FencedReentryError(AppError):
+    """同一 Run 的 fenced_session 重入：立即失败，不等待数据库锁。"""
+
+    def __init__(self, run_id: str) -> None:
+        super().__init__(
+            ErrorCode.CONFLICT,
+            "FENCED_SESSION_REENTRY: run "
+            f"{run_id} 已在当前上下文持有 fenced_session；"
+            "同一 Run 嵌套开事务会自锁（外层事务的行锁等待自己），"
+            "请在同一个 session 内完成写入，或先退出外层上下文",
+        )
+        self.run_id = run_id
 
 
 class LeaseHeartbeat:
@@ -471,14 +496,30 @@ class TaskService:
         - 未命中：代次/属主/租期/状态任一不成立 → 立即 `LEASE_LOST`，不写任何业务数据。
 
         这样 fencing_token 真正约束了持久化写入，而不是"再补一次 SELECT"。
+
+        RUN-017 WP4.1：同一 Run 的嵌套调用会自锁（外层事务持有 run 行锁，内层
+        条件空更新等同一把锁），历史上表现为"无限挂起直到数据库超时"。这里用
+        ContextVar 做上下文级重入检测，命中即抛 `FENCED_SESSION_REENTRY`，
+        在打开事务之前失败——不等待锁、不改变正常事务原子性、不改 Fencing 语义。
+        明确拒绝重入而不是改成 RLock：嵌套事务在"外层未提交时内层已提交"的语义
+        下无法证明安全，拒绝比"看起来能跑"更可靠。
         """
-        with self.db.session() as s:
-            if not fenced_guard(s, run_id=run_id, worker_id=worker_id, fencing_token=fencing_token):
-                raise AppError(
-                    ErrorCode.CONFLICT,
-                    "LEASE_LOST: 租约已过期/被接管，写入被拒绝（fencing guard）",
-                )
-            yield s
+        active = _FENCED_SCOPE.get()
+        if run_id in active:
+            raise FencedReentryError(run_id)
+        scope_token = _FENCED_SCOPE.set(active | {run_id})
+        try:
+            with self.db.session() as s:
+                if not fenced_guard(
+                    s, run_id=run_id, worker_id=worker_id, fencing_token=fencing_token
+                ):
+                    raise AppError(
+                        ErrorCode.CONFLICT,
+                        "LEASE_LOST: 租约已过期/被接管，写入被拒绝（fencing guard）",
+                    )
+                yield s
+        finally:
+            _FENCED_SCOPE.reset(scope_token)
 
     def claim_next_run(self, worker_id: str, ttl_seconds: float = 120.0) -> dict[str, Any] | None:
         """Worker 领取：取最早排队的 Run；租约过期未提交的 Run 也会被回收领取。
