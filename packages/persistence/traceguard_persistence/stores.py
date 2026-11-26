@@ -25,6 +25,7 @@ from traceguard_evidence.evidence_manager import EvidenceRecord, _content_hash
 from traceguard_evidence.inbox import InboxOutcome, InboxRecord
 
 from .db import Database
+from .fencing import fenced_guard
 from .models import (
     ArtifactRow,
     DocRow,
@@ -63,6 +64,8 @@ class PersistentEventStore:
         context_refs: dict[str, str] | None = None,
         occurred_at: str | None = None,
         schema_version: str = "0.1.0",
+        fence: tuple[str, int] | None = None,
+        allow_own_submission: bool = False,
     ) -> StoredEvent:
         """追加事件。
 
@@ -71,6 +74,10 @@ class PersistentEventStore:
         - 幂等检查先于序号分配，正常的重复投递不会烧序号；
         - 仍用唯一约束兜底：极端竞争下重试，绝不把正常竞争误报成业务冲突；
         - 只有"同键异载荷"才报 CONFLICT 并审计。
+
+        RUN-014 WP2：传 `fence=(worker_id, fencing_token)` 时，事件写入与租约守卫
+        在同一事务内；旧 Worker 被接管后无法再写入任何事件。
+        `allow_own_submission=True` 仅用于提交终态之后的 `run.completed` 收尾事件。
         """
         payload = payload or {}
         clean_payload = {k: v for k, v in payload.items() if k != "workspace_id"}
@@ -102,6 +109,18 @@ class PersistentEventStore:
             seq = self._next_sequence(producer_instance_id)
             try:
                 with self.db.session() as s:
+                    if fence is not None:
+                        if not fenced_guard(
+                            s,
+                            run_id=str(context_refs.get("run") or "") if context_refs else "",
+                            worker_id=str(fence[0]),
+                            fencing_token=int(fence[1]),
+                            allow_own_submission=allow_own_submission,
+                        ):
+                            raise AppError(
+                                ErrorCode.CONFLICT,
+                                "LEASE_LOST: 租约已失效，事件写入被拒绝（fencing guard）",
+                            )
                     row = EventRow(
                         event_id=new_id("evt"),
                         event_type=event_type,
@@ -334,8 +353,13 @@ class PersistentEvidenceManager:
         run_id: str | None = None,
         attachment_ref: str | None = None,
         attachment_sha256: str = "",
+        fence: tuple[str, int] | None = None,
     ) -> EvidenceRecord:
-        """采集原始证据：同时记录"原始来源摘要"和"持久化内容摘要"。"""
+        """采集原始证据：同时记录"原始来源摘要"和"持久化内容摘要"。
+
+        `fence=(worker_id, fencing_token)`：证据写入与租约守卫在同一事务内，
+        旧 Worker 恢复后无法向已完成的 Run 追加证据（RUN-014 WP2）。
+        """
         raw_hash = _content_hash(content)
         stored_content = redact(content) if do_redact else content
         rec = EvidenceRecord(
@@ -353,7 +377,7 @@ class PersistentEvidenceManager:
             captured_at=captured_at or utc_now_iso(),
             attachment_ref=attachment_ref,
         )
-        self._insert(rec, run_id)
+        self._insert(rec, run_id, fence=fence)
         return rec
 
     def add_derived(
@@ -389,8 +413,25 @@ class PersistentEvidenceManager:
         self._insert(rec, raw.run_id if hasattr(raw, "run_id") else None)
         return rec
 
-    def _insert(self, rec: EvidenceRecord, run_id: str | None) -> None:
+    def _insert(
+        self,
+        rec: EvidenceRecord,
+        run_id: str | None,
+        *,
+        fence: tuple[str, int] | None = None,
+    ) -> None:
         with self._lock, self.db.session() as s:
+            if fence is not None and run_id:
+                if not fenced_guard(
+                    s,
+                    run_id=run_id,
+                    worker_id=str(fence[0]),
+                    fencing_token=int(fence[1]),
+                ):
+                    raise AppError(
+                        ErrorCode.CONFLICT,
+                        "LEASE_LOST: 租约已失效，证据写入被拒绝（fencing guard）",
+                    )
             if s.get(EvidenceRow, rec.evidence_id):
                 raise AppError(ErrorCode.CONFLICT, "evidence_id exists (immutable)")
             s.add(

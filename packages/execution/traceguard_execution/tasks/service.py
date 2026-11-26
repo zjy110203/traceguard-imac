@@ -11,12 +11,16 @@ from __future__ import annotations
 
 import threading
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
 
 from sqlalchemy import func, select, update
+from sqlalchemy.orm import Session
 from traceguard_core.errors import AppError, ErrorCode
 from traceguard_core.ids import new_id
 from traceguard_persistence.db import Database, get_database
+from traceguard_persistence.fencing import WRITE_BLOCKED_STATES, fenced_guard
 from traceguard_persistence.models import (
     RunRow,
     RunSubmissionRow,
@@ -343,19 +347,38 @@ class TaskService:
     def renew_lease(
         self, run_id: str, worker_id: str, fencing_token: int, ttl_seconds: float = 60.0
     ) -> bool:
+        """续租：**原子条件更新**，租约已过期则拒绝（fail-closed）。
+
+        RUN-014 WP2：旧实现只比对 owner/token，不看 `lease_expires_at`——
+        一个已经过期、但尚未被接管的旧 Worker 仍能续租成功，把"已经失效的执行权"
+        复活，与 claim 的接管条件形成竞态。现在过期即不可续；
+        续租语句本身也是条件 UPDATE，不存在"读到空闲 → 再写"的窗口。
+        """
+        now = time.time()
         with self.db.session() as s:
-            r = s.get(RunRow, run_id)
-            if not r or r.fencing_token != fencing_token or r.lease_owner != worker_id:
-                return False
-            r.lease_expires_at = time.time() + ttl_seconds
-            return True
+            result = s.execute(
+                update(RunRow)
+                .where(
+                    RunRow.run_id == run_id,
+                    RunRow.lease_owner == worker_id,
+                    RunRow.fencing_token == int(fencing_token),
+                    RunRow.lease_expires_at > now,
+                    RunRow.execution_status.notin_(WRITE_BLOCKED_STATES),
+                )
+                .values(lease_expires_at=now + ttl_seconds)
+            )
+            return result.rowcount == 1
 
     def lease_valid(self, run_id: str, worker_id: str, fencing_token: int) -> bool:
-        """同步租约校验（RUN-013 WP1）。
+        """同步租约校验（RUN-013 WP1 / RUN-014 WP2）。
 
         异步心跳只能"事后"发现租约丢失；步骤边界/写证据前必须再做一次同步校验，
         否则被 SIGSTOP 后恢复的旧 Worker 可能在被接管后继续写步骤与证据。
+
+        RUN-014 WP2：必须检查 `lease_expires_at > now`。租约只代表"一段时间内的执行权"，
+        过期即失效，**不能**以"还没有新 Worker 接管"为由来证明旧 Worker 仍然合法。
         """
+        now = time.time()
         with self.db.session() as s:
             r = s.get(RunRow, run_id)
             if not r:
@@ -363,9 +386,33 @@ class TaskService:
             return (
                 r.lease_owner == worker_id
                 and int(r.fencing_token) == int(fencing_token)
+                and float(r.lease_expires_at or 0.0) > now
                 and r.execution_status not in FINAL_RUN_STATES
                 and r.execution_status != "FINALIZING"
             )
+
+    @contextmanager
+    def fenced_session(self, run_id: str, worker_id: str, fencing_token: int) -> Iterator[Session]:
+        """租约守卫下的事务：**校验与写入在同一个事务内**（RUN-014 WP2）。
+
+        实现方式：事务开始先对 run 行做一次"条件空更新"——
+        `UPDATE tg_run SET fencing_token = fencing_token WHERE run_id=? AND
+        lease_owner=? AND fencing_token=? AND lease_expires_at > now AND status NOT IN (...)`
+
+        - 命中（rowcount=1）：本事务持有该 run 的行锁，接管方必须等本事务提交；
+          在 PostgreSQL READ COMMITTED 下，等锁的接管语句会重新求值 WHERE，
+          本事务若已续租/未退出，接管条件不再成立 → 不会发生"检查后写入被接管"。
+        - 未命中：代次/属主/租期/状态任一不成立 → 立即 `LEASE_LOST`，不写任何业务数据。
+
+        这样 fencing_token 真正约束了持久化写入，而不是"再补一次 SELECT"。
+        """
+        with self.db.session() as s:
+            if not fenced_guard(s, run_id=run_id, worker_id=worker_id, fencing_token=fencing_token):
+                raise AppError(
+                    ErrorCode.CONFLICT,
+                    "LEASE_LOST: 租约已过期/被接管，写入被拒绝（fencing guard）",
+                )
+            yield s
 
     def claim_next_run(self, worker_id: str, ttl_seconds: float = 120.0) -> dict[str, Any] | None:
         """Worker 领取：取最早排队的 Run；租约过期未提交的 Run 也会被回收领取。
@@ -499,13 +546,14 @@ class TaskService:
                         "IDEMPOTENCY_KEY_REUSED: key belongs to another run",
                     )
                 return self._submission_receipt(existing, replayed=True)
-            # 2) fencing 校验（旧 token / 旧 owner 拒绝）
-            if r.fencing_token != fencing_token or r.lease_owner != worker_id:
+            # 2) 主体不符（别人持有租约）：无论 Run 是否终态都是代次失效
+            if r.lease_owner != worker_id:
                 raise AppError(
-                    ErrorCode.CONFLICT, "STALE_FENCING_TOKEN: old worker submit rejected"
+                    ErrorCode.CONFLICT,
+                    "STALE_FENCING_TOKEN: old/expired worker submit rejected",
                 )
-            # 3) 终态冻结语义：终态 Run 只允许同键重放（上面已处理），
-            #    任何新的终态/其他状态提交都拒绝，不允许覆盖 verdict/report
+            # 3) 终态冻结语义：终态 Run 只允许同键重放（上面已处理）。
+            #    任何新键/新状态提交都拒绝，不允许覆盖 verdict/report。
             if r.execution_status in FINAL_RUN_STATES:
                 raise AppError(
                     ErrorCode.CONFLICT,
@@ -513,7 +561,13 @@ class TaskService:
                     f"{r.execution_status}; duplicate final submissions are rejected "
                     "(replay the original idempotency key to obtain the receipt)",
                 )
-            # 4) 状态转换检查
+            # 4) fencing + 租期校验（旧 token / 已过期租约一律拒绝）
+            if r.fencing_token != fencing_token or float(r.lease_expires_at or 0.0) <= time.time():
+                raise AppError(
+                    ErrorCode.CONFLICT,
+                    "STALE_FENCING_TOKEN: old/expired worker submit rejected",
+                )
+            # 5) 状态转换检查
             if (
                 execution_status != r.execution_status
                 and execution_status not in RUN_TRANSITIONS.get(r.execution_status, set())
@@ -523,7 +577,7 @@ class TaskService:
                     ErrorCode.CONFLICT,
                     f"illegal run transition {r.execution_status}->{execution_status}",
                 )
-            # 5) 状态变更 + 回执原子写入（同一事务）
+            # 6) 状态变更 + 回执原子写入（同一事务）
             previous_status = r.execution_status
             r.execution_status = execution_status
             r.test_verdict = test_verdict
@@ -531,7 +585,10 @@ class TaskService:
             r.observer_mode = observer_mode or r.observer_mode
             r.error = error
             r.ended_at = time.time() if execution_status in FINAL_RUN_STATES else r.ended_at
-            r.lease_expires_at = 0.0
+            # RUN-014 WP2：只有终态提交才释放租约。中间态（RUNNING/FINALIZING）仍由
+            # 本 Worker 持有执行权，提前清空会让"还在执行"的 Run 变成无主可接管。
+            if execution_status in FINAL_RUN_STATES:
+                r.lease_expires_at = 0.0
             receipt = RunSubmissionRow(
                 idempotency_key=key,
                 run_id=run_id,
@@ -587,13 +644,30 @@ class TaskService:
     def mark_running(
         self, run_id: str, worker_id: str, fencing_token: int, observer_mode: str
     ) -> None:
+        """PREPARING → RUNNING：条件 UPDATE（代次 + 属主 + 未过期 + 非终态）。"""
+        now = time.time()
         with self.db.session() as s:
             r = s.get(RunRow, run_id)
             if not r or r.fencing_token != fencing_token or r.lease_owner != worker_id:
                 raise AppError(ErrorCode.CONFLICT, "STALE_FENCING_TOKEN")
+            if float(r.lease_expires_at or 0.0) <= now:
+                raise AppError(ErrorCode.CONFLICT, "LEASE_LOST: 租约已过期，不能开始执行")
+            values: dict[str, Any] = {"observer_mode": observer_mode}
             if "RUNNING" in RUN_TRANSITIONS.get(r.execution_status, set()):
-                r.execution_status = "RUNNING"
-            r.observer_mode = observer_mode
+                values["execution_status"] = "RUNNING"
+            result = s.execute(
+                update(RunRow)
+                .where(
+                    RunRow.run_id == run_id,
+                    RunRow.lease_owner == worker_id,
+                    RunRow.fencing_token == int(fencing_token),
+                    RunRow.lease_expires_at > now,
+                    RunRow.execution_status.notin_(WRITE_BLOCKED_STATES),
+                )
+                .values(**values)
+            )
+            if result.rowcount != 1:
+                raise AppError(ErrorCode.CONFLICT, "LEASE_LOST: 租约已失效，写入被拒绝")
 
     def get_run(self, run_id: str) -> dict[str, Any] | None:
         with self.db.session() as s:
@@ -658,31 +732,59 @@ class TaskService:
         action: str = "",
         duration_ms: int = 0,
         observation: dict[str, Any] | None = None,
+        fence: tuple[str, int] | None = None,
+    ) -> None:
+        """写步骤。传 `fence=(worker_id, fencing_token)` 时走租约守卫事务。
+
+        RUN-014 WP2：守卫 UPDATE 与步骤写入在同一事务内，旧 Worker 无法在
+        "校验通过 → 被接管" 的窗口里追加步骤。
+        """
+        if fence is not None:
+            with self.fenced_session(run_id, fence[0], int(fence[1])) as s:
+                self._record_step_in(
+                    s, run_id, step_id, index, status, error, action, duration_ms, observation
+                )
+            return
+        with self.db.session() as s:
+            self._record_step_in(
+                s, run_id, step_id, index, status, error, action, duration_ms, observation
+            )
+
+    @staticmethod
+    def _record_step_in(
+        s: Session,
+        run_id: str,
+        step_id: str,
+        index: int,
+        status: str,
+        error: str | None,
+        action: str,
+        duration_ms: int,
+        observation: dict[str, Any] | None,
     ) -> None:
         row_id = f"{run_id}:{step_id}"
-        with self.db.session() as s:
-            existing = s.get(StepRow, row_id)
-            if existing:
-                existing.status = status
-                existing.error = error
-                existing.action = action or existing.action
-                existing.duration_ms = duration_ms or existing.duration_ms
-                if observation is not None:
-                    existing.observation = observation
-            else:
-                s.add(
-                    StepRow(
-                        id=row_id,
-                        step_id=step_id,
-                        run_id=run_id,
-                        step_index=index,
-                        status=status,
-                        error=error,
-                        action=action,
-                        duration_ms=duration_ms,
-                        observation=observation or {},
-                    )
+        existing = s.get(StepRow, row_id)
+        if existing:
+            existing.status = status
+            existing.error = error
+            existing.action = action or existing.action
+            existing.duration_ms = duration_ms or existing.duration_ms
+            if observation is not None:
+                existing.observation = observation
+        else:
+            s.add(
+                StepRow(
+                    id=row_id,
+                    step_id=step_id,
+                    run_id=run_id,
+                    step_index=index,
+                    status=status,
+                    error=error,
+                    action=action,
+                    duration_ms=duration_ms,
+                    observation=observation or {},
                 )
+            )
 
     def list_steps(self, run_id: str) -> list[dict[str, Any]]:
         with self.db.session() as s:

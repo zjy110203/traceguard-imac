@@ -115,6 +115,7 @@ class RunPipeline:
             workspace_id,
             {"run_id": run_id, "task_id": run["task_id"], "attempt": run["attempt"]},
             idem=f"{run_id}:started",
+            fence=(self.worker_id, token),
         )
 
         started = time.time()
@@ -169,6 +170,7 @@ class RunPipeline:
                 workspace_id,
                 {"run_id": run_id, "error": str(exc.message), "code": exc.code.value},
                 idem=f"{run_id}:failed",
+                fence=(self.worker_id, token),
             )
         except Exception as exc:  # noqa: BLE001 - 执行器必须收敛所有异常
             execution_status, verdict = "FAILED", "NOT_EVALUATED"
@@ -181,6 +183,7 @@ class RunPipeline:
                 workspace_id,
                 {"run_id": run_id, "error": str(exc)[:1000]},
                 idem=f"{run_id}:failed",
+                fence=(self.worker_id, token),
             )
 
         heartbeat.stop()
@@ -207,18 +210,33 @@ class RunPipeline:
                     report={"error": "LEASE_LOST"},
                 )
             raise
-        self._emit(
-            "run.completed",
-            workspace_id,
-            {
-                "run_id": run_id,
-                "execution_status": execution_status,
-                "test_verdict": verdict,
-                "observer_mode": observer_mode,
-                "duration_ms": report.get("duration_ms", 0),
-            },
-            idem=f"{run_id}:completed",
-        )
+        try:
+            self._emit(
+                "run.completed",
+                workspace_id,
+                {
+                    "run_id": run_id,
+                    "execution_status": execution_status,
+                    "test_verdict": verdict,
+                    "observer_mode": observer_mode,
+                    "duration_ms": report.get("duration_ms", 0),
+                },
+                idem=f"{run_id}:completed",
+                fence=(self.worker_id, token),
+                # 终态已由本 Worker 以同一代次提交：允许收尾完成事件
+                allow_own_submission=True,
+            )
+        except AppError as exc:
+            if self._is_lease_lost(exc):
+                logger.warning("completion_event_rejected", run_id=run_id, worker=self.worker_id)
+                return RunOutcome(
+                    run_id=run_id,
+                    execution_status="LEASE_LOST",
+                    test_verdict="NOT_EVALUATED",
+                    observer_mode=observer_mode,
+                    report={"error": "LEASE_LOST"},
+                )
+            raise
         return RunOutcome(
             run_id=run_id,
             execution_status=execution_status,
@@ -386,6 +404,7 @@ class RunPipeline:
                     "PASSED",
                     action="api",
                     observation=rec.observation,
+                    fence=(self.worker_id, token),
                 )
                 records.append(rec)
                 continue
@@ -393,7 +412,13 @@ class RunPipeline:
                 interrupted = True
                 errors.append("RUN_TIMEOUT")
                 self.tasks.record_step(
-                    run["run_id"], step.step_id, idx, "TIMED_OUT", "RUN_TIMEOUT", action=step.action
+                    run["run_id"],
+                    step.step_id,
+                    idx,
+                    "TIMED_OUT",
+                    "RUN_TIMEOUT",
+                    action=step.action,
+                    fence=(self.worker_id, token),
                 )
                 break
 
@@ -412,9 +437,10 @@ class RunPipeline:
                 action=step.action,
                 duration_ms=rec.duration_ms,
                 observation=_compact_observation(rec.observation),
+                fence=(self.worker_id, token),
             )
             ev_ids = self._record_step_evidence(
-                workspace_id, run["run_id"], rec, step, observer_mode
+                workspace_id, run["run_id"], rec, step, observer_mode, fence=(self.worker_id, token)
             )
             evidence_ids.extend(ev_ids)
             step_events += 1
@@ -458,7 +484,7 @@ class RunPipeline:
         state_ctx = self._query_states(tc, base_url)
         self._ensure_lease(run["run_id"], token)
         state_evidence = self._record_state_evidence(
-            workspace_id, run["run_id"], tc, base_url, state_ctx
+            workspace_id, run["run_id"], tc, base_url, state_ctx, fence=(self.worker_id, token)
         )
         evidence_ids.extend(state_evidence)
 
@@ -572,6 +598,8 @@ class RunPipeline:
         tc: TestCaseVersion,
         base_url: str,
         state_ctx: dict[str, Any],
+        *,
+        fence: tuple[str, int] | None = None,
     ) -> list[str]:
         """把 Trusted Oracle 的独立状态查询结果登记为证据（可追溯、可诊断引用）。"""
         paths: set[str] = set()
@@ -604,6 +632,7 @@ class RunPipeline:
                     source_trust="TRUSTED",
                     do_redact=True,
                     run_id=run_id,
+                    fence=fence,
                 )
                 ids.append(evd_id)
             except Exception as exc:  # noqa: BLE001
@@ -617,6 +646,8 @@ class RunPipeline:
         rec: ObservationRecord,
         step: TestStep,
         observer_mode: str,
+        *,
+        fence: tuple[str, int] | None = None,
     ) -> list[str]:
         ids: list[str] = []
         # 网络/控制台信号单独登记为证据（诊断需要可引用的权威来源）
@@ -645,6 +676,7 @@ class RunPipeline:
                     source_trust="TRUSTED",
                     do_redact=True,
                     run_id=run_id,
+                    fence=fence,
                 )
                 ids.append(evd_id)
             except Exception as exc:  # noqa: BLE001
@@ -673,8 +705,11 @@ class RunPipeline:
                     run_id=run_id,
                     attachment_ref=art.get("artifact_id"),
                     attachment_sha256=str(art.get("sha256") or ""),
+                    fence=fence,
                 )
                 ids.append(evd_id)
+            except AppError:
+                raise
             except Exception as exc:  # noqa: BLE001
                 logger.warning("evidence_write_failed", error=str(exc))
         rec.evidence_refs = ids
@@ -714,7 +749,14 @@ class RunPipeline:
 
     # ----------------------------------------------------------------- events
     def _emit(
-        self, event_type: str, workspace_id: str, payload: dict[str, Any], *, idem: str
+        self,
+        event_type: str,
+        workspace_id: str,
+        payload: dict[str, Any],
+        *,
+        idem: str,
+        fence: tuple[str, int] | None = None,
+        allow_own_submission: bool = False,
     ) -> None:
         try:
             self.events.append(
@@ -725,6 +767,8 @@ class RunPipeline:
                 idempotency_key=idem,
                 payload=payload,
                 context_refs={"run": str(payload.get("run_id", ""))},
+                fence=fence,
+                allow_own_submission=allow_own_submission,
             )
         except Exception as exc:  # noqa: BLE001 - 事件写入失败不得静默丢失
             logger.error("event_append_failed", event_type=event_type, error=str(exc))
