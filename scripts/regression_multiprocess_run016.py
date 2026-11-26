@@ -245,10 +245,14 @@ def main() -> int:
         "started_at_epoch": time.time(),
     }
 
-    worker = ctx.Process(target=_child_worker, args=(PG_URL, barrier, queue, stop_event, "r16-mp-w1"))
+    worker = ctx.Process(
+        target=_child_worker, args=(PG_URL, barrier, queue, stop_event, "r16-mp-w1")
+    )
     worker.start()
     procs = [
-        ctx.Process(target=_child_request, args=(i, PG_URL, proposal_id, barrier, queue, args.timeout))
+        ctx.Process(
+            target=_child_request, args=(i, PG_URL, proposal_id, barrier, queue, args.timeout)
+        )
         for i in range(args.procs)
     ]
     for p in procs:
@@ -324,10 +328,9 @@ def main() -> int:
     checks["新 Runtime 恢复原 Run"] = recovered.get("regression_run_id") == status.get(
         "regression_run_id"
     )
-    checks["重复请求不创建新 Run"] = (
-        RepairService(restarted).regression_run(proposal_id, timeout_s=5).get("regression_run_id")
-        == status.get("regression_run_id")
-    )
+    checks["重复请求不创建新 Run"] = RepairService(restarted).regression_run(
+        proposal_id, timeout_s=5
+    ).get("regression_run_id") == status.get("regression_run_id")
     # 失败请求不破坏赢家状态
     before = RepairService(restarted).get(proposal_id)
     try:
@@ -336,9 +339,11 @@ def main() -> int:
     except Exception:  # noqa: BLE001 - 期望被拒绝
         rejected = True
     after = RepairService(restarted).get(proposal_id)
-    checks["失败请求不破坏赢家状态"] = rejected and after["regression_status"] == before[
-        "regression_status"
-    ] and after.get("regression_run_id") == before.get("regression_run_id")
+    checks["失败请求不破坏赢家状态"] = (
+        rejected
+        and after["regression_status"] == before["regression_status"]
+        and after.get("regression_run_id") == before.get("regression_run_id")
+    )
 
     log["run_ids"] = sorted(x for x in run_ids if x)
     log["claim_rows"] = claim_rows

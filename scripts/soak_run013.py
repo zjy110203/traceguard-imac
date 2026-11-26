@@ -742,9 +742,7 @@ def main() -> int:
         "minutes_observed": round(duration_min, 2),
         "wall_clock_minutes": round(wall_clock_min, 3),
         "started_at_iso": (
-            time.strftime("%Y-%m-%dT%H:%M:%S%z", time.localtime(started_at))
-            if started_at
-            else None
+            time.strftime("%Y-%m-%dT%H:%M:%S%z", time.localtime(started_at)) if started_at else None
         ),
         "ended_at_iso": (
             time.strftime("%Y-%m-%dT%H:%M:%S%z", time.localtime(ended_at)) if ended_at else None
