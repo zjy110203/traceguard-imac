@@ -8,11 +8,14 @@ on:
   schedule:
     - cron: "0 18 * * *" # UTC 18:00 = 北京时间次日 02:00
   workflow_dispatch:
-  # RUN-015 WP4：工作分支每次推送都以该 HEAD 真实跑一次 Nightly，
+  # RUN-017 WP1：工作分支每次推送都以该 HEAD 真实跑一次 Nightly，
   # Release Gate 再按 head_sha 严格匹配，杜绝旧提交的成功结果冒充本轮证据。
   push:
     branches:
-      - "workbuddy/run015-*"
+      - main
+      - "workbuddy/run*"
+      - "workbuddy/run*-*"
+      - workbuddy/traceguard-autonomous
 
 concurrency:
   group: nightly-gate
@@ -64,6 +67,23 @@ jobs:
           echo "frontend dist ready: $(ls dist | tr '\n' ' ')"
       - name: Full backend suite (SQLite)
         run: .venv/bin/pytest -q
+      - name: RUN-016/017 专项（Benchmark v2 / 故障观测 / Regression 重试）
+        # 这些用例要么需要真实 Chromium（浏览器观测），要么需要启动独立 TeamFlow 子进程，
+        # 因此不进 PR Gate，只在安装好 Chromium 的 Nightly 上跑。
+        run: |
+          .venv/bin/pytest -q \
+            tests/unit/test_benchmark_false_pass_v2_run016.py \
+            tests/unit/test_benchmark_fault_effect_run016.py \
+            tests/unit/test_fencing_entrypoint_audit_run016.py \
+            tests/integration/test_artifact_lifecycle_run016.py \
+            tests/integration/test_promotion_recovery_run016.py \
+            tests/integration/test_system_config_rbac_run016.py \
+            tests/integration/test_regression_retry_run017.py \
+            tests/integration/test_fault_effect_teamflow_run017.py \
+            tests/integration/test_browser_effect_run017.py
+      - name: 真实浏览器全链路业务验收（RUN-017 WP6）
+        # 失败必须真实失败：脚本退出码非 0 即阻断。
+        run: .venv/bin/python scripts/business_loop_ui_acceptance_run017.py
       - name: Worker / event / inbox concurrency (real processes)
         run: |
           .venv/bin/pytest -q \
@@ -140,6 +160,11 @@ jobs:
       - name: PostgreSQL 16 lease-fencing lock-wait (RUN-015 WP1)
         # 覆盖：等锁期间租约过期不得复活；原子 submit_result；并发接管单 owner。
         run: .venv/bin/pytest -q tests/integration/test_fencing_pg_run015.py -rs
+      - name: PostgreSQL 16 fenced_session 重入与审计（RUN-017 WP4.1）
+        run: |
+          .venv/bin/pytest -q \
+            tests/integration/test_fenced_reentry_run017.py \
+            tests/integration/test_fencing_audit_run016.py -rs
       - name: PostgreSQL 16 fencing contract verification script (RUN-014/015)
         # 可自动复核的 PG16 fencing 专项；脚本支持 TG_TEST_POSTGRES_URL。
         env:

@@ -36,10 +36,14 @@ from business_loop_ui_acceptance_run012 import (  # noqa: E402
     _wait_health,
 )
 
-PG_ADMIN = "postgresql://traceguard@127.0.0.1:55432/postgres"
+# RUN-017 WP1：不再硬编码端口/主机。本机默认保持历史拓扑（55432），
+# CI 用 TG_SOAK_PG_ADMIN 指向 service container（127.0.0.1:5432 + 测试口令）。
+PG_ADMIN = os.environ.get("TG_SOAK_PG_ADMIN", "postgresql://traceguard@127.0.0.1:55432/postgres")
 # RUN-014 WP6：数据库名可参数化，避免覆盖 RUN-013 的历史长稳库（默认值保持兼容）。
 PG_NAME = os.environ.get("TG_SOAK_PG_DB", "traceguard_run013_soak")
-PG_URL = f"postgresql+psycopg://traceguard@127.0.0.1:55432/{PG_NAME}"
+PG_URL = f"{PG_ADMIN.rsplit('/', 1)[0]}/{PG_NAME}".replace(
+    "postgresql://", "postgresql+psycopg://", 1
+)
 PASSWORD = "Soak-accept-2026!"
 
 TERMINAL = {"COMPLETED", "FAILED", "TIMED_OUT", "CANCELLED"}

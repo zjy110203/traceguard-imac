@@ -47,7 +47,9 @@ for extra in (
 
 PG_ADMIN = os.environ.get("TG_R16_PG_ADMIN", "postgresql://traceguard@127.0.0.1:55432/postgres")
 PG_NAME = os.environ.get("TG_REGRESSION_PG_DB", "traceguard_run016_regression")
-PG_URL = f"postgresql+psycopg://traceguard@127.0.0.1:55432/{PG_NAME}"
+PG_URL = f"{PG_ADMIN.rsplit('/', 1)[0]}/{PG_NAME}".replace(
+    "postgresql://", "postgresql+psycopg://", 1
+)
 
 ORACLE_ID = "oracle_r16_a1"
 TC_ID = "tcase_reg16_mp"

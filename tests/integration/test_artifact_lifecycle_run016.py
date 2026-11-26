@@ -302,3 +302,71 @@ def test_scan_protects_artifact_referenced_only_by_run_report(env) -> None:
     scan = env["store"].scan(retention_days=7.0)
     assert meta["artifact_id"] not in {i["artifact_id"] for i in scan["orphan_rows"]}
     assert meta["sha256"] not in {i["sha256"] for i in scan["orphan_files"]}
+
+
+# ---------------------------------------------------------------------------
+# RUN-017 WP4.2 / WP4.3 追加
+# ---------------------------------------------------------------------------
+def test_unsupported_artifact_backend_fails_fast(work_tmp) -> None:  # type: ignore[no-untyped-def]
+    """配置要求 s3 时必须启动即失败，不能静默用本地目录冒充对象存储。"""
+    from traceguard_core.errors import AppError
+    from traceguard_persistence import ArtifactStore, Database
+
+    db = Database(f"sqlite:///{work_tmp / 'backend.db'}")
+    db.create_schema()
+    try:
+        with pytest.raises(AppError) as exc:
+            ArtifactStore(db, root=work_tmp / "art", backend="s3")
+        assert "ARTIFACT_BACKEND_UNSUPPORTED" in str(exc.value)
+    finally:
+        db.dispose()
+
+
+def test_gc_skips_artifact_referenced_after_scan(work_tmp) -> None:  # type: ignore[no-untyped-def]
+    """扫描快照已过期（之后新增引用）时，删除前的定向复核必须拦住。"""
+    from traceguard_persistence import ArtifactStore, Database
+    from traceguard_persistence.models import EvidenceRow
+
+    db = Database(f"sqlite:///{work_tmp / 'gc-race.db'}")
+    db.create_schema()
+    store = ArtifactStore(db, root=work_tmp / "art")
+    try:
+        saved = store.put(b"payload", workspace_id="default", original_name="x.txt")
+        with db.session() as s:
+            row = s.get(ArtifactRow, saved["artifact_id"])
+            row.created_at = "2020-01-01T00:00:00Z"
+        scan = store.scan(retention_days=7.0)
+        assert [i["artifact_id"] for i in scan["orphan_rows"]] == [saved["artifact_id"]]
+        # 新增引用后，把"过期快照"直接喂给 collect_garbage（模拟扫描与回收之间的窗口）
+        with db.session() as s:
+            s.add(
+                EvidenceRow(
+                    evidence_id="evd_late_ref",
+                    workspace_id="default",
+                    run_id=None,
+                    kind="snapshot",
+                    source_type="pipeline",
+                    sha256="0" * 64,
+                    stored_content_sha256="0" * 64,
+                    attachment_sha256="",
+                    attachment_ref=None,
+                    source_trust="TRUSTED",
+                    integrity_check="PASSED",
+                    integrity_detail={},
+                    redacted=False,
+                    doc={"artifact": saved["artifact_id"]},
+                    captured_at="2026-01-01T00:00:00Z",
+                )
+            )
+        result = store.collect_garbage(scan, apply=True)
+        done = {a.get("artifact_id"): a.get("result") for a in result["actions"]}
+        skipped = {a.get("artifact_id") for a in result["skipped"]}
+        assert done.get(saved["artifact_id"]) != "deleted"
+        assert saved["artifact_id"] in skipped
+        with db.session() as s:
+            assert s.get(ArtifactRow, saved["artifact_id"]) is not None
+        # 文件仍可读（没有被 quarantine）
+        data, _meta = store.read(saved["artifact_id"])
+        assert data == b"payload"
+    finally:
+        db.dispose()

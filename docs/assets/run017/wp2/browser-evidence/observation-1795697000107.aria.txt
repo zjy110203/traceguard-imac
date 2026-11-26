@@ -1,0 +1,22 @@
+- navigation:
+  - link "项目":
+    - /url: /projects
+  - link "新建项目":
+    - /url: /projects/new
+- heading "项目列表" [level=1]
+- text: 项目创建成功
+- table:
+  - rowgroup:
+    - row "Key 名称 状态 操作":
+      - columnheader "Key"
+      - columnheader "名称"
+      - columnheader "状态"
+      - columnheader "操作"
+  - rowgroup:
+    - row "TF-649643 bp:d4aea4ca7d4c:ui ACTIVE 详情":
+      - cell "TF-649643"
+      - cell "bp:d4aea4ca7d4c:ui"
+      - cell "ACTIVE"
+      - cell "详情":
+        - link "详情":
+          - /url: /projects/TF-649643

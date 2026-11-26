@@ -47,6 +47,11 @@ def main() -> int:
     ap.add_argument("--apply", action="store_true", help="真正执行回收（默认只巡检）")
     ap.add_argument("--out", default="", help="扫描/执行报告写入路径（JSON）")
     ap.add_argument("--actor", default="artifact-gc-cli")
+    ap.add_argument(
+        "--fail-on-inconsistent",
+        action="store_true",
+        help="巡检发现缺失/哈希不一致时返回非 0（CI 门禁用；默认只告警）",
+    )
     args = ap.parse_args()
 
     settings = get_settings()
@@ -87,7 +92,13 @@ def main() -> int:
                 len(report["consistency"]["hash_mismatch"]),
             )
         )
-    # dry-run 永远返回 0（巡检不是失败）；apply 时若有单条失败也不掩盖
+    if (
+        args.fail_on_inconsistent
+        and report.get("consistency")
+        and not report["consistency"]["consistent"]
+    ):
+        return 1
+    # dry-run 默认返回 0（巡检不是失败）；apply 时若有单条失败也不掩盖
     if args.apply:
         errors = [a for a in report["gc"]["actions"] if a.get("result") == "error"]
         return 1 if errors else 0

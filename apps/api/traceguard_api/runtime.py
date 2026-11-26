@@ -43,7 +43,9 @@ class Runtime:
         self.tasks = TaskService(self.db)
         self.events = PersistentEventStore(self.db)
         self.evidence = PersistentEvidenceManager(self.db)
-        self.artifacts = ArtifactStore(self.db, root=settings.artifact_dir)
+        self.artifacts = ArtifactStore(
+            self.db, root=settings.artifact_dir, backend=settings.artifact_backend
+        )
         self.docs = DocStore(self.db)
         self.worker_id = settings.worker_id or default_worker_id()
         self._pipeline_lock = threading.Lock()

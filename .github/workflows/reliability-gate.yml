@@ -1,0 +1,156 @@
+# Reliability Gate（独立可靠性门禁）：手动触发，只做"必须真实跑很久"的验收。
+#
+# 与 PR / Nightly 的分工：
+# - PR Gate：快速、确定性（无 PG / 无真实浏览器全量）；
+# - Nightly：日常真实依赖（PG16 + Chromium + 全量测试）；
+# - Reliability Gate：**发布前**的严格长稳与故障编排（60+ 分钟），默认不自动跑。
+#
+# 原则：任何一步失败都必须让 Job 真实失败；`if: always()` 只用于上传证据。
+name: Reliability Gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      soak_minutes:
+        description: "严格长稳时长（分钟，>=60）"
+        required: true
+        default: "62"
+      min_runs:
+        description: "长稳期间最少真实 Run 数"
+        required: true
+        default: "100"
+      workers:
+        description: "独立 Worker 进程数"
+        required: true
+        default: "3"
+
+concurrency:
+  group: reliability-gate
+  cancel-in-progress: false
+
+jobs:
+  reliability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: traceguard
+          POSTGRES_PASSWORD: traceguard_ci_only
+          POSTGRES_DB: traceguard
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U traceguard"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      TG_TEST_POSTGRES_URL: postgresql+psycopg://traceguard:traceguard_ci_only@127.0.0.1:5432/traceguard
+      TG_SOAK_PG_ADMIN: postgresql://traceguard:traceguard_ci_only@127.0.0.1:5432/postgres
+      TG_SOAK_PG_DB: traceguard_run017_soak
+      PYTHONPATH: packages/core:packages/contracts:packages/execution:packages/agents:packages/evidence:packages/persistence:apps/api:apps/teamflow:apps/workers:benchmark
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install (postgres driver + dev tools + pg client)
+        # pg_dump/pg_restore 用于备份恢复验收；缺客户端时该步骤会真实失败，不静默跳过。
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -r requirements-postgres.txt
+          .venv/bin/pip install -r requirements-dev.txt
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-16 || sudo apt-get install -y postgresql-client
+
+      - name: Install Playwright chromium (must succeed)
+        run: |
+          .venv/bin/python -m playwright install --with-deps chromium
+          .venv/bin/python - <<'PY'
+          import pathlib, sys
+          roots = [pathlib.Path.home() / ".cache" / "ms-playwright"]
+          found = [p.name for r in roots if r.exists() for p in r.iterdir() if "chromium" in p.name]
+          if not found:
+              print("BLOCKED: playwright chromium 未安装成功", file=sys.stderr)
+              sys.exit(1)
+          print("playwright chromium installed:", found)
+          PY
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build frontend (UI 验收依赖 SPA 产物)
+        working-directory: apps/web
+        run: |
+          npm ci
+          npm run build
+          test -f dist/index.html
+
+      - name: PostgreSQL server version must be 16
+        run: |
+          .venv/bin/python - <<'PY'
+          import os, sys
+          from sqlalchemy import create_engine, text
+          engine = create_engine(os.environ["TG_TEST_POSTGRES_URL"])
+          with engine.connect() as conn:
+              v = conn.execute(text("SHOW server_version")).scalar_one()
+          print("server_version =", v)
+          if not str(v).startswith("16"):
+              sys.exit(f"BLOCKED: 期望 PostgreSQL 16，实际 {v}")
+          PY
+
+      - name: 严格长稳（PG16 + 独立 API + 多 Worker + 真实 Chromium）
+        # 时长与最少 Run 数由输入决定；脚本内部强制"不伪造 PASS、失败保留 NOTE"。
+        run: |
+          .venv/bin/python scripts/soak_run013.py \
+            --minutes "${{ inputs.soak_minutes }}" \
+            --workers "${{ inputs.workers }}" \
+            --min-runs "${{ inputs.min_runs }}" \
+            --out docs/assets/run017/wp4/soak \
+            --workpackage "RUN-017 WP4" \
+            --run-tag run017
+
+      - name: Regression 多进程并发（10 进程 + PG16）
+        run: |
+          .venv/bin/python scripts/regression_multiprocess_run016.py \
+            --procs 10 --timeout 60 \
+            --out docs/assets/run017/wp4/regression-multiprocess.json
+
+      - name: Artifact 生命周期专项 + 规模一致性（10k Evidence）
+        run: |
+          .venv/bin/pytest -q \
+            tests/integration/test_artifact_lifecycle_run016.py \
+            tests/integration/test_fenced_reentry_run017.py -rs
+          .venv/bin/python scripts/artifact_gc_bench_run017.py \
+            --counts 10000 --out docs/assets/run017/wp4 --fail-on-inconsistent
+
+      - name: 备份与恢复（SQLite + PG16，真实 pg_dump/pg_restore）
+        run: |
+          .venv/bin/python scripts/backup_restore_verify_run017.py \
+            --out docs/assets/run017/wp5/backup-restore \
+            --pg-admin-url "postgresql://traceguard:traceguard_ci_only@127.0.0.1:5432/postgres"
+
+      - name: 真实 UI 全链路验收（独立 Worker + 真实 Chromium + 真实 TeamFlow）
+        run: .venv/bin/python scripts/business_loop_ui_acceptance_run017.py
+
+      - name: 环境诊断（只读，输出到证据）
+        if: always()
+        run: .venv/bin/python scripts/doctor.py --json docs/assets/run017/wp5/doctor.json --skip-browser
+
+      - name: Upload reliability evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reliability-evidence
+          path: |
+            docs/assets/run017
+            logs
+            .pytest-tmp
+          retention-days: 30
+          if-no-files-found: warn

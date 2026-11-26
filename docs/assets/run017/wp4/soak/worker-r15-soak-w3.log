@@ -1,0 +1,1 @@
+{"ts": "2026-11-26T12:50:08.461050+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "worker_started", "worker": "r15-soak-w3", "once": false, "poll": 0.4}

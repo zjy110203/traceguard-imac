@@ -1,0 +1,22 @@
+- navigation:
+  - link "项目":
+    - /url: /projects
+  - link "新建项目":
+    - /url: /projects/new
+- heading "项目列表" [level=1]
+- text: 创建失败（UI 表现异常）
+- table:
+  - rowgroup:
+    - row "Key 名称 状态 操作":
+      - columnheader "Key"
+      - columnheader "名称"
+      - columnheader "状态"
+      - columnheader "操作"
+  - rowgroup:
+    - row "TF-367801 bp:1fc1eb4468f1:ui ACTIVE 详情":
+      - cell "TF-367801"
+      - cell "bp:1fc1eb4468f1:ui"
+      - cell "ACTIVE"
+      - cell "详情":
+        - link "详情":
+          - /url: /projects/TF-367801

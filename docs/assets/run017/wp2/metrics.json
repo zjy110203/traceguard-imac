@@ -1,0 +1,295 @@
+{
+  "run": "RUN-017 WP2",
+  "mode": "rule_group_qualification_single_arm",
+  "rounds": 2,
+  "scenario_count": 30,
+  "started_at": "2026-11-26T20:33:40+0800",
+  "finished_at": "2026-11-26T20:45:54+0800",
+  "duration_s": 733.8,
+  "environment": {
+    "platform": "macOS-15.2-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12",
+    "db_url": "sqlite:////Users/dlp--test/Desktop/traceguard/docs/assets/run017/wp2/run-env/platform.db",
+    "teamflow": "http://127.0.0.1:54335",
+    "api": "http://127.0.0.1:54336",
+    "workers": 2,
+    "api_inline_worker": false,
+    "browser": "chromium (playwright)"
+  },
+  "benchmark_schema_version": "benchmark-fault-v2",
+  "metrics": {
+    "samples_total": 60,
+    "faulty_samples": 56,
+    "positive_controls": 4,
+    "unknown_samples": 2,
+    "unknown_ratio": 0.0333,
+    "confirmed_samples": 45,
+    "not_triggered_samples": 9,
+    "resolved_samples": 54,
+    "fault_activation_coverage": 1.0,
+    "fault_effect_confirmation_rate": 0.8333,
+    "fault_effect_confirmation_rate_ci95": [
+      0.7126,
+      0.9098
+    ],
+    "false_pass": 15,
+    "false_pass_rate_over_faulty": 0.2679,
+    "false_pass_samples": [
+      "TF-DB-003#r1",
+      "TF-API-003#r1",
+      "TF-API-004#r1",
+      "TF-NET-001#r1",
+      "TF-NET-001-FAST#r1",
+      "TF-TIME-001#r1",
+      "TF-TIME-002#r1",
+      "TF-FLAKY-001#r1",
+      "TF-DB-003#r2",
+      "TF-API-003#r2",
+      "TF-API-004#r2",
+      "TF-NET-001#r2",
+      "TF-NET-001-FAST#r2",
+      "TF-TIME-001#r2",
+      "TF-TIME-002#r2"
+    ],
+    "false_negative": 5,
+    "false_negative_samples": [
+      "TF-LOC-001#r1",
+      "TF-LOC-002#r1",
+      "TF-FLAKY-002#r1",
+      "TF-LOC-001#r2",
+      "TF-LOC-002#r2"
+    ],
+    "diagnosed_samples": 16,
+    "primary_cause_accuracy": 0.0,
+    "primary_cause_accuracy_ci95": [
+      0.0,
+      0.1936
+    ],
+    "macro_f1": 0.0,
+    "per_label": {
+      "TF-API-001": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 2,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "TF-API-002": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 2,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "TF-COMP-001": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 2,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "TF-FLAKY-002": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 2,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "TF-SEC-001": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 2,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "TF-SEC-002": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 2,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "TF-UI-001": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 2,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "TF-UI-003": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 2,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    },
+    "probe_cost_ms_total": 733180.7,
+    "probe_cost_ms_median": 10208.8,
+    "subset_23_scenarios": {
+      "samples_total": 46,
+      "faulty_samples": 42,
+      "positive_controls": 4,
+      "unknown_samples": 2,
+      "unknown_ratio": 0.0435,
+      "confirmed_samples": 37,
+      "not_triggered_samples": 3,
+      "resolved_samples": 40,
+      "fault_activation_coverage": 1.0,
+      "fault_effect_confirmation_rate": 0.925,
+      "fault_effect_confirmation_rate_ci95": [
+        0.8014,
+        0.9742
+      ],
+      "false_pass": 15,
+      "false_pass_rate_over_faulty": 0.3571,
+      "false_pass_samples": [
+        "TF-DB-003#r1",
+        "TF-API-003#r1",
+        "TF-API-004#r1",
+        "TF-NET-001#r1",
+        "TF-NET-001-FAST#r1",
+        "TF-TIME-001#r1",
+        "TF-TIME-002#r1",
+        "TF-FLAKY-001#r1",
+        "TF-DB-003#r2",
+        "TF-API-003#r2",
+        "TF-API-004#r2",
+        "TF-NET-001#r2",
+        "TF-NET-001-FAST#r2",
+        "TF-TIME-001#r2",
+        "TF-TIME-002#r2"
+      ],
+      "false_negative": 1,
+      "false_negative_samples": [
+        "TF-FLAKY-002#r1"
+      ],
+      "diagnosed_samples": 12,
+      "primary_cause_accuracy": 0.0,
+      "primary_cause_accuracy_ci95": [
+        0.0,
+        0.2425
+      ],
+      "macro_f1": 0.0,
+      "per_label": {
+        "TF-API-001": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "TF-API-002": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "TF-COMP-001": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "TF-FLAKY-002": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "TF-SEC-001": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "TF-SEC-002": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        }
+      },
+      "probe_cost_ms_total": 575989.7,
+      "probe_cost_ms_median": 8761.6
+    },
+    "subset_browser_7_scenarios": {
+      "samples_total": 14,
+      "faulty_samples": 14,
+      "positive_controls": 0,
+      "unknown_samples": 0,
+      "unknown_ratio": 0.0,
+      "confirmed_samples": 8,
+      "not_triggered_samples": 6,
+      "resolved_samples": 14,
+      "fault_activation_coverage": 1.0,
+      "fault_effect_confirmation_rate": 0.5714,
+      "fault_effect_confirmation_rate_ci95": [
+        0.3259,
+        0.7862
+      ],
+      "false_pass": 0,
+      "false_pass_rate_over_faulty": 0.0,
+      "false_pass_samples": [],
+      "false_negative": 4,
+      "false_negative_samples": [
+        "TF-LOC-001#r1",
+        "TF-LOC-002#r1",
+        "TF-LOC-001#r2",
+        "TF-LOC-002#r2"
+      ],
+      "diagnosed_samples": 4,
+      "primary_cause_accuracy": 0.0,
+      "primary_cause_accuracy_ci95": [
+        0.0,
+        0.4899
+      ],
+      "macro_f1": 0.0,
+      "per_label": {
+        "TF-UI-001": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "TF-UI-003": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        }
+      },
+      "probe_cost_ms_total": 157191.0,
+      "probe_cost_ms_median": 11420.6
+    }
+  },
+  "samples_file": "/Users/dlp--test/Desktop/traceguard/docs/assets/run017/wp2/samples.jsonl",
+  "limitations": [
+    "单臂（规则组）资格实验：不含 LLM 臂与人工基线，不与历史 v1 数据混算",
+    "UNKNOWN 不计入已确认故障效果；未达显著性的结论不外推",
+    "TF-TIME-003（双提交竞态）没有独立探针，样本保持 UNKNOWN"
+  ]
+}

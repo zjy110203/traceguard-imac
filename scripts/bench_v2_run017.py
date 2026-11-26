@@ -461,6 +461,7 @@ def run_sample(
     ]
 
     diag_primary = None
+    diag_directional = None
     diag_outcome = None
     if diagnosis:
         diag_outcome = diagnosis.get("outcome")
@@ -468,6 +469,14 @@ def run_sample(
         roots = diagnosis.get("root_causes") or []
         if roots and roots[0] in hyps:
             diag_primary = hyps[roots[0]].get("failure_mechanism")
+        # 方向性预测（与历史口径一致）：PROBABLE 且非 flaky 时取首个 SUPPORTED 假设，
+        # 明确标注为"方向性"，不与 CONFIRMED 主因混算。
+        is_flaky = any(h.get("flaky_characteristic") for h in hyps.values())
+        if diag_primary is None and diag_outcome == "PROBABLE" and not is_flaky:
+            for h in hyps.values():
+                if h.get("status") == "SUPPORTED":
+                    diag_directional = h.get("failure_mechanism")
+                    break
 
     return {
         "scenario_id": scenario.scenario_id,
@@ -475,6 +484,7 @@ def run_sample(
         "testcase_id": scenario.testcase_id,
         "faults": faults,
         "fault_mechanism_gt": scenario.fault_mechanism,
+        "gt_mechanism": scenario.gt_mechanism,
         "expected_test_verdict": scenario.expected_test_verdict or scenario.expected_verdict,
         "diagnosis_eligible": scenario.diagnosis_eligible,
         "fault_activation_status": activation.get("fault_activation_status"),
@@ -494,6 +504,7 @@ def run_sample(
         "run_id": run.get("run_id"),
         "run_duration_ms": run_ms,
         "diagnosis_primary_cause": diag_primary,
+        "diagnosis_predicted_cause": diag_primary or diag_directional,
         "diagnosis_outcome": diag_outcome,
         "diagnosis_id": diagnosis.get("diagnosis_id"),
         "ground_truth": gt,
@@ -505,6 +516,12 @@ def run_sample(
             "count": business_after.get("count"),
             "http_status": business_after.get("http_status"),
         },
+        "business_delta": (
+            int(business_after.get("count") or 0) - int(business_before.get("count") or 0)
+            if isinstance(business_after.get("count"), int)
+            and isinstance(business_before.get("count"), int)
+            else None
+        ),
         "baseline_captured": bool(baseline),
         "probe_token": token,
         "reset": reset_info,
@@ -535,51 +552,87 @@ def compute_metrics(samples: list[dict[str, Any]]) -> dict[str, Any]:
     controls = [s for s in samples if not s["faults"]]
     activation_active = sum(1 for s in faulty_samples if s["fault_activation_status"] == "ACTIVE")
 
+    # False Pass：本应失败却通过，且**本次 Run 的业务结果确实缺失**。
+    # 只有独立探针观测到效果还不够：像 TF-FLAKY-001 这类概率故障，探针可能命中
+    # 而本次 Run 的请求恰好没命中（business_delta=+1），此时不算测试漏报。
     false_pass = [
         s
         for s in faulty_samples
-        if s["run_verdict_observed"] == "PASSED" and s["fault_effect_status"] == "CONFIRMED"
+        if s["run_verdict_observed"] == "PASSED"
+        and s["fault_effect_status"] == "CONFIRMED"
+        and s["expected_test_verdict"] == "FAILED"
+        and (s.get("business_delta") is None or int(s["business_delta"]) <= 0)
     ]
+    # False Negative：本应通过（故障不该破坏业务）却被判失败。
+    # 与"测试失败但业务未受影响"分开统计——后者是测试资产/断言问题，不是漏报。
     false_negative = [
         s
         for s in faulty_samples
         if s["fault_effect_status"] == "NOT_TRIGGERED"
         and s["run_verdict_observed"] in {"FAILED", "NOT_EVALUATED"}
-        and bool(s["diagnosis_eligible"])
+        and s["expected_test_verdict"] == "PASSED"
     ]
-
-    diag_samples = [
-        s for s in faulty_samples if s["diagnosis_primary_cause"] and s.get("ground_truth")
-    ]
-    correct = [
+    test_failed_business_unaffected = [
         s
-        for s in diag_samples
-        if s["diagnosis_primary_cause"] == s["ground_truth"]["fault_mechanism_id"]
+        for s in faulty_samples
+        if s["fault_effect_status"] == "NOT_TRIGGERED"
+        and s["run_verdict_observed"] in {"FAILED", "NOT_EVALUATED"}
     ]
 
-    labels = sorted(
-        {s["ground_truth"]["fault_mechanism_id"] for s in diag_samples if s["ground_truth"]}
-    )
+    # 诊断输出的是**机制类**（API / UI_RENDERING / PERSISTENCE / ...），
+    # GT 的 fault_mechanism_id 是故障编号（TF-API-001）。二者不能用同一个字段比较。
+    diag_samples = [
+        s for s in faulty_samples if s["diagnosis_primary_cause"] and s.get("gt_mechanism")
+    ]
+    correct = [s for s in diag_samples if s["diagnosis_primary_cause"] == s["gt_mechanism"]]
+
+    directional_samples = [
+        s for s in faulty_samples if s.get("diagnosis_predicted_cause") and s.get("gt_mechanism")
+    ]
+    directional_correct = [
+        s for s in directional_samples if s["diagnosis_predicted_cause"] == s["gt_mechanism"]
+    ]
+    directional_f1s: list[float] = []
+    for label in sorted({s["gt_mechanism"] for s in directional_samples}):
+        tp = sum(
+            1
+            for s in directional_samples
+            if s["diagnosis_predicted_cause"] == label and s["gt_mechanism"] == label
+        )
+        fp = sum(
+            1
+            for s in directional_samples
+            if s["diagnosis_predicted_cause"] == label and s["gt_mechanism"] != label
+        )
+        fn = sum(
+            1
+            for s in directional_samples
+            if s["diagnosis_predicted_cause"] != label and s["gt_mechanism"] == label
+        )
+        precision = tp / (tp + fp) if tp + fp else 0.0
+        recall = tp / (tp + fn) if tp + fn else 0.0
+        directional_f1s.append(
+            2 * precision * recall / (precision + recall) if precision + recall else 0.0
+        )
+
+    labels = sorted({s["gt_mechanism"] for s in diag_samples if s.get("gt_mechanism")})
     f1s: list[float] = []
     per_label: dict[str, Any] = {}
     for label in labels:
         tp = sum(
             1
             for s in diag_samples
-            if s["diagnosis_primary_cause"] == label
-            and s["ground_truth"]["fault_mechanism_id"] == label
+            if s["diagnosis_primary_cause"] == label and s["gt_mechanism"] == label
         )
         fp = sum(
             1
             for s in diag_samples
-            if s["diagnosis_primary_cause"] == label
-            and s["ground_truth"]["fault_mechanism_id"] != label
+            if s["diagnosis_primary_cause"] == label and s["gt_mechanism"] != label
         )
         fn = sum(
             1
             for s in diag_samples
-            if s["diagnosis_primary_cause"] != label
-            and s["ground_truth"]["fault_mechanism_id"] == label
+            if s["diagnosis_primary_cause"] != label and s["gt_mechanism"] == label
         )
         precision = tp / (tp + fp) if tp + fp else 0.0
         recall = tp / (tp + fn) if tp + fn else 0.0
@@ -616,11 +669,27 @@ def compute_metrics(samples: list[dict[str, Any]]) -> dict[str, Any]:
         "false_pass_samples": [f"{s['scenario_id']}#r{s['round_id']}" for s in false_pass],
         "false_negative": len(false_negative),
         "false_negative_samples": [f"{s['scenario_id']}#r{s['round_id']}" for s in false_negative],
+        "test_failed_business_unaffected": len(test_failed_business_unaffected),
+        "test_failed_business_unaffected_samples": [
+            f"{s['scenario_id']}#r{s['round_id']}" for s in test_failed_business_unaffected
+        ],
         "diagnosed_samples": len(diag_samples),
         "primary_cause_accuracy": (
             round(len(correct) / len(diag_samples), 4) if diag_samples else None
         ),
         "primary_cause_accuracy_ci95": wilson_ci(len(correct), len(diag_samples)),
+        "diagnosed_samples_directional": len(directional_samples),
+        "primary_cause_accuracy_directional": (
+            round(len(directional_correct) / len(directional_samples), 4)
+            if directional_samples
+            else None
+        ),
+        "primary_cause_accuracy_directional_ci95": wilson_ci(
+            len(directional_correct), len(directional_samples)
+        ),
+        "macro_f1_directional": (
+            round(sum(directional_f1s) / len(directional_f1s), 4) if directional_f1s else None
+        ),
         "macro_f1": round(sum(f1s) / len(f1s), 4) if f1s else None,
         "per_label": per_label,
         "probe_cost_ms_total": round(sum(probe_ms), 1),
@@ -628,6 +697,99 @@ def compute_metrics(samples: list[dict[str, Any]]) -> dict[str, Any]:
             round(sorted(probe_ms)[len(probe_ms) // 2], 1) if probe_ms else None
         ),
     }
+
+
+def enrich_diagnosis(samples: list[dict[str, Any]], diag_db: str) -> int:
+    """从实验库回读诊断文档，补齐方向性预测（用于口径修正后的复核）。"""
+    from traceguard_persistence import Database
+    from traceguard_persistence.stores import DocStore
+
+    url = diag_db if "://" in diag_db else f"sqlite:///{Path(diag_db).resolve()}"
+    db = Database(url)
+    docs = DocStore(db)
+    enriched = 0
+    try:
+        for row in samples:
+            if row.get("diagnosis_predicted_cause"):
+                continue
+            diag_id = str(row.get("diagnosis_id") or "")
+            if not diag_id:
+                continue
+            rec = docs.get(diag_id)
+            if rec is None:
+                continue
+            d = rec.to_dict()
+            hyps = {h.get("hypothesis_id"): h for h in d.get("hypotheses") or []}
+            roots = d.get("root_causes") or []
+            primary = None
+            if roots and roots[0] in hyps:
+                primary = hyps[roots[0]].get("failure_mechanism")
+            directional = primary
+            is_flaky = any(h.get("flaky_characteristic") for h in hyps.values())
+            if primary is None and d.get("outcome") == "PROBABLE" and not is_flaky:
+                for h in hyps.values():
+                    if h.get("status") == "SUPPORTED":
+                        directional = h.get("failure_mechanism")
+                        break
+            row["diagnosis_predicted_cause"] = directional
+            row["diagnosis_primary_cause"] = primary
+            row["diagnosis_outcome"] = d.get("outcome")
+            enriched += 1
+    finally:
+        db.dispose()
+    return enriched
+
+
+def recompute(samples_file: Path, out_dir: Path, diag_db: str = "") -> int:
+    """从已落盘的样本重算指标（不重跑实验），用于口径修正后复核。"""
+    by_id = {s.scenario_id: s for s in SCENARIOS}
+    samples: list[dict[str, Any]] = []
+    for line in samples_file.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        scenario = by_id.get(row["scenario_id"])
+        if scenario:
+            row.setdefault("gt_mechanism", scenario.gt_mechanism)
+            row.setdefault(
+                "expected_test_verdict",
+                scenario.expected_test_verdict or scenario.expected_verdict,
+            )
+        before = (row.get("business_state_before") or {}).get("count")
+        after = (row.get("business_state_after") or {}).get("count")
+        if isinstance(before, int) and isinstance(after, int):
+            row.setdefault("business_delta", after - before)
+        samples.append(row)
+    if diag_db:
+        count = enrich_diagnosis(samples, diag_db)
+        print(f"[recompute] enriched {count} diagnoses from {diag_db}", flush=True)
+        # 回写样本，后续复算无需再读 DB
+        samples_file.write_text(
+            "\n".join(json.dumps(r, ensure_ascii=False) for r in samples) + "\n",
+            encoding="utf-8",
+        )
+    metrics = compute_metrics(samples)
+    metrics["subset_23_scenarios"] = compute_metrics(
+        [s for s in samples if s["gt_mechanism"] not in BROWSER_ONLY_MECHANISMS]
+    )
+    metrics["subset_browser_7_scenarios"] = compute_metrics(
+        [s for s in samples if s["gt_mechanism"] in BROWSER_ONLY_MECHANISMS]
+    )
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "metrics-recomputed.json").write_text(
+        json.dumps(
+            {
+                "run": "RUN-017 WP2 (recomputed)",
+                "samples_file": str(samples_file),
+                "metrics": metrics,
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    print(json.dumps(metrics, ensure_ascii=False, indent=2)[:4000])
+    return 0
 
 
 def main() -> int:
@@ -639,6 +801,12 @@ def main() -> int:
     parser.add_argument("--scenario", action="append", default=[])
     parser.add_argument("--workdir", default="")
     parser.add_argument("--keep-env", action="store_true")
+    parser.add_argument(
+        "--recompute",
+        default="",
+        help="只重算已有 samples.jsonl 的指标（不启动环境）",
+    )
+    parser.add_argument("--diag-db", default="", help="重算时用于补齐诊断预测的实验数据库")
     args = parser.parse_args()
 
     out_dir = ROOT / args.out
@@ -649,6 +817,9 @@ def main() -> int:
     selected = set(args.scenario)
     scenarios = [s for s in SCENARIOS if not selected or s.scenario_id in selected]
     ground_truth = load_ground_truth()
+
+    if args.recompute:
+        return recompute(Path(args.recompute), out_dir, args.diag_db)
 
     samples_path = out_dir / "samples.jsonl"
     if samples_path.exists():

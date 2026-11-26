@@ -1,0 +1,98 @@
+{
+  "run": "RUN-017 WP5.3",
+  "generated_at": "2026-11-26T20:43:56+0800",
+  "read_only": true,
+  "checks": [
+    {
+      "check": "python",
+      "status": "PASS",
+      "detail": "3.13.12",
+      "hint": ""
+    },
+    {
+      "check": "dependencies",
+      "status": "PASS",
+      "detail": "fastapi / sqlalchemy / pydantic / uvicorn 可用",
+      "hint": ""
+    },
+    {
+      "check": "config",
+      "status": "PASS",
+      "detail": ".env 存在（不打印内容）；示例 .env.example 存在=True",
+      "hint": ""
+    },
+    {
+      "check": "playwright_chromium",
+      "status": "PASS",
+      "detail": "chromium 159.0.8154.6",
+      "hint": ""
+    },
+    {
+      "check": "node",
+      "status": "PASS",
+      "detail": "v22.22.2 / npm npm",
+      "hint": ""
+    },
+    {
+      "check": "frontend_dist",
+      "status": "PASS",
+      "detail": "index.html 存在，共 372 KiB",
+      "hint": ""
+    },
+    {
+      "check": "database_migrations",
+      "status": "PASS",
+      "detail": "12 个迁移已应用",
+      "hint": ""
+    },
+    {
+      "check": "artifact_dir",
+      "status": "PASS",
+      "detail": ".traceguard/artifacts 可读写",
+      "hint": ""
+    },
+    {
+      "check": "api_health",
+      "status": "WARN",
+      "detail": "URLError: <urlopen error [Errno 61] Connection refused>",
+      "hint": "API 未启动（本地演示可稍后启动）"
+    },
+    {
+      "check": "teamflow_health",
+      "status": "WARN",
+      "detail": "URLError: <urlopen error [Errno 61] Connection refused>",
+      "hint": "被测目标 TeamFlow 未启动"
+    },
+    {
+      "check": "worker_queue",
+      "status": "WARN",
+      "detail": "URLError: <urlopen error [Errno 61] Connection refused>",
+      "hint": "API 未启动或未授权"
+    },
+    {
+      "check": "egress_policy",
+      "status": "PASS",
+      "detail": "默认目标 http://127.0.0.1:8001；额外放行 0 个 origin",
+      "hint": ""
+    },
+    {
+      "check": "port_api",
+      "status": "WARN",
+      "detail": "127.0.0.1:8000 free",
+      "hint": "服务未监听（本地演示可接受）"
+    },
+    {
+      "check": "port_teamflow",
+      "status": "WARN",
+      "detail": "127.0.0.1:8001 free",
+      "hint": "服务未监听（本地演示可接受）"
+    }
+  ],
+  "summary": {
+    "PASS": 9,
+    "WARN": 5,
+    "FAIL": 0,
+    "BLOCKED": 0
+  },
+  "exit_code": 0
+}

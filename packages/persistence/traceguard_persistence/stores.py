@@ -18,7 +18,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import select, update
+from sqlalchemy import String, cast, select, update
 from sqlalchemy.exc import IntegrityError
 from traceguard_core.errors import AppError, ErrorCode
 from traceguard_core.ids import new_id, utc_now_iso
@@ -1170,8 +1170,15 @@ class ArtifactStore:
         self.backend = backend
         self.bucket = bucket
         self.endpoint = endpoint
-        if backend == "local":
-            self.root.mkdir(parents=True, exist_ok=True)
+        # RUN-017 WP4.3：能力边界必须显式。当前只实现了本地内容寻址存储；
+        # 配置要求 s3/minio 时必须在**启动时**失败，不能静默用本地目录冒充对象存储
+        # （否则备份/恢复、容量规划与安全边界全部失真）。
+        if backend != "local":
+            raise AppError(
+                ErrorCode.PRECONDITION_FAILED,
+                f"ARTIFACT_BACKEND_UNSUPPORTED: '{backend}' 未实现（当前只支持 local）",
+            )
+        self.root.mkdir(parents=True, exist_ok=True)
 
     def put(
         self,
@@ -1357,24 +1364,77 @@ class ArtifactStore:
             "consistent": not missing and not mismatched,
         }
 
-    def _referenced_artifact_ids(self, s: Any) -> set[str]:
-        """收集仍被业务引用的产物 ID。
+    def _referenced_artifact_ids(self, s: Any, *, batch_size: int = 500) -> set[str]:
+        """收集仍被业务引用的产物 ID（keyset 分页，不一次性加载全部文档）。
 
         三个来源都要看，否则会误删真实引用：
         1. `tg_evidence.attachment_ref`（管道写入的截图/DOM/ARIA 附件）；
         2. Evidence `doc` JSON 内嵌的 `art_*` 引用（探针/诊断等派生证据）；
         3. `tg_run.report_json` 内嵌的引用（trace_artifact 等只在 Run 报告里出现，
            不属于任何一条 Evidence——RUN-016 实测：729 个产物中 181 个只被报告引用）。
+
+        RUN-017 WP4.2：旧实现用 `select(EvidenceRow.doc)` / `select(RunRow.report_json)`
+        一次性把**全部**文档读进 Python 内存，10 万条 Evidence 时峰值内存与查询时长
+        不可控。现在按主键 keyset 分页，每批只保留 batch_size 条文档的瞬时内存；
+        引用集合本身仍需要保存在内存中（这是判定"是否被引用"的最小状态）。
         """
         refs = {str(r) for r in s.scalars(select(EvidenceRow.attachment_ref).distinct()) if r}
-        for doc in s.scalars(select(EvidenceRow.doc)):
-            if not isinstance(doc, dict):
-                continue
-            refs.update(_ARTIFACT_REF_RE.findall(json.dumps(doc, ensure_ascii=False)))
-        for report in s.scalars(select(RunRow.report_json)):
-            if isinstance(report, dict) and report:
-                refs.update(_ARTIFACT_REF_RE.findall(json.dumps(report, ensure_ascii=False)))
+        last_id = ""
+        while True:
+            rows = s.execute(
+                select(EvidenceRow.evidence_id, EvidenceRow.doc)
+                .where(EvidenceRow.evidence_id > last_id)
+                .order_by(EvidenceRow.evidence_id)
+                .limit(batch_size)
+            ).all()
+            if not rows:
+                break
+            for evidence_id, doc in rows:
+                last_id = str(evidence_id)
+                if isinstance(doc, dict):
+                    refs.update(_ARTIFACT_REF_RE.findall(json.dumps(doc, ensure_ascii=False)))
+        last_run = ""
+        while True:
+            rows = s.execute(
+                select(RunRow.run_id, RunRow.report_json)
+                .where(RunRow.run_id > last_run)
+                .order_by(RunRow.run_id)
+                .limit(batch_size)
+            ).all()
+            if not rows:
+                break
+            for run_id, report in rows:
+                last_run = str(run_id)
+                if isinstance(report, dict) and report:
+                    refs.update(_ARTIFACT_REF_RE.findall(json.dumps(report, ensure_ascii=False)))
         return refs
+
+    def _artifact_still_referenced(self, s: Any, artifact_id: str) -> bool:
+        """删除前的**定向**复核：只查这一条产物是否被引用（不重扫全库）。
+
+        与 `_referenced_artifact_ids()` 的全量扫描配合：
+        - 扫描给出候选；
+        - 真正删除前再用定向查询确认一次，缩小"扫描后到删除前"的竞态窗口。
+        """
+        pattern = f"%{artifact_id}%"
+        if s.scalar(
+            select(EvidenceRow.evidence_id)
+            .where(EvidenceRow.attachment_ref == artifact_id)
+            .limit(1)
+        ):
+            return True
+        # Evidence.doc 内嵌引用（JSON 文本匹配，SQLite/PG 通用；只作用于单条候选）
+        if s.scalar(
+            select(EvidenceRow.evidence_id)
+            .where(cast(EvidenceRow.doc, String).like(pattern))
+            .limit(1)
+        ):
+            return True
+        if s.scalar(
+            select(RunRow.run_id).where(cast(RunRow.report_json, String).like(pattern)).limit(1)
+        ):
+            return True
+        return False
 
     def scan(
         self,
@@ -1391,22 +1451,31 @@ class ArtifactStore:
         fresh_orphans: list[dict[str, Any]] = []
         with self.db.session() as s:
             refs = self._referenced_artifact_ids(s)
-            rows = s.scalars(select(ArtifactRow)).all()
-            by_sha = {row.sha256: row for row in rows}
-            for row in rows:
-                path = Path(row.path)
+            # RUN-017 WP4.2：只取必要列（不实例化 ORM 对象），10 万级登记下表内存大幅下降
+            rows = s.execute(
+                select(
+                    ArtifactRow.artifact_id,
+                    ArtifactRow.sha256,
+                    ArtifactRow.path,
+                    ArtifactRow.created_at,
+                    ArtifactRow.size,
+                )
+            ).all()
+            by_sha = {row[1]: row[0] for row in rows}
+            for artifact_id, sha256, path_str, created_at, size in rows:
+                path = Path(path_str)
                 if not path.is_file():
-                    missing_files.append({"artifact_id": row.artifact_id, "path": row.path})
-                if row.artifact_id in refs:
+                    missing_files.append({"artifact_id": artifact_id, "path": path_str})
+                if artifact_id in refs:
                     continue
                 item = {
-                    "artifact_id": row.artifact_id,
-                    "sha256": row.sha256,
-                    "path": row.path,
-                    "created_at": row.created_at,
-                    "size": row.size,
+                    "artifact_id": artifact_id,
+                    "sha256": sha256,
+                    "path": path_str,
+                    "created_at": created_at,
+                    "size": size,
                 }
-                if _iso_epoch(row.created_at) >= cutoff:
+                if _iso_epoch(created_at) >= cutoff:
                     fresh_orphans.append(item)
                 else:
                     orphan_rows.append(item)
@@ -1483,31 +1552,42 @@ class ArtifactStore:
                 "audit_path": None,
             }
         quarantine = self.root / "_quarantine" / ts
+        # RUN-017 WP4.2：整个 apply 批次只做**一次**全量引用快照，
+        # 之后每条候选再用定向查询复核；避免 O(候选数 × 全库文档数)。
+        with self.db.session() as s:
+            snapshot_refs = self._referenced_artifact_ids(s)
         done: list[dict[str, Any]] = []
         for action in actions:
             record = {"at": stamp_iso, "actor": actor, **action}
             try:
                 if action["op"] == "quarantine_file":
-                    src = Path(action["path"])
-                    if not src.is_file():
-                        record["result"] = "gone"
+                    if f"art_{action['sha256'][:20]}" in snapshot_refs:
+                        record["result"] = "skipped_referenced"
                     else:
-                        quarantine.mkdir(parents=True, exist_ok=True)
-                        dest = quarantine / f"{action['sha256']}"
-                        src.replace(dest)
-                        record["result"] = "quarantined"
-                        record["quarantine_path"] = str(dest)
+                        src = Path(action["path"])
+                        if not src.is_file():
+                            record["result"] = "gone"
+                        else:
+                            quarantine.mkdir(parents=True, exist_ok=True)
+                            dest = quarantine / f"{action['sha256']}"
+                            src.replace(dest)
+                            record["result"] = "quarantined"
+                            record["quarantine_path"] = str(dest)
                 else:
                     deleted = False
-                    with self.db.session() as s:
-                        row = s.get(ArtifactRow, action["artifact_id"])
-                        if row is None:
-                            record["result"] = "gone"
-                        elif row.artifact_id in self._referenced_artifact_ids(s):
-                            record["result"] = "skipped_referenced"
-                        else:
-                            s.delete(row)
-                            deleted = True
+                    if action["artifact_id"] in snapshot_refs:
+                        record["result"] = "skipped_referenced"
+                    else:
+                        with self.db.session() as s:
+                            row = s.get(ArtifactRow, action["artifact_id"])
+                            if row is None:
+                                record["result"] = "gone"
+                            elif self._artifact_still_referenced(s, row.artifact_id):
+                                # 删除前定向复核：缩小"扫描后新增引用"的竞态窗口
+                                record["result"] = "skipped_referenced"
+                            else:
+                                s.delete(row)
+                                deleted = True
                     if deleted:
                         # 登记删除后必须同步处理落盘文件，否则会立刻变成下一轮的孤儿文件
                         src = Path(action.get("path") or "")

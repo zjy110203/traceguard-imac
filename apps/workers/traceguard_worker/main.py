@@ -89,7 +89,7 @@ def build_worker(worker_id: str) -> tuple[TaskService, RunPipeline]:
         CatalogService(db),
         PersistentEventStore(db),
         PersistentEvidenceManager(db),
-        ArtifactStore(db, root=settings.artifact_dir),
+        ArtifactStore(db, root=settings.artifact_dir, backend=settings.artifact_backend),
         worker_id=worker_id,
     )
     return tasks, pipeline

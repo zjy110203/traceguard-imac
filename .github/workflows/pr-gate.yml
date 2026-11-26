@@ -7,19 +7,13 @@ name: PR Gate
 on:
   pull_request:
   push:
-    # RUN-007 起工作分支改名为 workbuddy/run007-resume-<日期>；旧分支名保留以兼容历史提交。
+    # RUN-017 WP1：不再逐个轮次追加分支名（历史遗漏导致 RUN-016 从未触发门禁）。
+    # GitHub 的 filter pattern 中 `*` 不匹配 `/`，`workbuddy/run*` 覆盖
+    # workbuddy/run017-product-maturity 这类单层分支；`workbuddy/run*-*` 保留兼容。
     branches:
       - main
-      - "workbuddy/run007-resume-*"
-      - "workbuddy/run007-*"
-      - "workbuddy/run008-*"
-      # RUN-011 / RUN-012 工作分支必须能触发 PR Gate，否则安全修复在合并前没有快速门禁。
-      - "workbuddy/run011-*"
-      - "workbuddy/run012-*"
-      - "workbuddy/run013-*"
-      - "workbuddy/run014-*"
-      # RUN-015 执行一致性专项必须能在合并前触发快速门禁。
-      - "workbuddy/run015-*"
+      - "workbuddy/run*"
+      - "workbuddy/run*-*"
       - workbuddy/traceguard-autonomous
 
 concurrency:
@@ -71,7 +65,14 @@ jobs:
             tests/integration/test_sse_revocation_and_global_rbac_run014.py \
             tests/integration/test_repair_regression_run015.py \
             tests/integration/test_worker_fencing_run015.py \
-            tests/integration/test_sse_recheck_limit_run015.py
+            tests/integration/test_sse_recheck_limit_run015.py \
+            tests/integration/test_artifact_lifecycle_run016.py \
+            tests/integration/test_promotion_recovery_run016.py \
+            tests/integration/test_system_config_rbac_run016.py \
+            tests/unit/test_benchmark_false_pass_v2_run016.py \
+            tests/unit/test_benchmark_fault_effect_run016.py \
+            tests/unit/test_fencing_entrypoint_audit_run016.py \
+            tests/integration/test_regression_retry_run017.py
       - name: Gate result
         if: always()
         run: |
