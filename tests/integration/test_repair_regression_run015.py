@@ -237,8 +237,12 @@ def test_regression_failure_and_inconclusive_are_distinct(env) -> None:  # type:
     assert inconclusive["regression_status"] == "INCONCLUSIVE"
     assert inconclusive["regression_failure_reason"] == "REGRESSION_EVIDENCE_MISSING"
     status = svc.regression_status(no_evidence["proposal_id"])
-    assert status["regression_retry_allowed"] is False
-    assert status["regression_retry_decision"] == "NEEDS_DECISION"
+    # RUN-017 WP3：决策已采纳方案 A —— EVIDENCE_MISSING 允许"人工授权的新 Attempt"，
+    # 因此 retry_allowed=True（仍需人类主体 + confirm + 次数/版本/Oracle 门禁）。
+    # 这里只断言"服务端给出的资格判定"，实际重试链路由 test_regression_retry_run017.py 覆盖。
+    assert status["regression_retry_allowed"] is True
+    assert status["regression_retry_decision"] == "ALLOWED_WITH_AUTHORIZATION"
+    assert status["regression_retry_reason_code"] == "EVIDENCE_MISSING"
 
 
 def test_stale_recomputed_when_another_user_promotes_new_version(env) -> None:  # type: ignore[no-untyped-def]

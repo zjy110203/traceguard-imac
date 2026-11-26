@@ -1,5 +1,36 @@
 # TraceGuard
 
+> **RUN-017（2026-11-26）产品成熟度与交付闭环**：
+> 独立故障观测从"能跑"修到"测得对"（基线 + 分类 + 值一致性 + 浏览器级观测）、
+> Regression INCONCLUSIVE 人工授权新 Attempt、`fenced_session` 重入防护、
+> Artifact GC 分页与能力边界、SQLite/PG16 备份恢复真实验收、CI 三级门禁修复。
+> 30 场景 × 2 轮资格实验：60 样本 / 56 故障样本 / Fault Effect 确认率 83.3% /
+> False Pass 0 / 诊断主因准确率 93.75%（n=16）。
+> 权威结论：`docs/RUN-017-FINAL-REPORT.md`；基线：`docs/RUN-017-BASELINE.md`。
+
+## 当前支持范围（v1，以 RUN-017 为准）
+
+| 项 | 状态 |
+|---|---|
+| 部署形态 | 1 个 API + N 个独立 Worker + 1 个 TeamFlow 被测环境 |
+| 数据库 | **PostgreSQL 16 推荐**（可靠性验收/正式部署）；SQLite 仅本地快速演示 |
+| Artifact 存储 | **仅本地内容寻址存储**；配置 `s3` 会在启动时显式失败（不会静默回退） |
+| 浏览器 | Playwright Chromium（真实执行，非 mock） |
+| LLM | 可选能力；未配置凭据时诊断/编译走规则，不伪装成 LLM 结果 |
+| 不引入 | Redis/Celery、MinIO/S3、多 API 实例、新 Agent 框架、新消息队列 |
+
+## 快速自检与备份
+
+```bash
+# 只读环境诊断（PASS/WARN/FAIL/BLOCKED）
+.venv/bin/python scripts/doctor.py
+
+# 备份恢复真实验收（SQLite + PG16；需要 pg_dump/pg_restore）
+.venv/bin/python scripts/backup_restore_verify_run017.py \
+  --out docs/assets/run017/wp5/backup-restore \
+  --pg-admin-url "postgresql://traceguard@127.0.0.1:55432/postgres"
+```
+
 > **RUN-014（2026-11-26）**：产品闭环补全——晋升后的**真实 Regression**（独立 Run + 证据 +
 > 结论时效）、Worker 租约过期即失效与 Step/Evidence/Event 同事务 fencing、SSE 活跃连接撤权、
 > 全局统计接口 RBAC 与统计口径修正、单资产全血缘 UI 验收 40/40、Benchmark v5 23×2 真跑、

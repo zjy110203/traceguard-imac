@@ -769,11 +769,13 @@ def recompute(samples_file: Path, out_dir: Path, diag_db: str = "") -> int:
             encoding="utf-8",
         )
     metrics = compute_metrics(samples)
+    # 子集按**故障编号**拆分（BROWSER_ONLY_MECHANISMS 是 TF-UI-001 这类 id），
+    # 不能拿机制类（UI_RENDERING）比较。
     metrics["subset_23_scenarios"] = compute_metrics(
-        [s for s in samples if s["gt_mechanism"] not in BROWSER_ONLY_MECHANISMS]
+        [s for s in samples if s["fault_mechanism_gt"] not in BROWSER_ONLY_MECHANISMS]
     )
     metrics["subset_browser_7_scenarios"] = compute_metrics(
-        [s for s in samples if s["gt_mechanism"] in BROWSER_ONLY_MECHANISMS]
+        [s for s in samples if s["fault_mechanism_gt"] in BROWSER_ONLY_MECHANISMS]
     )
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "metrics-recomputed.json").write_text(

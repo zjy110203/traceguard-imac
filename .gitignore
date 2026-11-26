@@ -82,3 +82,7 @@ docs/assets/run015/wp5/smoke/
 # samples.jsonl / metrics.json / browser-evidence 等可审计证据
 docs/assets/run017/**/run-env/
 docs/assets/run017/**/logs/
+# RUN-017 长稳运行期文件（最终 soak JSON 仍入库）
+docs/assets/run017/**/_runtime/
+docs/assets/run017/**/worker-*
+docs/assets/run017/**/*.log

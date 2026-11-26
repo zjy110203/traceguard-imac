@@ -446,3 +446,53 @@ def test_reason_code_mapping_is_fail_closed() -> None:
     )
     assert regression_reason_code("SOMETHING_NEW") == "UNKNOWN"
     assert regression_reason_code("") == "UNKNOWN"
+
+
+def test_environment_drift_requires_healthy_target(rt: Runtime, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """ENVIRONMENT_DRIFT 只有环境自检恢复后才允许重试（不可达 → 拒绝）。"""
+    doc = _to_inconclusive(rt, verdict="PASSED", evidence=0)
+    pid = doc["proposal_id"]
+    svc = RepairService(rt)
+    raw = svc.get(pid)
+    raw["regression_status"] = "INCONCLUSIVE"
+    raw["regression_failure_reason"] = "REGRESSION_ENVIRONMENT_DRIFT"
+    svc._save(raw)
+
+    # 不可达的目标：拒绝
+    rt.settings.teamflow_base_url = "http://127.0.0.1:1"
+    with pytest.raises(AppError) as exc:
+        svc.regression_retry(
+            pid, actor="human:qa-lead", confirm=True, reason_code="ENVIRONMENT_DRIFT"
+        )
+    assert "ENVIRONMENT_NOT_RECOVERED" in str(exc.value)
+
+    # 健康目标（用本地 HTTP 服务模拟）：允许进入创建流程
+    import json
+    import threading
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *args) -> None:  # noqa: D102
+            return
+
+        def do_GET(self) -> None:  # noqa: N802
+            body = json.dumps({"ok": True}).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    rt.settings.teamflow_base_url = f"http://127.0.0.1:{server.server_address[1]}"
+    try:
+        worker = _worker(rt, verdict="PASSED", evidence=2)
+        svc.regression_retry(
+            pid, actor="human:qa-lead", confirm=True, reason_code="ENVIRONMENT_DRIFT"
+        )
+        worker.join(timeout=20)
+        assert svc.regression_status(pid)["regression_attempt_no"] == 2
+    finally:
+        server.shutdown()
+        server.server_close()

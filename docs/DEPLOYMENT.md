@@ -203,3 +203,78 @@ Artifact 目录必须与数据库一起备份（证据记录引用内容寻址�
 - [ ] 反向代理设置 SSE 不缓冲（`X-Accel-Buffering: no` 已由服务端返回）；
 - [ ] 监控 `/health/ready`、API 延迟、队列深度、Worker 存活、DB 大小/WAL；
 - [ ] 日志脱敏检查（不得出现 API Key、Cookie、密码）。
+
+---
+
+## 10. RUN-017 补充：存储能力边界、备份恢复与环境诊断
+
+### 10.1 Artifact 后端只支持 local（显式失败）
+
+- `TG_ARTIFACT_BACKEND` 当前只实现 `local`（内容寻址：`<root>/<sha[:2]>/<sha>`）；
+- 配置成 `s3` / `minio` 时**启动即失败**（`ARTIFACT_BACKEND_UNSUPPORTED`），
+  不会静默回退到本地目录；
+- 备份必须同时覆盖数据库与 `TG_ARTIFACT_DIR`（只备份数据库会丢证据附件）。
+
+### 10.2 备份与恢复（真实验收过的命令）
+
+SQLite（演示/单机）：
+
+```bash
+# 备份（停写或低峰期）
+cp .traceguard/traceguard.db  /backup/traceguard-$(date +%F).db
+tar czf /backup/artifacts-$(date +%F).tgz -C .traceguard artifacts
+
+# 恢复：新目录 + 新进程，验证后再切换
+mkdir -p /restore/{db,artifacts}
+cp /backup/traceguard-2026-11-26.db /restore/db/traceguard.db
+tar xzf /backup/artifacts-2026-11-26.tgz -C /restore/artifacts
+TG_DATABASE_URL=sqlite:////restore/db/traceguard.db \
+TG_ARTIFACT_DIR=/restore/artifacts \
+  .venv/bin/python -m uvicorn traceguard_api.main:app --port 8000
+```
+
+PostgreSQL 16：
+
+```bash
+pg_dump --format=custom --no-owner -f /backup/tg.dump "$TG_DATABASE_URL"
+createdb -h 127.0.0.1 -p 5432 -U traceguard traceguard_restored
+pg_restore --no-owner --dbname "postgresql://traceguard@127.0.0.1:5432/traceguard_restored" /backup/tg.dump
+# 产物目录同步复制后，用新 DSN + 新 Artifact 目录启动
+```
+
+自动化验收（12 项校验，含恢复后写入）：
+
+```bash
+.venv/bin/python scripts/backup_restore_verify_run017.py \
+  --out docs/assets/run017/wp5/backup-restore \
+  --pg-admin-url "postgresql://traceguard@127.0.0.1:55432/postgres"
+```
+
+### 10.3 PostgreSQL 拓扑提醒（本机实测过的坑）
+
+同一端口上可能同时存在两个实例：
+
+- `127.0.0.1:55432` → PostgreSQL 16.16（本轮验收使用）；
+- `localhost` / `::1:55432` → 另一个 PostgreSQL 16.2 实例。
+
+`localhost` 在 macOS 上优先解析到 IPv6，会连到不同实例。
+**所有 DSN 请显式写 `127.0.0.1`**，不要用 `localhost`。
+
+### 10.4 环境诊断（只读）
+
+```bash
+.venv/bin/python scripts/doctor.py --json /tmp/doctor.json
+```
+
+检查：Python/依赖/Playwright/Chromium/Node/前端产物/配置/数据库迁移/产物目录/
+API/TeamFlow/Worker 队列/出站策略/端口。输出 `PASS/WARN/FAIL/BLOCKED`，
+不打印任何口令，不修改配置。
+
+### 10.5 CI 门禁（三级 + 可靠性）
+
+| 门禁 | 触发 | 内容 |
+|---|---|---|
+| PR Gate | `pull_request` + push 到 `main` / `workbuddy/run*` | Ruff/format/单测/契约/关键集成（无 PG、无浏览器） |
+| Nightly Gate | 每日定时 + push 到上述分支 | 全量 pytest、PG16 专项、安全扫描、Chromium 专项、真实 UI 业务流、LLM smoke（缺 Secret 记 BLOCKED） |
+| Release Gate | 手动 | 需 `llm-smoke-status=PASSED` 等证据 |
+| Reliability Gate | 手动（120 分钟） | 60+ 分钟长稳、10 进程并发、Artifact 规模一致性、备份恢复、真实 UI |

@@ -1,6 +1,0 @@
-{"ts": "2026-11-26T12:50:08.461760+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "worker_started", "worker": "r13-soak-w2", "once": false, "poll": 0.4}
-{"ts": "2026-11-26T12:50:08.481226+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_claimed", "run_id": "run_1795697407419eb161d753f67", "attempt": 1}
-{"ts": "2026-11-26T12:50:08.526933+00:00", "level": "INFO", "logger": "traceguard.browser.egress", "message": "egress_proxy_started", "url": "http://127.0.0.1:63255", "worker_id": "r13-soak-w2"}
-{"ts": "2026-11-26T12:50:08.539978+00:00", "level": "INFO", "logger": "traceguard.browser", "message": "egress_warmup_ok", "origins": 1, "proxy": "http://127.0.0.1:63255"}
-{"ts": "2026-11-26T12:50:08.996417+00:00", "level": "INFO", "logger": "traceguard.browser", "message": "browser_launched", "channel": "bundled-chromium", "egress": true, "proxy": "http://127.0.0.1:63255"}
-{"ts": "2026-11-26T12:50:13.563334+00:00", "level": "INFO", "logger": "traceguard.worker", "message": "run_finished", "run_id": "run_1795697407419eb161d753f67", "verdict": "PASSED", "status": "COMPLETED"}

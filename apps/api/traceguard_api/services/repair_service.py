@@ -1299,6 +1299,14 @@ class RepairService:
                 ErrorCode.PRECONDITION_FAILED,
                 "REGRESSION_RETRY_STALE: 旧结论已标记 STALE，不允许重试",
             )
+        if current_reason == "ENVIRONMENT_DRIFT":
+            # 决策稿要求"环境自检恢复后"才允许重试：这里做一次只读健康检查，
+            # 不健康就拒绝（不把环境问题写进新的回归结论）。
+            if not self._environment_healthy():
+                raise AppError(
+                    ErrorCode.PRECONDITION_FAILED,
+                    "ENVIRONMENT_NOT_RECOVERED: 被测目标健康检查未通过，先修复环境再重试",
+                )
         version_ref = f"{doc['testcase_id']}@{promoted}"
         version_doc = self.rt.catalog.get_version(doc["testcase_id"], promoted)
         if not version_doc:
@@ -1385,6 +1393,17 @@ class RepairService:
                 raise
             saved = self.get(proposal_id)
         return self._settle_regression(saved, self._wait_regression(run_id, timeout_s))
+
+    def _environment_healthy(self) -> bool:
+        """只读环境自检：TeamFlow `/health` 必须 200（超时/拒连都算未恢复）。"""
+        import urllib.request
+
+        url = str(self.rt.settings.teamflow_base_url).rstrip("/") + "/health"
+        try:
+            with urllib.request.urlopen(url, timeout=2.0) as resp:  # noqa: S310 - 受控内网
+                return resp.status == 200
+        except Exception:  # noqa: BLE001 - 任何异常都视为环境不可用
+            return False
 
     def _regression_oracles(
         self, version_doc: dict[str, Any]

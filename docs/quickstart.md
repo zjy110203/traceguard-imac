@@ -77,3 +77,22 @@ bash scripts/run_worker.sh --once       # CI 用
 | 断言 `NOT_EVALUATED` | Oracle 缺失或未审批 |
 
 更多：`docs/DEPLOYMENT.md`、`docs/FEATURE-STATUS.md`。
+
+
+## 6. 备份、诊断与验证（RUN-017）
+
+```bash
+# 1) 环境自检（只读）
+.venv/bin/python scripts/doctor.py
+
+# 2) 备份恢复真实验收（SQLite + PG16）
+.venv/bin/python scripts/backup_restore_verify_run017.py \
+  --out docs/assets/run017/wp5/backup-restore \
+  --pg-admin-url "postgresql://traceguard@127.0.0.1:55432/postgres"
+
+# 3) 故障观测资格实验（30 场景 × 2 轮，约 12 分钟）
+.venv/bin/python scripts/bench_v2_run017.py --out docs/assets/run017/wp2 --rounds 2 --workers 2
+```
+
+注意：`TG_ARTIFACT_BACKEND` 只支持 `local`；配置 `s3` 会启动失败（这是有意为之）。
+PostgreSQL 请显式使用 `127.0.0.1`，不要用 `localhost`（同名端口可能指向另一个实例）。

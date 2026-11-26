@@ -1,3 +1,20 @@
+# 功能状态矩阵（更新至 2026-11-26 RUN-017）
+
+> **RUN-017 状态（2026-11-26，收口）**：分支 `workbuddy/run017-product-maturity`，基线 `f18e871`。
+> 主题：产品成熟度、智能诊断完善、最终交付闭环。**不重新设计架构。**
+> - **Benchmark 独立观测**：修掉 3 类"测错对象"的探针（空载荷 422 / 403 直接判影响 / name grep keys），
+>   新增更新接口、读权限、读延迟、**值一致性**探针与**浏览器级观测**；30×2=60 样本，
+>   UNKNOWN 2（3.3%）、确认率 83.3%、False Pass 0、诊断准确率 93.75%（n=16）。
+> - **Regression**：INCONCLUSIVE 人工授权新 Attempt（上限 2 次、原因码门禁、版本/Oracle/环境自检、幂等、并发唯一），15 项测试。
+> - **执行内核**：`fenced_session` 同 Run 重入立即失败（不再自锁）；Artifact GC keyset 分页 + 删除前定向复核；
+>   `s3` 后端启动即失败。
+> - **备份恢复**：SQLite 与 PG16 全 12 项校验通过（含恢复后写入）。
+> - **CI**：PR/Nightly 分支过滤改为 `workbuddy/run*`；新增 Reliability Gate；真实推送触发成功（此前 RUN-016 从未触发）。
+> - **状态口径**：功能状态见 `docs/RUN-017-FINAL-REPORT.md` 的完成度矩阵；BLOCKED/NOT_RUN 不含糊。
+> 最终权威结论见 `docs/RUN-017-FINAL-REPORT.md`。
+
+---
+
 # 功能状态矩阵（更新至 2026-11-26 RUN-016）
 
 > **RUN-016 状态（2026-11-26，收口）**：分支 `workbuddy/run016-finalization`，基线 `73e4fe6`。
