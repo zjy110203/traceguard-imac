@@ -27,7 +27,7 @@
 | WP1 | Repair Regression 真实闭环 | PASS | 独立 `regression_status`，13 passed；回归只能由真实 Run 判定 | `RUN-014-WP1-REGRESSION.md` |
 | WP2 | Lease / Fencing 原子性 | PASS | 过期即失效，同事务守卫；7 条并发故障测试 | `RUN-014-WP2-LEASE-FENCING.md` |
 | WP3 | SSE 撤权 / 全局 RBAC / 统计口径 | PASS | 活跃连接每 2s 复核；13 passed | `RUN-014-WP3-SECURITY.md` |
-| WP4 | 单资产全血缘 UI 验收 | PASS | 40/40，13 张截图，14 个血缘 ID | `RUN-014-WP4-FULL-UI-LOOP.md` |
+| WP4 | 单资产全血缘 UI 验收 | PASS | 40/40，13 张截图，15 个血缘 ID | `RUN-014-WP4-FULL-UI-LOOP.md` |
 | WP5 | Benchmark v5 + AI 质量 | PARTIAL（如实） | 23×2 真跑；AI n=32；False Pass 仍 PARTIAL | `RUN-014-WP5-BENCHMARK-AI.md` |
 | WP6 | 发布门禁 | PARTIAL | Ruff / build / 805 passed / PG16 / fencing 9/9；60 分钟长稳 **NOT_RUN** | §8 |
 | WP7 | 文档与状态 | 完成 | 本报告 + BASELINE + WORKLOG；README/FEATURE-STATUS 更新 | §11 |
@@ -58,7 +58,7 @@
 ## 6. WP4：单一业务资产全血缘 UI 验收
 
 - 环境：真实 API（认证 + CSRF，`TG_INLINE_WORKER=false`）+ 2 个独立 Worker + 真实 TeamFlow + 真实 Chromium + SQLite。
-- 结果：**40 条记录 = 40 PASS / 0 FAIL**；13 张截图；机器可读 `docs/assets/run014/wp4/full-loop.json` 含 14 个血缘 ID。
+- 结果：**40 条记录 = 40 PASS / 0 FAIL**；13 张截图；机器可读 `docs/assets/run014/wp4/full-loop.json` 含 15 个血缘 ID。
 - 链路：Intent → Explorer → Trace → Compiler → Oracle → Binding → Replay → Review → Run（独立 Worker）→ Diagnosis → Probe → Repair → Sandbox → Approval → Promotion → Regression → Rollback。正向、负向（无回放审核 412、真实故障 Run FAILED、回归 FAILED、人工回滚、未审批 Oracle 门禁）均按服务端真实结果记录。
 - 发现并修复：`_step_index()` 对 `step_index=None` 调 `int(None)`，导致 `run_config.*` 提案经 HTTP 创建即 500；改为 `is not None` 判定并补回归测试。
 - 边界：Explore / Compile / Replay / Probe Plan / Oracle 操作通过真实 API（无对应 UI 控件），其余人工决策点由真实 UI 点击；探索轨迹 `browser_version=http-observer` 是标签口径问题，不据此宣称 HTTP 降级；规则编译器 `rule_only`，编译告警如实保留。
@@ -164,7 +164,7 @@
 ## 13. 收口修正说明（本轮诚实修订）
 
 1. `docs/RUN-014-WORKLOG.md` 原把 60 分钟长稳写成"见最终报告（独立库 `traceguard_run014_soak`）"，实际只有约 4 分钟 Worker 日志、无汇总 JSON；已在 WORKLOG 与本报告改为 **NOT_RUN / INCONCLUSIVE**。
-2. WORKLOG 原称 `.workbuddy-run/*` 已全部推进到 RUN-014；实际这些被 `.gitignore` 忽略的状态文件仍保留 RUN-011-R1.1 及更早历史。已修正 WORKLOG 表述；权威状态以本报告和 RUN-014 专题为准。
+2. WORKLOG 原称 `.workbuddy-run/*` 已全部推进到 RUN-014；实际这些被 `.gitignore` 忽略的状态文件仍保留 RUN-011-R1.1 及更早历史。RUN-014 收口时修正不完整，RUN-015 WP7 已把 WORKLOG 第 23–24 行改为"本轮未改写"；权威状态以本报告和 RUN-014 专题为准。
 3. README / FEATURE-STATUS 此前引用尚不存在的 `docs/RUN-014-FINAL-REPORT.md`；本报告补齐后引用成立。
 
 ## 14. 下一阶段建议

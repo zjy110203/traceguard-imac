@@ -11,7 +11,7 @@
 | WP3 | `02c4b0a` | SSE 撤权 + 全局 RBAC + 统计口径 | 活跃连接每 2s 复核；`llm/summary`/`browser` 收归 `system.observe`；13 passed；全量 804 |
 | WP4 | `52617d1` | 单资产全血缘 UI 验收 | 40/40；真实 Chromium + 2 独立 Worker；发现并修复 `step_index=None` 500 |
 | WP5 | `a1b3fe8` | Benchmark v5 + AI 质量 | 23×2 真跑（46 执行/38 样本）；AI n=32（规则 0.9688 / LLM 0.875） |
-| WP6 | 见最终报告 | 发布门禁 | Ruff / build / 全量 / PG16 / PG fencing / 长稳 / CI |
+| WP6 | 见最终报告 | 发布门禁 | Ruff / build / 全量 / PG16 / PG fencing 通过；60 分钟长稳 **NOT_RUN**；Nightly/Release **NOT_RUN** |
 | WP7 | 见最终报告 | 文档与恢复状态 | 本文件 + 最终报告 + README/FEATURE-STATUS/台账/.workbuddy-run |
 
 ---
@@ -21,7 +21,7 @@
 - 核查：分支 `workbuddy/run013-production-reliability`、HEAD `85f18c1` 与 origin 一致、工作区 clean、
   `main=ac2876e` 未修改；创建 `workbuddy/run014-product-closure`。
 - 复核 RUN-013 报告、FEATURE-STATUS、DEPLOYMENT、`.workbuddy-run/*`：状态文件仍停在 RUN-011，
-  本轮已全部更新到 RUN-014。
+  **本轮未改写**（RUN-015 WP7 已据实修正此处的旧表述；权威状态见 RUN-014 最终报告）。
 - 产出：`docs/RUN-014-BASELINE.md`（功能状态 / 架构 / 已验证 / 未验证 / 缺陷 / 风险 / 阻塞 / 计划）。
 
 ## WP1（Repair Regression）

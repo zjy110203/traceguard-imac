@@ -1,3 +1,18 @@
+# RESUME（RUN-015，2026-11-26 追加；下方历史保留）
+
+- **当前分支**：`workbuddy/run015-execution-consistency`（基线 `438c54a`，勿改 main / 勿合并 PR #1/#2）。
+- **恢复顺序**：先读 `docs/RUN-015-BASELINE.md` → `RUN-015-WP{1,2,3,4,6}-*.md` →
+  `RUN-015-WORKLOG.md` / `RUN-015-FINAL-REPORT.md`（收口后）→ 本目录其他状态文件。
+- **进行中**：WP5 60 分钟 PG16 长稳（后台任务），完成后核验
+  `docs/assets/run015/wp5/soak/soak-60min.json` 是否为 **60 分钟 / ≥100 Run**；不足不得标 PASS。
+- **CI**：最终 HEAD 推送后从 GitHub 公开 API 读取 PR Gate / Nightly run ID 与 conclusion；
+  无凭据不触发 Release，不伪造结果。
+- **环境**：本机 PG16.16 在 `127.0.0.1:55432`（用户 `traceguard`）；无 psql CLI / Docker / gh CLI；
+  curl 匿名访问 GitHub API 会 rate limit，可用 WebFetch 只读核验。
+- **已知不变量**：B-17 仍 BLOCKED，不绕过；Benchmark 历史归档 SHA 冻结；INCONCLUSIVE 重试为 NEEDS_DECISION。
+
+---
+
 # RESUME（RUN-011-R1.1，2026-11-25 追加；下方 R1 历史保留）
 
 - **交付提交**：`ec05061`（`workbuddy/run011-full-loop`），已推送，本地与 origin HEAD 同步；

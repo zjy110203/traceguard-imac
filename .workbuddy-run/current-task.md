@@ -1,3 +1,15 @@
+# 当前任务（RUN-015 执行中，2026-11-26 追加；下方历史保留）
+
+> **当前阶段**：RUN-015 `workbuddy/run015-execution-consistency`，基线 `438c54a`，
+> 当前 HEAD `3fc9154`（WP6 收口）。WP0~WP4、WP6 已提交；WP5 60 分钟 PG16 长稳后台运行中；
+> WP7 文档/台账/恢复状态修正进行中。
+> 权威文档：`docs/RUN-015-BASELINE.md`、`RUN-015-WP1-FENCING.md`、`WP2-REGRESSION.md`、
+> `WP3-SSE-SECURITY.md`、`WP4-CI.md`、`WP6-BENCHMARK.md`；最终报告待 WP5 收口后生成。
+> 禁止：改 main、自动合并 PR、关闭 PR #1/#2、强推、reset --hard、git clean。
+> B-17 / 宿主隔离 / 人工基线 / LLM 四臂 / Release Gate 仍 BLOCKED 或 NOT_RUN。
+
+---
+
 # 当前任务（RUN-011-R1.1 交付，2026-11-25 追加；下方 R1 历史保留）
 
 > **RUN-011-R1.1 已交付**：Workspace 安全隔离 + Repair 血缘/来源可信 + Benchmark 口径修正 + 两轮闭环重测 + UI 验收。

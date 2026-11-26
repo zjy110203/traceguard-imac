@@ -42,19 +42,19 @@
   "passed": 40,
   "failed": 0,
   "screenshots": [
-    "/Users/dlp--test/Desktop/traceguard/docs/assets/run014/wp4/01-intent.png",
-    "/Users/dlp--test/Desktop/traceguard/docs/assets/run014/wp4/02-exploration.png",
-    "/Users/dlp--test/Desktop/traceguard/docs/assets/run014/wp4/03-compiled-candidate.png",
-    "/Users/dlp--test/Desktop/traceguard/docs/assets/run014/wp4/04-oracle-bound.png",
-    "/Users/dlp--test/Desktop/traceguard/docs/assets/run014/wp4/05-stability-replay.png",
-    "/Users/dlp--test/Desktop/traceguard/docs/assets/run014/wp4/06-approved.png",
-    "/Users/dlp--test/Desktop/traceguard/docs/assets/run014/wp4/07-run-passed.png",
-    "/Users/dlp--test/Desktop/traceguard/docs/assets/run014/wp4/08-diagnosis.png",
-    "/Users/dlp--test/Desktop/traceguard/docs/assets/run014/wp4/09-sandbox.png",
-    "/Users/dlp--test/Desktop/traceguard/docs/assets/run014/wp4/10-promoted.png",
-    "/Users/dlp--test/Desktop/traceguard/docs/assets/run014/wp4/11-regression-passed.png",
-    "/Users/dlp--test/Desktop/traceguard/docs/assets/run014/wp4/12-rolled-back.png",
-    "/Users/dlp--test/Desktop/traceguard/docs/assets/run014/wp4/13-negative-regression-rollback.png"
+    "docs/assets/run014/wp4/01-intent.png",
+    "docs/assets/run014/wp4/02-exploration.png",
+    "docs/assets/run014/wp4/03-compiled-candidate.png",
+    "docs/assets/run014/wp4/04-oracle-bound.png",
+    "docs/assets/run014/wp4/05-stability-replay.png",
+    "docs/assets/run014/wp4/06-approved.png",
+    "docs/assets/run014/wp4/07-run-passed.png",
+    "docs/assets/run014/wp4/08-diagnosis.png",
+    "docs/assets/run014/wp4/09-sandbox.png",
+    "docs/assets/run014/wp4/10-promoted.png",
+    "docs/assets/run014/wp4/11-regression-passed.png",
+    "docs/assets/run014/wp4/12-rolled-back.png",
+    "docs/assets/run014/wp4/13-negative-regression-rollback.png"
   ],
   "results": [
     {

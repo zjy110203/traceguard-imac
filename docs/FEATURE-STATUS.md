@@ -1,15 +1,26 @@
-# 功能状态矩阵（更新至 2026-11-26 RUN-014）
+# 功能状态矩阵（更新至 2026-11-26 RUN-015）
 
-> **RUN-014 状态（2026-11-26，权威）**：`docs/RUN-014-FINAL-REPORT.md` 为准。
+> **RUN-015 状态（2026-11-26，执行中）**：分支 `workbuddy/run015-execution-consistency`，
+> 基线 `438c54a`。WP1~WP4、WP6 已交付；WP5 60 分钟 PG16 长稳运行中；WP7 收口中。
+> - **Fencing**：`submit_result` 原子守卫 + Pipeline 全部 Run 事件 fence + PG16 锁后时钟（10 SQLite + 6 PG16 专项 PASS）。
+> - **Regression**：10 并发请求只建一个 Run；stale 在读取时重算；重试策略 NEEDS_DECISION（`RUN-015-WP2-REGRESSION.md`）。
+> - **SSE**：客户端参数收敛到 `[0.1, 10]s`，NaN/Infinity 回落默认 2s（`RUN-015-WP3-SSE-SECURITY.md`）。
+> - **CI**：PR Gate 纳入 RUN-014/015 专项；PG16 fencing 进 Nightly（`RUN-015-WP4-CI.md`）。
+> - **Benchmark**：故障状态字段增强；新一轮 23×2 NOT_RUN，False Pass 仍 PARTIAL（`RUN-015-WP6-BENCHMARK.md`）。
+> 最终权威结论见 `docs/RUN-015-FINAL-REPORT.md`（收口后）。
+
+> **RUN-014 状态（2026-11-26，历史）**：`docs/RUN-014-FINAL-REPORT.md` 为准。
 > 基线 `85f18c1`；主题：产品闭环补全、安全可靠性强化与发布就绪。
 >
 > - **Repair 闭环**：晋升后新增**真实 Regression**（独立 Run + 证据 + 版本关联 + 结论时效）；
 >   Promotion 失败不再被前端误判成功；生命周期七段全部取服务端状态（`RUN-014-WP1-REGRESSION.md`）。
 > - **租约/围栏**：过期即失效；Step/Evidence/Event 写入与租约守卫同事务；旧 Worker 恢复后无法写入
->   （专项 26 passed；PG16 上 9/9）。`RUN-014-WP2-LEASE-FENCING.md`。
+>   （`pytest -q tests/integration/test_worker_fencing_run014.py` **7 passed**；
+>   PG16 `scripts/verify_fencing_pg_run014.py` **9/9 PASS**；旧表述"专项 26 passed"无命令/日志支撑，
+>   RUN-015 WP7 已按原始证据更正）。`RUN-014-WP2-LEASE-FENCING.md`。
 > - **SSE 撤权 / 全局 RBAC**：活跃连接每 2s 复核会话与 Workspace；`/system/llm/summary`、
 >   `/system/browser` 收归 `system.observe`；LLM 摘要键集分页全量聚合。`RUN-014-WP3-SECURITY.md`。
-> - **全血缘 UI**：40/40 记录 + 13 张截图 + 14 个血缘 ID（`docs/assets/run014/wp4/full-loop.json`）。
+> - **全血缘 UI**：40/40 记录 + 13 张截图 + 15 个血缘 ID（`docs/assets/run014/wp4/full-loop.json`）。
 > - **Benchmark v5**：23×2 真跑（46 执行 / 38 样本 / 合同 5/5 / False Pass 0-38 PARTIAL）。
 > - **AI 质量**：n=32（8 域），规则 0.9688/0.9683，LLM 细粒度 0.8750/0.6119；四类顾问 Smoke。
 >

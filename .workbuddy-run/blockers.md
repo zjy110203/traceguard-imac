@@ -1,3 +1,13 @@
+> **RUN-015 阻塞状态（2026-11-26 追加，历史保留）**：
+> - B-17 Worker 补充故障注入：**BLOCKED**（安全审批未获，未重试未绕过）。
+> - 宿主级网络隔离 / 外部真实站点：**BLOCKED**（无容器与授权）。
+> - 真实人工诊断基线 / LLM 四臂成本实验：**BLOCKED / NOT_RUN**（无评审资源与计费授权）。
+> - INCONCLUSIVE 重试语义：**NEEDS_DECISION**（不改状态机；`regression_retry_allowed=false`）。
+> - Benchmark 23×2 新一轮：**NOT_RUN**（不与 60 分钟长稳共享资源）；False Pass 保持 PARTIAL。
+> - Release Gate：**NOT_RUN**（需 workflow_dispatch 与凭据）；Nightly 已配置分支 push 触发，
+>   待最终 HEAD 的真实 run 核验。
+> - PR #1 / #2 集成策略、LICENSE：**NEEDS_DECISION**，未合并未关闭。
+
 > **RUN-011-R1.1 阻塞状态（2026-11-25 追加，R1 历史保留）**：
 > - B-17（Worker 四补充故障场景）：**仍 BLOCKED**。遵守 §八 8.2，未实施被拦操作、
 >   未更换工具规避、未拆分绕过、未导出凭据；既有 17/17 故障恢复 + 4 Worker 并发证据保持有效。

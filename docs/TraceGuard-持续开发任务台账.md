@@ -1,5 +1,62 @@
 # TraceGuard 持续开发任务台账
 
+> **RUN-015 台账（2026-11-26，执行中；历史条目保留）**：分支 `workbuddy/run015-execution-consistency`，
+> 基线 `438c54a`，代码 HEAD `3fc9154`（WP6 收口，后续提交继续追加）。
+>
+> | 编号 | 任务 | 状态 | 证据 / 交付 |
+> |---|---|---|---|
+> | R15-00 | WP0 基线复核 | PASS | `RUN-015-BASELINE.md`；HEAD/工作区/main/PR Gate `45756471627` 核验 |
+> | R15-01 | WP1 Fencing 最终一致性 | PASS | `RUN-015-WP1-FENCING.md`；SQLite 10 + PG16 6；submit_result 原子守卫、事件全 fence、锁后 DB 时钟 |
+> | R15-02 | WP2 Regression 幂等与时效 | PASS | `RUN-015-WP2-REGRESSION.md`；10 并发单 Run、读取时 stale 重算；重试策略 NEEDS_DECISION |
+> | R15-03 | WP3 SSE 间隔上限 | PASS | `RUN-015-WP3-SSE-SECURITY.md`；上限 10s、NaN/Infinity 回落、撤权 7 项专项 |
+> | R15-04 | WP4 CI 覆盖 | PASS（配置）/ 待最终 HEAD 真实 run | `RUN-015-WP4-CI.md`；PR Gate 纳入 6 个专项，PG16 fencing 进 Nightly |
+> | R15-05 | WP5 PG16 长稳 | 进行中 | `docs/assets/run015/wp5/soak/`；3 独立 Worker、60 分钟、DB `traceguard_run015_soak`；完成前不标 PASS |
+> | R15-06 | WP6 Benchmark 证据 | PARTIAL（如实） | `RUN-015-WP6-BENCHMARK.md`；故障状态字段 + 归档 SHA 冻结；23×2 新一轮 NOT_RUN（不与长稳并行） |
+> | R15-07 | WP7 文档 / 台账 / 恢复状态 | 进行中 | 本台账 + `RUN-015-WORKLOG.md` + `RUN-015-FINAL-REPORT.md` + `.workbuddy-run/*` |
+>
+> 仍 BLOCKED / NOT_RUN / NEEDS_DECISION：B-17、宿主级隔离、真实人工基线、LLM 四臂、Release Gate、
+> Benchmark 新一轮、INCONCLUSIVE 重试策略、LICENSE、PR #1/#2 集成策略。
+
+> **RUN-014 台账（2026-11-26 追加）**：基线 `85f18c1`，代码交付 `a1b3fe8`，最终 HEAD `438c54a`；
+> 权威报告 `docs/RUN-014-FINAL-REPORT.md`。
+>
+> | 编号 | 任务 | 状态 | 证据 / 交付 |
+> |---|---|---|---|
+> | R14-01 | WP0 基线复核 | PASS | `RUN-014-BASELINE.md` |
+> | R14-02 | WP1 Repair Regression 闭环 | PASS | `RUN-014-WP1-REGRESSION.md`；13 passed，真实 Run 判定 |
+> | R14-03 | WP2 Lease / Fencing | PASS | `RUN-014-WP2-LEASE-FENCING.md`；7 passed（不是"26 passed"） |
+> | R14-04 | WP3 SSE 撤权 / 全局 RBAC | PASS | `RUN-014-WP3-SECURITY.md`；13 passed |
+> | R14-05 | WP4 全血缘 UI | PASS | `RUN-014-WP4-FULL-UI-LOOP.md`；40/40，13 截图，15 血缘 ID |
+> | R14-06 | WP5 Benchmark / AI | PARTIAL | `RUN-014-WP5-BENCHMARK-AI.md`；23×2、n=32；False Pass PARTIAL |
+> | R14-07 | WP6 发布门禁 | PARTIAL | Ruff/build/805 passed/16 skipped、PG16 16、fencing 9/9；60 分钟长稳 NOT_RUN |
+> | R14-08 | WP7 文档收口 | PASS（含 RUN-015 口径修正） | FINAL-REPORT / WORKLOG / FEATURE-STATUS；`.workbuddy-run/*` 本轮未改写 |
+> | R14-09 | CI 真实证据 | PASS（PR Gate） | run `45756471627` @ `438c54a` success；Nightly/Release NOT_RUN |
+
+> **RUN-013 台账（2026-11-26 追加）**：基线 `90f6f4e`，交付 `85f18c1`；权威报告 `docs/RUN-013-FINAL-REPORT.md`。
+>
+> | 编号 | 任务 | 状态 | 证据 / 交付 |
+> |---|---|---|---|
+> | R13-01 | WP0 基线修正 | PASS | `RUN-013-BASELINE.md` |
+> | R13-02 | WP1 独立 Worker 闭环 | PASS | 56 条 55 PASS / 1 NOTE；旧 Worker 重复证据修复 |
+> | R13-03 | WP2 SSE / Workspace 隔离 | PASS | `/events/stream` 路由鉴权 + 前端竞态修复 |
+> | R13-04 | WP3 回放后 Oracle 改版门禁 | PASS | 审核事务重核验 + 稳定性回放预检 |
+> | R13-05 | WP4 PG16 60 分钟长稳 | PASS | 60.05 分钟 / 113 Run；`docs/assets/run013/soak/` |
+> | R13-06 | WP5 DeepSeek smoke / 诊断质量 | PASS（smoke） | 11/11；Benchmark 23×2 NOT_RUN |
+> | R13-07 | WP6 全量 / PG16 / 部署 | PASS | 771 passed / 16 skipped；PG16 16；CI run `45658616476` |
+
+> **RUN-012 台账（2026-11-26 追加）**：基线 `0ca128f`，交付 `90f6f4e`；权威报告 `docs/RUN-012-FINAL-REPORT.md`。
+>
+> | 编号 | 任务 | 状态 | 证据 / 交付 |
+> |---|---|---|---|
+> | R12-01 | WP0 Benchmark 口径 | PASS | `RUN-012-WP0-BENCHMARK-ERRATA.md`；历史归档未改 |
+> | R12-02 | WP1 CI 可信 | PASS | 三次真实 CI 成功，最终 run `45621143973`；PG16 16/16 |
+> | R12-03 | WP2 多 Workspace 前端 | PASS | 25/25 真实浏览器；14 处硬编码清零 |
+> | R12-04 | WP3 全局统计越权 | PASS | 11/11；SQL COUNT 替代 `limit=500` 推断 |
+> | R12-05 | WP4 核心业务 UI 闭环 | PASS | 29/29，修复 6 个真实缺陷 |
+> | R12-06 | WP5 诊断顾问可靠性 | PASS | 22/22；Schema 校验 / 重试 / fallback 标注 |
+> | R12-07 | WP6 质量门禁 / 20 周期长稳 | PASS | 760 passed / 16 skipped；6.14 分钟 20/20（非 60 分钟） |
+> | R12-08 | BLOCKED / NOT_RUN | 如实 | Nightly/Release、23×2 Benchmark、真实 LLM、人工基线、宿主隔离、B-17 |
+
 > **RUN-011-R1.1 台账（2026-11-25 追加，历史保留）**：权威报告 `docs/RUN-011-R1.1-FINAL-REPORT.md`。
 >
 > | 编号 | 任务 | 状态 | 证据 |
