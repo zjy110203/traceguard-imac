@@ -10,6 +10,7 @@ const props = defineProps<{
 
 const LABELS: Record<string, string> = {
   PASSED: 'PASSED', FAILED: 'FAILED', INCONCLUSIVE: 'INCONCLUSIVE', NOT_EVALUATED: 'NOT EVAL',
+  NOT_STARTED: '未开始', NOT_RUN: '未运行',
   QUEUED: '排队中', PREPARING: '准备中', RUNNING: '执行中', FINALIZING: '收尾中', COMPLETED: '已完成',
   TIMED_OUT: '超时', CANCELLED: '已取消', APPROVED: '已通过', PENDING: '待审核', PENDING_APPROVAL: '待审批',
   DRAFT: '草稿', REJECTED: '已拒绝', VALIDATING: '校验中', VALIDATED: '已校验', VALIDATION_FAILED: '校验失败',

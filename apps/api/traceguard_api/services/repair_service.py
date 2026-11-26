@@ -48,10 +48,21 @@ RULE_SOURCE_CONTRACTS: dict[str, dict[str, Any]] = {
 FAILURE_SOURCE_VERDICTS = {"FAILED", "NOT_EVALUATED"}
 TERMINAL_STATUSES = {"COMPLETED", "FAILED", "TIMED_OUT", "CANCELLED"}
 
+#: RUN-014 WP1：Regression 是**独立于 Repair 生命周期**的验证阶段（与 sandbox_status 同构）：
+#: NOT_STARTED → QUEUED → RUNNING → PASSED / FAILED / INCONCLUSIVE（BLOCKED 为环境不可用）。
+#: 只有"真实 Regression Run 的 execution_status=COMPLETED + verdict=PASSED + 有证据"才算 PASSED。
+REGRESSION_STATUSES = frozenset(
+    {"NOT_STARTED", "QUEUED", "RUNNING", "PASSED", "FAILED", "INCONCLUSIVE", "BLOCKED"}
+)
+REGRESSION_TERMINAL = frozenset({"PASSED", "FAILED", "INCONCLUSIVE", "BLOCKED"})
+REGRESSION_INFLIGHT = frozenset({"QUEUED", "RUNNING"})
+
 
 class RepairService:
     #: 沙箱 Run 的等待上限（秒）：必须由独立 Worker 真实执行完，超时即失败而非伪造结论
     _sandbox_timeout_s: float = 300.0
+    #: Regression Run 的等待上限（秒）：超时不伪造结论，保持 RUNNING 由后续轮询收敛
+    _regression_timeout_s: float = 300.0
 
     def __init__(self, rt: Runtime) -> None:
         self.rt = rt
@@ -183,6 +194,19 @@ class RepairService:
             "approval_ref": None,
             "sandbox_run_id": None,
             "promotion_record": {},
+            # RUN-014 WP1：Regression 独立状态（不得由 promotion_record 推导）
+            "regression_status": "NOT_STARTED",
+            "regression_run_id": None,
+            "regression_task_id": None,
+            "regression_testcase_version_id": None,
+            "regression_verdict": "",
+            "regression_started_at": None,
+            "regression_finished_at": None,
+            "regression_failure_reason": "",
+            "regression_evidence_ids": [],
+            "regression_oracle_refs": [],
+            "regression_history": [],
+            "regression_stale": False,
             "failure_reason": ""
             if (ok_assert and ok_oracle and ok_diff)
             else "RULE_VALIDATION_FAILED",
@@ -748,6 +772,15 @@ class RepairService:
             "at": (doc.get("promotion_record") or {}).get("at") or utc_now_iso(),
         }
         doc["promoted_version"] = target
+        # RUN-014 WP1：晋升成功只代表"版本已生效"，Regression 仍应是独立未开始状态；
+        # 已存在的回归结果不得被幂等重放/恢复覆盖。
+        doc.setdefault("regression_status", "NOT_STARTED")
+        doc.setdefault("regression_run_id", None)
+        doc.setdefault("regression_verdict", "")
+        doc.setdefault("regression_failure_reason", "")
+        doc.setdefault("regression_evidence_ids", [])
+        doc.setdefault("regression_history", [])
+        doc.setdefault("regression_stale", False)
         if RepairStatus(doc["status"]) is RepairStatus.PROMOTING:
             self._transition(doc, RepairStatus.PROMOTED)
         return self._save(doc)
@@ -766,6 +799,248 @@ class RepairService:
                 return self._save(doc)
             return doc
         return self._settle_promoted(doc, receipt, receipt["idempotency_key"], recovered=True)
+
+    # ------------------------------------------------------------- regression
+    def regression_run(self, proposal_id: str, *, timeout_s: float | None = None) -> dict[str, Any]:
+        """晋升后的真实回归验证（RUN-014 WP1）。
+
+        契约（fail-closed）：
+        - 只有 PROMOTED 提案可回归；回归对象是**实际晋升版本**（promoted_version，APPROVED）；
+        - 使用该版本绑定的 Oracle（raise 前先在服务端核验，缺失/未审批 → INCONCLUSIVE）；
+        - 由现有独立 Worker 消费队列执行真实 Run，不由 API 线程冒充 Worker；
+        - 只有 execution_status=COMPLETED + verdict=PASSED + 有证据 才置 PASSED；
+        - 幂等：已终态直接返回；在途只收敛同一个 Run，绝不重复创建；
+        - 超时/未终态不伪造结论，保持 RUNNING 等后续轮询收敛。
+        """
+        doc = self.get(proposal_id)
+        if doc["status"] != "PROMOTED":
+            raise AppError(
+                ErrorCode.PRECONDITION_FAILED,
+                f"REGRESSION_REQUIRES_PROMOTED: 当前状态 {doc['status']}"
+                "（只有已晋升的修复才需要回归验证）",
+            )
+        current = str(doc.get("regression_status") or "NOT_STARTED")
+        if current not in REGRESSION_STATUSES:
+            raise AppError(ErrorCode.CONFLICT, f"REGRESSION_STATUS_UNKNOWN: {current}")
+        if current in REGRESSION_TERMINAL:
+            # 幂等：终态结果只能由新的 Run 改写，重复点击不创建新 Run
+            return doc
+        existing_run = str(doc.get("regression_run_id") or "")
+        if existing_run or current in REGRESSION_INFLIGHT:
+            if not existing_run:
+                raise AppError(
+                    ErrorCode.CONFLICT,
+                    "REGRESSION_STATE_INCONSISTENT: 状态为进行中但缺少 regression_run_id",
+                )
+            return self._settle_regression(doc, self._wait_regression(existing_run, timeout_s))
+
+        promoted = int(doc.get("promoted_version") or 0)
+        if promoted <= 0:
+            raise AppError(
+                ErrorCode.CONFLICT,
+                "PROMOTED_WITHOUT_VERSION: 提案缺少有效 promoted_version，无法回归",
+            )
+        version_ref = f"{doc['testcase_id']}@{promoted}"
+        version_doc = self.rt.catalog.get_version(doc["testcase_id"], promoted)
+        if not version_doc:
+            raise AppError(
+                ErrorCode.PRECONDITION_FAILED,
+                f"PROMOTED_VERSION_NOT_FOUND: {version_ref}",
+            )
+        version_ws = str(version_doc.get("workspace_id") or "default")
+        if version_ws != doc["workspace_id"]:
+            raise AppError(
+                ErrorCode.AUTHORIZATION_ERROR,
+                f"CROSS_WORKSPACE_REGRESSION: 版本 {version_ref} 属于 workspace "
+                f"'{version_ws}'，与提案 '{doc['workspace_id']}' 不一致",
+            )
+        if str(version_doc.get("review_status") or "") != "APPROVED":
+            raise AppError(
+                ErrorCode.PRECONDITION_FAILED,
+                f"REGRESSION_VERSION_NOT_APPROVED: {version_ref} "
+                f"review_status={version_doc.get('review_status')}",
+            )
+
+        oracle_refs, oracle_problems = self._regression_oracles(version_doc)
+        doc["regression_oracle_refs"] = oracle_refs
+        if oracle_problems:
+            # fail-closed：没有可信 Oracle 就不能宣称"回归通过"
+            return self._mark_regression_inconclusive(
+                doc, "REGRESSION_ORACLE_UNAVAILABLE", "; ".join(oracle_problems)
+            )
+
+        task = self.rt.tasks.create_task(
+            doc["testcase_id"],
+            f"repair-regression:{proposal_id}:v{promoted}",
+            testcase_version_id=version_ref,
+            mode="playwright",
+            workspace_id=doc["workspace_id"],
+        )
+        if task.get("idempotent_hit"):
+            # 崩溃恢复：Task 已存在时复用其已有 Run，绝不为同一提案重复建 Run
+            prior = self.rt.tasks.list_runs(task_id=task["task_id"], limit=1)
+            if prior:
+                run = prior[0]
+            else:
+                run = self.rt.tasks.create_run(task["task_id"], version_ref)
+        else:
+            run = self.rt.tasks.create_run(task["task_id"], version_ref)
+
+        doc["regression_task_id"] = task["task_id"]
+        doc["regression_run_id"] = run["run_id"]
+        doc["regression_testcase_version_id"] = version_ref
+        doc["regression_status"] = "QUEUED"
+        doc["regression_verdict"] = ""
+        doc["regression_failure_reason"] = ""
+        doc["regression_evidence_ids"] = []
+        doc["regression_started_at"] = utc_now_iso()
+        doc["regression_finished_at"] = None
+        doc["regression_stale"] = False
+        self._save(doc)
+        return self._settle_regression(doc, self._wait_regression(run["run_id"], timeout_s))
+
+    def regression_status(self, proposal_id: str) -> dict[str, Any]:
+        """只读回归状态 + 实时 Run 快照（供 UI 刷新；不做任何写入）。"""
+        doc = self.get(proposal_id)
+        run_id = str(doc.get("regression_run_id") or "")
+        run = self.rt.tasks.get_run(run_id) if run_id else None
+        return {
+            "proposal_id": proposal_id,
+            "regression_status": doc.get("regression_status") or "NOT_STARTED",
+            "regression_verdict": doc.get("regression_verdict") or "",
+            "regression_run_id": run_id or None,
+            "regression_testcase_version_id": doc.get("regression_testcase_version_id"),
+            "regression_started_at": doc.get("regression_started_at"),
+            "regression_finished_at": doc.get("regression_finished_at"),
+            "regression_failure_reason": doc.get("regression_failure_reason") or "",
+            "regression_evidence_ids": list(doc.get("regression_evidence_ids") or []),
+            "regression_oracle_refs": list(doc.get("regression_oracle_refs") or []),
+            "regression_stale": bool(doc.get("regression_stale")),
+            "regression_history": list(doc.get("regression_history") or []),
+            "run": (
+                {
+                    "run_id": run.get("run_id"),
+                    "execution_status": run.get("execution_status"),
+                    "test_verdict": run.get("test_verdict"),
+                    "lease_owner": run.get("lease_owner"),
+                    "fencing_token": run.get("fencing_token"),
+                    "started_at": run.get("started_at"),
+                    "ended_at": run.get("ended_at"),
+                }
+                if run
+                else None
+            ),
+        }
+
+    def _regression_oracles(
+        self, version_doc: dict[str, Any]
+    ) -> tuple[list[dict[str, Any]], list[str]]:
+        """核验晋升版本绑定的 Oracle：必须存在且已审批，且版本/Workspace 一致。"""
+        refs: list[dict[str, Any]] = []
+        problems: list[str] = []
+        for spec in version_doc.get("assertions") or []:
+            oracle_id = str(spec.get("oracle_id") or "")
+            if not oracle_id:
+                continue
+            pinned = spec.get("oracle_version")
+            ref = {
+                "assertion_id": spec.get("assertion_id"),
+                "oracle_id": oracle_id,
+                "oracle_version": pinned,
+            }
+            doc = self.rt.catalog.get_oracle(oracle_id, int(pinned) if pinned else None)
+            if not doc:
+                ref["status"] = "MISSING"
+                problems.append(f"{oracle_id}@{pinned or 'latest'} 不存在")
+            elif not doc.get("approved", False):
+                ref["status"] = "UNAPPROVED"
+                problems.append(f"{oracle_id}@{doc.get('version')} 未审批")
+            elif pinned and int(doc.get("version") or 0) != int(pinned):
+                ref["status"] = "VERSION_MISMATCH"
+                problems.append(f"{oracle_id} 固定版本 {pinned} 与读取版本不一致")
+            else:
+                ref["status"] = "OK"
+                ref["oracle_version"] = doc.get("version")
+            refs.append(ref)
+        if not refs:
+            problems.append("用例版本未绑定任何 Oracle")
+        return refs, problems
+
+    def _wait_regression(self, run_id: str, timeout_s: float | None) -> dict[str, Any]:
+        timeout = self._regression_timeout_s if timeout_s is None else max(1.0, timeout_s)
+        return self.rt.wait_for_run(run_id, timeout_s=timeout)
+
+    def _mark_regression_inconclusive(
+        self, doc: dict[str, Any], reason: str, detail: str
+    ) -> dict[str, Any]:
+        doc["regression_status"] = "INCONCLUSIVE"
+        doc["regression_failure_reason"] = reason
+        doc["regression_verdict"] = doc.get("regression_verdict") or "NOT_EVALUATED"
+        doc["regression_finished_at"] = utc_now_iso()
+        doc["regression_history"] = list(doc.get("regression_history") or []) + [
+            {
+                "at": doc["regression_finished_at"],
+                "run_id": doc.get("regression_run_id"),
+                "status": "INCONCLUSIVE",
+                "verdict": doc.get("regression_verdict"),
+                "reason": reason,
+                "detail": detail,
+            }
+        ]
+        return self._save(doc)
+
+    def _settle_regression(self, doc: dict[str, Any], run: dict[str, Any] | None) -> dict[str, Any]:
+        """把真实 Run 结果收敛为 Regression 状态（绝不从 promotion_record 推导）。"""
+        if not run:
+            doc["regression_status"] = "RUNNING"
+            return self._save(doc)
+        status = str(run.get("execution_status") or "")
+        verdict = str(run.get("test_verdict") or "NOT_EVALUATED")
+        report = run.get("report") or {}
+        evidence = [str(x) for x in (report.get("evidence_ids") or [])]
+        doc["regression_verdict"] = verdict
+        if status not in TERMINAL_STATUSES:
+            doc["regression_status"] = "RUNNING"
+            doc["regression_verdict"] = verdict
+            return self._save(doc)
+
+        reason = ""
+        if verdict == "FAILED":
+            new_status = "FAILED"
+            reason = "REGRESSION_ASSERTION_FAILED"
+        elif status == "COMPLETED" and verdict == "PASSED":
+            if evidence:
+                new_status = "PASSED"
+            else:
+                new_status = "INCONCLUSIVE"
+                reason = "REGRESSION_EVIDENCE_MISSING"
+        elif status == "COMPLETED":
+            new_status = "INCONCLUSIVE"
+            reason = f"REGRESSION_VERDICT_{verdict}"
+        else:
+            new_status = "INCONCLUSIVE"
+            reason = f"REGRESSION_RUN_{status}"
+
+        doc["regression_status"] = new_status
+        doc["regression_failure_reason"] = reason
+        doc["regression_evidence_ids"] = evidence[:100]
+        doc["regression_finished_at"] = utc_now_iso()
+        # 结果只对"当时晋升的版本"有效：之后被别人推进了新版本 → 明确标记 stale
+        current = self.rt.catalog.approved_version_number(doc["testcase_id"])
+        doc["regression_stale"] = bool(current) and current != int(doc.get("promoted_version") or 0)
+        doc["regression_history"] = list(doc.get("regression_history") or []) + [
+            {
+                "at": doc["regression_finished_at"],
+                "run_id": run.get("run_id"),
+                "status": new_status,
+                "verdict": verdict,
+                "execution_status": status,
+                "reason": reason,
+                "error": (report.get("errors") or [None])[0],
+                "evidence_count": len(evidence),
+            }
+        ]
+        return self._save(doc)
 
     def rollback(
         self,
@@ -842,6 +1117,8 @@ class RepairService:
             **(doc.get("promotion_record") or {}),
             "rollback": doc["rollback_record"],
         }
+        # RUN-014 WP1：回滚后原回归结论不再适用于当前正式版本，必须显式失效
+        doc["regression_stale"] = True
         if RepairStatus(doc["status"]) is RepairStatus.PROMOTED:
             self._transition(doc, RepairStatus.ROLLED_BACK)
         return self._save(doc)
@@ -956,4 +1233,8 @@ def _summary(doc: dict[str, Any]) -> dict[str, Any]:
         "diagnosis_id": doc.get("diagnosis_id"),
         "source_run_id": doc.get("source_run_id"),
         "repair_source": doc.get("repair_source", ""),
+        # RUN-014 WP1：列表也要能区分"已晋升"与"已回归通过"
+        "regression_status": doc.get("regression_status") or "NOT_STARTED",
+        "regression_run_id": doc.get("regression_run_id"),
+        "regression_verdict": doc.get("regression_verdict") or "",
     }

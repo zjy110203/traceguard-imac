@@ -64,6 +64,10 @@ def action_for_request(method: str, path: str) -> str | None:
             return "repair.promote"
         if path.endswith("/rollback"):
             return "repair.rollback"
+        if path.endswith("/regression-run") or path.endswith("/regression"):
+            # RUN-014 WP1：回归验证会创建真实 Run 并改变修复的验证结论，
+            # 与晋升同级的正式资产动作，不能落到 repair.submit（qa-engineer）。
+            return "repair.regression"
         if path.endswith("/approve") or path.endswith("/reject"):
             return "repair.approve"
         return "repair.submit"

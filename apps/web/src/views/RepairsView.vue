@@ -189,9 +189,46 @@ async function action(path: string, body?: Record<string, unknown>, label = '') 
   }
 }
 
+/** 回归验证：真实创建独立 Run 并由 Worker 执行；结果只认服务端状态。 */
+async function runRegression() {
+  if (!selected.value) return
+  busy.value = 'regression-run'
+  try {
+    const r = await api.post<Repair>(`/repairs/${selected.value.proposal_id}/regression-run`)
+    selected.value = r
+    notify('回归验证：' + (r.regression_status || 'UNKNOWN') + (r.regression_verdict ? ` / ${r.regression_verdict}` : ''))
+    await load()
+  } catch (e) {
+    notifyError(e)
+  } finally {
+    busy.value = ''
+  }
+}
+
 const canApprove = computed(() => selected.value?.status === 'PENDING_APPROVAL')
 const canPromote = computed(() => selected.value?.status === 'APPROVED')
 const canRollback = computed(() => selected.value?.status === 'PROMOTED')
+const canRunRegression = computed(() => {
+  const r = selected.value
+  if (!r || r.status !== 'PROMOTED') return false
+  return !['PASSED', 'FAILED', 'INCONCLUSIVE', 'BLOCKED'].includes(r.regression_status || 'NOT_STARTED')
+})
+const regressionRunning = computed(() =>
+  ['QUEUED', 'RUNNING'].includes(selected.value?.regression_status || ''),
+)
+const regressionTerminal = computed(() =>
+  ['PASSED', 'FAILED', 'INCONCLUSIVE', 'BLOCKED'].includes(selected.value?.regression_status || ''),
+)
+
+/** 回归持续时间（秒）：只有真实时间戳才算，不用"已进行多久"冒充结果。 */
+const regressionDuration = computed(() => {
+  const r = selected.value
+  if (!r?.regression_started_at) return ''
+  const start = Date.parse(r.regression_started_at)
+  const end = r.regression_finished_at ? Date.parse(r.regression_finished_at) : Date.now()
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return ''
+  return `${Math.round((end - start) / 1000)}s`
+})
 
 /** 候选预览：仅根据后端 diff 字段叠加真实基线版本，不冒充已晋升版本。 */
 const candidatePreview = computed(() => {
@@ -209,25 +246,60 @@ const candidatePreview = computed(() => {
   return copy
 })
 
+/**
+ * 生命周期每一步都必须来自服务端真实状态（RUN-014 WP1）。
+ * 旧实现把 Promotion 与 Regression 用同一个 `promoted` 条件判断，
+ * 且把任何非空 promotion_record（含 VERSION_CONFLICT）当作晋升成功 —— 都会误报完成。
+ */
 const lifecycle = computed(() => {
   const r = selected.value
-  const promoted = !!r?.promoted_version || !!Object.keys(r?.promotion_record || {}).length
-  const done = [
-    !!r,
-    !!r && !['DRAFT', 'PROPOSED', 'VALIDATION_FAILED'].includes(r.status),
-    r?.sandbox_status === 'PASSED',
-    !!r && ['APPROVED', 'PROMOTED', 'ROLLED_BACK'].includes(r.status),
-    promoted || r?.status === 'ROLLED_BACK',
-    promoted || r?.status === 'ROLLED_BACK',
-    r?.status === 'ROLLED_BACK' || !!Object.keys(r?.rollback_record || {}).length,
+  const validationPassed =
+    !!r &&
+    !['DRAFT', 'VALIDATION_FAILED'].includes(r.status) &&
+    r.assertion_preservation === 'PASS' &&
+    r.oracle_integrity === 'PASS' &&
+    r.diff_allowed === true
+  // 晋升成功 = 服务端给出有效新版本号，且提案确实进入 PROMOTED；
+  // VERSION_CONFLICT / PROMOTION_RESULT_INVALID / PROMOTION_FAILED 一律不算。
+  const promotedOk =
+    !!r &&
+    Number(r.promoted_version || 0) > 0 &&
+    ['PROMOTED', 'ROLLED_BACK'].includes(r.status) &&
+    (r.promotion_record?.check === 'CAS_OK' || r.promotion_record?.result === 'CAS_OK')
+  const promotionFailed =
+    !!r &&
+    (r.status === 'PROMOTION_FAILED' ||
+      ['VERSION_CONFLICT', 'PROMOTION_RESULT_INVALID'].includes(r.promotion_record?.result))
+  const regressionPassed = r?.regression_status === 'PASSED'
+  const regressionFailed = ['FAILED', 'INCONCLUSIVE'].includes(r?.regression_status || '')
+  const rollbackDone = Number(r?.rollback_record?.restored_version || 0) > 0
+  return [
+    { label: 'Proposal', state: r ? 'done' : 'todo' },
+    {
+      label: 'Rule Validation',
+      state: validationPassed ? 'done' : r?.status === 'VALIDATION_FAILED' ? 'fail' : 'todo',
+    },
+    { label: 'Sandbox Run', state: r?.sandbox_status === 'PASSED' ? 'done' : r?.sandbox_status === 'FAILED' ? 'fail' : 'todo' },
+    {
+      label: 'Human Approval',
+      state: r?.approval_ref || ['APPROVED', 'PROMOTING', 'PROMOTED', 'ROLLED_BACK'].includes(r?.status || '') ? 'done' : 'todo',
+    },
+    {
+      label: 'Promotion',
+      state: promotedOk ? 'done' : promotionFailed ? 'fail' : r?.status === 'PROMOTING' ? 'current' : 'todo',
+    },
+    {
+      label: 'Regression',
+      state: regressionPassed
+        ? 'done'
+        : regressionFailed
+          ? 'fail'
+          : regressionRunning.value
+            ? 'current'
+            : 'todo',
+    },
+    { label: 'Rollback', state: rollbackDone ? 'done' : 'todo' },
   ]
-  let seenUndone = false
-  return ['Proposal', 'Rule Validation', 'Sandbox Run', 'Human Approval', 'Promotion', 'Regression', 'Rollback']
-    .map((label, i) => {
-      const state = done[i] && !seenUndone ? 'done' : 'todo'
-      if (!done[i]) seenUndone = true
-      return { label, state }
-    })
 })
 
 function ask(path: string, body: Record<string, unknown> | undefined, label: string, danger = false) {
@@ -266,13 +338,14 @@ onMounted(load)
         <div class="card-body tight scroll-x">
           <AsyncBlock :loading="loading" :error="error" :empty="items.length === 0" empty-title="暂无修复提案">
             <table>
-              <thead><tr><th>提案</th><th>用例</th><th>状态</th><th>沙箱</th><th>创建</th></tr></thead>
+              <thead><tr><th>提案</th><th>用例</th><th>状态</th><th>沙箱</th><th>回归</th><th>创建</th></tr></thead>
               <tbody>
                 <tr v-for="r in items" :key="r.proposal_id" style="cursor: pointer" :style="selected?.proposal_id === r.proposal_id ? 'background: var(--brand-weak)' : ''" @click="select(r)">
                   <td class="mono small">{{ r.proposal_id.slice(-10) }}</td>
-                  <td class="small">{{ r.testcase_id }}<div class="muted" style="font-size: 10.5px">v{{ r.base_version }} → v{{ (r.promoted_version ?? r.base_version + 1) }}</div></td>
+                  <td class="small">{{ r.testcase_id }}<div class="muted" style="font-size: 10.5px">base v{{ r.base_version }}<template v-if="r.promoted_version"> → v{{ r.promoted_version }}</template></div></td>
                   <td><StatusBadge :value="r.status" /></td>
                   <td><StatusBadge :value="r.sandbox_status" /></td>
+                  <td><StatusBadge :value="r.regression_status || 'NOT_STARTED'" /></td>
                   <td class="small muted nowrap">{{ fmtTime(r.created_at) }}</td>
                 </tr>
               </tbody>
@@ -336,6 +409,7 @@ onMounted(load)
               <button class="sm primary" :disabled="busy === 'approve' || !canApprove" @click="ask('approve', { reviewer, note: '控制台审批' }, '审批', true)">批准</button>
               <button class="sm danger" :disabled="busy === 'reject' || !canApprove" @click="ask('reject', { reviewer, note: '控制台驳回' }, '驳回', true)">驳回</button>
               <button class="sm primary" :disabled="busy === 'promote' || !canPromote" @click="ask('promote', { idempotency_key: 'promo-' + selected.proposal_id }, '晋升正式版本', true)">晋升正式版本</button>
+              <button class="sm" :disabled="busy === 'regression-run' || !canRunRegression" @click="runRegression">运行回归验证</button>
               <button class="sm danger" :disabled="busy === 'rollback' || !canRollback" @click="ask('rollback', { operator: reviewer, reason: '控制台回滚' }, '回滚', true)">回滚</button>
             </div>
             <div class="hr" />
@@ -349,6 +423,64 @@ onMounted(load)
           <div class="card-head"><h2>晋升记录</h2></div>
           <div class="card-body"><pre class="json">{{ JSON.stringify(selected.promotion_record, null, 2) }}</pre></div>
         </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2>回归验证</h2>
+            <div class="actions">
+              <StatusBadge :value="selected.regression_status || 'NOT_STARTED'" />
+              <StatusBadge v-if="selected.regression_verdict" :value="selected.regression_verdict" />
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="kv">
+              <dt>回归 Run</dt>
+              <dd class="mono small">
+                <router-link v-if="selected.regression_run_id" :to="`/runs/${selected.regression_run_id}`">{{ selected.regression_run_id }}</router-link>
+                <span v-else class="muted">尚未创建（晋升后才可回归）</span>
+              </dd>
+              <dt>回归版本</dt>
+              <dd class="mono small">{{ selected.regression_testcase_version_id || '—' }}</dd>
+              <dt>Verdict</dt>
+              <dd><StatusBadge v-if="selected.regression_verdict" :value="selected.regression_verdict" /><span v-else class="muted">—</span></dd>
+              <dt>耗时</dt><dd class="small">{{ regressionDuration || '—' }}</dd>
+              <dt>证据</dt>
+              <dd class="small">
+                <router-link v-if="selected.regression_run_id" :to="`/runs/${selected.regression_run_id}`">
+                  {{ (selected.regression_evidence_ids || []).length }} 条（在 Run 详情回读）
+                </router-link>
+                <span v-else class="muted">—</span>
+              </dd>
+              <dt>Oracle</dt>
+              <dd class="small">
+                <span v-if="!(selected.regression_oracle_refs || []).length" class="muted">—</span>
+                <span v-for="o in selected.regression_oracle_refs || []" :key="o.oracle_id + (o.oracle_version || '')" class="mono" style="margin-right: 8px">
+                  {{ o.oracle_id }}@v{{ o.oracle_version ?? '?' }}
+                  <span :class="o.status === 'OK' ? 'pass-text' : 'fail-text'">{{ o.status }}</span>
+                </span>
+              </dd>
+              <dt>失败原因</dt><dd class="small fail-text">{{ selected.regression_failure_reason || '—' }}</dd>
+              <dt>结论时效</dt>
+              <dd class="small">
+                <span v-if="selected.regression_stale" class="badge fail">STALE（正式版本已变更）</span>
+                <span v-else class="muted">—</span>
+              </dd>
+              <dt>回滚</dt>
+              <dd class="small">
+                <span v-if="canRollback">可回滚（需要 repair.rollback 权限，人工确认）</span>
+                <span v-else-if="selected.rollback_record?.restored_version" class="pass-text">已回滚到 v{{ selected.rollback_record.restored_version }}</span>
+                <span v-else class="muted">仅 PROMOTED 状态可回滚</span>
+              </dd>
+            </div>
+            <p v-if="regressionRunning" class="small muted">回归 Run 执行中：状态来自服务端，刷新页面不会伪造完成。</p>
+            <p v-else-if="selected.status === 'PROMOTED' && (selected.regression_status || 'NOT_STARTED') === 'NOT_STARTED'" class="small muted">
+              晋升已生效，但回归尚未执行：不得视为已验证。
+            </p>
+            <div v-if="(selected.regression_history || []).length" class="hr" />
+            <pre v-if="(selected.regression_history || []).length" class="json" style="max-height: 180px">{{ JSON.stringify(selected.regression_history, null, 2) }}</pre>
+          </div>
+        </div>
+
         <div v-if="selected.rollback_record" class="card">
           <div class="card-head"><h2>回滚记录</h2></div>
           <div class="card-body"><pre class="json">{{ JSON.stringify(selected.rollback_record, null, 2) }}</pre></div>

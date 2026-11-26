@@ -45,6 +45,9 @@ PERMISSIONS: dict[str, set[str]] = {
     "repair.approve": {ROLE_QA_LEAD, ROLE_PLATFORM_ADMIN},
     "repair.promote": {ROLE_PLATFORM_ADMIN},
     "repair.rollback": {ROLE_PLATFORM_ADMIN},
+    # RUN-014 WP1：晋升后的真实回归验证（创建独立 Run 并给出通过/失败结论）。
+    # 属于正式资产的验证动作：qa-lead 及以上，普通 qa-engineer 只能提交修复。
+    "repair.regression": {ROLE_QA_LEAD, ROLE_PLATFORM_ADMIN},
     "system.configure": {ROLE_PLATFORM_ADMIN},
     # RUN-011-R1.2：跨 Workspace 的全局运维观测（审计/冲突/Inbox 汇总）独立权限，
     # 不得通过普通 read 暴露给 viewer / qa-engineer / qa-lead。

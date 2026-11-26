@@ -729,3 +729,40 @@ async def reconcile_repair(proposal_id: str, request: Request) -> dict[str, Any]
         return get_services().repair.reconcile(proposal_id)
     except AppError as exc:
         raise _http(exc) from exc
+
+
+@router.post("/repairs/{proposal_id}/regression-run")
+async def regression_repair(
+    proposal_id: str, request: Request, wait_timeout_s: float | None = None
+) -> dict[str, Any]:
+    """晋升后的真实回归验证：创建独立 Regression Run，由真实 Worker 执行。
+
+    幂等：已终态直接返回；在途只收敛同一个 Run，不重复创建。
+    """
+    rec = _doc_or_404(proposal_id, request, kind="repair")
+    if not (rec.doc or {}).get("promoted_version"):
+        raise HTTPException(
+            412,
+            detail={
+                "code": "PRECONDITION_FAILED",
+                "message": "REGRESSION_REQUIRES_PROMOTED: 提案尚未晋升，无法回归验证",
+            },
+        )
+    try:
+        return await run_in_threadpool(
+            get_services().repair.regression_run,
+            proposal_id,
+            timeout_s=wait_timeout_s,
+        )
+    except AppError as exc:
+        raise _http(exc) from exc
+
+
+@router.get("/repairs/{proposal_id}/regression")
+async def regression_status(proposal_id: str, request: Request) -> dict[str, Any]:
+    """只读回归状态（含实时 Run 快照），供 UI 刷新时不依赖本地状态。"""
+    _doc_or_404(proposal_id, request, kind="repair")
+    try:
+        return get_services().repair.regression_status(proposal_id)
+    except AppError as exc:
+        raise _http(exc) from exc

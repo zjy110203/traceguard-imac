@@ -396,6 +396,7 @@ pre.json { background: var(--sidebar-bg); color: #dbe4f3; border-radius: var(--r
 .lifecycle .stage { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 20px; font-size: 11px; border: 1px solid var(--border); color: var(--text-3); background: var(--surface-2); }
 .lifecycle .stage.done { color: var(--pass); border-color: var(--pass-border); background: var(--pass-weak); }
 .lifecycle .stage.current { color: var(--brand); border-color: var(--brand); background: var(--brand-weak); font-weight: 600; }
+.lifecycle .stage.fail { color: var(--fail); border-color: var(--fail-border); background: var(--fail-weak); }
 .lifecycle .arrow { color: var(--text-3); font-size: 11px; }
 .code-diff { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
 .diff-head { display: flex; gap: 8px; align-items: center; padding: 8px 12px; background: var(--surface-2); border-bottom: 1px solid var(--border); }

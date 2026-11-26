@@ -342,6 +342,18 @@ export interface Repair {
   promoted_version?: number
   rollback_record?: Record<string, any>
   failure_reason?: string
+  // RUN-014 WP1：Regression 是独立验证阶段，不得从 promotion_record 推导
+  regression_status?: 'NOT_STARTED' | 'QUEUED' | 'RUNNING' | 'PASSED' | 'FAILED' | 'INCONCLUSIVE' | 'BLOCKED'
+  regression_run_id?: string | null
+  regression_testcase_version_id?: string | null
+  regression_verdict?: string
+  regression_started_at?: string | null
+  regression_finished_at?: string | null
+  regression_failure_reason?: string
+  regression_evidence_ids?: string[]
+  regression_oracle_refs?: { assertion_id?: string; oracle_id: string; oracle_version?: number | null; status?: string }[]
+  regression_stale?: boolean
+  regression_history?: Record<string, any>[]
 }
 
 export interface ProbeExecution {
