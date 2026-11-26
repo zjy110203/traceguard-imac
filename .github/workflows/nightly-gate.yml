@@ -133,6 +133,38 @@ jobs:
         # timeout 1500：25 分钟内没跑完就明确失败，不静默挂到 job 超时。
         run: |
           timeout 1500 .venv/bin/python scripts/business_loop_ui_acceptance_run017.py --profile core
+      - name: 汇总 UI 验收结果（写入 Job Summary，便于无凭据环境直接核对）
+        if: always()
+        run: |
+          .venv/bin/python - <<'PY'
+          import json, os, pathlib
+          files = sorted(pathlib.Path("docs/assets/run017/wp5/ui").glob("run017-ui-*.json"))
+          if not files:
+              print("no ui report found")
+              raise SystemExit(0)
+          data = json.loads(files[-1].read_text(encoding="utf-8"))
+          rows = ["| check | status | detail |", "|---|---|---|"]
+          for item in data.get("results", []):
+              rows.append(
+                  f"| {str(item.get('check'))[:70]} | {item.get('status')} | "
+                  f"{str(item.get('detail'))[:90]} |"
+              )
+          text = "\n".join(
+              [
+                  "### UI 全链路验收结果",
+                  "",
+                  f"- total: {data.get('total')}",
+                  f"- passed: {data.get('passed')}",
+                  f"- failed: {data.get('failed')}",
+                  "",
+                  *rows,
+              ]
+          )
+          print(text)
+          summary = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary:
+              pathlib.Path(summary).write_text(text, encoding="utf-8")
+          PY
       - name: Upload UI evidence
         if: always()
         uses: actions/upload-artifact@v4
