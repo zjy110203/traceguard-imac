@@ -150,6 +150,8 @@ PostgreSQL 16**；SQLite 仅用于本地快速演示；Artifact 仅本地内容�
 | PR Gate **#78** | `4c2f851` | **success**（2m20s，最新 HEAD） |
 | Nightly #29 | `2d35998` | **failed**（11m52s）：除 `ui-acceptance` 外全部 Job 通过 |
 | Nightly #30 | `4c2f851` | **failed**（11m48s）：同上（`ui-acceptance` 退出码 1） |
+| Nightly #31 | `f34f6b4` | **failed**（11m54s）：同上，可复现 |
+| PR Gate **#80** | `feae308` | **success**（2m43s，**最终 HEAD**） |
 
 ### 5.1 门禁结论的口径说明
 
