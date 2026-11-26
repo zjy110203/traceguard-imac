@@ -83,11 +83,11 @@
 - 全量 pytest：**805 passed / 16 skipped**（skip 均为未配置 PG 的专项）。
 - PostgreSQL 16 专项：**16 passed**（parity / platform / workspace）。
 - PG16 Fencing 专项：`scripts/verify_fencing_pg_run014.py` **9/9 PASS**。
-- 60 分钟 PG16 长稳：见最终报告（独立库 `traceguard_run014_soak`，未覆盖 RUN-013 库）。
+- 60 分钟 PG16 长稳：**NOT_RUN / INCONCLUSIVE**：仅留下约 4 分钟 Worker 日志与瞬时指标，无 `soak-60min.json` 汇总；脚本已参数化 `TG_SOAK_PG_DB` 以隔离历史库，待重跑。
 - CI：见最终报告（PR Gate 通过公开 API 读取；Nightly/Release 未触发 → NOT_RUN）。
 
 ## WP7（文档与恢复状态）
 
 - 新增：BASELINE / WORKLOG / WP1~WP5 专题 / FINAL-REPORT。
-- 更新：README、FEATURE-STATUS、TraceGuard 台账、`.workbuddy-run/*`（全部推进到 RUN-014）。
+- 更新：README、FEATURE-STATUS、TraceGuard 台账；`.workbuddy-run/*` 保留 RUN-011-R1.1 及更早历史记录，本轮未改写（权威状态以最终报告与 RUN-014 专题为准）。
 - 历史 RUN-013 交付记录只追加、不覆盖；`docs/assets/run011*|run012|run013` 零改动（已用 git diff 校验）。
