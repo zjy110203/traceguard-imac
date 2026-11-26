@@ -23,9 +23,9 @@ RUN-018 把 TraceGuard 从"测量可信"推进到"**观测严格可信、GC 并�
 
 | 能力 | 状态 | 证据 |
 |---|---|---|
-| 独立观测 UNKNOWN 语义（三态） | **VERIFIED** | WP2：BrowserEffectObserver + state_consistency 修复 |
+| 独立观测 UNKNOWN 语义（三态） | **VERIFIED** | WP2：ReadVerdict 三态 + _persisted() 改造 + 37 测试 |
 | 探针清理接口安全 | **VERIFIED** | WP3：token 校验 + startswith() + 19 测试 |
-| Artifact GC 并发安全 | **IMPLEMENTED** | WP4：同步机制 + 并发测试 |
+| Artifact GC 并发安全 | **VERIFIED** | WP4：竞态 A/B 修复 + 5 并发测试 + 14 回归 |
 | Active Probe → Diagnosis Feedback | **IMPLEMENTED** | WP5：闭环流程 + 5 场景测试 |
 | TF-TIME-003 双提交观测 | **IMPLEMENTED** | WP6：DoubleSubmitObserver + 9 测试 |
 | 诊断保留集验证 | **IMPLEMENTED** | WP7：方法论 + 指标定义 |
@@ -168,10 +168,14 @@ Nightly 的其他 Job（backend-full / postgres / security / llm-smoke）全部�
 
 | 项 | 结果 |
 |---|---|
+| WP2 三态语义 | 37 passed |
 | WP3 安全测试 | 19 passed |
+| WP4 GC 并发测试 | 5 passed |
 | WP6 双提交测试 | 9 passed |
 | 现有 fault_effect 测试 | 31 passed |
-| 全量 pytest | 待运行 |
+| 现有 artifact lifecycle | 14 passed |
+| 全量 unit | 419 passed |
+| **新增合计** | **70 passed** |
 
 ---
 

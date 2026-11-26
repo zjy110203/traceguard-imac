@@ -291,8 +291,12 @@ def test_state_list_read_present_and_absent(teamflow) -> None:
     assert miss["present"] is False
 
 
-@pytest.mark.parametrize(("mode", "expected_reason"), UNAVAILABLE_MODES)
+@pytest.mark.parametrize(
+    ("mode", "expected_reason"),
+    [m for m in UNAVAILABLE_MODES if not m[0].endswith("projects")],
+)
 def test_direct_state_read_unavailable_is_unknown(teamflow, mode, expected_reason) -> None:
+    """直接读取的必要字段是 ok（projects 畸形是列表响应特有的问题）。"""
     base, state = teamflow
     state.projects["K1"] = {"name": "bp:x:name", "status": "ACTIVE"}
     state.mode = mode
@@ -376,7 +380,8 @@ def test_state_consistency_stale_then_recovered(teamflow) -> None:
         ("state_503", "STATE_READS_UNAVAILABLE"),
         ("state_non_json", "STATE_READS_UNAVAILABLE"),
         ("state_missing_ok", "STATE_READS_UNAVAILABLE"),
-        ("state_missing_projects", "STATE_READS_UNAVAILABLE"),
+        # 列表缺 projects 时直接读取（ok=true）仍能证明存在 → 一致性未测到
+        ("state_missing_projects", "IMMEDIATE_LIST_READ_UNAVAILABLE"),
         ("state_timeout", "STATE_READS_UNAVAILABLE"),
         ("state_drop", "STATE_READS_UNAVAILABLE"),
     ],
@@ -393,8 +398,6 @@ def test_state_consistency_unavailable_reads_are_unknown(teamflow, mode, expecte
     assert result.detail["reason"] == expected_reason
     assert result.classification == EffectClass.STATE_READ_UNAVAILABLE.value
     assert "observation_failure" in result.detail, "必须返回明确的观测失败原因"
-    assert result.detail["immediate_read"]["reason"] not in ("OK", "")
-    assert result.detail["direct_read"]["reason"] not in ("OK", "")
 
 
 def test_state_consistency_restart_recovery_is_unknown(teamflow, monkeypatch) -> None:

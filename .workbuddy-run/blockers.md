@@ -1,3 +1,15 @@
+# 阻塞（RUN-018，2026-11-27 00:40 CST）
+
+| 编号 | 事项 | 状态 |
+|---|---|---|
+| B-28 | Nightly ui-acceptance 持续失败（#26~#33 全部失败，本地 35/35 通过） | NOT_CLOSED：需 CI job 日志定位 |
+| B-26 | PR #3 创建 | NOT_RUN（无 gh CLI） |
+| B-27 | gh/API 导出 CI 日志 | BLOCKED（无凭据） |
+| B-24 | Release Gate 真实 LLM 证据 | NOT_RUN（缺 Secret） |
+| B-25 | Reliability Gate 真实运行 | NOT_RUN（需手动窗口） |
+
+---
+
 # 阻塞（RUN-017，2026-11-26 21:55 CST）
 
 | 编号 | 事项 | 状态 |

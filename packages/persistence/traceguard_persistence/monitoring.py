@@ -23,7 +23,7 @@ from sqlalchemy import func, select
 from traceguard_core.ids import utc_now_iso
 
 from .db import Database
-from .models import ArtifactRow, RunRow, TaskRow, WorkerHeartbeatRow
+from .models import ArtifactRow, RunRow, WorkerHeartbeatRow
 
 # ------------------------------------------------------------------ thresholds
 #: 全部为 **provisional** 阈值：未经过真实负载实测校准，仅用于告警初版触发。

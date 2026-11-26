@@ -1,3 +1,21 @@
+# 阶段状态（RUN-018 执行中，2026-11-27 00:40 CST）
+
+| 阶段 | 状态 | 证据 |
+|---|---|---|
+| WP0 基线核查 | IN_PROGRESS | — |
+| WP1 CI 闭环 | TODO | — |
+| WP2 观测 UNKNOWN 语义 | TODO | — |
+| WP3 探针清理安全 | TODO | — |
+| WP4 Artifact GC 并发 | TODO | — |
+| WP5 诊断反馈闭环 | TODO | — |
+| WP6 双提交观测 | TODO | — |
+| WP7 保留集验证 | TODO | — |
+| WP8 运维监控 | TODO | — |
+| WP9 UI 无障碍 | TODO | — |
+| WP10 部署运维 | TODO | — |
+
+---
+
 # 阶段状态（RUN-017 收口，2026-11-26 22:40 CST）
 
 | 阶段 | 状态 | 证据 |

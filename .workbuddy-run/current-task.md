@@ -12,6 +12,15 @@
 
 ---
 
+# 当前任务（RUN-018 执行中，2026-11-27 00:40 CST）
+
+> 分支 `workbuddy/run018-diagnostic-closure`（起点 `c807284`）。
+> 主题：诊断反馈闭环、观测可信度、产品可靠性完善。
+> WP0 基线核查中。PR Gate #81 success；Nightly #33 failed（B-28 仍未闭环）。
+> 禁止：改 main、强推、reset --hard、git clean、自动合并 PR、读取凭据。
+
+---
+
 # 当前任务（RUN-017 收口，2026-11-26 23:55 CST）
 
 > 最终 HEAD：`f34f6b4`（分支 `workbuddy/run017-product-maturity`，已推送）。

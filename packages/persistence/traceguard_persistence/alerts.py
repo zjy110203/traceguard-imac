@@ -56,6 +56,20 @@ SEVERITIES = ("INFO", "WARNING", "CRITICAL")
 _ENGINE_ACTOR = "system:alert-engine"
 
 
+def _unreliable_types(snapshot: dict[str, Any]) -> set[str]:
+    """快照中数据源报错/缺数的告警类型：视为"未知"，禁止据此自动解决。"""
+    bad: set[str] = set()
+    if (snapshot.get("worker") or {}).get("error"):
+        bad.add("WORKER_OFFLINE")
+    if (snapshot.get("queue") or {}).get("error"):
+        bad.update({"QUEUE_BACKLOG", "RUN_TIMEOUT"})
+    if (snapshot.get("run") or {}).get("error"):
+        bad.add("RUN_FAILURE_RATE")
+    if (snapshot.get("artifact") or {}).get("error"):
+        bad.update({"ARTIFACT_INTEGRITY", "GC_ANOMALY"})
+    return bad
+
+
 class AlertStateError(ValueError):
     """非法状态迁移（含重复处理）。"""
 
@@ -84,6 +98,12 @@ class AlertEngine:
         self._last_eval = now_ts
         findings = self._rules(snapshot, now=now_ts)
         active_fps = {f["fingerprint"] for f in findings}
+        # RUN-018 WP8：自动解决的两道防护（修复快照 TOCTOU 竞态）——
+        # 1) 快照 `generated_at` 之后才创建的告警不因这份旧快照被自动解决
+        #    （Worker 线程"先采集、后评估"期间，API 侧可能新建告警）；
+        # 2) 对应数据源在本次快照中报错/缺数时，视为"未知"而非"已恢复"。
+        generated_at = float(snapshot.get("generated_at") or now_ts)
+        unreliable = _unreliable_types(snapshot)
         created: list[str] = []
         updated: list[str] = []
         auto_resolved: list[str] = []
@@ -124,6 +144,10 @@ class AlertEngine:
                 for row in open_rows:
                     if row.fingerprint in active_fps:
                         continue
+                    if float(row.created_at or 0.0) > generated_at:
+                        continue  # 快照之后才创建：本次评估无权判定其已恢复
+                    if row.alert_type in unreliable:
+                        continue  # 数据源异常：保持活跃，交由下次健康快照/人工处理
                     row.status = "RESOLVED"
                     row.resolved_by = _ENGINE_ACTOR
                     row.resolved_at = now_ts

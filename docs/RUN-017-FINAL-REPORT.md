@@ -31,7 +31,7 @@ apps/
                evidence/intelligence/benchmark）＋ Repair/Graph/Diagnosis/Probe 服务
   workers/     独立 Worker 进程（claim → execute → submit；租约 + fencing + 接管）
   teamflow/    真实被测目标（27 类故障注入 + 独立状态查询 + 权威状态 + Ground Truth 隔离）
-  web/         Vue3 + Vite 工作台（16 个路由 / 15 个视图）
+  web/         Vue3 + Vite 工作台（16 个路由 / 16 个视图）
 packages/
   core/        配置、错误、日志、安全（TargetPolicy / 出站代理 / 配额）
   contracts/   Pydantic 契约模型（22 个 Schema + 防漂移）
@@ -76,7 +76,7 @@ PostgreSQL 16**；SQLite 仅用于本地快速演示；Artifact 仅本地内容�
 | RBAC + Workspace 隔离 | VERIFIED | `test_system_config_rbac_run016.py` |
 | 备份与恢复（SQLite / PG16） | **VERIFIED（本轮新增）** | 12 项校验 × 2 |
 | 环境诊断（doctor） | **IMPLEMENTED（本轮新增）** | PASS=9 WARN=5 FAIL=0 |
-| CI 三级门禁 + Reliability Gate | VERIFIED | PR #75 success、Nightly 见 §5 |
+| CI 三级门禁 + Reliability Gate | VERIFIED（PR Gate） | PR Gate #81 success；Nightly 见 §5（`ui-acceptance` 未闭环）；Reliability Gate 真实运行 NOT_RUN |
 | 多 API 实例 / Redis / S3 / 新消息队列 | NOT_IMPLEMENTED | v1 明确不引入 |
 | LLM 四臂 / 人工基线 / 宿主级隔离 / 外部站点 | BLOCKED | 无授权凭据/人员；安全边界禁止 |
 | Release Gate 真实 LLM 证据 | NOT_RUN | 缺 `DEEPSEEK_API_KEY` |
@@ -109,9 +109,9 @@ PostgreSQL 16**；SQLite 仅用于本地快速演示；Artifact 仅本地内容�
     93.75%（n=16）、方向性 83.33%（n=30），含 95% CI 与 Macro-F1。
 12. **数据库和 Artifact 是否可完整备份恢复？** —— 可以：SQLite 与 PG16 各 12 项校验全绿，
     含恢复后继续写入。
-13. **GitHub Actions 是否在最新 HEAD 真实通过？** —— PR Gate **#75 success**（2m22s，
-    head_sha `1faebec`）；Nightly 见 §5。
-14. **前端是否完成核心业务流程和响应式验收？** —— 见 §7（业务闭环 + 15 视图 × 4 断点 × 双主题矩阵）。
+13. **GitHub Actions 是否在最新 HEAD 真实通过？** —— PR Gate **#81 success**（2m28s，
+    head_sha `c807284`）；Nightly 见 §5（#33 @ `c807284` 仍 failed，`ui-acceptance`）。
+14. **前端是否完成核心业务流程和响应式验收？** —— 见 §7（业务闭环 + 16 路由/视图 × 4 断点 × 双主题矩阵）。
 15. **项目是否具备可重复部署的能力？** —— 是：`bootstrap.sh` + 独立 Worker 模式 +
     PG16 配置 + doctor 自检 + 备份恢复脚本 + 三级 CI 门禁 + 部署文档。
 16. **目前还有哪些 BLOCKED？** —— LLM 四臂/人工基线/宿主级网络隔离/真实外部站点/
@@ -202,7 +202,7 @@ PostgreSQL 16**；SQLite 仅用于本地快速演示；Artifact 仅本地内容�
 
 ## 7. 前端产品体验（WP6）
 
-见 `docs/RUN-017-WP6-PRODUCT.md`（业务闭环验收 + 15 视图 × 4 断点 × 双主题矩阵）。
+见 `docs/RUN-017-WP6-PRODUCT.md`（业务闭环验收 + 16 路由/视图 × 4 断点 × 双主题矩阵，128/128）。
 
 ---
 

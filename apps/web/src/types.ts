@@ -206,9 +206,11 @@ export interface Hypothesis {
   description: string
   failure_domain: string
   failure_mechanism: string
-  supporting: { id: string; trust: string; confirming: boolean }[]
-  contradicting: { id: string; trust: string }[]
+  supporting: { id: string; trust: string; confirming: boolean; time_alignment?: string }[]
+  contradicting: { id: string; trust: string; time_alignment?: string }[]
   status: string
+  // RUN-018 WP5：确定性置信度（启发式标量，仅用于版本间变化对比与展示）
+  confidence?: number
   contributing_factors: string[]
   flaky_characteristic: boolean
   suggested_by: string
@@ -220,8 +222,59 @@ export interface Hypothesis {
     confirming: boolean
     exclude: boolean
     reason: string
+    time_alignment?: string
   }[]
   excluded_by?: { probe_id: string; evidence_id: string; reason: string }[]
+}
+
+// RUN-018 WP5：诊断版本（重诊断留痕：原诊断 → 新诊断，追加写不可覆盖）
+export interface DiagnosisRevision {
+  revision_id: string
+  diagnosis_id: string
+  revision_no: number
+  trigger: string
+  probe_ids: string[]
+  probe_execution_ids: string[]
+  new_evidence_ids: string[]
+  before: DiagnosisState | null
+  after: DiagnosisState
+  hypothesis_changes: {
+    hypothesis_id: string
+    description: string
+    status_before: string | null
+    status_after: string
+    confidence_before: number | null
+    confidence_after: number
+    added_by_probe: boolean
+    changed: boolean
+  }[]
+  confidence_changes: {
+    hypothesis_id: string
+    description: string
+    confidence_before: number | null
+    confidence_after: number
+  }[]
+  final_reason: string
+  created_at: string
+}
+
+export interface DiagnosisState {
+  diagnosis_id?: string
+  outcome?: string
+  disposition?: string
+  root_causes?: string[]
+  unresolved_conflicts?: string[]
+  hypotheses: {
+    hypothesis_id: string
+    description: string
+    failure_domain: string
+    failure_mechanism: string
+    status: string
+    confidence: number
+    supporting_count: number
+    contradicting_count: number
+    suggested_by: string
+  }[]
 }
 
 export interface Diagnosis {
@@ -246,6 +299,11 @@ export interface Diagnosis {
   } | null
   created_at: string
   disposition_id?: string
+  // RUN-018 WP5：版本链与最终裁决原因
+  revision_no?: number
+  revision_ids?: string[]
+  final_reason?: string
+  graph_adjudication?: Record<string, unknown> | null
   // RUN-006：未解决冲突（同一假设同时有可信支持与反驳证据）
   unresolved_conflicts?: string[]
   probe_feedback?: Record<string, unknown>[]
@@ -253,10 +311,20 @@ export interface Diagnosis {
     at: string
     trigger: string
     probes: string[]
+    probe_execution_ids?: string[]
     outcome_before: string
     outcome_after: string
     root_causes_after: string[]
     unresolved_conflicts: string[]
+    // RUN-018 WP5：重诊断留痕
+    revision_id?: string
+    revision_no?: number
+    diagnosis_before?: DiagnosisState
+    diagnosis_after?: DiagnosisState
+    new_evidence_ids?: string[]
+    hypothesis_changes?: DiagnosisRevision['hypothesis_changes']
+    confidence_changes?: DiagnosisRevision['confidence_changes']
+    final_reason?: string
   }[]
 }
 
@@ -270,10 +338,16 @@ export interface ProbePlan {
     iteration: number
     probe_id: string
     status: string
+    probe_status?: string
     reason: string
     score: number
     applied_to_diagnosis: boolean
     evidence_ids: string[]
+    // RUN-018 WP5：探针证据契约字段
+    cost?: number
+    duration_ms?: number
+    time_alignment?: string
+    idempotency_key?: string
     hypothesis_updates?: { hypothesis_id: string; relation: string; exclude: boolean; reason: string }[]
     diagnosis_after?: { outcome: string; root_causes: string[]; unresolved_conflicts: string[] }
   }[]
@@ -382,14 +456,24 @@ export interface ProbeExecution {
   probe_id: string
   workspace_id: string
   run_id?: string | null
+  diagnosis_id?: string | null
   status: string
+  probe_status?: string
   permission_decision: string
   risk_level: string
   params: Record<string, unknown>
   result: Record<string, unknown>
   reason: string
+  failure_reason?: string
   evidence_refs: string[]
   executed_at: string
+  // RUN-018 WP5：探针证据契约字段
+  duration_ms?: number
+  cost?: number
+  time_alignment?: string
+  idempotency_key?: string
+  raw_result_ref?: string
+  source_trust?: string
 }
 
 export interface BenchmarkMetric {

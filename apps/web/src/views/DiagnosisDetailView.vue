@@ -1,12 +1,22 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, artifactUrl, fmtTime } from '../api'
 import AsyncBlock from '../components/AsyncBlock.vue'
+import GraphView from '../components/GraphView.vue'
 import PageHeader from '../components/PageHeader.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import { notify, notifyError } from '../toast'
-import type { Diagnosis, Disposition, Evidence, ProbeExecution, ProbePlan } from '../types'
+import type {
+  Diagnosis,
+  DiagnosisRevision,
+  Disposition,
+  Evidence,
+  EvidenceGraph,
+  GraphNode,
+  ProbeExecution,
+  ProbePlan,
+} from '../types'
 
 const route = useRoute()
 const router = useRouter()
@@ -16,6 +26,10 @@ const dispositions = ref<Disposition[]>([])
 const evidence = ref<Evidence[]>([])
 const probes = ref<ProbeExecution[]>([])
 const plan = ref<ProbePlan | null>(null)
+const revisions = ref<DiagnosisRevision[]>([])
+const graph = ref<EvidenceGraph | null>(null)
+const graphNode = ref<GraphNode | null>(null)
+const highlightedEvd = ref('')
 const suggestions = ref<{ probe_id: string; params: Record<string, unknown>; why: string; score: number }[]>([])
 const loading = ref(true)
 const error = ref('')
@@ -25,6 +39,46 @@ const reviewer = ref('role:qa-lead')
 
 const disposition = computed(() => dispositions.value.find((p) => p.diagnosis_id === id))
 const conflicts = computed(() => diag.value?.unresolved_conflicts ?? [])
+/** 最新重诊断版本的裁决原因（为什么确认 / 为什么弃权） */
+const finalReason = computed(() => {
+  if (revisions.value.length) return revisions.value[revisions.value.length - 1].final_reason
+  return diag.value?.final_reason ?? ''
+})
+/** 探针新增证据（时间对齐/可信度可审计） */
+const probeEvidence = computed(() =>
+  evidence.value.filter((e) => e.source_type === 'probe'),
+)
+
+function timeAlignmentOf(e: Evidence): string {
+  return String(e.content?.probe_evidence_contract?.time_alignment ?? '')
+}
+
+/** Graph → Evidence 跳转：点击图上 Evidence 节点定位到对应证据条目 */
+function onGraphSelect(node: GraphNode) {
+  graphNode.value = node
+  if (node.node_type === 'Evidence') void jumpToEvidence(node.ref_id)
+}
+
+async function jumpToEvidence(eid: string) {
+  if (!evidence.value.some((e) => e.evidence_id === eid)) {
+    try {
+      const ev = await api.get<Evidence>(`/evidence/${eid}`)
+      if (ev) evidence.value = [...evidence.value, ev]
+    } catch {
+      notifyError(new Error(`证据 ${eid} 加载失败`))
+      return
+    }
+  }
+  await nextTick()
+  const el = document.getElementById(`evd-${eid}`)
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    highlightedEvd.value = eid
+    setTimeout(() => {
+      if (highlightedEvd.value === eid) highlightedEvd.value = ''
+    }, 2600)
+  }
+}
 
 /** 主动诊断闭环：证据缺口 → 探针 → 回灌 → 重新裁决（一次调用内完成，可复现） */
 async function runActiveLoop() {
@@ -52,7 +106,7 @@ async function load() {
     const d = await api.get<Diagnosis>(`/diagnoses/${id}`)
     diag.value = d
     const partial: string[] = []
-    const [disp, pe, pex, plans] = await Promise.all([
+    const [disp, pe, pex, plans, revs, g] = await Promise.all([
       api.get<Disposition[]>('/dispositions?limit=200'),
       Promise.all(
         (d.evidence_refs ?? []).map((eid) =>
@@ -69,11 +123,18 @@ async function load() {
         partial.push('探针计划')
         return []
       }),
+      api.get<DiagnosisRevision[]>(`/diagnoses/${id}/revisions`).catch(() => {
+        partial.push('诊断版本链')
+        return []
+      }),
+      api.get<EvidenceGraph>(`/runs/${d.run_id}/graph`).catch(() => null),
     ])
     dispositions.value = disp
     evidence.value = pe.filter((x): x is Evidence => !!x)
     probes.value = pex
     plan.value = plans.find((p) => p.diagnosis_id === id) ?? null
+    revisions.value = revs
+    graph.value = g
     suggestions.value = await api
       .get<{ probe_id: string; params: Record<string, unknown>; why: string; score: number }[]>(
         `/runs/${d.run_id}/probe-suggestions?diagnosis_id=${id}`,
@@ -166,6 +227,23 @@ onMounted(load)
           </template>
         </PageHeader>
 
+        <div v-if="finalReason" class="card">
+          <div class="card-head">
+            <h2>最终结论与裁决原因</h2>
+            <div class="actions">
+              <StatusBadge :value="diag.outcome" />
+              <span class="small muted">版本 v{{ diag.revision_no ?? (revisions.length || 1) }}</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <p class="small" style="margin: 0">{{ finalReason }}</p>
+            <p class="small muted" style="margin: 6px 0 0">
+              确认需要 TRUSTED + 直接确认证据且无未解决反驳；POST_HOC / 时间未知证据不作权威依据；
+              LLM 假设永远停留在候选级。弃权（INCONCLUSIVE/PROBABLE）优于硬猜。
+            </p>
+          </div>
+        </div>
+
         <div v-if="plan" class="card">
           <div class="card-head">
             <h2>最近一次主动诊断闭环</h2>
@@ -194,12 +272,22 @@ onMounted(load)
             </div>
             <div class="scroll-x">
               <table>
-                <thead><tr><th>#</th><th>探针</th><th>状态</th><th>回灌诊断</th><th>对假设的影响</th></tr></thead>
+                <thead><tr><th>#</th><th>探针</th><th>状态</th><th>时间对齐</th><th>新增证据</th><th>回灌诊断</th><th>对假设的影响</th></tr></thead>
                 <tbody>
                   <tr v-for="s in plan.steps" :key="s.iteration">
                     <td class="small muted">{{ s.iteration }}</td>
                     <td class="mono small">{{ s.probe_id }}</td>
-                    <td><StatusBadge :value="s.status" /></td>
+                    <td><StatusBadge :value="s.status" /> <span class="small muted">{{ s.cost ?? '' }}</span></td>
+                    <td class="small">
+                      <span class="badge" :class="s.time_alignment === 'ALIGNED' ? 'info' : 'warn'">
+                        {{ s.time_alignment || '—' }}
+                      </span>
+                    </td>
+                    <td class="chip-row">
+                      <a v-for="eid in s.evidence_ids" :key="eid" class="chip"
+                        href="javascript:void(0)" @click="jumpToEvidence(eid)">{{ eid }}</a>
+                      <span v-if="!s.evidence_ids?.length" class="small muted">无（不伪造证据）</span>
+                    </td>
                     <td class="small">{{ s.applied_to_diagnosis ? '已回灌' : '未回灌（无证据/无诊断）' }}</td>
                     <td class="small">
                       <span v-if="!s.hypothesis_updates?.length" class="muted">未改变假设</span>
@@ -210,10 +298,69 @@ onMounted(load)
                     </td>
                   </tr>
                   <tr v-if="plan.steps.length === 0">
-                    <td colspan="5"><div class="empty">本轮未执行探针（{{ plan.stop_reason }}）</div></td>
+                    <td colspan="7"><div class="empty">本轮未执行探针（{{ plan.stop_reason }}）</div></td>
                   </tr>
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="revisions.length" class="card">
+          <div class="card-head">
+            <h2>重诊断过程（诊断版本链）</h2>
+            <div class="actions">
+              <span class="small muted">v1 = 原始诊断 · 追加写不覆盖 · 共 {{ revisions.length }} 版</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <div v-for="rev in revisions" :key="rev.revision_id" class="card" style="box-shadow:none; margin-bottom: 10px">
+              <div class="card-body">
+                <div class="flex wrap">
+                  <span class="badge neutral">v{{ rev.revision_no }}</span>
+                  <StatusBadge :value="rev.trigger === 'initial' ? 'INITIAL' : 'PROBE_REASSESS'" />
+                  <span v-if="rev.before" class="small muted">
+                    {{ rev.before.outcome }} → <b>{{ rev.after.outcome }}</b>
+                  </span>
+                  <span v-else class="small muted">原始诊断 → <b>{{ rev.after.outcome }}</b></span>
+                  <span class="small muted" style="margin-left: auto">{{ fmtTime(rev.created_at) }}</span>
+                </div>
+                <div v-if="rev.probe_ids?.length" class="small muted" style="margin-top: 4px">
+                  触发探针：{{ rev.probe_ids.join('、') }}
+                </div>
+                <div v-if="rev.new_evidence_ids?.length" class="chip-row" style="margin-top: 4px">
+                  <span class="small muted">新增证据</span>
+                  <a v-for="eid in rev.new_evidence_ids" :key="eid" class="chip"
+                    href="javascript:void(0)" @click="jumpToEvidence(eid)">{{ eid }}</a>
+                </div>
+                <template v-if="rev.hypothesis_changes?.length">
+                  <div class="small muted" style="margin-top: 8px">假设变化（状态 / 置信度）</div>
+                  <div class="scroll-x" style="margin-top: 4px">
+                    <table>
+                      <thead><tr><th>假设</th><th>变化</th><th>状态</th><th>置信度</th></tr></thead>
+                      <tbody>
+                        <tr v-for="c in rev.hypothesis_changes" :key="c.hypothesis_id">
+                          <td class="small">
+                            <span class="mono">{{ c.hypothesis_id }}</span>
+                            <span v-if="c.added_by_probe" class="badge info">探针新增</span>
+                            <div class="muted" style="font-size: 10.5px">{{ c.description }}</div>
+                          </td>
+                          <td class="small">
+                            <span v-if="c.changed && !c.added_by_probe" class="badge warn">已变化</span>
+                            <span v-else-if="c.added_by_probe" class="badge info">新增</span>
+                            <span v-else class="muted">无变化</span>
+                          </td>
+                          <td class="small">{{ c.status_before ?? '—' }} → <b>{{ c.status_after }}</b></td>
+                          <td class="small">{{ c.confidence_before ?? '—' }} → <b>{{ c.confidence_after }}</b></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </template>
+                <div v-if="rev.final_reason" class="small" style="margin-top: 8px">
+                  <span class="badge neutral">裁决原因</span> {{ rev.final_reason }}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -233,6 +380,7 @@ onMounted(load)
                   <div class="card-body">
                     <div class="flex wrap">
                       <StatusBadge :value="h.status" />
+                      <span v-if="h.confidence !== undefined" class="badge neutral">置信度 {{ h.confidence }}</span>
                       <span class="badge neutral">{{ h.failure_domain }}</span>
                       <span class="badge neutral">{{ h.failure_mechanism }}</span>
                       <span v-if="String(h.suggested_by || '').startsWith('llm:')" class="source-tag llm">LLM 候选 · {{ h.suggested_by }} · 未确认</span>
@@ -291,8 +439,18 @@ onMounted(load)
                     </tr>
                     <tr v-for="x in probes" :key="x.execution_id">
                       <td class="mono small nowrap">{{ x.probe_id }}</td>
-                      <td class="mono small truncate" style="max-width: 320px">{{ JSON.stringify(x.result) }}</td>
-                      <td><StatusBadge :value="x.status" /></td>
+                      <td class="mono small truncate" style="max-width: 320px">
+                        <template v-if="x.status === 'SUCCEEDED'">{{ JSON.stringify(x.result) }}</template>
+                        <template v-else>{{ x.failure_reason || x.reason || '—' }}</template>
+                      </td>
+                      <td class="nowrap">
+                        <StatusBadge :value="x.probe_status || x.status" />
+                        <div class="small muted">
+                          <template v-if="x.time_alignment">时间对齐 {{ x.time_alignment }} · </template>
+                          <template v-if="x.cost !== undefined">成本 {{ x.cost }} · </template>
+                          {{ x.evidence_refs?.length ? `证据 ${x.evidence_refs.length}` : '零证据' }}
+                        </div>
+                      </td>
                       <td class="small muted nowrap">{{ x.permission_decision }}</td>
                     </tr>
                     <tr v-if="suggestions.length === 0 && probes.length === 0"><td colspan="4"><div class="empty">暂无探针</div></td></tr>
@@ -338,16 +496,47 @@ onMounted(load)
             </div>
 
             <div class="card">
-              <div class="card-head"><h2>引用证据</h2><div class="actions"><span class="small muted">{{ evidence.length }}</span></div></div>
+              <div class="card-head"><h2>引用证据</h2>
+                <div class="actions">
+                  <span class="small muted">{{ evidence.length }} · 探针新增 {{ probeEvidence.length }}</span>
+                </div>
+              </div>
               <div class="card-body">
-                <div v-for="e in evidence" :key="e.evidence_id" class="flex" style="justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border)">
+                <div v-for="e in evidence" :key="e.evidence_id" :id="'evd-' + e.evidence_id"
+                  class="flex" :class="{ 'evd-highlight': highlightedEvd === e.evidence_id }"
+                  style="justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border)">
                   <div style="min-width: 0">
                     <div class="mono small truncate">{{ e.evidence_id }}</div>
-                    <div class="muted" style="font-size: 10.5px">{{ e.source_type }} · {{ e.source_trust }} · {{ fmtTime(e.captured_at) }}</div>
+                    <div class="muted" style="font-size: 10.5px">
+                      {{ e.source_type }} · 可信度 {{ e.source_trust }} · {{ fmtTime(e.captured_at) }}
+                      <template v-if="timeAlignmentOf(e)"> · 时间对齐 {{ timeAlignmentOf(e) }}</template>
+                    </div>
                   </div>
                   <a v-if="e.attachment_ref" :href="artifactUrl(e.attachment_ref)" target="_blank" class="small">附件</a>
                 </div>
                 <div v-if="evidence.length === 0" class="empty">无</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-head">
+                <h2>证据图（Graph）</h2>
+                <div class="actions"><span class="small muted">点击 Evidence 节点跳转对应证据</span></div>
+              </div>
+              <div class="card-body">
+                <template v-if="graph">
+                  <GraphView :graph="graph" @select="onGraphSelect" />
+                  <div v-if="graphNode" class="kv" style="margin-top: 8px">
+                    <dt>节点</dt><dd class="mono small">{{ graphNode.node_type }} · {{ graphNode.node_id }}</dd>
+                    <dt>引用对象</dt>
+                    <dd class="mono small">
+                      <a v-if="graphNode.node_type === 'Evidence'" href="javascript:void(0)"
+                        @click="jumpToEvidence(graphNode.ref_id)">{{ graphNode.ref_id }} ↗</a>
+                      <template v-else>{{ graphNode.ref_id }}</template>
+                    </dd>
+                  </div>
+                </template>
+                <div v-else class="empty">证据图尚未生成（在 Run 详情页生成后可在此查看）</div>
               </div>
             </div>
           </div>
@@ -363,5 +552,22 @@ onMounted(load)
   .probe-table .col-purpose {
     display: none;
   }
+}
+
+/* Graph → Evidence 跳转后的高亮定位 */
+.evd-highlight {
+  background: rgba(59, 130, 246, 0.14);
+  border-radius: 6px;
+  padding-left: 6px;
+  padding-right: 6px;
+  transition: background 0.4s ease;
+}
+
+a.chip {
+  cursor: pointer;
+  text-decoration: none;
+}
+a.chip:hover {
+  outline: 1px solid var(--border, #ccc);
 }
 </style>
