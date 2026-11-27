@@ -1,0 +1,528 @@
+{
+  "round": 1,
+  "records": [
+    {
+      "sample_id": "run019-71414-persistence-v1",
+      "family": "persistence",
+      "ground_truth": "PERSISTENCE",
+      "prediction": "PERSISTENCE",
+      "outcome": "CONFIRMED",
+      "revisions": 2,
+      "probe_cost": 1.0,
+      "evidence_coverage": {
+        "injected": 3,
+        "referenced": 2
+      },
+      "time_to_diagnosis_ms": 30.2
+    },
+    {
+      "sample_id": "run019-71414-persistence-v2",
+      "family": "persistence",
+      "ground_truth": "PERSISTENCE",
+      "prediction": "PERSISTENCE",
+      "outcome": "CONFIRMED",
+      "revisions": 2,
+      "probe_cost": 1.0,
+      "evidence_coverage": {
+        "injected": 3,
+        "referenced": 2
+      },
+      "time_to_diagnosis_ms": 20.6
+    },
+    {
+      "sample_id": "run019-71414-persistence-v3",
+      "family": "persistence",
+      "ground_truth": "PERSISTENCE",
+      "prediction": "PERSISTENCE",
+      "outcome": "CONFIRMED",
+      "revisions": 2,
+      "probe_cost": 1.0,
+      "evidence_coverage": {
+        "injected": 3,
+        "referenced": 2
+      },
+      "time_to_diagnosis_ms": 17.3
+    },
+    {
+      "sample_id": "run019-71414-persistence-v4",
+      "family": "persistence",
+      "ground_truth": "PERSISTENCE",
+      "prediction": "PERSISTENCE",
+      "outcome": "CONFIRMED",
+      "revisions": 2,
+      "probe_cost": 1.0,
+      "evidence_coverage": {
+        "injected": 3,
+        "referenced": 2
+      },
+      "time_to_diagnosis_ms": 17.7
+    },
+    {
+      "sample_id": "run019-71414-persistence-v5",
+      "family": "persistence",
+      "ground_truth": "PERSISTENCE",
+      "prediction": "PERSISTENCE",
+      "outcome": "CONFIRMED",
+      "revisions": 2,
+      "probe_cost": 1.0,
+      "evidence_coverage": {
+        "injected": 3,
+        "referenced": 2
+      },
+      "time_to_diagnosis_ms": 17.1
+    },
+    {
+      "sample_id": "run019-71414-persistence-v6",
+      "family": "persistence",
+      "ground_truth": "PERSISTENCE",
+      "prediction": "PERSISTENCE",
+      "outcome": "CONFIRMED",
+      "revisions": 2,
+      "probe_cost": 1.0,
+      "evidence_coverage": {
+        "injected": 3,
+        "referenced": 2
+      },
+      "time_to_diagnosis_ms": 17.7
+    },
+    {
+      "sample_id": "run019-71414-timing-v1",
+      "family": "timing",
+      "ground_truth": "TIMING",
+      "prediction": "TIMING",
+      "outcome": "CONFIRMED",
+      "revisions": 2,
+      "probe_cost": 1.0,
+      "evidence_coverage": {
+        "injected": 2,
+        "referenced": 2
+      },
+      "time_to_diagnosis_ms": 17.3
+    },
+    {
+      "sample_id": "run019-71414-timing-v2",
+      "family": "timing",
+      "ground_truth": "TIMING",
+      "prediction": "TIMING",
+      "outcome": "CONFIRMED",
+      "revisions": 2,
+      "probe_cost": 1.0,
+      "evidence_coverage": {
+        "injected": 2,
+        "referenced": 2
+      },
+      "time_to_diagnosis_ms": 20.0
+    },
+    {
+      "sample_id": "run019-71414-timing-v3",
+      "family": "timing",
+      "ground_truth": "TIMING",
+      "prediction": "TIMING",
+      "outcome": "CONFIRMED",
+      "revisions": 2,
+      "probe_cost": 1.0,
+      "evidence_coverage": {
+        "injected": 2,
+        "referenced": 2
+      },
+      "time_to_diagnosis_ms": 17.0
+    },
+    {
+      "sample_id": "run019-71414-timing-v4",
+      "family": "timing",
+      "ground_truth": "TIMING",
+      "prediction": "TIMING",
+      "outcome": "CONFIRMED",
+      "revisions": 2,
+      "probe_cost": 1.0,
+      "evidence_coverage": {
+        "injected": 2,
+        "referenced": 2
+      },
+      "time_to_diagnosis_ms": 16.7
+    },
+    {
+      "sample_id": "run019-71414-timing-v5",
+      "family": "timing",
+      "ground_truth": "TIMING",
+      "prediction": "TIMING",
+      "outcome": "CONFIRMED",
+      "revisions": 2,
+      "probe_cost": 1.0,
+      "evidence_coverage": {
+        "injected": 2,
+        "referenced": 2
+      },
+      "time_to_diagnosis_ms": 17.4
+    },
+    {
+      "sample_id": "run019-71414-timing-v6",
+      "family": "timing",
+      "ground_truth": "TIMING",
+      "prediction": "TIMING",
+      "outcome": "CONFIRMED",
+      "revisions": 2,
+      "probe_cost": 1.0,
+      "evidence_coverage": {
+        "injected": 2,
+        "referenced": 2
+      },
+      "time_to_diagnosis_ms": 17.6
+    },
+    {
+      "sample_id": "run019-71414-locator-v1",
+      "family": "locator",
+      "ground_truth": "LOCATOR",
+      "prediction": "LOCATOR",
+      "outcome": "CONFIRMED",
+      "revisions": 2,
+      "probe_cost": 1.2,
+      "evidence_coverage": {
+        "injected": 2,
+        "referenced": 2
+      },
+      "time_to_diagnosis_ms": 20.8
+    },
+    {
+      "sample_id": "run019-71414-locator-v2",
+      "family": "locator",
+      "ground_truth": "LOCATOR",
+      "prediction": "LOCATOR",
+      "outcome": "CONFIRMED",
+      "revisions": 2,
+      "probe_cost": 1.2,
+      "evidence_coverage": {
+        "injected": 2,
+        "referenced": 2
+      },
+      "time_to_diagnosis_ms": 19.1
+    },
+    {
+      "sample_id": "run019-71414-locator-v3",
+      "family": "locator",
+      "ground_truth": "LOCATOR",
+      "prediction": "LOCATOR",
+      "outcome": "CONFIRMED",
+      "revisions": 2,
+      "probe_cost": 1.2,
+      "evidence_coverage": {
+        "injected": 2,
+        "referenced": 2
+      },
+      "time_to_diagnosis_ms": 18.8
+    },
+    {
+      "sample_id": "run019-71414-locator-v4",
+      "family": "locator",
+      "ground_truth": "LOCATOR",
+      "prediction": "LOCATOR",
+      "outcome": "CONFIRMED",
+      "revisions": 2,
+      "probe_cost": 1.2,
+      "evidence_coverage": {
+        "injected": 2,
+        "referenced": 2
+      },
+      "time_to_diagnosis_ms": 23.6
+    },
+    {
+      "sample_id": "run019-71414-locator-v5",
+      "family": "locator",
+      "ground_truth": "LOCATOR",
+      "prediction": "LOCATOR",
+      "outcome": "CONFIRMED",
+      "revisions": 2,
+      "probe_cost": 1.2,
+      "evidence_coverage": {
+        "injected": 2,
+        "referenced": 2
+      },
+      "time_to_diagnosis_ms": 20.2
+    },
+    {
+      "sample_id": "run019-71414-locator-v6",
+      "family": "locator",
+      "ground_truth": "LOCATOR",
+      "prediction": "LOCATOR",
+      "outcome": "CONFIRMED",
+      "revisions": 2,
+      "probe_cost": 1.2,
+      "evidence_coverage": {
+        "injected": 2,
+        "referenced": 2
+      },
+      "time_to_diagnosis_ms": 21.0
+    },
+    {
+      "sample_id": "run019-71414-api_control-v1",
+      "family": "api_control",
+      "ground_truth": "API",
+      "prediction": "API",
+      "outcome": "CONFIRMED",
+      "revisions": 2,
+      "probe_cost": 1.0,
+      "evidence_coverage": {
+        "injected": 1,
+        "referenced": 1
+      },
+      "time_to_diagnosis_ms": 18.0
+    },
+    {
+      "sample_id": "run019-71414-api_control-v2",
+      "family": "api_control",
+      "ground_truth": "API",
+      "prediction": "API",
+      "outcome": "CONFIRMED",
+      "revisions": 2,
+      "probe_cost": 1.0,
+      "evidence_coverage": {
+        "injected": 1,
+        "referenced": 1
+      },
+      "time_to_diagnosis_ms": 18.5
+    },
+    {
+      "sample_id": "run019-71414-api_control-v3",
+      "family": "api_control",
+      "ground_truth": "API",
+      "prediction": "API",
+      "outcome": "CONFIRMED",
+      "revisions": 2,
+      "probe_cost": 1.0,
+      "evidence_coverage": {
+        "injected": 1,
+        "referenced": 1
+      },
+      "time_to_diagnosis_ms": 19.2
+    },
+    {
+      "sample_id": "run019-71414-api_control-v4",
+      "family": "api_control",
+      "ground_truth": "API",
+      "prediction": "API",
+      "outcome": "CONFIRMED",
+      "revisions": 2,
+      "probe_cost": 1.0,
+      "evidence_coverage": {
+        "injected": 1,
+        "referenced": 1
+      },
+      "time_to_diagnosis_ms": 18.2
+    },
+    {
+      "sample_id": "run019-71414-network_control-v1",
+      "family": "network_control",
+      "ground_truth": "NETWORK",
+      "prediction": "NETWORK",
+      "outcome": "CONFIRMED",
+      "revisions": 2,
+      "probe_cost": 0.2,
+      "evidence_coverage": {
+        "injected": 1,
+        "referenced": 1
+      },
+      "time_to_diagnosis_ms": 28.1
+    },
+    {
+      "sample_id": "run019-71414-network_control-v2",
+      "family": "network_control",
+      "ground_truth": "NETWORK",
+      "prediction": "NETWORK",
+      "outcome": "CONFIRMED",
+      "revisions": 2,
+      "probe_cost": 0.2,
+      "evidence_coverage": {
+        "injected": 1,
+        "referenced": 1
+      },
+      "time_to_diagnosis_ms": 18.7
+    },
+    {
+      "sample_id": "run019-71414-network_control-v3",
+      "family": "network_control",
+      "ground_truth": "NETWORK",
+      "prediction": "NETWORK",
+      "outcome": "CONFIRMED",
+      "revisions": 2,
+      "probe_cost": 0.2,
+      "evidence_coverage": {
+        "injected": 1,
+        "referenced": 1
+      },
+      "time_to_diagnosis_ms": 18.2
+    },
+    {
+      "sample_id": "run019-71414-network_control-v4",
+      "family": "network_control",
+      "ground_truth": "NETWORK",
+      "prediction": "NETWORK",
+      "outcome": "CONFIRMED",
+      "revisions": 2,
+      "probe_cost": 0.2,
+      "evidence_coverage": {
+        "injected": 1,
+        "referenced": 1
+      },
+      "time_to_diagnosis_ms": 24.7
+    },
+    {
+      "sample_id": "run019-71414-ambiguous_control-v1",
+      "family": "ambiguous_control",
+      "ground_truth": "INCONCLUSIVE",
+      "prediction": "INCONCLUSIVE",
+      "outcome": "INCONCLUSIVE",
+      "revisions": 1,
+      "probe_cost": 0.0,
+      "evidence_coverage": {
+        "injected": 0,
+        "referenced": 0
+      },
+      "time_to_diagnosis_ms": 11.6
+    },
+    {
+      "sample_id": "run019-71414-ambiguous_control-v2",
+      "family": "ambiguous_control",
+      "ground_truth": "INCONCLUSIVE",
+      "prediction": "INCONCLUSIVE",
+      "outcome": "INCONCLUSIVE",
+      "revisions": 1,
+      "probe_cost": 0.0,
+      "evidence_coverage": {
+        "injected": 0,
+        "referenced": 0
+      },
+      "time_to_diagnosis_ms": 13.0
+    },
+    {
+      "sample_id": "run019-71414-ambiguous_control-v3",
+      "family": "ambiguous_control",
+      "ground_truth": "INCONCLUSIVE",
+      "prediction": "INCONCLUSIVE",
+      "outcome": "INCONCLUSIVE",
+      "revisions": 1,
+      "probe_cost": 0.0,
+      "evidence_coverage": {
+        "injected": 0,
+        "referenced": 0
+      },
+      "time_to_diagnosis_ms": 11.3
+    },
+    {
+      "sample_id": "run019-71414-ambiguous_control-v4",
+      "family": "ambiguous_control",
+      "ground_truth": "INCONCLUSIVE",
+      "prediction": "INCONCLUSIVE",
+      "outcome": "INCONCLUSIVE",
+      "revisions": 1,
+      "probe_cost": 0.0,
+      "evidence_coverage": {
+        "injected": 0,
+        "referenced": 0
+      },
+      "time_to_diagnosis_ms": 10.7
+    }
+  ],
+  "metrics": {
+    "sample_count": 30,
+    "abstention_rate": 0.1333,
+    "selective_accuracy": 1.0,
+    "selective_accuracy_denominator": 26,
+    "primary_cause_accuracy": 0.8667,
+    "per_class": {
+      "API": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 4
+      },
+      "INCONCLUSIVE": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support": 0
+      },
+      "LOCATOR": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 6
+      },
+      "NETWORK": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 4
+      },
+      "PERSISTENCE": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 6
+      },
+      "TIMING": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 6
+      }
+    },
+    "confusion_matrix": {
+      "API": {
+        "API": 4,
+        "INCONCLUSIVE": 0,
+        "LOCATOR": 0,
+        "NETWORK": 0,
+        "PERSISTENCE": 0,
+        "TIMING": 0
+      },
+      "INCONCLUSIVE": {
+        "API": 0,
+        "INCONCLUSIVE": 4,
+        "LOCATOR": 0,
+        "NETWORK": 0,
+        "PERSISTENCE": 0,
+        "TIMING": 0
+      },
+      "LOCATOR": {
+        "API": 0,
+        "INCONCLUSIVE": 0,
+        "LOCATOR": 6,
+        "NETWORK": 0,
+        "PERSISTENCE": 0,
+        "TIMING": 0
+      },
+      "NETWORK": {
+        "API": 0,
+        "INCONCLUSIVE": 0,
+        "LOCATOR": 0,
+        "NETWORK": 4,
+        "PERSISTENCE": 0,
+        "TIMING": 0
+      },
+      "PERSISTENCE": {
+        "API": 0,
+        "INCONCLUSIVE": 0,
+        "LOCATOR": 0,
+        "NETWORK": 0,
+        "PERSISTENCE": 6,
+        "TIMING": 0
+      },
+      "TIMING": {
+        "API": 0,
+        "INCONCLUSIVE": 0,
+        "LOCATOR": 0,
+        "NETWORK": 0,
+        "PERSISTENCE": 0,
+        "TIMING": 6
+      }
+    },
+    "macro_f1": 0.8333,
+    "mean_time_to_diagnosis_ms": 18.68,
+    "total_probe_cost": 24.0,
+    "evidence_coverage": {
+      "injected": 50,
+      "referenced": 44
+    },
+    "errors": []
+  }
+}

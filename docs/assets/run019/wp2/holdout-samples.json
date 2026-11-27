@@ -1,0 +1,2114 @@
+[
+  {
+    "sample_id": "run019-71414-persistence-v1",
+    "family": "persistence",
+    "ground_truth": "PERSISTENCE",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "PASSED",
+          "observation": {
+            "network": [
+              {
+                "url": "/api/projects",
+                "status": 200,
+                "failure": "",
+                "entity_id": "e-persist-1"
+              }
+            ]
+          }
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "FAILED",
+          "reason": "count mismatch"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "kind": "api",
+        "source_ref": "state_query:immediate",
+        "content": {
+          "entity_id": "e-persist-1",
+          "count": 0,
+          "keys": []
+        },
+        "trust": "TRUSTED",
+        "at_offset": -80
+      },
+      {
+        "kind": "api",
+        "source_ref": "state_query:delayed",
+        "content": {
+          "entity_id": "e-persist-1",
+          "count": 0,
+          "keys": []
+        },
+        "trust": "TRUSTED",
+        "at_offset": -45
+      },
+      {
+        "kind": "api",
+        "source_ref": "state_query:final",
+        "content": {
+          "entity_id": "e-persist-1",
+          "count": 0,
+          "keys": []
+        },
+        "trust": "TRUSTED",
+        "at_offset": -35
+      }
+    ],
+    "probes": [
+      {
+        "probe_id": "http_state",
+        "data": {
+          "template": "get_state_projects",
+          "response": {
+            "ok": true,
+            "count": 0,
+            "keys": [],
+            "entity_id": "e-persist-1"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "sample_id": "run019-71414-persistence-v2",
+    "family": "persistence",
+    "ground_truth": "PERSISTENCE",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "PASSED",
+          "observation": {
+            "network": [
+              {
+                "url": "/api/projects",
+                "status": 200,
+                "failure": "",
+                "entity_id": "e-persist-2"
+              }
+            ]
+          }
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "FAILED",
+          "reason": "count mismatch"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "kind": "api",
+        "source_ref": "state_query:immediate",
+        "content": {
+          "entity_id": "e-persist-2",
+          "count": 0,
+          "keys": []
+        },
+        "trust": "TRUSTED",
+        "at_offset": -80
+      },
+      {
+        "kind": "api",
+        "source_ref": "state_query:delayed",
+        "content": {
+          "entity_id": "e-persist-2",
+          "count": 0,
+          "keys": []
+        },
+        "trust": "TRUSTED",
+        "at_offset": -45
+      },
+      {
+        "kind": "api",
+        "source_ref": "state_query:final",
+        "content": {
+          "entity_id": "e-persist-2",
+          "count": 0,
+          "keys": []
+        },
+        "trust": "TRUSTED",
+        "at_offset": -35
+      }
+    ],
+    "probes": [
+      {
+        "probe_id": "http_state",
+        "data": {
+          "template": "get_state_projects",
+          "response": {
+            "ok": true,
+            "count": 0,
+            "keys": [],
+            "entity_id": "e-persist-2"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "sample_id": "run019-71414-persistence-v3",
+    "family": "persistence",
+    "ground_truth": "PERSISTENCE",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "PASSED",
+          "observation": {
+            "network": [
+              {
+                "url": "/api/projects",
+                "status": 200,
+                "failure": "",
+                "entity_id": "e-persist-3"
+              }
+            ]
+          }
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "FAILED",
+          "reason": "count mismatch"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "kind": "api",
+        "source_ref": "state_query:immediate",
+        "content": {
+          "entity_id": "e-persist-3",
+          "count": 0,
+          "keys": []
+        },
+        "trust": "TRUSTED",
+        "at_offset": -80
+      },
+      {
+        "kind": "api",
+        "source_ref": "state_query:delayed",
+        "content": {
+          "entity_id": "e-persist-3",
+          "count": 0,
+          "keys": []
+        },
+        "trust": "TRUSTED",
+        "at_offset": -45
+      },
+      {
+        "kind": "api",
+        "source_ref": "state_query:final",
+        "content": {
+          "entity_id": "e-persist-3",
+          "count": 0,
+          "keys": []
+        },
+        "trust": "TRUSTED",
+        "at_offset": -35
+      }
+    ],
+    "probes": [
+      {
+        "probe_id": "http_state",
+        "data": {
+          "template": "get_state_projects",
+          "response": {
+            "ok": true,
+            "count": 0,
+            "keys": [],
+            "entity_id": "e-persist-3"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "sample_id": "run019-71414-persistence-v4",
+    "family": "persistence",
+    "ground_truth": "PERSISTENCE",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "PASSED",
+          "observation": {
+            "network": [
+              {
+                "url": "/api/projects",
+                "status": 200,
+                "failure": "",
+                "entity_id": "e-persist-4"
+              }
+            ]
+          }
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "FAILED",
+          "reason": "count mismatch"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "kind": "api",
+        "source_ref": "state_query:immediate",
+        "content": {
+          "entity_id": "e-persist-4",
+          "count": 0,
+          "keys": []
+        },
+        "trust": "TRUSTED",
+        "at_offset": -80
+      },
+      {
+        "kind": "api",
+        "source_ref": "state_query:delayed",
+        "content": {
+          "entity_id": "e-persist-4",
+          "count": 0,
+          "keys": []
+        },
+        "trust": "TRUSTED",
+        "at_offset": -45
+      },
+      {
+        "kind": "api",
+        "source_ref": "state_query:final",
+        "content": {
+          "entity_id": "e-persist-4",
+          "count": 0,
+          "keys": []
+        },
+        "trust": "TRUSTED",
+        "at_offset": -35
+      }
+    ],
+    "probes": [
+      {
+        "probe_id": "http_state",
+        "data": {
+          "template": "get_state_projects",
+          "response": {
+            "ok": true,
+            "count": 0,
+            "keys": [],
+            "entity_id": "e-persist-4"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "sample_id": "run019-71414-persistence-v5",
+    "family": "persistence",
+    "ground_truth": "PERSISTENCE",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "PASSED",
+          "observation": {
+            "network": [
+              {
+                "url": "/api/projects",
+                "status": 200,
+                "failure": "",
+                "entity_id": "e-persist-5"
+              }
+            ]
+          }
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "FAILED",
+          "reason": "count mismatch"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "kind": "api",
+        "source_ref": "state_query:immediate",
+        "content": {
+          "entity_id": "e-persist-5",
+          "count": 0,
+          "keys": []
+        },
+        "trust": "TRUSTED",
+        "at_offset": -80
+      },
+      {
+        "kind": "api",
+        "source_ref": "state_query:delayed",
+        "content": {
+          "entity_id": "e-persist-5",
+          "count": 0,
+          "keys": []
+        },
+        "trust": "TRUSTED",
+        "at_offset": -45
+      },
+      {
+        "kind": "api",
+        "source_ref": "state_query:final",
+        "content": {
+          "entity_id": "e-persist-5",
+          "count": 0,
+          "keys": []
+        },
+        "trust": "TRUSTED",
+        "at_offset": -35
+      }
+    ],
+    "probes": [
+      {
+        "probe_id": "http_state",
+        "data": {
+          "template": "get_state_projects",
+          "response": {
+            "ok": true,
+            "count": 0,
+            "keys": [],
+            "entity_id": "e-persist-5"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "sample_id": "run019-71414-persistence-v6",
+    "family": "persistence",
+    "ground_truth": "PERSISTENCE",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "PASSED",
+          "observation": {
+            "network": [
+              {
+                "url": "/api/projects",
+                "status": 200,
+                "failure": "",
+                "entity_id": "e-persist-6"
+              }
+            ]
+          }
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "FAILED",
+          "reason": "count mismatch"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "kind": "api",
+        "source_ref": "state_query:immediate",
+        "content": {
+          "entity_id": "e-persist-6",
+          "count": 0,
+          "keys": []
+        },
+        "trust": "TRUSTED",
+        "at_offset": -80
+      },
+      {
+        "kind": "api",
+        "source_ref": "state_query:delayed",
+        "content": {
+          "entity_id": "e-persist-6",
+          "count": 0,
+          "keys": []
+        },
+        "trust": "TRUSTED",
+        "at_offset": -45
+      },
+      {
+        "kind": "api",
+        "source_ref": "state_query:final",
+        "content": {
+          "entity_id": "e-persist-6",
+          "count": 0,
+          "keys": []
+        },
+        "trust": "TRUSTED",
+        "at_offset": -35
+      }
+    ],
+    "probes": [
+      {
+        "probe_id": "http_state",
+        "data": {
+          "template": "get_state_projects",
+          "response": {
+            "ok": true,
+            "count": 0,
+            "keys": [],
+            "entity_id": "e-persist-6"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "sample_id": "run019-71414-timing-v1",
+    "family": "timing",
+    "ground_truth": "TIMING",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "PASSED",
+          "observation": {
+            "network": [
+              {
+                "url": "/api/projects",
+                "status": 200,
+                "failure": "",
+                "entity_id": "e-timing-1"
+              }
+            ]
+          }
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "FAILED",
+          "reason": "count mismatch"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "kind": "api",
+        "source_ref": "state_query:immediate",
+        "content": {
+          "entity_id": "e-timing-1",
+          "count": 0,
+          "keys": []
+        },
+        "trust": "TRUSTED",
+        "at_offset": -80
+      },
+      {
+        "kind": "api",
+        "source_ref": "state_query:delayed",
+        "content": {
+          "entity_id": "e-timing-1",
+          "count": 1,
+          "keys": [
+            "k0"
+          ]
+        },
+        "trust": "TRUSTED",
+        "at_offset": -45
+      }
+    ],
+    "probes": [
+      {
+        "probe_id": "http_state",
+        "data": {
+          "template": "get_state_projects",
+          "response": {
+            "ok": true,
+            "count": 1,
+            "keys": [
+              "k0"
+            ],
+            "entity_id": "e-timing-1"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "sample_id": "run019-71414-timing-v2",
+    "family": "timing",
+    "ground_truth": "TIMING",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "PASSED",
+          "observation": {
+            "network": [
+              {
+                "url": "/api/projects",
+                "status": 200,
+                "failure": "",
+                "entity_id": "e-timing-2"
+              }
+            ]
+          }
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "FAILED",
+          "reason": "count mismatch"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "kind": "api",
+        "source_ref": "state_query:immediate",
+        "content": {
+          "entity_id": "e-timing-2",
+          "count": 0,
+          "keys": []
+        },
+        "trust": "TRUSTED",
+        "at_offset": -80
+      },
+      {
+        "kind": "api",
+        "source_ref": "state_query:delayed",
+        "content": {
+          "entity_id": "e-timing-2",
+          "count": 2,
+          "keys": [
+            "k0",
+            "k1"
+          ]
+        },
+        "trust": "TRUSTED",
+        "at_offset": -45
+      }
+    ],
+    "probes": [
+      {
+        "probe_id": "http_state",
+        "data": {
+          "template": "get_state_projects",
+          "response": {
+            "ok": true,
+            "count": 2,
+            "keys": [
+              "k0",
+              "k1"
+            ],
+            "entity_id": "e-timing-2"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "sample_id": "run019-71414-timing-v3",
+    "family": "timing",
+    "ground_truth": "TIMING",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "PASSED",
+          "observation": {
+            "network": [
+              {
+                "url": "/api/projects",
+                "status": 200,
+                "failure": "",
+                "entity_id": "e-timing-3"
+              }
+            ]
+          }
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "FAILED",
+          "reason": "count mismatch"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "kind": "api",
+        "source_ref": "state_query:immediate",
+        "content": {
+          "entity_id": "e-timing-3",
+          "count": 0,
+          "keys": []
+        },
+        "trust": "TRUSTED",
+        "at_offset": -80
+      },
+      {
+        "kind": "api",
+        "source_ref": "state_query:delayed",
+        "content": {
+          "entity_id": "e-timing-3",
+          "count": 3,
+          "keys": [
+            "k0",
+            "k1",
+            "k2"
+          ]
+        },
+        "trust": "TRUSTED",
+        "at_offset": -45
+      }
+    ],
+    "probes": [
+      {
+        "probe_id": "http_state",
+        "data": {
+          "template": "get_state_projects",
+          "response": {
+            "ok": true,
+            "count": 3,
+            "keys": [
+              "k0",
+              "k1",
+              "k2"
+            ],
+            "entity_id": "e-timing-3"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "sample_id": "run019-71414-timing-v4",
+    "family": "timing",
+    "ground_truth": "TIMING",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "PASSED",
+          "observation": {
+            "network": [
+              {
+                "url": "/api/projects",
+                "status": 200,
+                "failure": "",
+                "entity_id": "e-timing-4"
+              }
+            ]
+          }
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "FAILED",
+          "reason": "count mismatch"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "kind": "api",
+        "source_ref": "state_query:immediate",
+        "content": {
+          "entity_id": "e-timing-4",
+          "count": 0,
+          "keys": []
+        },
+        "trust": "TRUSTED",
+        "at_offset": -80
+      },
+      {
+        "kind": "api",
+        "source_ref": "state_query:delayed",
+        "content": {
+          "entity_id": "e-timing-4",
+          "count": 4,
+          "keys": [
+            "k0",
+            "k1",
+            "k2",
+            "k3"
+          ]
+        },
+        "trust": "TRUSTED",
+        "at_offset": -45
+      }
+    ],
+    "probes": [
+      {
+        "probe_id": "http_state",
+        "data": {
+          "template": "get_state_projects",
+          "response": {
+            "ok": true,
+            "count": 4,
+            "keys": [
+              "k0",
+              "k1",
+              "k2",
+              "k3"
+            ],
+            "entity_id": "e-timing-4"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "sample_id": "run019-71414-timing-v5",
+    "family": "timing",
+    "ground_truth": "TIMING",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "PASSED",
+          "observation": {
+            "network": [
+              {
+                "url": "/api/projects",
+                "status": 200,
+                "failure": "",
+                "entity_id": "e-timing-5"
+              }
+            ]
+          }
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "FAILED",
+          "reason": "count mismatch"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "kind": "api",
+        "source_ref": "state_query:immediate",
+        "content": {
+          "entity_id": "e-timing-5",
+          "count": 0,
+          "keys": []
+        },
+        "trust": "TRUSTED",
+        "at_offset": -80
+      },
+      {
+        "kind": "api",
+        "source_ref": "state_query:delayed",
+        "content": {
+          "entity_id": "e-timing-5",
+          "count": 5,
+          "keys": [
+            "k0",
+            "k1",
+            "k2",
+            "k3",
+            "k4"
+          ]
+        },
+        "trust": "TRUSTED",
+        "at_offset": -45
+      }
+    ],
+    "probes": [
+      {
+        "probe_id": "http_state",
+        "data": {
+          "template": "get_state_projects",
+          "response": {
+            "ok": true,
+            "count": 5,
+            "keys": [
+              "k0",
+              "k1",
+              "k2",
+              "k3",
+              "k4"
+            ],
+            "entity_id": "e-timing-5"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "sample_id": "run019-71414-timing-v6",
+    "family": "timing",
+    "ground_truth": "TIMING",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "PASSED",
+          "observation": {
+            "network": [
+              {
+                "url": "/api/projects",
+                "status": 200,
+                "failure": "",
+                "entity_id": "e-timing-6"
+              }
+            ]
+          }
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "FAILED",
+          "reason": "count mismatch"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "kind": "api",
+        "source_ref": "state_query:immediate",
+        "content": {
+          "entity_id": "e-timing-6",
+          "count": 0,
+          "keys": []
+        },
+        "trust": "TRUSTED",
+        "at_offset": -80
+      },
+      {
+        "kind": "api",
+        "source_ref": "state_query:delayed",
+        "content": {
+          "entity_id": "e-timing-6",
+          "count": 6,
+          "keys": [
+            "k0",
+            "k1",
+            "k2",
+            "k3",
+            "k4",
+            "k5"
+          ]
+        },
+        "trust": "TRUSTED",
+        "at_offset": -45
+      }
+    ],
+    "probes": [
+      {
+        "probe_id": "http_state",
+        "data": {
+          "template": "get_state_projects",
+          "response": {
+            "ok": true,
+            "count": 6,
+            "keys": [
+              "k0",
+              "k1",
+              "k2",
+              "k3",
+              "k4",
+              "k5"
+            ],
+            "entity_id": "e-timing-6"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "sample_id": "run019-71414-locator-v1",
+    "family": "locator",
+    "ground_truth": "LOCATOR",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "FAILED",
+          "error": "Locator.click: Timeout 8000ms exceeded",
+          "target": {
+            "strategy": "test_id",
+            "value": "create-submit"
+          },
+          "observation": {
+            "network": [
+              {
+                "url": "/api/projects",
+                "status": 200,
+                "failure": "",
+                "entity_id": "e-locator-1"
+              }
+            ],
+            "user_action_succeeded": true
+          }
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "NOT_EVALUATED"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "kind": "browser",
+        "source_ref": "dom_snapshot:s1",
+        "content": {
+          "entity_id": "e-locator-1",
+          "matched": true,
+          "visible": true,
+          "role": "button",
+          "name": "新建",
+          "test_id": "nav-new-1"
+        },
+        "trust": "TRUSTED",
+        "at_offset": -70
+      },
+      {
+        "kind": "api",
+        "source_ref": "state_query:delayed",
+        "content": {
+          "entity_id": "e-locator-1",
+          "count": 1,
+          "keys": [
+            "e-locator-1"
+          ]
+        },
+        "trust": "TRUSTED",
+        "at_offset": -40
+      }
+    ],
+    "probes": [
+      {
+        "probe_id": "dom_snapshot",
+        "data": {
+          "template": "run_dom",
+          "evidence_id": "dom-1",
+          "artifact_id": "art-1",
+          "size": 120,
+          "excerpt": "<button data-testid=\"nav-new-1\">新建</button>"
+        }
+      },
+      {
+        "probe_id": "http_state",
+        "data": {
+          "template": "get_state_projects",
+          "response": {
+            "ok": true,
+            "count": 1,
+            "keys": [
+              "e-locator-1"
+            ],
+            "entity_id": "e-locator-1"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "sample_id": "run019-71414-locator-v2",
+    "family": "locator",
+    "ground_truth": "LOCATOR",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "FAILED",
+          "error": "Locator.click: Timeout 8000ms exceeded",
+          "target": {
+            "strategy": "test_id",
+            "value": "create-submit"
+          },
+          "observation": {
+            "network": [
+              {
+                "url": "/api/projects",
+                "status": 200,
+                "failure": "",
+                "entity_id": "e-locator-2"
+              }
+            ],
+            "user_action_succeeded": true
+          }
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "NOT_EVALUATED"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "kind": "browser",
+        "source_ref": "dom_snapshot:s1",
+        "content": {
+          "entity_id": "e-locator-2",
+          "matched": true,
+          "visible": true,
+          "role": "button",
+          "name": "新建",
+          "test_id": "nav-new-2"
+        },
+        "trust": "TRUSTED",
+        "at_offset": -70
+      },
+      {
+        "kind": "api",
+        "source_ref": "state_query:delayed",
+        "content": {
+          "entity_id": "e-locator-2",
+          "count": 1,
+          "keys": [
+            "e-locator-2"
+          ]
+        },
+        "trust": "TRUSTED",
+        "at_offset": -40
+      }
+    ],
+    "probes": [
+      {
+        "probe_id": "dom_snapshot",
+        "data": {
+          "template": "run_dom",
+          "evidence_id": "dom-2",
+          "artifact_id": "art-2",
+          "size": 120,
+          "excerpt": "<button data-testid=\"nav-new-2\">新建</button>"
+        }
+      },
+      {
+        "probe_id": "http_state",
+        "data": {
+          "template": "get_state_projects",
+          "response": {
+            "ok": true,
+            "count": 1,
+            "keys": [
+              "e-locator-2"
+            ],
+            "entity_id": "e-locator-2"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "sample_id": "run019-71414-locator-v3",
+    "family": "locator",
+    "ground_truth": "LOCATOR",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "FAILED",
+          "error": "Locator.click: Timeout 8000ms exceeded",
+          "target": {
+            "strategy": "test_id",
+            "value": "create-submit"
+          },
+          "observation": {
+            "network": [
+              {
+                "url": "/api/projects",
+                "status": 200,
+                "failure": "",
+                "entity_id": "e-locator-3"
+              }
+            ],
+            "user_action_succeeded": true
+          }
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "NOT_EVALUATED"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "kind": "browser",
+        "source_ref": "dom_snapshot:s1",
+        "content": {
+          "entity_id": "e-locator-3",
+          "matched": true,
+          "visible": true,
+          "role": "button",
+          "name": "新建",
+          "test_id": "nav-new-3"
+        },
+        "trust": "TRUSTED",
+        "at_offset": -70
+      },
+      {
+        "kind": "api",
+        "source_ref": "state_query:delayed",
+        "content": {
+          "entity_id": "e-locator-3",
+          "count": 1,
+          "keys": [
+            "e-locator-3"
+          ]
+        },
+        "trust": "TRUSTED",
+        "at_offset": -40
+      }
+    ],
+    "probes": [
+      {
+        "probe_id": "dom_snapshot",
+        "data": {
+          "template": "run_dom",
+          "evidence_id": "dom-3",
+          "artifact_id": "art-3",
+          "size": 120,
+          "excerpt": "<button data-testid=\"nav-new-3\">新建</button>"
+        }
+      },
+      {
+        "probe_id": "http_state",
+        "data": {
+          "template": "get_state_projects",
+          "response": {
+            "ok": true,
+            "count": 1,
+            "keys": [
+              "e-locator-3"
+            ],
+            "entity_id": "e-locator-3"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "sample_id": "run019-71414-locator-v4",
+    "family": "locator",
+    "ground_truth": "LOCATOR",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "FAILED",
+          "error": "Locator.click: Timeout 8000ms exceeded",
+          "target": {
+            "strategy": "test_id",
+            "value": "create-submit"
+          },
+          "observation": {
+            "network": [
+              {
+                "url": "/api/projects",
+                "status": 200,
+                "failure": "",
+                "entity_id": "e-locator-4"
+              }
+            ],
+            "user_action_succeeded": true
+          }
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "NOT_EVALUATED"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "kind": "browser",
+        "source_ref": "dom_snapshot:s1",
+        "content": {
+          "entity_id": "e-locator-4",
+          "matched": true,
+          "visible": true,
+          "role": "button",
+          "name": "新建",
+          "test_id": "nav-new-4"
+        },
+        "trust": "TRUSTED",
+        "at_offset": -70
+      },
+      {
+        "kind": "api",
+        "source_ref": "state_query:delayed",
+        "content": {
+          "entity_id": "e-locator-4",
+          "count": 1,
+          "keys": [
+            "e-locator-4"
+          ]
+        },
+        "trust": "TRUSTED",
+        "at_offset": -40
+      }
+    ],
+    "probes": [
+      {
+        "probe_id": "dom_snapshot",
+        "data": {
+          "template": "run_dom",
+          "evidence_id": "dom-4",
+          "artifact_id": "art-4",
+          "size": 120,
+          "excerpt": "<button data-testid=\"nav-new-4\">新建</button>"
+        }
+      },
+      {
+        "probe_id": "http_state",
+        "data": {
+          "template": "get_state_projects",
+          "response": {
+            "ok": true,
+            "count": 1,
+            "keys": [
+              "e-locator-4"
+            ],
+            "entity_id": "e-locator-4"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "sample_id": "run019-71414-locator-v5",
+    "family": "locator",
+    "ground_truth": "LOCATOR",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "FAILED",
+          "error": "Locator.click: Timeout 8000ms exceeded",
+          "target": {
+            "strategy": "test_id",
+            "value": "create-submit"
+          },
+          "observation": {
+            "network": [
+              {
+                "url": "/api/projects",
+                "status": 200,
+                "failure": "",
+                "entity_id": "e-locator-5"
+              }
+            ],
+            "user_action_succeeded": true
+          }
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "NOT_EVALUATED"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "kind": "browser",
+        "source_ref": "dom_snapshot:s1",
+        "content": {
+          "entity_id": "e-locator-5",
+          "matched": true,
+          "visible": true,
+          "role": "button",
+          "name": "新建",
+          "test_id": "nav-new-5"
+        },
+        "trust": "TRUSTED",
+        "at_offset": -70
+      },
+      {
+        "kind": "api",
+        "source_ref": "state_query:delayed",
+        "content": {
+          "entity_id": "e-locator-5",
+          "count": 1,
+          "keys": [
+            "e-locator-5"
+          ]
+        },
+        "trust": "TRUSTED",
+        "at_offset": -40
+      }
+    ],
+    "probes": [
+      {
+        "probe_id": "dom_snapshot",
+        "data": {
+          "template": "run_dom",
+          "evidence_id": "dom-5",
+          "artifact_id": "art-5",
+          "size": 120,
+          "excerpt": "<button data-testid=\"nav-new-5\">新建</button>"
+        }
+      },
+      {
+        "probe_id": "http_state",
+        "data": {
+          "template": "get_state_projects",
+          "response": {
+            "ok": true,
+            "count": 1,
+            "keys": [
+              "e-locator-5"
+            ],
+            "entity_id": "e-locator-5"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "sample_id": "run019-71414-locator-v6",
+    "family": "locator",
+    "ground_truth": "LOCATOR",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "FAILED",
+          "error": "Locator.click: Timeout 8000ms exceeded",
+          "target": {
+            "strategy": "test_id",
+            "value": "create-submit"
+          },
+          "observation": {
+            "network": [
+              {
+                "url": "/api/projects",
+                "status": 200,
+                "failure": "",
+                "entity_id": "e-locator-6"
+              }
+            ],
+            "user_action_succeeded": true
+          }
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "NOT_EVALUATED"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "kind": "browser",
+        "source_ref": "dom_snapshot:s1",
+        "content": {
+          "entity_id": "e-locator-6",
+          "matched": true,
+          "visible": true,
+          "role": "button",
+          "name": "新建",
+          "test_id": "nav-new-6"
+        },
+        "trust": "TRUSTED",
+        "at_offset": -70
+      },
+      {
+        "kind": "api",
+        "source_ref": "state_query:delayed",
+        "content": {
+          "entity_id": "e-locator-6",
+          "count": 1,
+          "keys": [
+            "e-locator-6"
+          ]
+        },
+        "trust": "TRUSTED",
+        "at_offset": -40
+      }
+    ],
+    "probes": [
+      {
+        "probe_id": "dom_snapshot",
+        "data": {
+          "template": "run_dom",
+          "evidence_id": "dom-6",
+          "artifact_id": "art-6",
+          "size": 120,
+          "excerpt": "<button data-testid=\"nav-new-6\">新建</button>"
+        }
+      },
+      {
+        "probe_id": "http_state",
+        "data": {
+          "template": "get_state_projects",
+          "response": {
+            "ok": true,
+            "count": 1,
+            "keys": [
+              "e-locator-6"
+            ],
+            "entity_id": "e-locator-6"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "sample_id": "run019-71414-api_control-v1",
+    "family": "api_control",
+    "ground_truth": "API",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "FAILED",
+          "observation": {
+            "network": [
+              {
+                "url": "/api/projects",
+                "status": 500,
+                "failure": ""
+              }
+            ],
+            "http_errors": [
+              {
+                "url": "/api/projects",
+                "status": 500
+              }
+            ]
+          }
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "NOT_EVALUATED"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "kind": "network",
+        "source_ref": "step_signals:s1",
+        "content": {
+          "step_id": "s1",
+          "status": 500,
+          "url": "/api/projects"
+        },
+        "trust": "TRUSTED",
+        "at_offset": -60
+      }
+    ],
+    "probes": [
+      {
+        "probe_id": "http_state",
+        "data": {
+          "template": "get_state_projects",
+          "response": {
+            "ok": true,
+            "count": 2,
+            "keys": [
+              "a",
+              "b"
+            ]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "sample_id": "run019-71414-api_control-v2",
+    "family": "api_control",
+    "ground_truth": "API",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "FAILED",
+          "observation": {
+            "network": [
+              {
+                "url": "/api/projects",
+                "status": 502,
+                "failure": ""
+              }
+            ],
+            "http_errors": [
+              {
+                "url": "/api/projects",
+                "status": 502
+              }
+            ]
+          }
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "NOT_EVALUATED"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "kind": "network",
+        "source_ref": "step_signals:s1",
+        "content": {
+          "step_id": "s1",
+          "status": 502,
+          "url": "/api/projects"
+        },
+        "trust": "TRUSTED",
+        "at_offset": -60
+      }
+    ],
+    "probes": [
+      {
+        "probe_id": "http_state",
+        "data": {
+          "template": "get_state_projects",
+          "response": {
+            "ok": true,
+            "count": 2,
+            "keys": [
+              "a",
+              "b"
+            ]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "sample_id": "run019-71414-api_control-v3",
+    "family": "api_control",
+    "ground_truth": "API",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "FAILED",
+          "observation": {
+            "network": [
+              {
+                "url": "/api/projects",
+                "status": 503,
+                "failure": ""
+              }
+            ],
+            "http_errors": [
+              {
+                "url": "/api/projects",
+                "status": 503
+              }
+            ]
+          }
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "NOT_EVALUATED"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "kind": "network",
+        "source_ref": "step_signals:s1",
+        "content": {
+          "step_id": "s1",
+          "status": 503,
+          "url": "/api/projects"
+        },
+        "trust": "TRUSTED",
+        "at_offset": -60
+      }
+    ],
+    "probes": [
+      {
+        "probe_id": "http_state",
+        "data": {
+          "template": "get_state_projects",
+          "response": {
+            "ok": true,
+            "count": 2,
+            "keys": [
+              "a",
+              "b"
+            ]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "sample_id": "run019-71414-api_control-v4",
+    "family": "api_control",
+    "ground_truth": "API",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "FAILED",
+          "observation": {
+            "network": [
+              {
+                "url": "/api/projects",
+                "status": 500,
+                "failure": ""
+              }
+            ],
+            "http_errors": [
+              {
+                "url": "/api/projects",
+                "status": 500
+              }
+            ]
+          }
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "NOT_EVALUATED"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "kind": "network",
+        "source_ref": "step_signals:s1",
+        "content": {
+          "step_id": "s1",
+          "status": 500,
+          "url": "/api/projects"
+        },
+        "trust": "TRUSTED",
+        "at_offset": -60
+      }
+    ],
+    "probes": [
+      {
+        "probe_id": "http_state",
+        "data": {
+          "template": "get_state_projects",
+          "response": {
+            "ok": true,
+            "count": 2,
+            "keys": [
+              "a",
+              "b"
+            ]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "sample_id": "run019-71414-network_control-v1",
+    "family": "network_control",
+    "ground_truth": "NETWORK",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "FAILED",
+          "error": "net::ERR_CONNECTION_REFUSED",
+          "observation": {
+            "network": [
+              {
+                "url": "/api/projects",
+                "status": 0,
+                "failure": "net::ERR_CONNECTION_REFUSED"
+              }
+            ]
+          }
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "NOT_EVALUATED"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "kind": "network",
+        "source_ref": "step_signals:s1",
+        "content": {
+          "step_id": "s1",
+          "status": 0,
+          "failure": "net::ERR_CONNECTION_REFUSED"
+        },
+        "trust": "TRUSTED",
+        "at_offset": -60
+      }
+    ],
+    "probes": [
+      {
+        "probe_id": "network_trace",
+        "data": {
+          "template": "run_network",
+          "entries": [
+            {
+              "step_id": "s1",
+              "url": "/api/projects",
+              "status": 0,
+              "failure": "net::ERR_CONNECTION_REFUSED"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "sample_id": "run019-71414-network_control-v2",
+    "family": "network_control",
+    "ground_truth": "NETWORK",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "FAILED",
+          "error": "net::ERR_CONNECTION_REFUSED",
+          "observation": {
+            "network": [
+              {
+                "url": "/api/projects",
+                "status": 0,
+                "failure": "net::ERR_CONNECTION_REFUSED"
+              }
+            ]
+          }
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "NOT_EVALUATED"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "kind": "network",
+        "source_ref": "step_signals:s1",
+        "content": {
+          "step_id": "s1",
+          "status": 0,
+          "failure": "net::ERR_CONNECTION_REFUSED"
+        },
+        "trust": "TRUSTED",
+        "at_offset": -60
+      }
+    ],
+    "probes": [
+      {
+        "probe_id": "network_trace",
+        "data": {
+          "template": "run_network",
+          "entries": [
+            {
+              "step_id": "s1",
+              "url": "/api/projects",
+              "status": 0,
+              "failure": "net::ERR_CONNECTION_REFUSED"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "sample_id": "run019-71414-network_control-v3",
+    "family": "network_control",
+    "ground_truth": "NETWORK",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "FAILED",
+          "error": "net::ERR_CONNECTION_REFUSED",
+          "observation": {
+            "network": [
+              {
+                "url": "/api/projects",
+                "status": 0,
+                "failure": "net::ERR_CONNECTION_REFUSED"
+              }
+            ]
+          }
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "NOT_EVALUATED"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "kind": "network",
+        "source_ref": "step_signals:s1",
+        "content": {
+          "step_id": "s1",
+          "status": 0,
+          "failure": "net::ERR_CONNECTION_REFUSED"
+        },
+        "trust": "TRUSTED",
+        "at_offset": -60
+      }
+    ],
+    "probes": [
+      {
+        "probe_id": "network_trace",
+        "data": {
+          "template": "run_network",
+          "entries": [
+            {
+              "step_id": "s1",
+              "url": "/api/projects",
+              "status": 0,
+              "failure": "net::ERR_CONNECTION_REFUSED"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "sample_id": "run019-71414-network_control-v4",
+    "family": "network_control",
+    "ground_truth": "NETWORK",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "FAILED",
+          "error": "net::ERR_CONNECTION_REFUSED",
+          "observation": {
+            "network": [
+              {
+                "url": "/api/projects",
+                "status": 0,
+                "failure": "net::ERR_CONNECTION_REFUSED"
+              }
+            ]
+          }
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "NOT_EVALUATED"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "kind": "network",
+        "source_ref": "step_signals:s1",
+        "content": {
+          "step_id": "s1",
+          "status": 0,
+          "failure": "net::ERR_CONNECTION_REFUSED"
+        },
+        "trust": "TRUSTED",
+        "at_offset": -60
+      }
+    ],
+    "probes": [
+      {
+        "probe_id": "network_trace",
+        "data": {
+          "template": "run_network",
+          "entries": [
+            {
+              "step_id": "s1",
+              "url": "/api/projects",
+              "status": 0,
+              "failure": "net::ERR_CONNECTION_REFUSED"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "sample_id": "run019-71414-ambiguous_control-v1",
+    "family": "ambiguous_control",
+    "ground_truth": "INCONCLUSIVE",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "FAILED",
+          "error": "unknown transient",
+          "observation": {}
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "NOT_EVALUATED"
+        }
+      ]
+    },
+    "evidence": [],
+    "probes": []
+  },
+  {
+    "sample_id": "run019-71414-ambiguous_control-v2",
+    "family": "ambiguous_control",
+    "ground_truth": "INCONCLUSIVE",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "FAILED",
+          "error": "unknown transient",
+          "observation": {}
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "NOT_EVALUATED"
+        }
+      ]
+    },
+    "evidence": [],
+    "probes": []
+  },
+  {
+    "sample_id": "run019-71414-ambiguous_control-v3",
+    "family": "ambiguous_control",
+    "ground_truth": "INCONCLUSIVE",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "FAILED",
+          "error": "unknown transient",
+          "observation": {}
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "NOT_EVALUATED"
+        }
+      ]
+    },
+    "evidence": [],
+    "probes": []
+  },
+  {
+    "sample_id": "run019-71414-ambiguous_control-v4",
+    "family": "ambiguous_control",
+    "ground_truth": "INCONCLUSIVE",
+    "report": {
+      "steps": [
+        {
+          "step_id": "s1",
+          "action": "click",
+          "status": "FAILED",
+          "error": "unknown transient",
+          "observation": {}
+        }
+      ],
+      "assertion_outcomes": [
+        {
+          "assertion_id": "a_biz",
+          "kind": "business_state",
+          "status": "NOT_EVALUATED"
+        }
+      ]
+    },
+    "evidence": [],
+    "probes": []
+  }
+]

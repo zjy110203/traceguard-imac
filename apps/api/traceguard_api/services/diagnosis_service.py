@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import UTC, datetime
 from typing import Any
 
 from traceguard_core.errors import AppError, ErrorCode
@@ -30,6 +31,63 @@ from traceguard_evidence.probe.feedback import ProbeSignal, merge_signals
 from traceguard_api.runtime import Runtime
 
 logger = get_logger("traceguard.service.diagnosis")
+
+
+def _parse_ts(value: Any) -> float | None:
+    """把 ISO 时间解析为 epoch；解析失败返回 None（时间未知≠时间对齐）。"""
+    if not value:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    try:
+        text = str(value).replace("Z", "+00:00")
+        dt = datetime.fromisoformat(text)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=UTC)
+        return dt.timestamp()
+    except (ValueError, TypeError):
+        return None
+
+
+def _within_run(e: Any, run: dict[str, Any]) -> bool:
+    """证据采集时刻必须落在 Run 窗口内，且证据可信度必须为 TRUSTED。"""
+    if getattr(e, "source_trust", "") != "TRUSTED":
+        return False
+    captured = _parse_ts(getattr(e, "captured_at", ""))
+    started = _parse_ts(run.get("started_at"))
+    ended = _parse_ts(run.get("ended_at"))
+    if captured is None or started is None or ended is None:
+        return False
+    return started <= captured <= ended + 5.0
+
+
+def _state_chain(state_evidence: list[Any], run: dict[str, Any]) -> dict[str, list[Any]]:
+    """按业务实体分组的即时/延迟/最终权威状态读取（只收 Run 窗口内 TRUSTED 证据）。"""
+    chain: dict[str, dict[str, list[Any]]] = {}
+
+    def bucket(source_ref: str) -> str | None:
+        ref = str(source_ref)
+        if "immediate" in ref:
+            return "immediate"
+        if "delayed" in ref:
+            return "delayed"
+        if "final" in ref:
+            return "final"
+        return None
+
+    for e in state_evidence:
+        if not _within_run(e, run):
+            continue
+        content = e.content or {}
+        entity = str(content.get("entity_id") or "")
+        if not entity:
+            continue
+        kind = bucket(e.source_ref)
+        if not kind:
+            continue
+        chain.setdefault(entity, {"immediate": [], "delayed": [], "final": []})[kind].append(e)
+    return chain
+
 
 DOMAIN_UI = FailureDomain.PRODUCT
 DOMAIN_ENV = FailureDomain.ENVIRONMENT
@@ -172,6 +230,53 @@ class DiagnosisService:
         state_ids = [e.evidence_id for e in state_evidence]
         biz_failed_detail = self._business_detail(failed_biz)
 
+        # ---- RUN-019 WP2：独立证据链（同一业务实体 + Run 窗口内 TRUSTED 证据）
+        accepted_entities: set[str] = set()
+        for s in steps:
+            for ne in (s.get("observation") or {}).get("network") or []:
+                status_code = int(ne.get("status") or 0)
+                entity = str(ne.get("entity_id") or "")
+                if entity and 200 <= status_code < 300:
+                    accepted_entities.add(entity)
+
+        entity_chain = _state_chain(state_evidence, run)
+        dom_evidence = [
+            e
+            for e in evidence
+            if e.source_type == "browser"
+            and "dom_snapshot" in str(e.source_ref)
+            and _within_run(e, run)
+        ]
+
+        def _count(e: Any) -> int:
+            try:
+                return int((e.content or {}).get("count", -1))
+            except (ValueError, TypeError):
+                return -1
+
+        persistent_entities = [
+            entity
+            for entity, buckets in entity_chain.items()
+            if entity in accepted_entities
+            and buckets["immediate"]
+            and any(_count(e) == 0 for e in buckets["immediate"])
+            and buckets["delayed"]
+            and all(_count(e) == 0 for e in buckets["delayed"])
+            and not http_5xx
+            and not network_failures
+        ]
+        recovered_entities = [
+            entity
+            for entity, buckets in entity_chain.items()
+            if entity in accepted_entities
+            and buckets["immediate"]
+            and any(_count(e) == 0 for e in buckets["immediate"])
+            and buckets["delayed"]
+            and all(_count(e) > 0 for e in buckets["delayed"])
+            and not http_5xx
+            and not network_failures
+        ]
+
         # ---- 持久化失败（UI 成功但业务未落库）→ 权威状态证据支持（候选级）
         # 若存在 5xx，则"未落库"是接口失败的后果，不作为独立根因（避免症状冒充根因）
         # RUN-011-R1 WP2/WP4（决策 R1-04 扩展）：业务断言失败背后也是同一次状态查询——
@@ -179,14 +284,43 @@ class DiagnosisService:
         # TF-DB-004（查询滞后）与 TF-DB-001（永久回滚）的 Run 时签名完全相同，
         # 单查询无法区分：确认须延迟复测（探针）后仍持续缺失的多点一致证据。
         if failed_biz and not failed_ui and not http_5xx:
+            chain_ids: list[str] = []
+            for entity in persistent_entities:
+                chain_ids.extend(e.evidence_id for e in entity_chain[entity]["immediate"])
+                chain_ids.extend(e.evidence_id for e in entity_chain[entity]["delayed"])
+            confirming = bool(persistent_entities)
             hypotheses.append(
                 Hypothesis(
                     hypothesis_id=new_id("hyp"),
-                    description="界面操作成功但业务状态未持久化（False Pass 风险）",
+                    description=(
+                        "接受请求且同一业务实体在即时+延迟权威状态读取中持续缺失"
+                        if confirming
+                        else "界面操作成功但业务状态未持久化（False Pass 风险）"
+                    ),
                     failure_domain=DOMAIN_UI,
                     failure_mechanism=FailureMechanism.PERSISTENCE,
-                    supporting=refs(state_ids, confirming=False),
+                    supporting=refs(
+                        list(dict.fromkeys(chain_ids or state_ids)), confirming=confirming
+                    ),
                     contributing_factors=[biz_failed_detail] if biz_failed_detail else [],
+                )
+            )
+
+        # RUN-019 WP2：TIMING 需要"接受→即时缺失→延迟恢复"同一实体证据链，
+        # 且即时/延迟读取都必须在 Run 窗口内、TRUSTED；事后恢复不得充当 Run 时证据。
+        if recovered_entities:
+            timing_ids: list[str] = []
+            for entity in recovered_entities:
+                timing_ids.extend(e.evidence_id for e in entity_chain[entity]["immediate"])
+                timing_ids.extend(e.evidence_id for e in entity_chain[entity]["delayed"])
+            hypotheses.append(
+                Hypothesis(
+                    hypothesis_id=new_id("hyp"),
+                    description="同一业务实体即时读取缺失、Run 窗口内延迟复测恢复（状态读取滞后）",
+                    failure_domain=DOMAIN_EXEC,
+                    failure_mechanism=FailureMechanism.TIMING,
+                    supporting=refs(list(dict.fromkeys(timing_ids)), confirming=True),
+                    contributing_factors=[f"entity={entity}" for entity in recovered_entities[:3]],
                 )
             )
 
@@ -279,18 +413,47 @@ class DiagnosisService:
                 )
             )
 
-        # ---- 定位器失效（不确认，需补 DOM 证据）
+        # ---- 定位器失效：Run 窗口内 DOM 独立观测 + 业务已落库 + 用户操作成功
+        # 时才升级为确认级"用例资产问题"；仅有超时描述仍只作候选。
         if locator_timeouts and not failed_biz:
             ids = []
             for s in locator_timeouts:
                 ids.extend(step_evidence_ids(s["step_id"]))
+            dom_ok = [
+                e
+                for e in dom_evidence
+                if (e.content or {}).get("matched") is True
+                or (e.content or {}).get("visible") is True
+                or _count(e) >= 1
+            ]
+            business_ok = [
+                e
+                for entity, buckets in entity_chain.items()
+                if entity in accepted_entities
+                for e in buckets["delayed"] + buckets["final"] + buckets["immediate"]
+                if _count(e) > 0
+            ]
+            locator_confirmed = bool(
+                dom_ok
+                and business_ok
+                and accepted_entities
+                and not http_5xx
+                and not network_failures
+            )
+            if locator_confirmed:
+                ids.extend(e.evidence_id for e in dom_ok)
+                ids.extend(e.evidence_id for e in business_ok)
             hypotheses.append(
                 Hypothesis(
                     hypothesis_id=new_id("hyp"),
-                    description="元素定位失败或等待超时（可能为用例资产问题）",
+                    description=(
+                        "用户操作已成功且业务状态已落库，测试定位器与 DOM 观测不一致（用例资产问题）"
+                        if locator_confirmed
+                        else "元素定位失败或等待超时（可能为用例资产问题）"
+                    ),
                     failure_domain=DOMAIN_ASSET,
                     failure_mechanism=FailureMechanism.LOCATOR,
-                    supporting=refs(list(dict.fromkeys(ids)), confirming=False),
+                    supporting=refs(list(dict.fromkeys(ids)), confirming=locator_confirmed),
                     contributing_factors=[str(s.get("error", ""))[:160] for s in locator_timeouts][
                         :3
                     ],
