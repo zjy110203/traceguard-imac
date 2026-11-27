@@ -8,6 +8,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { api, endpoints, fmtBytes, fmtNumber, fmtPercent, fmtTime, type AlertRecord } from '../api'
 import { authState, can } from '../auth'
+import { currentWorkspaceId } from '../workspace'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import MetricCard from '../components/MetricCard.vue'
 import ModalShell from '../components/ModalShell.vue'
@@ -140,9 +141,18 @@ const canManageAlerts = computed(
   () => authState.status?.auth_enabled === false || can('system.configure'),
 )
 
+/** RUN-019-R2：默认统计当前 Workspace；全局汇总必须显式勾选并在页面标注范围。 */
+const globalScope = ref(false)
 const activeAlerts = computed(() =>
   alerts.value.filter((a) => a.status === 'OPEN' || a.status === 'ACKNOWLEDGED'),
 )
+const scopeLabel = computed(() => {
+  const mode = snap.value?.scope?.mode
+  if (mode === 'workspace') return `当前 Workspace（${snap.value?.scope?.workspace_id}）`
+  if (mode === 'global') return '全局汇总（全部 Workspace）'
+  if (mode === 'authorized_workspaces') return '全部已授权 Workspace 聚合'
+  return '未声明（服务端未返回 scope）'
+})
 const trendSeries = computed(() => {
   const samples = snap.value?.queue.trend.samples ?? []
   return [
@@ -155,7 +165,10 @@ async function load(): Promise<boolean> {
   loading.value = !snap.value
   try {
     const [m, a] = await Promise.all([
-      endpoints.monitoringMetrics(undefined, 50),
+      endpoints.monitoringMetrics(
+        globalScope.value ? undefined : currentWorkspaceId.value || undefined,
+        50,
+      ),
       api.get<{ alerts: AlertRecord[] }>('/monitoring/alerts?limit=200'),
     ])
     snap.value = m as unknown as Snapshot
@@ -241,6 +254,10 @@ onUnmounted(stopTimer)
     >
       <template #actions>
         <button :disabled="loading" @click="load()">刷新</button>
+        <label class="small muted flex" style="gap: 6px; align-items: center">
+          <input v-model="globalScope" type="checkbox" style="width: auto" data-testid="monitoring-global-scope" @change="load()" />
+          全局范围（全部已授权 Workspace）
+        </label>
         <button :class="{ primary: autoRefresh }" @click="toggleAuto">
           {{ autoRefresh ? '自动刷新开（30s）' : '自动刷新关' }}
         </button>
@@ -250,6 +267,10 @@ onUnmounted(stopTimer)
 
     <AsyncBlock :loading="loading" :error="error">
       <template v-if="snap">
+        <div class="small muted" data-testid="monitoring-scope" style="margin-bottom: 10px">
+          统计范围：<b>{{ scopeLabel }}</b>
+          <span v-if="snap.scope?.authorized_workspaces">（{{ snap.scope.authorized_workspaces.join(', ') }}）</span>
+        </div>
         <!-- 概览 -->
         <div class="metric-grid m5" style="margin-bottom: 14px">
           <MetricCard label="API 状态" :value="snap.api.health.toUpperCase()" :hint="`错误率 ${fmtPercent(snap.api.error_rate)} · P95 ${snap.api.response_time_ms.p95 ?? '—'} ms`"

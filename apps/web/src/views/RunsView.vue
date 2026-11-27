@@ -78,8 +78,8 @@ function verdictCount(v: string) {
             <option value="NOT_EVALUATED">NOT_EVALUATED</option>
           </select>
           <label class="filter-check">
-            <input id="runs-include-bench" v-model="includeBench" type="checkbox" style="width: auto" aria-label="包含 Benchmark 运行" @change="load" />
-            包含 Benchmark 运行
+            <input id="runs-include-bench" v-model="includeBench" type="checkbox" style="width: auto" aria-label="包含 Benchmark 运行（跨全部已授权 Workspace 聚合）" @change="load" />
+            包含 Benchmark 运行（跨全部已授权 Workspace 聚合）
           </label>
           <select id="runs-status" v-model="status" aria-label="按执行状态筛选">
             <option value="">全部执行状态</option>
