@@ -120,6 +120,7 @@ class CatalogService:
                 "name": name,
                 "description": description,
                 "created_from": created_by,
+                "created_by": created_by,
             }
 
     def list_workspaces(self) -> list[dict[str, Any]]:
@@ -131,6 +132,7 @@ class CatalogService:
                     "name": r.name,
                     "description": r.description,
                     "created_at": r.created_at,
+                    "created_by": r.created_by,
                 }
                 for r in rows
             ]
@@ -145,6 +147,36 @@ class CatalogService:
                 "name": r.name,
                 "description": r.description,
                 "created_at": r.created_at,
+                "created_by": r.created_by,
+            }
+
+    def update_workspace(
+        self, workspace_id: str, *, name: str | None = None, description: str | None = None
+    ) -> dict[str, Any]:
+        """更新 Workspace 基础信息。默认 Workspace 受保护，不允许改名或改写。"""
+        if workspace_id == DEFAULT_WORKSPACE:
+            raise AppError(
+                ErrorCode.AUTHORIZATION_ERROR,
+                "DEFAULT_WORKSPACE_PROTECTED: 默认工作区不允许编辑",
+            )
+        with self.db.session() as s:
+            r = s.get(WorkspaceRow, workspace_id)
+            if not r:
+                raise AppError(ErrorCode.NOT_FOUND, "workspace not found")
+            if name is not None:
+                cleaned = str(name).strip()
+                if not cleaned:
+                    raise AppError(ErrorCode.VALIDATION_ERROR, "workspace name required")
+                r.name = cleaned[:200]
+            if description is not None:
+                r.description = str(description)
+            s.flush()
+            return {
+                "workspace_id": r.workspace_id,
+                "name": r.name,
+                "description": r.description,
+                "created_at": r.created_at,
+                "created_by": r.created_by,
             }
 
     # ---------------- TestIntent ----------------

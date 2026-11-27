@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -11,6 +12,7 @@ from traceguard_persistence import auth as auth_store
 
 from ..auth import AuthManager, Principal, current_principal, get_auth_manager
 from ..runtime import get_runtime
+from ..services import get_services
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
@@ -34,6 +36,10 @@ class UserCreateReq(BaseModel):
 
 class WorkspacesReq(BaseModel):
     workspaces: list[str]
+
+
+class RolesReq(BaseModel):
+    roles: list[str]
 
 
 def _require_platform_admin(principal: Principal) -> None:
@@ -172,7 +178,12 @@ async def set_user_active(
     principal: Annotated[Principal, Depends(current_principal)],
 ) -> dict[str, Any]:
     _require_platform_admin(principal)
-    ok = auth_store.set_user_active(get_runtime().db, user_id, active)
+    try:
+        ok = auth_store.set_user_active(get_runtime().db, user_id, active)
+    except ValueError as exc:
+        raise HTTPException(
+            409, detail={"code": str(exc), "message": "last platform-admin must remain active"}
+        ) from exc
     if not ok:
         raise HTTPException(404, detail={"code": "NOT_FOUND", "message": "user not found"})
     if not active:
@@ -188,6 +199,35 @@ async def set_user_active(
         after={"active": active},
     )
     return {"user_id": user_id, "active": active}
+
+
+@router.post("/users/{user_id}/roles")
+async def set_user_roles(
+    user_id: str,
+    req: RolesReq,
+    request: Request,
+    principal: Annotated[Principal, Depends(current_principal)],
+) -> dict[str, Any]:
+    """修改用户角色。主体只取服务端 Principal，且禁止降级最后一个平台管理员。"""
+    _require_platform_admin(principal)
+    try:
+        result = auth_store.set_user_roles(get_runtime().db, user_id, req.roles)
+    except ValueError as exc:
+        code = str(exc)
+        status = 404 if code == "USER_NOT_FOUND" else 409
+        raise HTTPException(status_code=status, detail={"code": code, "message": code}) from exc
+    auth_store.record_audit(
+        get_runtime().db,
+        actor_id=principal.actor_id,
+        role=principal.primary_role,
+        action="auth.user_roles_changed",
+        resource_type="user",
+        resource_id=user_id,
+        result="SUCCESS",
+        before={"roles": result["before"]},
+        after={"roles": result["roles"]},
+    )
+    return result
 
 
 @router.post("/users/{user_id}/workspaces")
@@ -213,6 +253,40 @@ async def set_user_workspaces(
         after={"workspaces": auth_store.parse_workspaces(req.workspaces)},
     )
     return {"user_id": user_id, "workspaces": auth_store.parse_workspaces(req.workspaces)}
+
+
+@router.get("/workspaces/{workspace_id}/members")
+async def list_workspace_members(
+    workspace_id: str,
+    principal: Annotated[Principal, Depends(current_principal)],
+) -> dict[str, Any]:
+    """Workspace 成员与授权范围展示（只做展示，不引入新的成员模型）。
+
+    成员定义沿用既有权威来源：`tg_user.workspaces` 白名单（含 `*` 全量）。
+    只有 platform-admin 可读取；服务端不采信任何请求体声明。
+    """
+    _require_platform_admin(principal)
+    if not get_services().rt.catalog.get_workspace(workspace_id):
+        raise HTTPException(404, detail={"code": "NOT_FOUND", "message": "workspace not found"})
+    members: list[dict[str, Any]] = []
+    for user in auth_store.list_users(get_runtime().db):
+        scope = auth_store.parse_workspaces(user.get("workspaces"))
+        if "*" not in scope and workspace_id not in scope:
+            continue
+        try:
+            roles = json.loads(user.get("roles") or "[]")
+        except (TypeError, ValueError):
+            roles = []
+        members.append(
+            {
+                "user_id": user["user_id"],
+                "username": user["username"],
+                "roles": roles,
+                "active": bool(user["active"]),
+                "scope_mode": "all" if "*" in scope else "explicit",
+            }
+        )
+    return {"workspace_id": workspace_id, "members": members}
 
 
 @router.get("/permissions")

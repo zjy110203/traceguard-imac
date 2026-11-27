@@ -376,7 +376,25 @@ MIGRATIONS: list[tuple[int, str, list[str]]] = [
             "CREATE INDEX IF NOT EXISTS ix_tg_run_submission_run ON tg_run_submission (run_id)",
         ],
     ),
+    (
+        14,
+        "run019_admin_guard",
+        [
+            "CREATE TABLE IF NOT EXISTS tg_admin_guard ("
+            "guard_id VARCHAR(64) PRIMARY KEY, touched VARCHAR(40) NOT NULL DEFAULT '')",
+            "__CALLABLE__:_seed_admin_guard",
+        ],
+    ),
 ]
+
+
+def _seed_admin_guard(conn) -> None:  # type: ignore[no-untyped-def]
+    """RUN-019 WP1：为“最后一个管理员”保护创建单行锁靶（SQLite/PG 通用）。"""
+    if conn.execute(text("SELECT 1 FROM tg_admin_guard WHERE guard_id = 'platform_admin'")).first():
+        return
+    conn.execute(
+        text("INSERT INTO tg_admin_guard (guard_id, touched) VALUES ('platform_admin', '')")
+    )
 
 
 def _migrate_audit_seq(conn) -> None:  # type: ignore[no-untyped-def]
@@ -543,6 +561,7 @@ _MIGRATION_CALLABLES = {
     "_migrate_evidence_digest_semantics": _migrate_evidence_digest_semantics,
     "_migrate_widen_intent_ref": _migrate_widen_intent_ref,
     "_migrate_audit_seq": _migrate_audit_seq,
+    "_seed_admin_guard": _seed_admin_guard,
 }
 
 _lock = threading.RLock()

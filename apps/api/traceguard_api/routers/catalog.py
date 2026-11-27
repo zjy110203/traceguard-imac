@@ -68,8 +68,68 @@ async def list_workspaces(request: Request) -> list[dict[str, Any]]:
 
 
 @router.post("/workspaces", status_code=201)
-async def create_workspace(req: WorkspaceReq) -> dict[str, Any]:
-    return get_services().rt.catalog.create_workspace(req.name, req.description, req.created_by)
+async def create_workspace(req: WorkspaceReq, request: Request) -> dict[str, Any]:
+    """创建 Workspace。创建者只取服务端可信主体；请求体中的 created_by 一律忽略。"""
+    created_by = (
+        trusted_actor(
+            request,
+            "",
+            "system.configure",
+            resource_type="workspace",
+            resource_id="create",
+        )
+        or "system"
+    )
+    try:
+        return get_services().rt.catalog.create_workspace(req.name, req.description, created_by)
+    except AppError as exc:
+        raise _handle(exc) from exc
+
+
+@router.get("/workspaces/{workspace_id}")
+async def get_workspace(workspace_id: str, request: Request) -> dict[str, Any]:
+    doc = get_services().rt.catalog.get_workspace(workspace_id)
+    if not doc:
+        raise HTTPException(404, detail={"code": "NOT_FOUND", "message": "workspace not found"})
+    require_entity_workspace(
+        principal_of(request),
+        workspace_id,
+        resource_type="workspace",
+        resource_id=workspace_id,
+        request=request,
+    )
+    return doc
+
+
+class WorkspaceUpdateReq(BaseModel):
+    name: str | None = Field(default=None, max_length=200)
+    description: str | None = None
+
+
+@router.patch("/workspaces/{workspace_id}")
+async def update_workspace(
+    workspace_id: str, req: WorkspaceUpdateReq, request: Request
+) -> dict[str, Any]:
+    require_entity_workspace(
+        principal_of(request),
+        workspace_id,
+        resource_type="workspace",
+        resource_id=workspace_id,
+        request=request,
+    )
+    trusted_actor(
+        request,
+        "",
+        "system.configure",
+        resource_type="workspace",
+        resource_id=workspace_id,
+    )
+    try:
+        return get_services().rt.catalog.update_workspace(
+            workspace_id, name=req.name, description=req.description
+        )
+    except AppError as exc:
+        raise _handle(exc) from exc
 
 
 # ------------------------------------------------------------------- intents

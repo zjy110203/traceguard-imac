@@ -166,13 +166,91 @@ def list_users(db: Database) -> list[dict[str, Any]]:
     return [dict(r) for r in rows]
 
 
+def _lock_admin_guard(s: Any, db: Database) -> None:
+    """串行化"最后一个管理员"检查（PG 行锁 / SQLite 写锁），防止并发绕过。"""
+    if db.engine.dialect.name == "postgresql":
+        s.execute(
+            text("SELECT guard_id FROM tg_admin_guard WHERE guard_id = 'platform_admin' FOR UPDATE")
+        )
+    else:
+        # SQLite 无 SELECT FOR UPDATE：先写一行取得写锁，事务内其它写入者必须等待。
+        s.execute(
+            text("UPDATE tg_admin_guard SET touched = :t WHERE guard_id = 'platform_admin'"),
+            {"t": utc_now_iso()},
+        )
+
+
+def _active_admin_count(s: Any) -> int:
+    rows = s.execute(text("SELECT roles, active FROM tg_user")).mappings().all()
+    count = 0
+    for row in rows:
+        if not row["active"]:
+            continue
+        try:
+            roles = json.loads(row["roles"] or "[]")
+        except (TypeError, ValueError):
+            continue
+        if ROLE_PLATFORM_ADMIN in roles:
+            count += 1
+    return count
+
+
+def _user_roles(row: Any) -> list[str]:
+    try:
+        return list(json.loads(row["roles"] or "[]"))
+    except (TypeError, ValueError):
+        return []
+
+
 def set_user_active(db: Database, user_id: str, active: bool) -> bool:
     with db.session() as s:
+        _lock_admin_guard(s, db)
+        row = (
+            s.execute(
+                text("SELECT roles, active FROM tg_user WHERE user_id = :id"), {"id": user_id}
+            )
+            .mappings()
+            .first()
+        )
+        if not row:
+            return False
+        if not active and ROLE_PLATFORM_ADMIN in _user_roles(row) and _active_admin_count(s) <= 1:
+            raise ValueError("LAST_ADMIN_CANNOT_BE_DEACTIVATED")
         result = s.execute(
             text("UPDATE tg_user SET active = :a, updated_at = :now WHERE user_id = :id"),
             {"a": 1 if active else 0, "now": utc_now_iso(), "id": user_id},
         )
     return result.rowcount == 1
+
+
+def set_user_roles(db: Database, user_id: str, roles: list[str]) -> dict[str, Any]:
+    """修改用户角色；禁止降级/停用最后一个有效平台管理员（含并发场景）。"""
+    cleaned = _validate_roles(list(roles))
+    with db.session() as s:
+        _lock_admin_guard(s, db)
+        row = (
+            s.execute(
+                text("SELECT user_id, roles, active FROM tg_user WHERE user_id = :id"),
+                {"id": user_id},
+            )
+            .mappings()
+            .first()
+        )
+        if not row:
+            raise ValueError("USER_NOT_FOUND")
+        before = _user_roles(row)
+        if (
+            ROLE_PLATFORM_ADMIN in before
+            and ROLE_PLATFORM_ADMIN not in cleaned
+            and row["active"]
+            and _active_admin_count(s) <= 1
+        ):
+            raise ValueError("LAST_ADMIN_CANNOT_BE_DEMOTED")
+        s.execute(
+            text("UPDATE tg_user SET roles = :r, updated_at = :now WHERE user_id = :id"),
+            {"r": json.dumps(cleaned), "now": utc_now_iso(), "id": user_id},
+        )
+    return {"user_id": user_id, "roles": cleaned, "before": before}
 
 
 def change_password(db: Database, user_id: str, old_password: str, new_password: str) -> bool:
