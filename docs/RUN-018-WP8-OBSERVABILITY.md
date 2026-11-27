@@ -217,6 +217,21 @@ API 侧可能已新建告警）。引擎做了两道防护：
   原因必填/409/404）、metrics 评估联动、Workspace 作用域声明、
   RBAC（POST 仅 platform-admin、跨 Workspace 告警 403）。
 
+### 7.1 真实运行验收（RUN-018-R1 轮新增）
+
+`tests/integration/test_monitoring_real_run_run018.py`：**真实 uvicorn API 子进程**
++ 共享 SQLite 库，5 项场景 × 3 轮稳定：
+
+| 场景 | 验证结果 |
+|---|---|
+| API 重启 | 进程内请求计数器清零（仅本次请求 +1）、error_count 归零、`since` 更新、`counting.note` 口径声明；告警以数据库为准跨重启保持 OPEN（预置过期心跳让 WORKER_OFFLINE 条件持续成立） |
+| Worker 停止 → 恢复 | 心跳停更 → WORKER_OFFLINE OPEN（ref_worker_id 可跳转）；心跳恢复 → 引擎自动 RESOLVED（resolved_by=system:alert-engine, reason=condition_cleared） |
+| Queue 积压 | 真实插入 25 条 QUEUED Run（阈值 20）→ QUEUE_BACKLOG OPEN，detail.queued≥25，阈值 provisional 声明 |
+| 数据源不可用 | worker 采集报错快照 → 已有告警保持 OPEN（未知 ≠ 已恢复）；TOCTOU：generated_at 之后创建的告警不被旧快照自动解决 |
+| Artifact 缺失 / GC 异常 | 真实 put + 删除落盘文件 → ARTIFACT_INTEGRITY OPEN；GC 审计写入 error 记录 → GC_ANOMALY OPEN（detail.gc.errors≥1） |
+
+合计 32 项监控测试（5 真实运行 + 27 既有）× 3 轮全部通过。
+
 运行：`.venv/bin/python -m pytest tests/ -q -x --timeout=120`（全量回归通过）。
 
 ## 8. 已知边界（诚实声明）
