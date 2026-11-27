@@ -7,8 +7,12 @@ import { onMounted, ref } from 'vue'
 import { CircleCheck, CircleX, LoaderCircle, Plus, RefreshCw, ShieldCheck, UserRound } from '@lucide/vue'
 import { api, ApiError, endpoints } from '../api'
 import PageHeader from '../components/PageHeader.vue'
-import { ROLE_LABELS } from '../auth'
+import { ROLE_LABELS, authState, can } from '../auth'
 import { notify, notifyError } from '../toast'
+
+/** 服务端 _require_platform_admin 是最终判定者；这里只决定按钮是否可用。 */
+const allowed = (action: string): boolean =>
+  authState.status?.auth_enabled === false || can(action)
 
 interface AuthUserRow {
   user_id: string
@@ -157,7 +161,7 @@ const actionLabel = (action: string): string => ACTION_LABELS[action] ?? action
         <button class="ghost" type="button" :disabled="loading" @click="load">
           <RefreshCw :size="14" /> 刷新
         </button>
-        <button class="primary" type="button" @click="showCreate = true"><Plus :size="14" /> 新建用户</button>
+        <button class="primary" type="button" :disabled="!allowed('user.manage')" @click="showCreate = true"><Plus :size="14" /> 新建用户</button>
       </template>
     </PageHeader>
 
@@ -192,10 +196,10 @@ const actionLabel = (action: string): string => ACTION_LABELS[action] ?? action
                   </span>
                 </td>
                 <td>
-                  <button class="sm" type="button" style="margin-right: 6px" @click="startEdit(u)">编辑权限</button>
+                  <button class="sm" type="button" style="margin-right: 6px" :disabled="!allowed('user.manage')" @click="startEdit(u)">编辑权限</button>
                   <button
                     class="sm" :class="u.active ? 'danger' : 'primary'" type="button"
-                    :disabled="busy === 'active:' + u.user_id"
+                    :disabled="busy === 'active:' + u.user_id || !allowed('user.manage')"
                     @click="toggleActive(u)"
                   >
                     <CircleX v-if="u.active" :size="12" /><CircleCheck v-else :size="12" />
@@ -256,7 +260,7 @@ const actionLabel = (action: string): string => ACTION_LABELS[action] ?? action
         </div>
         <div class="modal-foot">
           <button class="ghost" type="button" @click="editing = null">取消</button>
-          <button class="primary" type="button" :disabled="busy === 'edit:' + editing.user_id" @click="saveEdit">保存</button>
+          <button class="primary" type="button" :disabled="busy === 'edit:' + editing.user_id || !allowed('user.manage')" @click="saveEdit">保存</button>
         </div>
       </div>
     </div>
@@ -289,7 +293,7 @@ const actionLabel = (action: string): string => ACTION_LABELS[action] ?? action
         </div>
         <div class="modal-foot">
           <button class="ghost" type="button" @click="showCreate = false">取消</button>
-          <button class="primary" type="button" :disabled="busy === 'create'" @click="createUser">
+          <button class="primary" type="button" :disabled="busy === 'create' || !allowed('user.manage')" @click="createUser">
             <LoaderCircle v-if="busy === 'create'" :size="14" class="spin-slow" /> 创建
           </button>
         </div>

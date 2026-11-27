@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { api, endpoints, fmtTime } from '../api'
 import { currentWorkspaceId, wsPath } from '../workspace'
+import { authState, can } from '../auth'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import PageHeader from '../components/PageHeader.vue'
 import ModalShell from '../components/ModalShell.vue'
@@ -28,6 +29,10 @@ const editing = ref<string | null>(null)
 const editForm = ref({ title: '', description: '', owner: '', candidate_assertions: '' })
 /** 候选用例链接来自真实 /testcases 列表，不再用页面内本地状态伪装持久结果。 */
 const compiledByIntent = ref<Record<string, string>>({})
+
+/** 按钮可见性与服务端权限矩阵同构；服务端仍独立校验每次操作。 */
+const allowed = (action: string): boolean =>
+  authState.status?.auth_enabled === false || can(action)
 
 async function explore(intentId: string) {
   busy.value = intentId
@@ -175,7 +180,7 @@ onMounted(load)
       subtitle="TestIntent 是测试资产的上游输入：需求 → 探索/编译 → 候选用例 → 人工审核。">
       <template #actions>
         <button @click="load">刷新</button>
-        <button class="primary" @click="showCreate = true">新建需求</button>
+        <button class="primary" :disabled="!allowed('testcase.create')" @click="showCreate = true">新建需求</button>
       </template>
     </PageHeader>
 
@@ -208,16 +213,16 @@ onMounted(load)
             <div class="flex">
               <span class="small muted">{{ fmtTime(i.created_at) }}</span>
               <div class="right flex">
-                <button class="sm ghost" :disabled="!!busy" @click="startEdit(i)">编辑</button>
-                <button v-if="i.status === 'DRAFT'" class="sm" :disabled="busy === i.intent_id" @click="setStatus(i.intent_id, 'REVIEW')">提交评审</button>
-                <button v-if="i.status === 'REVIEW'" class="sm primary" :disabled="busy === i.intent_id" @click="setStatus(i.intent_id, 'APPROVED')">通过</button>
+                <button class="sm ghost" :disabled="!!busy || !allowed('testcase.create')" @click="startEdit(i)">编辑</button>
+                <button v-if="i.status === 'DRAFT'" class="sm" :disabled="busy === i.intent_id || !allowed('testcase.create')" @click="setStatus(i.intent_id, 'REVIEW')">提交评审</button>
+                <button v-if="i.status === 'REVIEW'" class="sm primary" :disabled="busy === i.intent_id || !allowed('testcase.review')" @click="setStatus(i.intent_id, 'APPROVED')">通过</button>
                 <router-link
                   v-if="compiledByIntent[i.intent_id]"
                   :to="`/testcases/${compiledByIntent[i.intent_id]}`"
                   class="sm"
                 >查看候选用例</router-link>
-                <button class="sm" :disabled="busy === i.intent_id" @click="explore(i.intent_id)">探索并生成候选</button>
-                <button v-if="i.status !== 'DEPRECATED'" class="sm ghost" :disabled="busy === i.intent_id" @click="setStatus(i.intent_id, 'DEPRECATED')">废弃</button>
+                <button class="sm" :disabled="busy === i.intent_id || !allowed('testcase.create')" @click="explore(i.intent_id)">探索并生成候选</button>
+                <button v-if="i.status !== 'DEPRECATED'" class="sm ghost" :disabled="busy === i.intent_id || !allowed('testcase.create')" @click="setStatus(i.intent_id, 'DEPRECATED')">废弃</button>
               </div>
             </div>
           </div>
@@ -245,7 +250,7 @@ onMounted(load)
       <p class="small muted">原始需求来源保留；若该需求已关联测试用例，编辑会被服务端拒绝。</p>
       <template #footer>
         <button @click="editing = null">取消</button>
-        <button class="primary" :disabled="busy === 'edit'" @click="saveEdit">保存</button>
+        <button class="primary" :disabled="busy === 'edit' || !allowed('testcase.create')" @click="saveEdit">保存</button>
       </template>
     </ModalShell>
 
@@ -268,7 +273,7 @@ onMounted(load)
       </div>
       <template #footer>
         <button @click="showCreate = false">取消</button>
-        <button class="primary" :disabled="busy === 'create'" @click="create">创建</button>
+        <button class="primary" :disabled="busy === 'create' || !allowed('testcase.create')" @click="create">创建</button>
       </template>
     </ModalShell>
   </div>

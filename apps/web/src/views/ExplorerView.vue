@@ -4,6 +4,7 @@ import { computed, onMounted, ref } from 'vue'
 import { Bot, ChevronRight, CircleAlert, Cpu, FileCode2, GitBranch, Play, RefreshCw, Search, ShieldCheck } from '@lucide/vue'
 import { api, fmtDuration, fmtTime } from '../api'
 import { wsPath } from '../workspace'
+import { authState, can } from '../auth'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import JsonBlock from '../components/JsonBlock.vue'
 import MetricCard from '../components/MetricCard.vue'
@@ -11,6 +12,10 @@ import PageHeader from '../components/PageHeader.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import { notify, notifyError } from '../toast'
 import type { ExplorationAction, ExplorationDetail } from '../types'
+
+/** 探索与编译产出候选用例，属 testcase.create（服务端独立校验）。 */
+const allowed = (action: string): boolean =>
+  authState.status?.auth_enabled === false || can(action)
 
 interface ExplorationRow {
   exploration_id: string
@@ -143,7 +148,7 @@ onMounted(load)
       subtitle="真实浏览器探索 → ToolGateway 权限检查 → 规则编译器候选。模型信息以 API 返回的 engine / llm_stats 为准，不用 engine 标记代替每次决策的真实性。">
       <template #actions>
         <button class="sm" type="button" :disabled="loading" @click="load"><RefreshCw :size="13" /> 刷新</button>
-        <button class="sm primary" type="button" :disabled="busy === 'explore' || !chosenIntent" @click="explore">
+        <button class="sm primary" type="button" :disabled="busy === 'explore' || !chosenIntent || !allowed('testcase.create')" @click="explore">
           <Play :size="13" /> {{ busy === 'explore' ? '探索中…' : '发起探索' }}
         </button>
       </template>
@@ -257,7 +262,7 @@ onMounted(load)
           <div class="panel-head">
             <h2>步骤详情与编译</h2>
             <button v-if="selected && actions.length" class="sm primary right" type="button"
-              :disabled="busy === 'compile'" @click="compile(selected.exploration_id)">
+              :disabled="busy === 'compile' || !allowed('testcase.create')" @click="compile(selected.exploration_id)">
               {{ busy === 'compile' ? '编译中…' : selected.compiled ? '重新编译' : '编译候选用例' }}
             </button>
           </div>

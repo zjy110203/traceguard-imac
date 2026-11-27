@@ -11,6 +11,7 @@ import JsonBlock from '../components/JsonBlock.vue'
 import MetricCard from '../components/MetricCard.vue'
 import PageHeader from '../components/PageHeader.vue'
 import StatusBadge from '../components/StatusBadge.vue'
+import { authState, can } from '../auth'
 import { subscribeEvents, type StreamMode } from '../events'
 import { notify, notifyError } from '../toast'
 import type { Diagnosis, EventRow, Evidence, EvidenceGraph, GraphNode, Run, StepRow } from '../types'
@@ -18,6 +19,10 @@ import type { Diagnosis, EventRow, Evidence, EvidenceGraph, GraphNode, Run, Step
 const route = useRoute()
 const router = useRouter()
 const runId = String(route.params.id)
+
+/** 操作按钮按真实会话权限显示；服务端仍独立校验（诊断/探针/重试各有动作）。 */
+const allowed = (action: string): boolean =>
+  authState.status?.auth_enabled === false || can(action)
 
 const run = ref<Run | null>(null)
 const steps = ref<StepRow[]>([])
@@ -239,9 +244,9 @@ onUnmounted(() => {
           :subtitle="`task ${run.task_id} · attempt ${run.attempt} · ${fmtTime(run.created_at)}`">
           <template #actions>
             <button @click="router.push('/runs')">返回执行中心</button>
-            <button :disabled="busy === 'graph'" @click="buildGraph">生成证据图</button>
-            <button :disabled="busy === 'diag' || run.test_verdict === 'PASSED'" @click="diagnose">诊断</button>
-            <button :disabled="running || busy === 'retry'" @click="retry">重试</button>
+            <button :disabled="busy === 'graph' || !allowed('diagnosis.operate')" @click="buildGraph">生成证据图</button>
+            <button :disabled="busy === 'diag' || run.test_verdict === 'PASSED' || !allowed('diagnosis.operate')" @click="diagnose">诊断</button>
+            <button :disabled="running || busy === 'retry' || !allowed('run.execute')" @click="retry">重试</button>
           </template>
           <template #meta>
             <div class="flex wrap mt">
@@ -450,7 +455,7 @@ onUnmounted(() => {
             <h2>Evidence Graph</h2>
             <div class="actions">
               <span class="small muted">{{ graph?.stats?.nodes ?? 0 }} 节点 / {{ graph?.stats?.edges ?? 0 }} 边 · 悬停高亮邻接，点击查看节点</span>
-              <button class="sm" @click="buildGraph">重建</button>
+              <button class="sm" :disabled="!allowed('diagnosis.operate')" @click="buildGraph">重建</button>
             </div>
           </div>
           <div class="card-body">
@@ -476,7 +481,7 @@ onUnmounted(() => {
               <div class="empty">
                 <div class="title">尚未诊断</div>
                 <div class="small">失败 Run 可执行诊断；PASSED 的 Run 不做伪诊断</div>
-                <button class="primary" style="margin-top: 10px" :disabled="run.test_verdict === 'PASSED' || busy === 'diag'" @click="diagnose">立即诊断</button>
+                <button class="primary" style="margin-top: 10px" :disabled="run.test_verdict === 'PASSED' || busy === 'diag' || !allowed('diagnosis.operate')" @click="diagnose">立即诊断</button>
               </div>
             </div>
           </div>
@@ -515,7 +520,7 @@ onUnmounted(() => {
           <div class="card">
             <div class="card-head">
               <h2>探针建议（Active Diagnosis）</h2>
-              <div class="actions"><button class="sm" @click="loadProbes">刷新建议</button></div>
+              <div class="actions"><button class="sm" :disabled="!allowed('probe.execute')" @click="loadProbes">刷新建议</button></div>
             </div>
             <div class="card-body tight scroll-x" tabindex="0">
               <table>
@@ -525,7 +530,7 @@ onUnmounted(() => {
                     <td class="mono small">{{ p.probe_id }}</td>
                     <td class="small">{{ p.why }}</td>
                     <td class="small">{{ p.score }}</td>
-                    <td><button class="sm" :disabled="busy === 'probe'" @click="runProbe(p)">执行（只读）</button></td>
+                    <td><button class="sm" :disabled="busy === 'probe' || !allowed('probe.execute')" @click="runProbe(p)">执行（只读）</button></td>
                   </tr>
                   <tr v-if="probes.length === 0"><td colspan="4"><div class="empty">暂无建议</div></td></tr>
                 </tbody>

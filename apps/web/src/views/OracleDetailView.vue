@@ -110,7 +110,7 @@ onMounted(load)
             <div v-if="allowed('oracle.create')" class="toolbar">
               <label for="oracle-note">审批备注</label>
               <input id="oracle-note" v-model="note" placeholder="复核说明" />
-              <button class="primary" :disabled="busy" @click="approve">审批并新建版本</button>
+              <button class="primary" :disabled="busy || !allowed('oracle.create')" @click="approve">审批并新建版本</button>
             </div>
             <p class="small muted">审批不会替换历史版本；已审核用例绑定的 Oracle 版本保持固定。</p>
           </div>

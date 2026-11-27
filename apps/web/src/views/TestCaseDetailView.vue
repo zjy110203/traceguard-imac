@@ -340,7 +340,7 @@ onUnmounted(() => {
                 <h2>版本</h2>
                 <div class="actions">
                   <span class="small muted">不可变版本，审核状态可流转</span>
-                  <button class="sm primary" :disabled="!current" @click="openNewVersion">新建版本</button>
+                  <button class="sm primary" :disabled="!current || !allowed('testcase.create')" @click="openNewVersion">新建版本</button>
                 </div>
               </div>
               <div class="card-body tight scroll-x" tabindex="0">
@@ -406,7 +406,7 @@ onUnmounted(() => {
                 <h2>断言与 Oracle 绑定</h2>
                 <div class="actions">
                   <button class="sm primary"
-                    :disabled="busy === 'bind' || current.review_status === 'APPROVED'"
+                    :disabled="busy === 'bind' || current.review_status === 'APPROVED' || !allowed('oracle.bind')"
                     @click="saveBindings">保存绑定</button>
                 </div>
               </div>
@@ -457,7 +457,7 @@ onUnmounted(() => {
                 <div class="flex" style="margin-top: 10px">
                   <button class="sm primary" :disabled="!allowed('testcase.review') || busy === 'review'" @click="review('APPROVED')">审核通过</button>
                   <button class="sm danger" :disabled="!allowed('testcase.review') || busy === 'review'" @click="review('REJECTED')">拒绝</button>
-                  <button class="sm" :disabled="busy === 'replay'" @click="startStabilityReplay">启动稳定性回放</button>
+                  <button class="sm" :disabled="busy === 'replay' || !allowed('testcase.create')" @click="startStabilityReplay">启动稳定性回放</button>
                 </div>
                 <p class="small muted" style="margin-top: 6px">
                   编译来源为 compiler/healed 的版本，审核通过前必须有「同版本、STABLE_PASS、Oracle 完整」的稳定性回放记录。
@@ -575,7 +575,7 @@ onUnmounted(() => {
         </div>
         <div class="modal-foot">
           <button class="ghost" type="button" @click="showNewVersion = false">取消</button>
-          <button class="primary" type="button" :disabled="busy === 'new-version'" @click="saveNewVersion">创建新版本</button>
+          <button class="primary" type="button" :disabled="busy === 'new-version' || !allowed('testcase.create')" @click="saveNewVersion">创建新版本</button>
         </div>
       </div>
     </div>

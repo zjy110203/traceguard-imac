@@ -1,11 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { api, fmtBytes } from '../api'
+import { authState, can } from '../auth'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import MetricCard from '../components/MetricCard.vue'
 import PageHeader from '../components/PageHeader.vue'
 import { notify, notifyError } from '../toast'
 import type { BrowserHealth, SystemHealth } from '../types'
+
+/** 系统配置/自检属 platform-admin（服务端 system.configure 独立校验）。 */
+const allowed = (action: string): boolean =>
+  authState.status?.auth_enabled === false || can(action)
 
 const health = ref<SystemHealth | null>(null)
 const browser = ref<BrowserHealth | null>(null)
@@ -130,8 +135,8 @@ onMounted(() => load())
       subtitle="数据库、浏览器、Worker、产物存储的真实状态（不是配置文件的自我描述）。浏览器状态需主动自检，配置成功不等于连通成功。">
       <template #actions>
         <router-link class="button ghost" to="/monitoring">运行监控与告警</router-link>
-        <button :disabled="busy === 'browser'" @click="probeBrowser">真实启动浏览器自检</button>
-        <button :disabled="busy === 'seed'" @click="seed">写入演示资产</button>
+        <button :disabled="busy === 'browser' || !allowed('system.configure')" @click="probeBrowser">真实启动浏览器自检</button>
+        <button :disabled="busy === 'seed' || !allowed('system.configure')" @click="seed">写入演示资产</button>
         <button @click="load()">刷新</button>
       </template>
     </PageHeader>

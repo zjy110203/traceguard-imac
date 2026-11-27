@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { api, fmtTime } from '../api'
+import { authState, can } from '../auth'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import BarChart from '../components/BarChart.vue'
 import PageHeader from '../components/PageHeader.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import { notify, notifyError } from '../toast'
 import type { BenchmarkExperiment } from '../types'
+
+/** 启动评测会创建真实实验（服务端映射 system.configure）。 */
+const allowed = (action: string): boolean =>
+  authState.status?.auth_enabled === false || can(action)
 
 const items = ref<BenchmarkExperiment[]>([])
 const loading = ref(true)
@@ -89,9 +94,9 @@ onMounted(load)
     <PageHeader eyebrow="UI-FaultBench" title="Benchmark 实验对照"
       subtitle="真实执行产出的对照实验：固定数据集、GT 隔离、分子/分母可核。已验证 / 未验证 / BLOCKED / 样本不足严格区分，不以小样本宣称统计显著。">
       <template #actions>
-        <button :disabled="!!busy" @click="run('A')">实验 A · 用例生成</button>
-        <button :disabled="!!busy" @click="run('B')">实验 B · 故障诊断</button>
-        <button :disabled="!!busy" @click="run('C')">实验 C · 自愈</button>
+        <button :disabled="!!busy || !allowed('system.configure')" @click="run('A')">实验 A · 用例生成</button>
+        <button :disabled="!!busy || !allowed('system.configure')" @click="run('B')">实验 B · 故障诊断</button>
+        <button :disabled="!!busy || !allowed('system.configure')" @click="run('C')">实验 C · 自愈</button>
         <button @click="load">刷新</button>
       </template>
     </PageHeader>

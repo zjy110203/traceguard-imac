@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, artifactUrl, fmtTime } from '../api'
-import { currentActor } from '../auth'
+import { authState, can, currentActor } from '../auth'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import GraphView from '../components/GraphView.vue'
 import PageHeader from '../components/PageHeader.vue'
@@ -22,6 +22,10 @@ import type {
 const route = useRoute()
 const router = useRouter()
 const id = String(route.params.id)
+/** 探针属 probe.execute；分流复核属 diagnosis.operate（服务端独立校验）。 */
+const allowed = (action: string): boolean =>
+  authState.status?.auth_enabled === false || can(action)
+
 const diag = ref<Diagnosis | null>(null)
 const dispositions = ref<Disposition[]>([])
 const evidence = ref<Evidence[]>([])
@@ -422,7 +426,7 @@ onMounted(load)
             <div class="card">
               <div class="card-head"><h2>探针建议与执行记录</h2>
                 <div class="actions">
-                  <button class="sm primary" :disabled="busy === 'loop'" @click="runActiveLoop">
+                  <button class="sm primary" :disabled="busy === 'loop' || !allowed('probe.execute')" @click="runActiveLoop">
                     {{ busy === 'loop' ? '执行中…' : '运行主动诊断闭环' }}
                   </button>
                   <span class="small muted">只读 · 白名单 · 预算受限</span>
@@ -436,7 +440,7 @@ onMounted(load)
                       <td class="mono small nowrap">{{ p.probe_id }}</td>
                       <td class="small col-purpose">{{ p.why }}</td>
                       <td class="small muted nowrap">建议 · {{ p.score }}</td>
-                      <td class="nowrap"><button class="sm" :disabled="busy === 'probe'" @click="runProbe(p)">执行</button></td>
+                      <td class="nowrap"><button class="sm" :disabled="busy === 'probe' || !allowed('probe.execute')" @click="runProbe(p)">执行</button></td>
                     </tr>
                     <tr v-for="x in probes" :key="x.execution_id">
                       <td class="mono small nowrap">{{ x.probe_id }}</td>
@@ -488,8 +492,8 @@ onMounted(load)
                   <label for="disp-reviewer">审核人</label>
                   <input id="disp-reviewer" v-model="reviewer" />
                   <div class="flex" style="margin-top: 8px">
-                    <button class="sm primary" :disabled="busy === 'review'" @click="reviewDisposition('APPROVED')">批准分流</button>
-                    <button class="sm danger" :disabled="busy === 'review'" @click="reviewDisposition('REJECTED')">驳回</button>
+                    <button class="sm primary" :disabled="busy === 'review' || !allowed('diagnosis.operate')" @click="reviewDisposition('APPROVED')">批准分流</button>
+                    <button class="sm danger" :disabled="busy === 'review' || !allowed('diagnosis.operate')" @click="reviewDisposition('REJECTED')">驳回</button>
                   </div>
                 </div>
                 <div v-else class="empty">无处置记录</div>

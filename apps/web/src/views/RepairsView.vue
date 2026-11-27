@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { api, fmtTime } from '../api'
-import { can, currentActor } from '../auth'
+import { authState, can, currentActor } from '../auth'
 import { currentWorkspaceId, wsPath } from '../workspace'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import CodeDiff from '../components/CodeDiff.vue'
@@ -214,12 +214,16 @@ async function runRegression() {
   }
 }
 
-const canApprove = computed(() => selected.value?.status === 'PENDING_APPROVAL' && can('repair.approve'))
-const canPromote = computed(() => selected.value?.status === 'APPROVED' && can('repair.promote'))
-const canRollback = computed(() => selected.value?.status === 'PROMOTED' && can('repair.rollback'))
+/** 认证关闭的开发环境不隐藏按钮；认证开启时严格按会话权限。 */
+const allowed = (action: string): boolean =>
+  authState.status?.auth_enabled === false || can(action)
+const canSubmit = computed(() => allowed('repair.submit'))
+const canApprove = computed(() => selected.value?.status === 'PENDING_APPROVAL' && allowed('repair.approve'))
+const canPromote = computed(() => selected.value?.status === 'APPROVED' && allowed('repair.promote'))
+const canRollback = computed(() => selected.value?.status === 'PROMOTED' && allowed('repair.rollback'))
 const canRunRegression = computed(() => {
   const r = selected.value
-  if (!r || r.status !== 'PROMOTED' || !can('repair.regression')) return false
+  if (!r || r.status !== 'PROMOTED' || !allowed('repair.regression')) return false
   return !['PASSED', 'FAILED', 'INCONCLUSIVE', 'BLOCKED'].includes(r.regression_status || 'NOT_STARTED')
 })
 const regressionRunning = computed(() =>
@@ -364,10 +368,10 @@ onMounted(load)
       subtitle="Oracle-Protected Self-Healing：只改定位/等待/数据引用，断言与 Oracle 不可触碰；沙箱必须真实再执行。审批与晋升由后端鉴权，前端不绕过。">
       <template #actions>
         <label class="flex small" style="gap: 5px; margin: 0">
-          <input v-model="includeBench" type="checkbox" style="width: auto" @change="load" /> 包含 Benchmark
+          <input v-model="includeBench" type="checkbox" style="width: auto" aria-label="包含 Benchmark 修复提案（跨全部已授权 Workspace 聚合）" @change="load" /> 包含 Benchmark（跨全部已授权 Workspace 聚合）
         </label>
         <button @click="load">刷新</button>
-        <button class="primary" @click="showCreate = true">新建修复提案</button>
+        <button class="primary" :disabled="!canSubmit" @click="showCreate = true">新建修复提案</button>
       </template>
     </PageHeader>
 
@@ -442,9 +446,9 @@ onMounted(load)
             <div v-if="selected.failure_reason" class="small fail-text mt">{{ selected.failure_reason }}</div>
             <div class="hr" />
             <div class="flex wrap">
-              <button class="sm" :disabled="busy === 'validate' || ['PROMOTED','PROMOTING','ROLLED_BACK','REJECTED','PENDING_APPROVAL','APPROVED'].includes(selected.status)" @click="action('validate', undefined, '规则校验')">规则校验</button>
-              <button class="sm" :disabled="busy === 'sandbox-run' || selected.status !== 'VALIDATED'" @click="action('sandbox-run', undefined, '沙箱验证')">沙箱真实执行</button>
-              <button class="sm" :disabled="busy === 'submit' || selected.status !== 'VALIDATED' || selected.sandbox_status !== 'PASSED'" @click="action('submit', undefined, '提交审批')">提交审批</button>
+              <button class="sm" :disabled="busy === 'validate' || !canSubmit || ['PROMOTED','PROMOTING','ROLLED_BACK','REJECTED','PENDING_APPROVAL','APPROVED'].includes(selected.status)" @click="action('validate', undefined, '规则校验')">规则校验</button>
+              <button class="sm" :disabled="busy === 'sandbox-run' || !canSubmit || selected.status !== 'VALIDATED'" @click="action('sandbox-run', undefined, '沙箱验证')">沙箱真实执行</button>
+              <button class="sm" :disabled="busy === 'submit' || !canSubmit || selected.status !== 'VALIDATED' || selected.sandbox_status !== 'PASSED'" @click="action('submit', undefined, '提交审批')">提交审批</button>
               <button class="sm primary" :disabled="busy === 'approve' || !canApprove" @click="ask('approve', { reviewer, note: '控制台审批' }, '审批', true)">批准</button>
               <button class="sm danger" :disabled="busy === 'reject' || !canApprove" @click="ask('reject', { reviewer, note: '控制台驳回' }, '驳回', true)">驳回</button>
               <button class="sm primary" :disabled="busy === 'promote' || !canPromote" @click="ask('promote', { idempotency_key: 'promo-' + selected.proposal_id }, '晋升正式版本', true)">晋升正式版本</button>
@@ -564,7 +568,7 @@ onMounted(load)
               <label>重试说明（写入授权审计）</label>
               <input v-model="retryNote" placeholder="例如：采集失败导致证据缺失，环境已自检恢复" />
               <div class="flex wrap" style="margin-top: 8px">
-                <button class="sm primary" :disabled="busy === 'regression-retry'" @click="askRetryRegression">
+                <button class="sm primary" :disabled="busy === 'regression-retry' || !allowed('repair.regression')" @click="askRetryRegression">
                   重新验证（人工授权 · 新 Attempt）
                 </button>
                 <span class="small muted" style="align-self: center">
@@ -642,7 +646,7 @@ onMounted(load)
       <template #footer>
         <button @click="showCreate = false">取消</button>
         <button :disabled="busy === 'llm' || !form.testcase_id" @click="llmSuggest">LLM 建议</button>
-        <button class="primary" :disabled="busy === 'create' || !form.testcase_id || !form.value" @click="propose">创建提案</button>
+        <button class="primary" :disabled="busy === 'create' || !canSubmit || !form.testcase_id || !form.value" @click="propose">创建提案</button>
       </template>
     </ModalShell>
   </div>
