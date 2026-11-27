@@ -261,6 +261,17 @@ def _setup_pg(tmp_path: Path) -> GCEnv:
     admin.close()
     db = Database(PG_URL)
     db.create_schema()
+    # TG_TEST_POSTGRES_URL 指向共享库（CI 口径）时，清理上一测试残留，
+    # 保证本测试的并发场景从干净状态开始（自有 PG_NAME 时本就是全新库）。
+    from sqlalchemy import inspect as _inspect
+    from sqlalchemy import text as _text
+
+    existing = set(_inspect(db.engine).get_table_names())
+    with db.session() as s:
+        for table in ("tg_artifact", "tg_evidence", "tg_run", "tg_doc", "tg_event",
+                      "tg_worker_heartbeat", "tg_alert"):
+            if table in existing:
+                s.execute(_text(f"DELETE FROM {table}"))
     db.dispose()
     return GCEnv(tmp_path, PG_URL, pg=True)
 
@@ -353,7 +364,11 @@ def _scenario_ref_vs_gc(env: GCEnv, data_text: str, ref_mode: str) -> dict[str, 
                     a.get("op") == "delete_row" and a.get("result") == "skipped_referenced"
                     for a in actions
                 ) or not any(a.get("op") == "delete_row" for a in actions), gc_res
-                deleted = [a for a in actions if a.get("op") == "delete_row"]
+                deleted = [
+                    a
+                    for a in actions
+                    if a.get("op") == "delete_row" and a.get("artifact_id") == artifact_id
+                ]
                 assert all(a.get("result") != "deleted" for a in deleted), gc_res
                 outcome = {"kept": True}
             else:
