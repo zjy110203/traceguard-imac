@@ -163,3 +163,28 @@ print(f'孤儿文件: {len(scan[\"orphan_files\"])}')
 - 文档：本文件
 - 现有工具：`scripts/backup_restore_verify_run017.py`（12 项校验 × 2 平台）、`scripts/doctor.py`
 - 状态：**IMPLEMENTED**（恢复演练需真实 PG16 环境验证）
+
+---
+
+## R1 轮：可执行运维工具箱（文档 → 命令）
+
+`scripts/ops_toolkit_run018.py` 提供 6 个可重复执行的子命令
+（`tests/integration/test_ops_toolkit_run018.py` 5 项集成测试全过）：
+
+| 子命令 | 对应指令项 | 状态 |
+|---|---|---|
+| `artifact-backup`（对比上份 manifest 的 SHA-256，只复制增量） | Artifact 增量备份 | ✅ 可执行（含增量语义测试） |
+| `verify-backup`（逐文件重算哈希比对 manifest） | 备份完整性校验 | ✅ 可执行（篡改检测测试：FAIL 不伪报成功） |
+| `sha-audit`（封装 verify_consistency，支持 limit 抽查） | SHA-256 巡检 | ✅ 可执行（缺文件 FAIL 测试） |
+| `retention-dry-run`（列出"会删除什么"，**零删除**） | 保留策略 dry-run | ✅ 可执行（零删除断言） |
+| `pre-migration-check` / `post-migration-check`（表/列/行数/迁移版本 diff + doctor 数据库检查） | 迁移前/后检查 + 恢复后 doctor | ✅ 可执行 |
+| PG16 真实备份恢复（pg_dump --format=custom → pg_restore → 独立库业务核验） | PostgreSQL 16 备份 / 恢复验证 | ✅ 真实执行（本机 PG16.16，pg_dump 位于 Postgres.app 卷） |
+
+**已有能力保留**：`scripts/backup_restore_verify_run017.py`（SQLite + PG 全链路
+备份/恢复/核验）、`scripts/doctor.py`（启动前检查）——本工具箱是补充而非替代。
+
+**边界（诚实声明）**：
+- 保留策略只提供 dry-run；真实删除需人工另行确认执行，工具不做；
+- 不触碰真实系统的 cron/launchd、不启用真实 WAL 归档（指令红线）；
+- 真实生产服务器上的备份尚未部署授权 → 该项保持 NOT_RUN；
+- 故障恢复文档见 DEPLOYMENT.md 与本文档前述章节。
