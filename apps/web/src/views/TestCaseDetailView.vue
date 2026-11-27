@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { api, fmtDuration, fmtTime } from '../api'
+import { api, endpoints, fmtDuration, fmtTime } from '../api'
+import { currentActor } from '../auth'
 import { currentWorkspaceId, wsPath } from '../workspace'
+import StepEditor, {
+  type EditableAssertion,
+  type EditableStep,
+} from '../components/StepEditor.vue'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import PageHeader from '../components/PageHeader.vue'
 import StatusBadge from '../components/StatusBadge.vue'
@@ -63,6 +68,13 @@ const loading = ref(true)
 const error = ref('')
 const busy = ref('')
 const activeVersion = ref<number | null>(null)
+const showNewVersion = ref(false)
+const newVersionTitle = ref('')
+const draftSteps = ref<EditableStep[]>([])
+const draftAssertions = ref<EditableAssertion[]>([])
+const diffFrom = ref<number | null>(null)
+const diffTo = ref<number | null>(null)
+const diffResult = ref<{ changed_fields: string[]; diff: string } | null>(null)
 // RUN-013 WP3：稳定性回放状态面板（状态/进度/样本/结论/Oracle/审核条件）
 const replay = ref<StabilityReplay | null>(null)
 const replayGate = ref<GatePreview | null>(null)
@@ -189,7 +201,7 @@ async function saveBindings() {
   try {
     await api.post(`/testcases/${id}/versions/${cur.version}/oracle-bindings`, {
       bindings,
-      actor: 'role:qa-lead',
+      actor: currentActor(),
     })
     notify('Oracle 绑定已保存')
     await load()
@@ -237,7 +249,7 @@ async function review(decision: string) {
   try {
     await api.post(`/testcases/${id}/versions/${v.version}/review`, {
       decision,
-      reviewer: 'role:qa-lead',
+      reviewer: currentActor(),
       note: '控制台审核',
     })
     notify('审核完成：' + decision)
@@ -246,6 +258,46 @@ async function review(decision: string) {
     notifyError(e)
   } finally {
     busy.value = ''
+  }
+}
+
+function openNewVersion(): void {
+  if (!current.value) return
+  newVersionTitle.value = detail.value?.title || ''
+  draftSteps.value = JSON.parse(JSON.stringify(current.value.steps || [])) as EditableStep[]
+  draftAssertions.value = JSON.parse(
+    JSON.stringify(current.value.assertions || []),
+  ) as EditableAssertion[]
+  showNewVersion.value = true
+}
+
+async function saveNewVersion(): Promise<void> {
+  busy.value = 'new-version'
+  try {
+    await endpoints.createTestCaseVersion(id, {
+      title: newVersionTitle.value,
+      steps: draftSteps.value,
+      assertions: draftAssertions.value,
+    })
+    notify('已创建新版本；历史版本和对历史 Run 的引用不变')
+    showNewVersion.value = false
+    await load()
+  } catch (e) {
+    notifyError(e)
+  } finally {
+    busy.value = ''
+  }
+}
+
+async function compareVersions(): Promise<void> {
+  if (!diffFrom.value || !diffTo.value) {
+    notify('请选择两个版本', true)
+    return
+  }
+  try {
+    diffResult.value = await endpoints.diffTestCaseVersions(id, diffFrom.value, diffTo.value)
+  } catch (e) {
+    notifyError(e)
   }
 }
 
@@ -286,6 +338,7 @@ onUnmounted(() => {
                 <h2>版本</h2>
                 <div class="actions">
                   <span class="small muted">不可变版本，审核状态可流转</span>
+                  <button class="sm primary" :disabled="!current" @click="openNewVersion">新建版本</button>
                 </div>
               </div>
               <div class="card-body tight scroll-x" tabindex="0">
@@ -301,6 +354,22 @@ onUnmounted(() => {
                     </tr>
                   </tbody>
                 </table>
+              </div>
+              <div class="card-body" style="border-top: 1px solid var(--border)">
+                <div class="toolbar" style="gap: 8px; flex-wrap: wrap">
+                  <label for="diff-from">版本比较</label>
+                  <select id="diff-from" v-model.number="diffFrom">
+                    <option :value="null">选择起始版本</option>
+                    <option v-for="v in versions" :key="'f' + v.version" :value="v.version">v{{ v.version }}</option>
+                  </select>
+                  <select v-model.number="diffTo" aria-label="比较目标版本">
+                    <option :value="null">选择目标版本</option>
+                    <option v-for="v in versions" :key="'t' + v.version" :value="v.version">v{{ v.version }}</option>
+                  </select>
+                  <button class="sm" @click="compareVersions">比较</button>
+                  <span v-if="diffResult" class="small muted">变更字段：{{ diffResult.changed_fields.join(', ') || '无' }}</span>
+                </div>
+                <pre v-if="diffResult" class="mono small" style="max-height: 260px; overflow: auto">{{ diffResult.diff || '（无差异）' }}</pre>
               </div>
             </div>
 
@@ -487,5 +556,26 @@ onUnmounted(() => {
         </div>
       </div>
     </AsyncBlock>
+
+    <div v-if="showNewVersion" class="modal-backdrop" @click.self="showNewVersion = false">
+      <div class="modal" role="dialog" aria-modal="true" aria-label="创建测试用例新版本" style="width: min(860px, 94vw)">
+        <div class="card-head"><h2>基于 {{ detail?.title }} 创建新版本</h2></div>
+        <div class="card-body">
+          <div class="field">
+            <label for="new-version-title">标题</label>
+            <input id="new-version-title" v-model="newVersionTitle" />
+          </div>
+          <StepEditor
+            :steps="draftSteps" :assertions="draftAssertions" :oracles="oracles"
+            @update:steps="draftSteps = $event" @update:assertions="draftAssertions = $event"
+          />
+          <p class="small muted">新版本写入后为 PENDING；审核门禁、Oracle 绑定门禁与稳定性回放不受影响。</p>
+        </div>
+        <div class="modal-foot">
+          <button class="ghost" type="button" @click="showNewVersion = false">取消</button>
+          <button class="primary" type="button" :disabled="busy === 'new-version'" @click="saveNewVersion">创建新版本</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

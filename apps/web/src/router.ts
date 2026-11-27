@@ -7,6 +7,7 @@ const routes = [
   { path: '/testcases', name: 'testcases', component: () => import('./views/TestCasesView.vue'), meta: { title: '测试资产', crumb: '测试资产' } },
   { path: '/testcases/:id', name: 'testcase-detail', component: () => import('./views/TestCaseDetailView.vue'), meta: { title: '用例详情', crumb: '测试资产 / 用例详情' } },
   { path: '/oracles', name: 'oracles', component: () => import('./views/OraclesView.vue'), meta: { title: 'Oracle 契约', crumb: '测试资产 / Oracle 契约' } },
+  { path: '/oracles/:id', name: 'oracle-detail', component: () => import('./views/OracleDetailView.vue'), meta: { title: 'Oracle 详情', crumb: '测试资产 / Oracle 契约 / 详情' } },
   { path: '/runs', name: 'runs', component: () => import('./views/RunsView.vue'), meta: { title: '执行中心', crumb: '执行中心' } },
   { path: '/runs/:id', name: 'run-detail', component: () => import('./views/RunDetailView.vue'), meta: { title: 'Run 详情', crumb: '执行中心 / Run 详情' } },
   { path: '/explorer', name: 'explorer', component: () => import('./views/ExplorerView.vue'), meta: { title: 'Agent Studio', crumb: 'Agent Studio · 探索与编译' } },
@@ -18,6 +19,7 @@ const routes = [
   { path: '/system', name: 'system', component: () => import('./views/SystemView.vue'), meta: { title: '系统与运行环境', crumb: '系统与运行环境' } },
   { path: '/monitoring', name: 'monitoring', component: () => import('./views/MonitoringView.vue'), meta: { title: '运行监控与告警', crumb: '运行 / 运行监控与告警' } },
   { path: '/users', name: 'users', component: () => import('./views/UsersView.vue'), meta: { title: '用户与角色', crumb: '运行 / 用户与角色', adminOnly: true } },
+  { path: '/workspaces', name: 'workspaces', component: () => import('./views/WorkspacesView.vue'), meta: { title: '工作区管理', crumb: '运行 / 工作区管理', adminOnly: true } },
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ]
 

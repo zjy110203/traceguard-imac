@@ -6,6 +6,8 @@ RUN-011-R1.1 WP1：实体 Workspace 一律以服务端数据库行为准；写�
 
 from __future__ import annotations
 
+import difflib
+import json
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Request
@@ -397,6 +399,107 @@ async def get_version(testcase_id: str, version: int, request: Request) -> dict[
     return doc
 
 
+class TestCaseVersionReq(BaseModel):
+    """基于既有用例创建新版本：不可变版本只增不改，历史 Run 引用固定。"""
+
+    title: str | None = Field(default=None, min_length=1)
+    intent_ref: str | None = None
+    steps: list[StepReq] | None = None
+    assertions: list[AssertionReq] | None = None
+    cleanup_policy: str | None = None
+    run_config: dict[str, Any] | None = None
+    compile_source: Literal["human", "compiler", "healed"] | None = None
+    preconditions: list[str] | None = None
+    test_data_refs: list[str] | None = None
+
+
+@router.post("/testcases/{testcase_id}/versions", status_code=201)
+async def create_testcase_version(
+    testcase_id: str, req: TestCaseVersionReq, request: Request
+) -> dict[str, Any]:
+    base = _testcase_or_404(testcase_id, request)
+    trusted_actor(
+        request,
+        "",
+        "testcase.create",
+        resource_type="testcase",
+        resource_id=testcase_id,
+    )
+    ws = base["workspace_id"]
+    latest = base.get("latest") or {}
+    payload = {
+        "testcase_id": testcase_id,
+        "version": 1,  # 服务端递增，忽略客户端声明
+        "intent_ref": req.intent_ref if req.intent_ref is not None else base.get("intent_ref"),
+        "steps": [s.model_dump() for s in req.steps]
+        if req.steps is not None
+        else latest.get("steps", []),
+        "assertions": [a.model_dump() for a in req.assertions]
+        if req.assertions is not None
+        else latest.get("assertions", []),
+        "test_data_refs": req.test_data_refs
+        if req.test_data_refs is not None
+        else latest.get("test_data_refs", []),
+        "preconditions": req.preconditions
+        if req.preconditions is not None
+        else latest.get("preconditions", []),
+        "cleanup_policy": req.cleanup_policy or latest.get("cleanup_policy", "NONE"),
+        "run_config": req.run_config
+        if req.run_config is not None
+        else latest.get("run_config", {}),
+        "compile_source": req.compile_source or base.get("compile_source", "human"),
+        "created_at": utc_now_iso(),
+        "workspace_id": ws,
+    }
+    try:
+        return get_services().rt.catalog.create_testcase(
+            payload,
+            title=req.title or base.get("title", testcase_id),
+            workspace_id=ws,
+            review_status="PENDING",
+        )
+    except AppError as exc:
+        raise _handle(exc) from exc
+
+
+def _diffable_lines(doc: dict[str, Any]) -> list[str]:
+    volatile = {"created_at", "updated_at", "review_history", "evaluation_history"}
+    clean = {k: v for k, v in doc.items() if k not in volatile}
+    return json.dumps(clean, ensure_ascii=False, sort_keys=True, indent=2).splitlines()
+
+
+@router.get("/testcases/{testcase_id}/versions/{from_version}/diff/{to_version}")
+async def diff_testcase_versions(
+    testcase_id: str, from_version: int, to_version: int, request: Request
+) -> dict[str, Any]:
+    _testcase_or_404(testcase_id, request)
+    left = get_services().rt.catalog.get_version(testcase_id, from_version)
+    right = get_services().rt.catalog.get_version(testcase_id, to_version)
+    if not left or not right:
+        raise HTTPException(404, detail={"code": "NOT_FOUND", "message": "version not found"})
+    changed = sorted(
+        key
+        for key in set(left) | set(right)
+        if key not in {"created_at", "updated_at"} and left.get(key) != right.get(key)
+    )
+    diff = "\n".join(
+        difflib.unified_diff(
+            _diffable_lines(left),
+            _diffable_lines(right),
+            fromfile=f"{testcase_id}@v{from_version}",
+            tofile=f"{testcase_id}@v{to_version}",
+            lineterm="",
+        )
+    )
+    return {
+        "testcase_id": testcase_id,
+        "from_version": from_version,
+        "to_version": to_version,
+        "changed_fields": changed,
+        "diff": diff,
+    }
+
+
 class ReviewReq(BaseModel):
     decision: str
     reviewer: str
@@ -523,3 +626,87 @@ async def get_oracle(
         request=request,
     )
     return doc
+
+
+@router.get("/oracles/{oracle_id}/versions")
+async def list_oracle_versions(oracle_id: str, request: Request) -> list[dict[str, Any]]:
+    versions = get_services().rt.catalog.list_oracle_versions(oracle_id)
+    if not versions:
+        raise HTTPException(404, detail={"code": "NOT_FOUND", "message": "oracle not found"})
+    require_entity_workspace(
+        principal_of(request),
+        versions[0].get("workspace_id"),
+        resource_type="oracle",
+        resource_id=oracle_id,
+        request=request,
+    )
+    return versions
+
+
+@router.get("/oracles/{oracle_id}/versions/{version}")
+async def get_oracle_version(oracle_id: str, version: int, request: Request) -> dict[str, Any]:
+    doc = get_services().rt.catalog.get_oracle(oracle_id, version)
+    if not doc:
+        raise HTTPException(
+            404, detail={"code": "NOT_FOUND", "message": "oracle version not found"}
+        )
+    require_entity_workspace(
+        principal_of(request),
+        doc.get("workspace_id"),
+        resource_type="oracle_version",
+        resource_id=f"{oracle_id}@{version}",
+        request=request,
+    )
+    return doc
+
+
+@router.get("/oracles/{oracle_id}/references")
+async def get_oracle_references(
+    oracle_id: str, request: Request, version: int | None = None
+) -> list[dict[str, Any]]:
+    current = get_services().rt.catalog.get_oracle(oracle_id, version)
+    if not current:
+        raise HTTPException(404, detail={"code": "NOT_FOUND", "message": "oracle not found"})
+    require_entity_workspace(
+        principal_of(request),
+        current.get("workspace_id"),
+        resource_type="oracle",
+        resource_id=oracle_id,
+        request=request,
+    )
+    return get_services().rt.catalog.oracle_references(oracle_id, version)
+
+
+class OracleApproveReq(BaseModel):
+    approved_by: str
+    note: str = ""
+
+
+@router.post("/oracles/{oracle_id}/versions/{version}/approve")
+async def approve_oracle(
+    oracle_id: str, version: int, req: OracleApproveReq, request: Request
+) -> dict[str, Any]:
+    """人工审批：基于既有版本新建已审批版本；Agent/LLM 主体一律被服务层拒绝。"""
+    current = get_services().rt.catalog.get_oracle(oracle_id, version)
+    if not current:
+        raise HTTPException(
+            404, detail={"code": "NOT_FOUND", "message": "oracle version not found"}
+        )
+    require_entity_workspace(
+        principal_of(request),
+        current.get("workspace_id"),
+        resource_type="oracle",
+        resource_id=oracle_id,
+        request=request,
+    )
+    approver = trusted_actor(
+        request,
+        req.approved_by,
+        "oracle.create",
+        resource_type="oracle",
+        resource_id=f"{oracle_id}@{version}",
+    )
+    try:
+        return get_services().rt.catalog.approve_oracle(oracle_id, version, approver, req.note)
+    except AppError as exc:
+        raise _handle(exc) from exc

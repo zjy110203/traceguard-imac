@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { api, fmtTime } from '../api'
+import { currentActor } from '../auth'
 import { currentWorkspaceId, wsPath } from '../workspace'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import PageHeader from '../components/PageHeader.vue'
@@ -29,7 +30,7 @@ const form = ref({
   assertion_id: '',
   expected_behavior: '',
   requirement_ref: '',
-  approved_by: 'role:qa-lead',
+  approved_by: '',
   rule: '{"type":"presence","test_id":"banner-success"}',
   approve: true,
 })
@@ -74,7 +75,7 @@ async function create() {
       requirement_ref: form.value.requirement_ref,
       evaluation_rule: rule,
       approved: form.value.approve,
-      approved_by: form.value.approved_by,
+      approved_by: form.value.approved_by || currentActor(),
       approval_note: 'Oracle 管理页创建',
     })
     notify('Oracle 已创建' + (form.value.approve ? '（已审批）' : '（未审批，不参与判定）'))
@@ -119,7 +120,9 @@ onMounted(load)
             <thead><tr><th>Oracle</th><th>断言</th><th>预期行为</th><th>审批</th><th>版本</th><th>时间</th></tr></thead>
             <tbody>
               <tr v-for="o in filtered" :key="o.oracle_id + '@' + o.version">
-                <td class="mono small">{{ o.oracle_id }}</td>
+                <td class="mono small">
+                  <router-link :to="`/oracles/${encodeURIComponent(o.oracle_id)}`">{{ o.oracle_id }}</router-link>
+                </td>
                 <td class="mono small">{{ o.assertion_id }}</td>
                 <td class="small">{{ o.expected_behavior }}</td>
                 <td>

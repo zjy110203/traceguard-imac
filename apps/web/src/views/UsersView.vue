@@ -5,7 +5,7 @@
  */
 import { onMounted, ref } from 'vue'
 import { CircleCheck, CircleX, LoaderCircle, Plus, RefreshCw, ShieldCheck, UserRound } from '@lucide/vue'
-import { api, ApiError } from '../api'
+import { api, ApiError, endpoints } from '../api'
 import PageHeader from '../components/PageHeader.vue'
 import { ROLE_LABELS } from '../auth'
 import { notify, notifyError } from '../toast'
@@ -30,6 +30,10 @@ const newPassword = ref('')
 const newRoles = ref<string[]>(['viewer'])
 const newWorkspaces = ref('*')
 const createError = ref('')
+
+const editing = ref<AuthUserRow | null>(null)
+const editRoles = ref<string[]>([])
+const editWorkspaces = ref('')
 
 const ALL_ROLES = ['viewer', 'qa-engineer', 'qa-lead', 'platform-admin'] as const
 const ACTION_LABELS: Record<string, string> = {
@@ -111,6 +115,33 @@ async function toggleActive(user: AuthUserRow): Promise<void> {
   }
 }
 
+function startEdit(user: AuthUserRow): void {
+  editing.value = user
+  editRoles.value = [...user.roles]
+  editWorkspaces.value = (user.workspaces || []).join(', ')
+}
+
+async function saveEdit(): Promise<void> {
+  const user = editing.value
+  if (!user) return
+  if (!editRoles.value.length) { notify('至少选择一个角色', true); return }
+  busy.value = 'edit:' + user.user_id
+  try {
+    const workspaces = editWorkspaces.value.trim()
+      ? editWorkspaces.value.trim().split(/[,\s]+/).filter(Boolean)
+      : ['default']
+    await endpoints.setUserRoles(user.user_id, editRoles.value)
+    await endpoints.setUserWorkspaces(user.user_id, workspaces)
+    notify(`已更新 ${user.username} 的角色与授权范围；其现有会话下一次请求即生效`)
+    editing.value = null
+    await load()
+  } catch (e) {
+    notifyError(e instanceof Error ? e.message : String(e))
+  } finally {
+    busy.value = ''
+  }
+}
+
 const roleLabel = (role: string): string => ROLE_LABELS[role] ?? role
 const actionLabel = (action: string): string => ACTION_LABELS[action] ?? action
 </script>
@@ -161,6 +192,7 @@ const actionLabel = (action: string): string => ACTION_LABELS[action] ?? action
                   </span>
                 </td>
                 <td>
+                  <button class="sm" type="button" style="margin-right: 6px" @click="startEdit(u)">编辑权限</button>
                   <button
                     class="sm" :class="u.active ? 'danger' : 'primary'" type="button"
                     :disabled="busy === 'active:' + u.user_id"
@@ -203,6 +235,31 @@ const actionLabel = (action: string): string => ACTION_LABELS[action] ?? action
         </div>
       </section>
     </template>
+
+    <div v-if="editing" class="modal-backdrop" @click.self="editing = null">
+      <div class="modal user-create-modal" role="dialog" aria-modal="true" :aria-label="`编辑 ${editing.username} 的权限`">
+        <div class="card-head"><h2>编辑 {{ editing.username }} 的权限</h2></div>
+        <div class="card-body">
+          <div class="field">
+            <label>角色</label>
+            <div class="role-checks">
+              <label v-for="r in ALL_ROLES" :key="r" class="role-check">
+                <input v-model="editRoles" type="checkbox" :value="r" /> {{ roleLabel(r) }}
+              </label>
+            </div>
+          </div>
+          <div class="field">
+            <label for="edit-workspaces">Workspace 范围（逗号分隔；* = 全部）</label>
+            <input id="edit-workspaces" v-model="editWorkspaces" type="text" />
+          </div>
+          <p class="small muted">服务端会拒绝降级最后一个有效平台管理员；角色/范围变更在现有会话的下一请求立即生效。</p>
+        </div>
+        <div class="modal-foot">
+          <button class="ghost" type="button" @click="editing = null">取消</button>
+          <button class="primary" type="button" :disabled="busy === 'edit:' + editing.user_id" @click="saveEdit">保存</button>
+        </div>
+      </div>
+    </div>
 
     <div v-if="showCreate" class="modal-backdrop" @click.self="showCreate = false">
       <div class="modal user-create-modal" role="dialog" aria-modal="true" aria-label="新建用户">

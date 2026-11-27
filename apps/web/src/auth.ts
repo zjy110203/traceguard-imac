@@ -65,6 +65,11 @@ export function can(action: string): boolean {
   return roles.some((r) => ROLE_PERMISSIONS[r]?.includes(action))
 }
 
+/** 审核/审批主体默认值始终来自服务端 /auth/me；开发环境未登录时才退化为具名本地主体。 */
+export function currentActor(): string {
+  return state.user?.actor_id || 'human:admin'
+}
+
 export function isViewerOnly(): boolean {
   const roles = state.user?.roles ?? []
   return roles.length > 0 && roles.every((r) => ROLE_PERMISSIONS[r]?.every((a) => a === 'read'))

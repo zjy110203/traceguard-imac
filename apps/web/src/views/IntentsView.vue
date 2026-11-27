@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { api, fmtTime } from '../api'
+import { api, endpoints, fmtTime } from '../api'
 import { currentWorkspaceId, wsPath } from '../workspace'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import PageHeader from '../components/PageHeader.vue'
@@ -24,6 +24,8 @@ watch(
   (v) => { focusId.value = typeof v === 'string' ? v : '' },
 )
 const form = ref({ title: '', description: '', owner: 'qa-team', candidate_assertions: '' })
+const editing = ref<string | null>(null)
+const editForm = ref({ title: '', description: '', owner: '', candidate_assertions: '' })
 /** 候选用例链接来自真实 /testcases 列表，不再用页面内本地状态伪装持久结果。 */
 const compiledByIntent = ref<Record<string, string>>({})
 
@@ -119,8 +121,43 @@ async function create() {
 async function setStatus(id: string, status: string) {
   busy.value = id
   try {
-    await api.post(`/intents/${id}/status`, { status })
+    if (status === 'REVIEW') await endpoints.submitIntent(id)
+    else if (status === 'APPROVED') await endpoints.approveIntent(id)
+    else await api.post(`/intents/${id}/status`, { status })
     notify('状态已更新为 ' + status)
+    await load()
+  } catch (e) {
+    notifyError(e)
+  } finally {
+    busy.value = ''
+  }
+}
+
+function startEdit(i: Intent): void {
+  editing.value = i.intent_id
+  editForm.value = {
+    title: i.title,
+    description: i.description,
+    owner: i.owner,
+    candidate_assertions: (i.candidate_assertions || []).join('\n'),
+  }
+}
+
+async function saveEdit(): Promise<void> {
+  if (!editing.value) return
+  busy.value = 'edit'
+  try {
+    await endpoints.updateIntent(editing.value, {
+      title: editForm.value.title,
+      description: editForm.value.description,
+      owner: editForm.value.owner,
+      candidate_assertions: editForm.value.candidate_assertions
+        .split('\n')
+        .map((s) => s.trim())
+        .filter(Boolean),
+    })
+    notify('需求已保存；版本递增并回到 DRAFT，需重新提交评审')
+    editing.value = null
     await load()
   } catch (e) {
     notifyError(e)
@@ -171,6 +208,7 @@ onMounted(load)
             <div class="flex">
               <span class="small muted">{{ fmtTime(i.created_at) }}</span>
               <div class="right flex">
+                <button class="sm ghost" :disabled="!!busy" @click="startEdit(i)">编辑</button>
                 <button v-if="i.status === 'DRAFT'" class="sm" :disabled="busy === i.intent_id" @click="setStatus(i.intent_id, 'REVIEW')">提交评审</button>
                 <button v-if="i.status === 'REVIEW'" class="sm primary" :disabled="busy === i.intent_id" @click="setStatus(i.intent_id, 'APPROVED')">通过</button>
                 <router-link
@@ -186,6 +224,30 @@ onMounted(load)
         </div>
       </div>
     </AsyncBlock>
+
+    <ModalShell v-if="editing" title="编辑测试需求" @close="editing = null">
+      <div>
+        <label for="edit-intent-title">标题</label>
+        <input id="edit-intent-title" v-model="editForm.title" />
+      </div>
+      <div>
+        <label for="edit-intent-desc">描述</label>
+        <textarea id="edit-intent-desc" v-model="editForm.description" rows="4" />
+      </div>
+      <div>
+        <label for="edit-intent-owner">Owner</label>
+        <input id="edit-intent-owner" v-model="editForm.owner" />
+      </div>
+      <div>
+        <label for="edit-intent-assertions">候选断言（每行一条）</label>
+        <textarea id="edit-intent-assertions" v-model="editForm.candidate_assertions" rows="3" />
+      </div>
+      <p class="small muted">原始需求来源保留；若该需求已关联测试用例，编辑会被服务端拒绝。</p>
+      <template #footer>
+        <button @click="editing = null">取消</button>
+        <button class="primary" :disabled="busy === 'edit'" @click="saveEdit">保存</button>
+      </template>
+    </ModalShell>
 
     <ModalShell v-if="showCreate" title="新建测试需求" @close="showCreate = false">
       <div>

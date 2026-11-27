@@ -75,6 +75,8 @@ export const api = {
     request<T>(path, { method: 'POST', body: body === undefined ? undefined : JSON.stringify(body) }),
   put: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: 'PUT', body: body === undefined ? undefined : JSON.stringify(body) }),
+  patch: <T>(path: string, body?: unknown) =>
+    request<T>(path, { method: 'PATCH', body: body === undefined ? undefined : JSON.stringify(body) }),
   delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
 }
 
@@ -135,6 +137,88 @@ export const endpoints = {
     api.post<AlertRecord>(`/monitoring/alerts/${alertId}/acknowledge`, { note: note ?? null }),
   alertResolve: (alertId: string, reason: string) =>
     api.post<AlertRecord>(`/monitoring/alerts/${alertId}/resolve`, { reason }),
+  // RUN-019 WP1：资产管理
+  workspaces: () => api.get<WorkspaceRecord[]>('/workspaces'),
+  workspace: (id: string) => api.get<WorkspaceRecord>(`/workspaces/${encodeURIComponent(id)}`),
+  createWorkspace: (body: { name: string; description?: string }) =>
+    api.post<WorkspaceRecord>('/workspaces', body),
+  updateWorkspace: (id: string, body: { name?: string; description?: string }) =>
+    api.patch<WorkspaceRecord>(`/workspaces/${encodeURIComponent(id)}`, body),
+  workspaceMembers: (id: string) =>
+    api.get<{ workspace_id: string; members: WorkspaceMember[] }>(
+      `/auth/workspaces/${encodeURIComponent(id)}/members`,
+    ),
+  setUserRoles: (userId: string, roles: string[]) =>
+    api.post<{ user_id: string; roles: string[] }>(
+      `/auth/users/${encodeURIComponent(userId)}/roles`,
+      { roles },
+    ),
+  setUserWorkspaces: (userId: string, workspaces: string[]) =>
+    api.post<{ user_id: string; workspaces: string[] }>(
+      `/auth/users/${encodeURIComponent(userId)}/workspaces`,
+      { workspaces },
+    ),
+  updateIntent: (id: string, body: Record<string, unknown>) =>
+    api.patch<Record<string, unknown>>(`/intents/${encodeURIComponent(id)}`, body),
+  submitIntent: (id: string) =>
+    api.post<Record<string, unknown>>(`/intents/${encodeURIComponent(id)}/submit`),
+  approveIntent: (id: string) =>
+    api.post<Record<string, unknown>>(`/intents/${encodeURIComponent(id)}/approve`),
+  createTestCaseVersion: (id: string, body: Record<string, unknown>) =>
+    api.post<Record<string, unknown>>(`/testcases/${encodeURIComponent(id)}/versions`, body),
+  diffTestCaseVersions: (id: string, from: number, to: number) =>
+    api.get<{ changed_fields: string[]; diff: string }>(
+      `/testcases/${encodeURIComponent(id)}/versions/${from}/diff/${to}`,
+    ),
+  oracleVersions: (id: string) =>
+    api.get<OracleVersionRecord[]>(`/oracles/${encodeURIComponent(id)}/versions`),
+  oracleVersion: (id: string, version: number) =>
+    api.get<Record<string, unknown>>(`/oracles/${encodeURIComponent(id)}/versions/${version}`),
+  oracleReferences: (id: string, version?: number) =>
+    api.get<OracleReference[]>(
+      `/oracles/${encodeURIComponent(id)}/references${qs({ version })}`,
+    ),
+  approveOracle: (id: string, version: number, approvedBy: string, note = '') =>
+    api.post<Record<string, unknown>>(
+      `/oracles/${encodeURIComponent(id)}/versions/${version}/approve`,
+      { approved_by: approvedBy, note },
+    ),
+}
+
+/** RUN-019 WP1 前端记录类型。 */
+export interface WorkspaceRecord {
+  workspace_id: string
+  name: string
+  description: string
+  created_at?: string
+  created_by?: string
+}
+
+export interface WorkspaceMember {
+  user_id: string
+  username: string
+  roles: string[]
+  active: boolean
+  scope_mode: 'all' | 'explicit'
+}
+
+export interface OracleVersionRecord {
+  oracle_id: string
+  version: number
+  workspace_id: string
+  approved: boolean
+  approved_by: string
+  approval_history: Array<Record<string, unknown>>
+  created_at: string
+}
+
+export interface OracleReference {
+  testcase_id: string
+  version: number
+  assertion_id: string
+  oracle_version: number | null
+  review_status: string
+  workspace_id: string
 }
 
 /** RUN-018 WP8 告警记录（前端展示用）。 */

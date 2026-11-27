@@ -1355,26 +1355,36 @@ class CatalogService:
                 .order_by(OracleRow.version.desc())
                 .limit(1)
             )
+            if prev and (prev.workspace_id or DEFAULT_WORKSPACE) != (
+                payload.get("workspace_id", DEFAULT_WORKSPACE)
+            ):
+                raise AppError(
+                    ErrorCode.AUTHORIZATION_ERROR,
+                    f"CROSS_WORKSPACE_ORACLE: {spec.oracle_id} 已属于 workspace "
+                    f"'{prev.workspace_id}'，不能在 '{payload.get('workspace_id')}' 下追加版本",
+                )
             version = (prev.version + 1) if prev else spec.version
             spec.version = version
             if approved:
                 # 主体类型校验（不接受 agent:*/llm:*/system:* 等非人类主体）
                 approved_by = require_human_actor(approved_by, field="approved_by")
             doc = spec.model_dump()
-            doc["approval_history"] = [
+            history = list((prev.doc or {}).get("approval_history") or []) if prev else []
+            history.append(
                 {
                     "approved": approved,
                     "approved_by": approved_by,
                     "note": approval_note,
                     "at": _now(),
                 }
-            ]
+            )
+            doc["approval_history"] = history
             # OracleManager 校验读取 expectation_approval，必须与行级审批状态一致
             doc["expectation_approval"] = {
                 "approved": bool(approved),
                 "approver": approved_by,
                 "note": approval_note,
-                "at": doc["approval_history"][0]["at"],
+                "at": doc["approval_history"][-1]["at"],
             }
             s.add(
                 OracleRow(
@@ -1388,8 +1398,72 @@ class CatalogService:
                     doc=doc,
                 )
             )
+            doc["approved"] = bool(approved)
+            doc["approved_by"] = approved_by
+            doc["workspace_id"] = payload.get("workspace_id", DEFAULT_WORKSPACE)
             s.flush()
             return doc
+
+    def list_oracle_versions(self, oracle_id: str) -> list[dict[str, Any]]:
+        with self.db.session() as s:
+            rows = s.scalars(
+                select(OracleRow)
+                .where(OracleRow.oracle_id == oracle_id)
+                .order_by(OracleRow.version.asc())
+            ).all()
+            return [
+                {
+                    "oracle_id": r.oracle_id,
+                    "version": r.version,
+                    "workspace_id": r.workspace_id,
+                    "approved": bool(r.approved),
+                    "approved_by": r.approved_by,
+                    "approval_history": list((r.doc or {}).get("approval_history") or []),
+                    "created_at": r.created_at,
+                }
+                for r in rows
+            ]
+
+    def oracle_references(self, oracle_id: str, version: int | None = None) -> list[dict[str, Any]]:
+        """反向查询哪些 TestCase 版本断言引用了该 Oracle（含固定版本）。"""
+        refs: list[dict[str, Any]] = []
+        with self.db.session() as s:
+            rows = s.scalars(select(TestCaseVersionRow)).all()
+            for r in rows:
+                for assertion in (r.doc or {}).get("assertions") or []:
+                    if assertion.get("oracle_id") != oracle_id:
+                        continue
+                    pinned = assertion.get("oracle_version")
+                    if version is not None and pinned is not None and int(pinned) != version:
+                        continue
+                    refs.append(
+                        {
+                            "testcase_id": r.testcase_id,
+                            "version": r.version,
+                            "assertion_id": assertion.get("assertion_id"),
+                            "oracle_version": pinned,
+                            "review_status": r.review_status,
+                            "workspace_id": r.workspace_id,
+                        }
+                    )
+        return refs
+
+    def approve_oracle(
+        self, oracle_id: str, version: int, approved_by: str, note: str = ""
+    ) -> dict[str, Any]:
+        """基于既有版本创建新版本并完成审批；历史版本不可覆盖。"""
+        previous = self.get_oracle(oracle_id, version)
+        if not previous:
+            raise AppError(ErrorCode.NOT_FOUND, "oracle version not found")
+        payload = {k: v for k, v in previous.items() if k in OracleSpec.model_fields}
+        payload["oracle_id"] = oracle_id
+        payload["workspace_id"] = previous["workspace_id"]
+        return self.create_oracle(
+            payload,
+            approved_by=require_human_actor(approved_by, field="approved_by"),
+            approval_note=note,
+            approved=True,
+        )
 
     def get_oracle(self, oracle_id: str, version: int | None = None) -> dict[str, Any] | None:
         with self.db.session() as s:

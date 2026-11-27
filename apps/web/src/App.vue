@@ -5,7 +5,7 @@
 import { computed, onMounted, onUnmounted, ref, watch, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
-  ArrowRight, Bot, ChevronRight, CircleCheck, CircleX, Command, Cpu, Database,
+  ArrowRight, Bot, Building2, ChevronRight, CircleCheck, CircleX, Command, Cpu, Database,
   FileCode2, Gauge, GitCompare, KeyRound, LayoutDashboard, ListChecks, LoaderCircle, LogOut, Menu, Moon,
   PanelLeftClose, PanelLeftOpen, PlayCircle, Search, Settings2, ShieldCheck,
   Stethoscope, Sun, UserRound, Users, Wrench, X,
@@ -100,6 +100,7 @@ const groups = computed<NavGroup[]>(() => [
       { label: '运行监控', to: '/monitoring', icon: Gauge },
       // platform-admin 专属菜单（路由守卫与服务端双重校验）
       ...(can('user.manage') ? [{ label: '用户与角色', to: '/users', icon: Users, adminOnly: true } satisfies NavItem] : []),
+      ...(can('system.configure') ? [{ label: '工作区管理', to: '/workspaces', icon: Building2, adminOnly: true } satisfies NavItem] : []),
     ],
   },
 ])
@@ -200,6 +201,12 @@ const staticSearch = [
   { label: '修复中心', sub: '/repairs', to: '/repairs' },
   { label: 'Benchmark 实验对照', sub: '/benchmark', to: '/benchmark' },
   { label: '运行监控与告警', sub: '/monitoring', to: '/monitoring' },
+  { label: '测试需求', sub: '/intents', to: '/intents' },
+  { label: '测试资产', sub: '/testcases', to: '/testcases' },
+  { label: 'Oracle 契约', sub: '/oracles', to: '/oracles' },
+  { label: '系统与运行环境', sub: '/system', to: '/system' },
+  ...(can('user.manage') ? [{ label: '用户与角色', sub: '/users', to: '/users' }] : []),
+  ...(can('system.configure') ? [{ label: '工作区管理', sub: '/workspaces', to: '/workspaces' }] : []),
 ]
 async function runSearch() {
   const q = query.value.trim().toLowerCase()
@@ -211,10 +218,12 @@ async function runSearch() {
     api.get<Record<string, unknown>[]>(wsPath('/testcases')),
     api.get<Record<string, unknown>[]>(wsPath('/intents')),
     api.get<Record<string, unknown>[]>(wsPath('/diagnoses', { limit: 100 })),
+    api.get<Record<string, unknown>[]>(wsPath('/oracles')),
+    api.get<Record<string, unknown>[]>(wsPath('/repairs')),
   ])
-  const labels = ['run_id', 'testcase_id', 'intent_id', 'diagnosis_id']
+  const labels = ['run_id', 'testcase_id', 'intent_id', 'diagnosis_id', 'oracle_id', 'repair_id']
   // 只有存在详情路由的实体才可下钻；Intents 无详情路由，改为列表页带 id 过滤参数。
-  const routes = ['/runs/', '/testcases/', '/intents?id=', '/diagnoses/']
+  const routes = ['/runs/', '/testcases/', '/intents?id=', '/diagnoses/', '/oracles/', '/repairs']
   jobs.forEach((job, idx) => {
     if (job.status !== 'fulfilled') return
     const idKey = labels[idx]

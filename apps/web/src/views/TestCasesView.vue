@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { api, fmtTime } from '../api'
+import { api, fmtTime, type OracleVersionRecord } from '../api'
+import { currentActor } from '../auth'
 import { currentWorkspaceId, wsPath } from '../workspace'
+import StepEditor, {
+  type EditableAssertion,
+  type EditableStep,
+} from '../components/StepEditor.vue'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import PageHeader from '../components/PageHeader.vue'
 import ModalShell from '../components/ModalShell.vue'
@@ -21,6 +26,9 @@ const busy = ref('')
 const showCreate = ref(false)
 /** 被测目标地址来自服务端配置（TG_TEAMFLOW_BASE_URL），不再前端硬编码端口。 */
 const targetBaseUrl = ref('')
+const steps = ref<EditableStep[]>([])
+const assertions = ref<EditableAssertion[]>([])
+const oracles = ref<OracleVersionRecord[]>([])
 
 const form = ref({
   title: '新建项目并校验持久化',
@@ -37,6 +45,9 @@ const form = ref({
 ]`,
 })
 
+steps.value = JSON.parse(form.value.steps) as EditableStep[]
+assertions.value = JSON.parse(form.value.assertions) as EditableAssertion[]
+
 const filtered = computed(() =>
   items.value.filter(
     (i) =>
@@ -48,14 +59,16 @@ const filtered = computed(() =>
 async function load() {
   loading.value = true
   try {
-    const [t, i, cfg] = await Promise.all([
+    const [t, i, cfg, o] = await Promise.all([
       api.get<TestCaseSummary[]>(wsPath('/testcases')),
       api.get<Intent[]>(wsPath('/intents')),
       api.get<{ teamflow_base_url?: string }>('/system/config').catch(() => ({}) as { teamflow_base_url?: string }),
+      api.get<OracleVersionRecord[]>(wsPath('/oracles')).catch(() => [] as OracleVersionRecord[]),
     ])
     items.value = t
     intents.value = i
     targetBaseUrl.value = cfg.teamflow_base_url || ''
+    oracles.value = o
     error.value = ''
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
@@ -82,7 +95,7 @@ async function review(id: string, version: number, decision: string) {
   try {
     await api.post(`/testcases/${id}/versions/${version}/review`, {
       decision,
-      reviewer: 'role:qa-lead',
+      reviewer: currentActor(),
       note: '控制台审核',
     })
     notify(decision === 'APPROVED' ? '已审核通过' : '已拒绝')
@@ -97,13 +110,8 @@ async function review(id: string, version: number, decision: string) {
 async function create() {
   busy.value = 'create'
   try {
-    let steps: unknown
-    let assertions: unknown
-    try {
-      steps = JSON.parse(form.value.steps)
-      assertions = JSON.parse(form.value.assertions)
-    } catch {
-      notify('步骤/断言 JSON 解析失败', true)
+    if (!steps.value.length || !assertions.value.length) {
+      notify('至少需要一个步骤和一条断言', true)
       return
     }
     // base_url 省略时由服务端按 TG_TEAMFLOW_BASE_URL 解析；前端只在明确知道配置时写入。
@@ -113,8 +121,8 @@ async function create() {
       workspace_id: currentWorkspaceId.value,
       title: form.value.title,
       intent_ref: form.value.intent_ref || null,
-      steps,
-      assertions,
+      steps: steps.value,
+      assertions: assertions.value,
       run_config: runConfig,
       cleanup_policy: 'RESET_DATA',
     })
@@ -199,12 +207,11 @@ onMounted(load)
         </select>
       </div>
       <div>
-        <label for="tc-steps">步骤（JSON 数组，支持 navigate/click/fill/select/press/assert/wait/api）</label>
-        <textarea id="tc-steps" v-model="form.steps" rows="10" class="mono" style="font-size: 12px" />
-      </div>
-      <div>
-        <label for="tc-assertions">断言（JSON 数组，oracle_id 必须是已审批 Oracle）</label>
-        <textarea id="tc-assertions" v-model="form.assertions" rows="5" class="mono" style="font-size: 12px" />
+        <label>步骤与断言（支持 navigate/click/fill/select/press/assert/wait/api；可切换 JSON 高级编辑）</label>
+        <StepEditor
+          :steps="steps" :assertions="assertions" :oracles="oracles"
+          @update:steps="steps = $event" @update:assertions="assertions = $event"
+        />
       </div>
       <template #footer>
         <button @click="showCreate = false">取消</button>
