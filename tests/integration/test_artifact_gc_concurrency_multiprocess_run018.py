@@ -268,8 +268,15 @@ def _setup_pg(tmp_path: Path) -> GCEnv:
 
     existing = set(_inspect(db.engine).get_table_names())
     with db.session() as s:
-        for table in ("tg_artifact", "tg_evidence", "tg_run", "tg_doc", "tg_event",
-                      "tg_worker_heartbeat", "tg_alert"):
+        for table in (
+            "tg_artifact",
+            "tg_evidence",
+            "tg_run",
+            "tg_doc",
+            "tg_event",
+            "tg_worker_heartbeat",
+            "tg_alert",
+        ):
             if table in existing:
                 s.execute(_text(f"DELETE FROM {table}"))
     db.dispose()
