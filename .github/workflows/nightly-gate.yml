@@ -114,7 +114,11 @@ jobs:
       - name: Install
         run: |
           python -m venv .venv
-          .venv/bin/pip install -r requirements-dev.txt
+          # RUN-018 R2：与 backend-full 同口径——优先锁文件安装，失败才回退范围声明。
+          # 此前本 job 始终按范围装最新依赖，可能与本地/锁文件验证过的版本漂移
+          # （B-28：CI 失败、本地同脚本通过），属可复现性缺口。
+          .venv/bin/pip install -r requirements.lock.txt || \
+            .venv/bin/pip install -r requirements-dev.txt
       - name: Install Playwright chromium (must succeed)
         run: |
           .venv/bin/python -m playwright install --with-deps chromium

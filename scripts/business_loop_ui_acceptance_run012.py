@@ -168,6 +168,18 @@ class Reporter:
         self.results: list[dict[str, Any]] = []
         self.screens: list[str] = []
 
+    @staticmethod
+    def _ci_error(name: str, detail: str) -> None:
+        """RUN-018 R2：把 FAIL 检查写进 GitHub Actions annotation。
+
+        CI runner 上 ui-acceptance 曾多次退出 3，但 annotation 只有
+        "Process completed with exit code 3"，无凭据环境无法读到 job 日志
+        （B-28）。让每条 FAIL 自身成为 annotation，可直接在 Actions 页面
+        定位失败检查与上下文；本地运行时这行只是普通 stdout。
+        """
+        msg = f"{name}: {detail}".replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+        print(f"::error title=UI 验收失败::{msg}")
+
     def check(
         self, name: str, ok: bool, detail: str = "", *, server_verified: bool = False
     ) -> None:
@@ -180,6 +192,8 @@ class Reporter:
             }
         )
         print(f"[{'PASS' if ok else 'FAIL'}] {name}" + (f" — {detail}" if detail else ""))
+        if not ok:
+            self._ci_error(name, detail)
 
     def note(self, name: str, detail: str) -> None:
         self.results.append({"check": name, "status": "NOTE", "detail": detail})
