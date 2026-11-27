@@ -77,15 +77,34 @@ def _wait_replay(api: Http, replay_id: str, timeout_s: float = 120.0) -> dict[st
     return last
 
 
+#: RUN-019-R2：compiler / healed 候选不再允许经公共 HTTP 声明来源。
+#: 脚本直接走服务端持久层的可信候选入口（与 Explorer / Repair 同一条代码路径）。
+_TRUSTED_DB_URL = ""
+
+
+def _create_trusted_candidate(payload: dict[str, Any], *, source: str, source_ref: str) -> dict[str, Any]:
+    if not _TRUSTED_DB_URL:
+        raise RuntimeError("_TRUSTED_DB_URL 未初始化：无法经可信入口创建候选")
+    from traceguard_persistence import Database
+    from traceguard_persistence.catalog import CatalogService
+
+    catalog = CatalogService(Database(_TRUSTED_DB_URL))
+    return catalog.create_trusted_candidate(
+        payload,
+        source=source,
+        source_ref=source_ref,
+        title=str(payload.get("title") or ""),
+        workspace_id="default",
+    )
+
+
 def _create_candidate(
     lead: Http, title: str, *, compile_source: str, oracle_id: str
 ) -> tuple[str, int]:
-    tc = lead.post(
-        "/api/v1/testcases",
+    tc = _create_trusted_candidate(
         {
             "title": title,
             "workspace_id": "default",
-            "compile_source": compile_source,
             "steps": STEPS,
             "assertions": [
                 {
@@ -100,7 +119,8 @@ def _create_candidate(
             ],
             "cleanup_policy": "RESET_DATA",
         },
-        expect_status=(200, 201),
+        source=compile_source,
+        source_ref=f"run013_fixture:{compile_source}",
     )
     tc_id = str(tc.get("testcase_id") or "")
     version = int(tc.get("version") or 1)
@@ -153,6 +173,8 @@ def main() -> int:
         lease_ttl_s=30.0,
     )
     env["TG_ARTIFACT_DIR"] = str(work / "artifacts")
+    global _TRUSTED_DB_URL
+    _TRUSTED_DB_URL = f"sqlite:///{work / 'replay.db'}"
     tf_proc = subprocess.Popen(
         [
             sys.executable,

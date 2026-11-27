@@ -15,6 +15,8 @@ RUN-006 WP1-01 增强：
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from typing import Any
 
@@ -36,6 +38,42 @@ from .models import (
 )
 
 DEFAULT_WORKSPACE = "default"
+
+#: RUN-019-R2：版本"作者内容"字段。审核/绑定可以追加流程元数据，但不得改动这些字段。
+AUTHORING_FIELDS = (
+    "intent_ref",
+    "intent_text",
+    "steps",
+    "preconditions",
+    "postconditions",
+    "test_data_refs",
+    "cleanup_policy",
+    "run_config",
+    "compile_source",
+    "source_origin",
+    "source_ref",
+)
+#: Oracle 绑定属于独立关联（审批前可变、审批后冻结），不计入作者内容摘要。
+VOLATILE_ASSERTION_FIELDS = {"oracle_id", "oracle_version"}
+
+
+def authoring_digest(doc: dict[str, Any]) -> str:
+    """计算版本作者内容摘要（排除 Oracle 绑定与审核元数据）。
+
+    用于把 `immutable=True` 从"流程约定"变成可验证不变量：
+    - 创建时写入 `authoring_hash`；
+    - 审核 / 绑定写库前重新计算，不一致即拒绝（说明历史业务内容被改写）。
+    """
+    assertions = []
+    for a in doc.get("assertions") or []:
+        if isinstance(a, dict):
+            assertions.append({k: v for k, v in a.items() if k not in VOLATILE_ASSERTION_FIELDS})
+        else:  # pragma: no cover - 历史脏数据按原样参与摘要
+            assertions.append(a)
+    payload = {key: doc.get(key) for key in AUTHORING_FIELDS}
+    payload["assertions"] = assertions
+    canonical = json.dumps(payload, sort_keys=True, ensure_ascii=False, default=str)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 #: 非人类主体标识：审核 / 审批 / 晋升一律拒绝（agent 可以"提案"，但不能"批准"）
 NON_HUMAN_TOKENS = {
@@ -312,6 +350,53 @@ class CatalogService:
             return _intent_dict(r)
 
     # ---------------- TestCase ----------------
+    #: RUN-019-R2：可信候选来源 → 允许的血缘前缀（写库时一并记录）。
+    TRUSTED_CANDIDATE_ORIGINS = {
+        "compiler": "compiler_flow",
+        "healed": "repair_sandbox",
+    }
+
+    def create_trusted_candidate(
+        self,
+        payload: dict[str, Any],
+        *,
+        source: str,
+        source_ref: str,
+        title: str = "",
+        workspace_id: str = DEFAULT_WORKSPACE,
+        review_status: str = "PENDING",
+    ) -> dict[str, Any]:
+        """服务端可信候选入口：Explorer Compiler / Repair 服务专用。
+
+        公共 HTTP 只能创建 `compile_source="human"`；`compiler` / `healed` 候选必须
+        经本方法写入，并携带来源血缘（exploration_id / proposal_id）。不接受 `human`，
+        避免把"人工编写豁免"做成可被程序调用的后门。
+        """
+        clean_source = str(source or "").strip().lower()
+        origin = self.TRUSTED_CANDIDATE_ORIGINS.get(clean_source)
+        if not origin:
+            raise AppError(
+                ErrorCode.VALIDATION_ERROR,
+                f"TRUSTED_CANDIDATE_SOURCE_INVALID: '{source}'（只接受 compiler / healed）",
+            )
+        if not str(source_ref or "").strip():
+            raise AppError(
+                ErrorCode.VALIDATION_ERROR,
+                "TRUSTED_CANDIDATE_SOURCE_REF_REQUIRED: 可信候选必须携带来源血缘",
+            )
+        trusted = {
+            **payload,
+            "compile_source": clean_source,
+            "source_origin": origin,
+            "source_ref": str(source_ref),
+        }
+        # 版本号由 create_testcase 按行内 latest_version 递增，这里的 1 只是占位。
+        trusted.setdefault("version", 1)
+        trusted.setdefault("created_at", _now())
+        return self.create_testcase(
+            trusted, title=title, workspace_id=workspace_id, review_status=review_status
+        )
+
     def create_testcase(
         self,
         payload: dict[str, Any],
@@ -366,6 +451,8 @@ class CatalogService:
                 tc.version = next_version
             version_doc = tc.model_dump()
             version_doc["review_status"] = review_status
+            # RUN-019-R2：作者内容摘要随版本落库，后续审核/绑定写库前必须复核。
+            version_doc["authoring_hash"] = authoring_digest(version_doc)
             s.add(
                 TestCaseVersionRow(
                     id=f"{tc.testcase_id}@{tc.version}",
@@ -521,6 +608,13 @@ class CatalogService:
                 raise AppError(ErrorCode.NOT_FOUND, "testcase version not found")
             base_revision = int(v.review_revision or 0)
             doc = dict(v.doc or {})
+            stored_hash = str(doc.get("authoring_hash") or "")
+            if stored_hash and authoring_digest(doc) != stored_hash:
+                raise AppError(
+                    ErrorCode.CONFLICT,
+                    "TESTCASE_VERSION_CONTENT_MUTATED: 历史版本的步骤/断言/配置已被改写，"
+                    "拒绝在其上继续流转（必须新建版本）",
+                )
             wsid = v.workspace_id or DEFAULT_WORKSPACE
             warnings: list[str] = list(doc.get("oracle_binding_warnings") or [])
             stability_evidence: dict[str, Any] | None = None
@@ -555,9 +649,17 @@ class CatalogService:
                     "review_revision": base_revision + 1,
                     "stability_policy": stability_policy,
                     "stability_evidence": stability_evidence,
+                    # RUN-019-R2：来源血缘随审核留痕，人工豁免不再是"看不见的旁路"。
+                    "source_provenance": {
+                        "compile_source": str(doc.get("compile_source") or "human"),
+                        "source_origin": str(doc.get("source_origin") or "legacy"),
+                        "source_ref": str(doc.get("source_ref") or ""),
+                    },
                 }
             ]
             doc["review_revision"] = base_revision + 1
+            # 历史版本（R2 之前）没有摘要：首次流转时建立基线，不回溯改写内容。
+            doc["authoring_hash"] = stored_hash or authoring_digest(doc)
 
             # 行级 CAS：并发审核只有一个能推进修订号，另一个得到 CONFLICT
             result = s.execute(
@@ -615,6 +717,13 @@ class CatalogService:
                     "APPROVED_VERSION_CONTENT_IMMUTABLE: 请创建新版本后再绑定 Oracle",
                 )
             doc = dict(v.doc or {})
+            stored_hash = str(doc.get("authoring_hash") or "")
+            if stored_hash and authoring_digest(doc) != stored_hash:
+                raise AppError(
+                    ErrorCode.CONFLICT,
+                    "TESTCASE_VERSION_CONTENT_MUTATED: 历史版本的步骤/断言/配置已被改写，"
+                    "拒绝继续绑定 Oracle（必须新建版本）",
+                )
             wsid = v.workspace_id or DEFAULT_WORKSPACE
             assertions = {a.get("assertion_id"): a for a in doc.get("assertions") or []}
             bound: dict[str, Any] = dict(doc.get("oracle_bindings") or {})
@@ -651,6 +760,7 @@ class CatalogService:
             doc["binding_history"] = list(doc.get("binding_history") or []) + [
                 {"actor": actor, "bindings": bound, "warnings": warnings, "at": _now()}
             ]
+            doc["authoring_hash"] = stored_hash or authoring_digest(doc)
             v.doc = doc
             s.flush()
             return {
@@ -991,6 +1101,10 @@ class CatalogService:
             expected_latest = int(row.latest_version or 0)
             new_version = max(expected_latest, current) + 1
             doc = self._promoted_doc(candidate, new_version=new_version)
+            # RUN-019-R2：晋升是服务端可信路径，来源血缘固定为 repair_promotion + 提案 ID。
+            doc["source_origin"] = "repair_promotion"
+            doc["source_ref"] = proposal_id or str(doc.get("source_ref") or "")
+            doc["authoring_hash"] = authoring_digest(doc)
             updated = s.execute(
                 update(TestCaseRow)
                 .where(
@@ -1079,6 +1193,10 @@ class CatalogService:
             expected_latest = int(row.latest_version or 0)
             new_version = max(expected_latest, current) + 1
             doc = self._promoted_doc(restored, new_version=new_version)
+            # RUN-019-R2：回滚同样由服务端可信路径产生，血缘指向触发回滚的提案。
+            doc["source_origin"] = "repair_rollback"
+            doc["source_ref"] = proposal_id or str(doc.get("source_ref") or "")
+            doc["authoring_hash"] = authoring_digest(doc)
             updated = s.execute(
                 update(TestCaseRow)
                 .where(

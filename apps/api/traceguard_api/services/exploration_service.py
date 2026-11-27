@@ -268,8 +268,11 @@ class ExplorationService:
             "fail_fast": False,
             "trace": True,
         }
-        created = self.rt.catalog.create_testcase(
+        # RUN-019-R2：走服务端可信候选入口，来源（compiler_flow）+ 探索 ID 由服务端写入。
+        created = self.rt.catalog.create_trusted_candidate(
             candidate,
+            source="compiler",
+            source_ref=exploration_id,
             title=f"探索生成：{intent.get('title', doc['intent_id'])}",
             workspace_id=doc["workspace_id"],
             review_status="PENDING",

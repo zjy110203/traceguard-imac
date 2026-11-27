@@ -52,6 +52,56 @@ def _require_write_workspace(request: Request, workspace_id: str) -> str:
     )
 
 
+# ------------------------------------------------------------ source provenance
+#: RUN-019-R2：公共 HTTP 只能产生"人工来源"。Compiler / Healed 候选由
+#: Explorer Compiler 与 Repair 服务在服务端进程内生成（source_origin/source_ref 落库），
+#: 客户端无法通过 JSON 声明，也不能把已生成的候选改标为 human 以规避稳定性回放。
+MANUAL_SOURCE = "human"
+MANUAL_ORIGIN = "manual_http"
+
+
+def _reject_client_declared_source(request: Request, declared: str | None, want: str) -> str:
+    """校验客户端声明的 compile_source；返回服务端认定的来源。
+
+    允许客户端重复声明服务端已认定的值（旧脚本兼容），任何"提升来源可信度"的
+    声明（compiler / healed / 与既有来源不一致）一律 403 并写审计。
+    """
+    if declared is None or str(declared) == want:
+        return want
+    principal = principal_of(request)
+    actor_id = getattr(principal, "actor_id", "") or "anonymous"
+    try:
+        from traceguard_persistence import auth as auth_store
+
+        auth_store.record_audit(
+            get_services().rt.db,
+            actor_id=actor_id,
+            role=getattr(principal, "primary_role", ""),
+            action="testcase.source.declared",
+            resource_type="testcase",
+            result="DENIED",
+            after={"declared": str(declared)[:40], "server_assigned": want},
+        )
+    except Exception:  # noqa: BLE001 - 审计写入失败不改变拒绝结论
+        pass
+    raise HTTPException(
+        403,
+        detail={
+            "code": "COMPILE_SOURCE_NOT_CLIENT_CONTROLLED",
+            "message": (
+                f"compile_source 由服务端可信流程决定（本次为 '{want}'），"
+                f"客户端不得声明 '{declared}'。Compiler/Healed 候选只能由 "
+                "Explorer Compiler 与 Repair 服务生成。"
+            ),
+        },
+    )
+
+
+def _manual_source_ref(request: Request) -> str:
+    principal = principal_of(request)
+    return getattr(principal, "actor_id", "") or "anonymous"
+
+
 # ---------------------------------------------------------------- workspaces
 class WorkspaceReq(BaseModel):
     name: str = Field(min_length=1)
@@ -322,6 +372,8 @@ async def list_testcases(
 @router.post("/testcases", status_code=201)
 async def create_testcase(req: TestCaseReq, request: Request) -> dict[str, Any]:
     ws = _require_write_workspace(request, req.workspace_id)
+    # 公共 HTTP = 人工编写路径：来源由服务端固定为 human，客户端声明 compiler/healed 一律拒绝。
+    compile_source = _reject_client_declared_source(request, req.compile_source, MANUAL_SOURCE)
     # 跨 Workspace 引用一律拒绝：intent_ref 必须与用例同属一个 Workspace
     if req.intent_ref:
         intent = get_services().rt.catalog.get_intent(req.intent_ref)
@@ -345,7 +397,9 @@ async def create_testcase(req: TestCaseReq, request: Request) -> dict[str, Any]:
         "preconditions": req.preconditions,
         "cleanup_policy": req.cleanup_policy,
         "run_config": req.run_config,
-        "compile_source": req.compile_source,
+        "compile_source": compile_source,
+        "source_origin": MANUAL_ORIGIN,
+        "source_ref": _manual_source_ref(request),
         "created_at": utc_now_iso(),
         "workspace_id": ws,
     }
@@ -427,6 +481,10 @@ async def create_testcase_version(
     )
     ws = base["workspace_id"]
     latest = base.get("latest") or {}
+    # 版本递增必须保留可信来源血缘：来源取自已落库的用例行，客户端不得改标。
+    inherited_source = str(base.get("compile_source") or MANUAL_SOURCE)
+    compile_source = _reject_client_declared_source(request, req.compile_source, inherited_source)
+    parent_version = int(base.get("latest_version") or 0)
     payload = {
         "testcase_id": testcase_id,
         "version": 1,  # 服务端递增，忽略客户端声明
@@ -447,7 +505,9 @@ async def create_testcase_version(
         "run_config": req.run_config
         if req.run_config is not None
         else latest.get("run_config", {}),
-        "compile_source": req.compile_source or base.get("compile_source", "human"),
+        "compile_source": compile_source,
+        "source_origin": str(latest.get("source_origin") or "legacy"),
+        "source_ref": f"{testcase_id}@{parent_version}",
         "created_at": utc_now_iso(),
         "workspace_id": ws,
     }

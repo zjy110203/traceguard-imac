@@ -534,8 +534,11 @@ class RepairService:
         rc["sandbox_only"] = True
         candidate["run_config"] = rc
         candidate["compile_source"] = "healed"
-        created = self.rt.catalog.create_testcase(
+        # RUN-019-R2：healed 来源只能由 Repair 服务经可信候选入口写入，血缘绑定提案 ID。
+        created = self.rt.catalog.create_trusted_candidate(
             candidate,
+            source="healed",
+            source_ref=proposal_id,
             title=f"sandbox-{doc['testcase_id']}",
             workspace_id=doc["workspace_id"],
             review_status="PENDING",

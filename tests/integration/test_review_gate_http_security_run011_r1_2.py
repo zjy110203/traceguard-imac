@@ -82,28 +82,39 @@ def _testcase(
 ) -> str:
     oracle_id = _oracle(client, headers)
     tc_id = f"tcase_gate_{uuid.uuid4().hex[:10]}"
-    r = client.post(
-        "/api/v1/testcases",
-        json={
-            "testcase_id": tc_id,
-            "title": "R1.2 门禁用例",
-            "compile_source": compile_source,
-            "steps": [{"step_id": "s1", "action": "navigate", "value": "http://127.0.0.1:8011/"}],
-            "assertions": [
-                {
-                    "assertion_id": "a1",
-                    "description": "成功提示",
-                    "kind": "ui",
-                    "required": True,
-                    "expected": {"test_id": "banner-success"},
-                    "oracle_id": oracle_id,
-                    "oracle_version": 1,
-                }
-            ],
-        },
-        headers=headers,
+    body = {
+        "testcase_id": tc_id,
+        "title": "R1.2 门禁用例",
+        "steps": [{"step_id": "s1", "action": "navigate", "value": "http://127.0.0.1:8011/"}],
+        "assertions": [
+            {
+                "assertion_id": "a1",
+                "description": "成功提示",
+                "kind": "ui",
+                "required": True,
+                "expected": {"test_id": "banner-success"},
+                "oracle_id": oracle_id,
+                "oracle_version": 1,
+            }
+        ],
+    }
+    if compile_source == "human":
+        # 人工编写路径：公共 HTTP 合法（服务端固定记录 human + manual_http 血缘）。
+        r = client.post("/api/v1/testcases", json={**body, "compile_source": "human"}, headers=headers)
+        assert r.status_code == 201, r.text
+        return tc_id
+    # RUN-019-R2：compiler / healed 候选不能经公共 HTTP 声明来源，
+    # 必须走服务端可信候选入口（本用例验证的是 HTTP 审核门禁，不是 HTTP 创建）。
+    from traceguard_api.services import get_services
+
+    get_services().rt.catalog.create_trusted_candidate(
+        {**body, "workspace_id": "default", "version": 1},
+        source=compile_source,
+        source_ref="test_fixture",
+        title=body["title"],
+        workspace_id="default",
+        review_status="PENDING",
     )
-    assert r.status_code == 201, r.text
     return tc_id
 
 

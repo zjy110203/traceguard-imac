@@ -396,6 +396,8 @@ def seed_teamflow_catalog(rt: Any, base_url: str = BASE) -> dict[str, Any]:
             "cleanup_policy": "RESET_DATA",
             "run_config": {"base_url": base_url, "fail_fast": False, "trace": True},
             "compile_source": "human",
+            "source_origin": "seed",
+            "source_ref": tc.get("testcase_id", ""),
             "created_at": utc_now_iso(),
         }
         doc = rt.catalog.create_testcase(payload, title=tc["title"], review_status="PENDING")
@@ -945,6 +947,8 @@ def _seed_bench_v2(rt: Any, base_url: str) -> int:
             "cleanup_policy": "RESET_DATA",
             "run_config": {"base_url": base_url, "fail_fast": False, "trace": True},
             "compile_source": "human",
+            "source_origin": "seed",
+            "source_ref": tc.get("testcase_id", ""),
             "created_at": utc_now_iso(),
         }
         doc = rt.catalog.create_testcase(payload, title=tc["title"], review_status="PENDING")

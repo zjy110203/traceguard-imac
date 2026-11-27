@@ -82,6 +82,14 @@ class TestCaseVersion(ContractBase):
     cleanup_policy: Literal["NONE", "RESET_DATA", "CUSTOM"] = "NONE"
     run_config: dict[str, Any] = Field(default_factory=dict)
     compile_source: Literal["human", "compiler", "healed"] = "human"
+    #: RUN-019-R2：来源血缘。**只能由服务端可信流程写入**，公共 HTTP 请求不得声明：
+    #: - manual_ui：控制台人工创建（Principal 已认证）；
+    #: - compiler_flow：Explorer/Compiler 在服务端进程内生成（source_ref=exploration_id）；
+    #: - repair_sandbox / repair_promotion：Repair 服务生成（source_ref=proposal_id）；
+    #: - seed / migration：内置演示资产 / 历史迁移；
+    #: - legacy：R2 之前写入的历史版本，未记录来源。
+    source_origin: str = "legacy"
+    source_ref: str = ""
     review_status: Literal["DRAFT", "PENDING", "APPROVED", "REJECTED"] = "DRAFT"
     immutable: bool = True  # 版本不可原地覆盖
     created_at: str
