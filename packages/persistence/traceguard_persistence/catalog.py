@@ -18,7 +18,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from traceguard_contracts.models import OracleSpec, TestCaseVersion, TestIntent
 from traceguard_core.errors import AppError, ErrorCode
 from traceguard_core.ids import new_id, utc_now_iso
@@ -227,18 +227,87 @@ class CatalogService:
             return _intent_dict(r) if r else None
 
     def update_intent_status(self, intent_id: str, status: str) -> dict[str, Any]:
-        allowed = {"DRAFT", "REVIEW", "APPROVED", "DEPRECATED"}
-        if status not in allowed:
+        """需求状态机：拒绝非法跳转（RUN-019 WP1）。
+
+        允许：DRAFT→REVIEW/DEPRECATED；REVIEW→APPROVED/DRAFT/DEPRECATED；
+        APPROVED→DEPRECATED；DEPRECATED 为终态。
+        """
+        transitions = {
+            "DRAFT": {"REVIEW", "DEPRECATED"},
+            "REVIEW": {"APPROVED", "DRAFT", "DEPRECATED"},
+            "APPROVED": {"DEPRECATED"},
+            "DEPRECATED": set(),
+        }
+        if status not in transitions:
             raise AppError(ErrorCode.VALIDATION_ERROR, f"invalid status {status}")
         with self.db.session() as s:
             r = s.get(IntentRow, intent_id)
             if not r:
                 raise AppError(ErrorCode.NOT_FOUND, "intent not found")
+            if status not in transitions.get(r.status, set()):
+                raise AppError(
+                    ErrorCode.PRECONDITION_FAILED,
+                    f"INVALID_INTENT_TRANSITION: {r.status} -> {status}",
+                )
             r.status = status
             r.updated_at = _now()
             doc = dict(r.doc or {})
             doc["status"] = status
             r.doc = doc
+            s.flush()
+            return _intent_dict(r)
+
+    @staticmethod
+    def _linked_testcase_count(s: Any, intent_id: str) -> int:
+        return int(
+            s.scalar(
+                select(func.count())
+                .select_from(TestCaseRow)
+                .where(TestCaseRow.intent_ref == intent_id)
+            )
+            or 0
+        )
+
+    def linked_testcase_count(self, intent_id: str) -> int:
+        with self.db.session() as s:
+            return self._linked_testcase_count(s, intent_id)
+
+    def update_intent(self, intent_id: str, changes: dict[str, Any]) -> dict[str, Any]:
+        """编辑需求内容：保留原始来源、版本递增，并保护已编译用例的引用关系。"""
+        editable = {
+            "title",
+            "description",
+            "owner",
+            "requirement_refs",
+            "preconditions",
+            "candidate_assertions",
+            "business_context",
+        }
+        clean = {k: v for k, v in changes.items() if k in editable}
+        if not clean:
+            raise AppError(ErrorCode.VALIDATION_ERROR, "no editable fields provided")
+        with self.db.session() as s:
+            r = s.get(IntentRow, intent_id)
+            if not r:
+                raise AppError(ErrorCode.NOT_FOUND, "intent not found")
+            if r.status in {"APPROVED", "DEPRECATED"} and self._linked_testcase_count(s, intent_id):
+                raise AppError(
+                    ErrorCode.PRECONDITION_FAILED,
+                    "INTENT_HAS_LINKED_TESTCASES: 已有关联用例，请先废弃用例或新建需求版本",
+                )
+            doc = dict(r.doc or {})
+            doc.setdefault("original_requirement_refs", list(doc.get("requirement_refs") or []))
+            doc.setdefault("original_description", str(doc.get("description") or ""))
+            doc.update(clean)
+            next_version = int(r.version or 1) + 1
+            doc["version"] = next_version
+            doc["status"] = "DRAFT"  # 编辑后必须重新走评审
+            doc["updated_at"] = _now()
+            r.version = next_version
+            r.status = "DRAFT"
+            r.title = str(doc.get("title") or r.title)
+            r.doc = doc
+            r.updated_at = _now()
             s.flush()
             return _intent_dict(r)
 

@@ -188,7 +188,11 @@ def scenario_a(api: Api, teamflow: str, ex: Executor) -> dict[str, Any]:
     )
     intent_id = intent["intent_id"]
     step(
-        "A2 Intent 状态推进",
+        "A2 Intent 提交评审并审核（RUN-019 状态机）",
+        lambda: api.call("POST", f"/intents/{intent_id}/status", {"status": "REVIEW"}),
+    )
+    step(
+        "A2b Intent 审核通过",
         lambda: api.call("POST", f"/intents/{intent_id}/status", {"status": "APPROVED"}),
     )
 

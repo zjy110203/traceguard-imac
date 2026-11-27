@@ -77,6 +77,12 @@ def test_health_and_catalog_flow(client) -> None:  # type: ignore[no-untyped-def
     assert any(x["intent_id"] == it["intent_id"] for x in client.get("/api/v1/intents").json())
     assert (
         client.post(
+            f"/api/v1/intents/{it['intent_id']}/status", json={"status": "REVIEW"}
+        ).status_code
+        == 200
+    )
+    assert (
+        client.post(
             f"/api/v1/intents/{it['intent_id']}/status", json={"status": "APPROVED"}
         ).status_code
         == 200

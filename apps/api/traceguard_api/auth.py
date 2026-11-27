@@ -57,6 +57,11 @@ def action_for_request(method: str, path: str) -> str | None:
         return "read"
     if path.endswith("/review") and "/testcases/" in path:
         return "testcase.review"
+    # RUN-019 WP1：需求提交评审与审批是两种不同权限，不能由创建权限自然获得审批权。
+    if "/intents/" in path and path.endswith("/approve"):
+        return "testcase.review"
+    if "/intents/" in path and path.endswith("/submit"):
+        return "testcase.create"
     if path.endswith("/oracle-bindings"):
         return "oracle.bind"
     if "/oracles" in path:

@@ -203,17 +203,73 @@ async def get_intent(intent_id: str, request: Request) -> dict[str, Any]:
     return _intent_or_404(intent_id, request)
 
 
+class IntentUpdateReq(BaseModel):
+    title: str | None = Field(default=None, min_length=1)
+    description: str | None = Field(default=None, min_length=1)
+    owner: str | None = None
+    requirement_refs: list[str] | None = None
+    preconditions: list[str] | None = None
+    candidate_assertions: list[str] | None = None
+    business_context: dict[str, Any] | None = None
+
+
 class StatusReq(BaseModel):
     status: str
 
 
-@router.post("/intents/{intent_id}/status")
-async def set_intent_status(intent_id: str, req: StatusReq, request: Request) -> dict[str, Any]:
+@router.patch("/intents/{intent_id}")
+async def update_intent(intent_id: str, req: IntentUpdateReq, request: Request) -> dict[str, Any]:
     _intent_or_404(intent_id, request)
+    trusted_actor(
+        request,
+        "",
+        "testcase.create",
+        resource_type="intent",
+        resource_id=intent_id,
+    )
     try:
-        return get_services().rt.catalog.update_intent_status(intent_id, req.status)
+        doc = get_services().rt.catalog.update_intent(
+            intent_id, {k: v for k, v in req.model_dump().items() if v is not None}
+        )
     except AppError as exc:
         raise _handle(exc) from exc
+    return doc
+
+
+def _advance_intent(
+    intent_id: str,
+    status: str,
+    action: str,
+    request: Request,
+    resource_id: str,
+) -> dict[str, Any]:
+    trusted_actor(request, "", action, resource_type="intent", resource_id=resource_id or intent_id)
+    try:
+        return get_services().rt.catalog.update_intent_status(intent_id, status)
+    except AppError as exc:
+        raise _handle(exc) from exc
+
+
+@router.post("/intents/{intent_id}/submit")
+async def submit_intent(intent_id: str, request: Request) -> dict[str, Any]:
+    """提交评审：testcase.create 权限即可，但不能直接审批。"""
+    _intent_or_404(intent_id, request)
+    return _advance_intent(intent_id, "REVIEW", "testcase.create", request, intent_id)
+
+
+@router.post("/intents/{intent_id}/approve")
+async def approve_intent(intent_id: str, request: Request) -> dict[str, Any]:
+    """审核通过：必须持有 testcase.review，服务端可信主体写审计。"""
+    _intent_or_404(intent_id, request)
+    return _advance_intent(intent_id, "APPROVED", "testcase.review", request, intent_id)
+
+
+@router.post("/intents/{intent_id}/status")
+async def set_intent_status(intent_id: str, req: StatusReq, request: Request) -> dict[str, Any]:
+    """兼容旧端点；审批目标额外校验 testcase.review，阻断创建权限自提权。"""
+    _intent_or_404(intent_id, request)
+    action = "testcase.review" if req.status == "APPROVED" else "testcase.create"
+    return _advance_intent(intent_id, req.status, action, request, intent_id)
 
 
 # ----------------------------------------------------------------- testcases

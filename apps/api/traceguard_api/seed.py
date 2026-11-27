@@ -138,6 +138,7 @@ def seed_teamflow_catalog(rt: Any, base_url: str = BASE) -> dict[str, Any]:
             skipped += 1
             continue
         rt.catalog.create_intent(it)
+        rt.catalog.update_intent_status(it["intent_id"], "REVIEW")
         rt.catalog.update_intent_status(it["intent_id"], "APPROVED")
         created += 1
 
@@ -502,6 +503,7 @@ def _seed_bench_v2(rt: Any, base_url: str) -> int:
                 "owner": "qa-team",
             }
         )
+        rt.catalog.update_intent_status("intent_tf_bench_v2", "REVIEW")
         rt.catalog.update_intent_status("intent_tf_bench_v2", "APPROVED")
         created += 1
 
