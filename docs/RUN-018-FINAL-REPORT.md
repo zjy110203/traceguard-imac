@@ -2,7 +2,8 @@
 
 > 仓库：`traceguard-imac`｜分支：`workbuddy/run018-diagnostic-closure`
 > 起点 HEAD：`7674842`｜本轮最终 HEAD：`94c706e`（已推送）
-> CI 实跑：**PR Gate #102 @ `94c706e` success（3m34s）**；
+> CI 实跑：**PR Gate #103 @ `e1fb5f3` success（3m32s，最终报告提交本身）；
+> 此前 #102 @ `94c706e` success（3m34s）**；
 > Nightly Gate 为 cron 调度（每日 02:00），下次调度将自动以最新 HEAD 实跑。
 > 原则：只写**实际发生并可复核**的事；未跑写 NOT_RUN，被挡写 BLOCKED。
 
