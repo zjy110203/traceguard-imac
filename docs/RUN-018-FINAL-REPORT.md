@@ -1,7 +1,9 @@
 # RUN-018 最终报告：核心正确性修复、智能诊断闭环验证与产品验收收口（R1 轮）
 
 > 仓库：`traceguard-imac`｜分支：`workbuddy/run018-diagnostic-closure`
-> 起点 HEAD：`7674842`｜本轮最终 HEAD：`426f1e6`（已推送，触发 PR Gate / Nightly）
+> 起点 HEAD：`7674842`｜本轮最终 HEAD：`94c706e`（已推送）
+> CI 实跑：**PR Gate #102 @ `94c706e` success（3m34s）**；
+> Nightly Gate 为 cron 调度（每日 02:00），下次调度将自动以最新 HEAD 实跑。
 > 原则：只写**实际发生并可复核**的事；未跑写 NOT_RUN，被挡写 BLOCKED。
 
 ---
@@ -20,7 +22,7 @@ Holdout 真实执行（冻结 manifest + 显式分母），16 视图无障碍 65
 
 | 能力 | 状态 | 证据 |
 |---|---|---|
-| CI 门禁（Ruff/SIGKILL/Worker readiness/Job Summary） | **PARTIAL**（代码修复全部完成，待最新 HEAD CI 实跑确认） | `docs/RUN-018-WP1-CI.md` |
+| CI 门禁（Ruff/SIGKILL/Worker readiness/Job Summary） | **VERIFIED**（PR Gate #102 @ `94c706e` success，3m34s；Nightly 待 cron 实跑） | `docs/RUN-018-WP1-CI.md`、GitHub Actions |
 | 独立观测 UNKNOWN 语义 | **VERIFIED**（前轮保持） | 37 测试 |
 | 探针清理安全 | **VERIFIED** | 19 单测 + 8 项真实 TeamFlow 集成（共 27） |
 | Artifact GC 跨进程并发安全 | **VERIFIED** | 13 项多进程并发（SQLite+PG16）+ journal 崩溃恢复 + 10k 基准无回退 |
@@ -72,10 +74,13 @@ Holdout 真实执行（冻结 manifest + 显式分母），16 视图无障碍 65
 
 ## 4. 最终验收 19 问（逐条回答）
 
-1. **PR Gate 是否在最终 HEAD 通过？** 代码侧全部就绪（Ruff/格式/测试本地全绿）；
-   已推送 `426f1e6` 触发 CI。**核对每个 Job 的 head_sha 属最终确认步骤**（本机无
-   gh 凭据，匿名 API 限流 403，见 §7 BLOCKED）。
-2. **Nightly 是否在最终 HEAD 通过？** 同上，待 CI 实跑确认（B-28 修复已就位）。
+1. **PR Gate 是否在最终 HEAD 通过？** **是——PR Gate #102 @ `94c706e` success
+   （3m34s，backend + frontend 双 job 全绿）**。过程记录：#86~#98 连续绿；
+   #99~#101 于 30-33s 早退——根因是 426f1e6 的补丁漏跑 `ruff format`
+   （format --check 门禁确定性失败，本地复核复现），`94c706e` 修复后通过。
+2. **Nightly 是否在最终 HEAD 通过？** 待 cron（每日 02:00 北京时间）自动以最新
+   HEAD 实跑；WP1 修复（readiness 门禁 + 本次 run 专属报告）已就位，B-28 待
+   该次结果 CLOSED。无 gh 凭据（匿名 API 403），结果核对需凭据或 Actions 页面。
 3. **Worker 是否在 CI 真正领取 Run？** 本地 3 次验收均由独立 Worker 领取
    （lease_owner=r13-w1/r13-w2，fencing=1）；新增 readiness 门禁保证 CI 上
    Worker 未就绪时带日志快速失败而非静默 QUEUED。
@@ -122,8 +127,10 @@ Holdout 真实执行（冻结 manifest + 显式分母），16 视图无障碍 65
 
 ## 5. 已知风险与未完成项
 
-- **B-28（Nightly ui-acceptance）**：修复就位但未在 CI 实跑确认 → MITIGATED，待
-  最新 HEAD 结果后改 CLOSED 或带日志继续定位；
+- **B-28（Nightly ui-acceptance）**：修复就位；PR Gate #102 全绿，Nightly 待
+  cron 实跑 → MITIGATED；
+- **CI 过程教训**：`426f1e6` 补丁漏跑 `ruff format` 导致 PR Gate #99~#101 早退
+  （30-33s）——提交前必须完整跑 `ruff check + format --check` 双门禁；
 - **Holdout 弃权率 66.7%**：如实呈现引擎保守设计；提升需规则变更 + 新 Holdout；
 - **双提交实验 B 发现**：TeamFlow 服务端对跨会话同名并发提交无幂等保护
   （产生重复数据）——被测系统的真实缺陷，修复属 TeamFlow 侧工作；
