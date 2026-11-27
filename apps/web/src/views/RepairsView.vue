@@ -373,7 +373,7 @@ onMounted(load)
     <div class="split">
       <div class="card">
         <div class="card-head"><h2>提案</h2><div class="actions"><span class="small muted">{{ items.length }}</span></div></div>
-        <div class="card-body tight scroll-x">
+        <div class="card-body tight scroll-x" tabindex="0">
           <AsyncBlock :loading="loading" :error="error" :empty="items.length === 0" empty-title="暂无修复提案">
             <table>
               <thead><tr><th>提案</th><th>用例</th><th>状态</th><th>沙箱</th><th>回归</th><th>创建</th></tr></thead>
@@ -407,21 +407,21 @@ onMounted(load)
             </div>
             <div class="hr" />
             <div class="kv">
-              <dt>用例</dt><dd class="mono small">{{ selected.testcase_id }} · base v{{ selected.base_version }}</dd>
-              <dt>断言保持</dt><dd><StatusBadge :value="selected.assertion_preservation" /></dd>
-              <dt>Oracle 完整</dt><dd><StatusBadge :value="selected.oracle_integrity" /></dd>
-              <dt>Diff 白名单</dt>
-              <dd>
+              <div class="kvt">用例</div><div class="kvd mono small">{{ selected.testcase_id }} · base v{{ selected.base_version }}</div>
+              <div class="kvt">断言保持</div><div class="kvd"><StatusBadge :value="selected.assertion_preservation" /></div>
+              <div class="kvt">Oracle 完整</div><div class="kvd"><StatusBadge :value="selected.oracle_integrity" /></div>
+              <div class="kvt">Diff 白名单</div>
+              <div class="kvd">
                 <span v-if="selected.diff_allowed === false" class="badge fail">FAIL</span>
                 <span v-else-if="selected.diff_allowed" class="badge pass">PASS</span>
                 <span v-else class="muted">—</span>
-              </dd>
-              <dt>原因</dt><dd class="small">{{ selected.reason || '—' }}</dd>
-              <dt>沙箱 Run</dt>
-              <dd class="mono small">
+              </div>
+              <div class="kvt">原因</div><div class="kvd small">{{ selected.reason || '—' }}</div>
+              <div class="kvt">沙箱 Run</div>
+              <div class="kvd mono small">
                 <router-link v-if="selected.sandbox_run_id" :to="`/runs/${selected.sandbox_run_id}`">{{ selected.sandbox_run_id }}</router-link>
                 <span v-else>—</span>
-              </dd>
+              </div>
             </div>
             <div class="hr" />
             <div class="section-title">变更 Diff（代码审查视图）</div>
@@ -459,7 +459,7 @@ onMounted(load)
 
         <div v-if="selected.promotion_record && Object.keys(selected.promotion_record).length" class="card">
           <div class="card-head"><h2>晋升记录</h2></div>
-          <div class="card-body"><pre class="json">{{ JSON.stringify(selected.promotion_record, null, 2) }}</pre></div>
+          <div class="card-body"><pre class="json" tabindex="0">{{ JSON.stringify(selected.promotion_record, null, 2) }}</pre></div>
         </div>
 
         <div class="card">
@@ -472,43 +472,43 @@ onMounted(load)
           </div>
           <div class="card-body">
             <div class="kv">
-              <dt>回归 Run</dt>
-              <dd class="mono small">
+              <div class="kvt">回归 Run</div>
+              <div class="kvd mono small">
                 <router-link v-if="selected.regression_run_id" :to="`/runs/${selected.regression_run_id}`">{{ selected.regression_run_id }}</router-link>
                 <span v-else class="muted">尚未创建（晋升后才可回归）</span>
-              </dd>
-              <dt>回归版本</dt>
-              <dd class="mono small">{{ selected.regression_testcase_version_id || '—' }}</dd>
-              <dt>Verdict</dt>
-              <dd><StatusBadge v-if="selected.regression_verdict" :value="selected.regression_verdict" /><span v-else class="muted">—</span></dd>
-              <dt>耗时</dt><dd class="small">{{ regressionDuration || '—' }}</dd>
-              <dt>证据</dt>
-              <dd class="small">
+              </div>
+              <div class="kvt">回归版本</div>
+              <div class="kvd mono small">{{ selected.regression_testcase_version_id || '—' }}</div>
+              <div class="kvt">Verdict</div>
+              <div class="kvd"><StatusBadge v-if="selected.regression_verdict" :value="selected.regression_verdict" /><span v-else class="muted">—</span></div>
+              <div class="kvt">耗时</div><div class="kvd small">{{ regressionDuration || '—' }}</div>
+              <div class="kvt">证据</div>
+              <div class="kvd small">
                 <router-link v-if="selected.regression_run_id" :to="`/runs/${selected.regression_run_id}`">
                   {{ (selected.regression_evidence_ids || []).length }} 条（在 Run 详情回读）
                 </router-link>
                 <span v-else class="muted">—</span>
-              </dd>
-              <dt>Oracle</dt>
-              <dd class="small">
+              </div>
+              <div class="kvt">Oracle</div>
+              <div class="kvd small">
                 <span v-if="!(selected.regression_oracle_refs || []).length" class="muted">—</span>
                 <span v-for="o in selected.regression_oracle_refs || []" :key="o.oracle_id + (o.oracle_version || '')" class="mono" style="margin-right: 8px">
                   {{ o.oracle_id }}@v{{ o.oracle_version ?? '?' }}
                   <span :class="o.status === 'OK' ? 'pass-text' : 'fail-text'">{{ o.status }}</span>
                 </span>
-              </dd>
-              <dt>失败原因</dt><dd class="small fail-text">{{ selected.regression_failure_reason || '—' }}</dd>
-              <dt>结论时效</dt>
-              <dd class="small">
+              </div>
+              <div class="kvt">失败原因</div><div class="kvd small fail-text">{{ selected.regression_failure_reason || '—' }}</div>
+              <div class="kvt">结论时效</div>
+              <div class="kvd small">
                 <span v-if="selected.regression_stale" class="badge fail">STALE（正式版本已变更）</span>
                 <span v-else class="muted">—</span>
-              </dd>
-              <dt>回滚</dt>
-              <dd class="small">
+              </div>
+              <div class="kvt">回滚</div>
+              <div class="kvd small">
                 <span v-if="canRollback">可回滚（需要 repair.rollback 权限，人工确认）</span>
                 <span v-else-if="selected.rollback_record?.restored_version" class="pass-text">已回滚到 v{{ selected.rollback_record.restored_version }}</span>
                 <span v-else class="muted">仅 PROMOTED 状态可回滚</span>
-              </dd>
+              </div>
             </div>
             <p v-if="regressionRunning" class="small muted">回归 Run 执行中：状态来自服务端，刷新页面不会伪造完成。</p>
             <p v-else-if="selected.status === 'PROMOTED' && (selected.regression_status || 'NOT_STARTED') === 'NOT_STARTED'" class="small muted">
@@ -517,26 +517,26 @@ onMounted(load)
 
             <div class="hr" />
             <div class="kv">
-              <dt>Attempt</dt>
-              <dd class="small">
+              <div class="kvt">Attempt</div>
+              <div class="kvd small">
                 第 {{ selected.regression_attempt_no || 1 }} 次 / 最多 {{ selected.regression_max_attempts || 2 }} 次
                 <span v-if="remainingAttempts === 0" class="muted">（已用完）</span>
-              </dd>
-              <dt>重试资格</dt>
-              <dd class="small">
+              </div>
+              <div class="kvt">重试资格</div>
+              <div class="kvd small">
                 <span v-if="canRetryRegression" class="pass-text">允许人工授权重试（{{ selected.regression_retry_reason_code }}）</span>
                 <span v-else-if="selected.regression_status === 'INCONCLUSIVE'" class="muted">
                   不可重试：{{ selected.regression_retry_block_reason || '未满足条件' }}
                 </span>
                 <span v-else class="muted">—</span>
-              </dd>
-              <dt>血缘</dt>
-              <dd class="small mono">
+              </div>
+              <div class="kvt">血缘</div>
+              <div class="kvd small mono">
                 <span v-if="selected.regression_parent_run_id">
                   上一 Attempt：<router-link :to="`/runs/${selected.regression_parent_run_id}`">{{ selected.regression_parent_run_id }}</router-link>
                 </span>
                 <span v-else class="muted">首次验证（无父 Run）</span>
-              </dd>
+              </div>
             </div>
 
             <div v-if="regressionAttempts.length">
@@ -579,7 +579,7 @@ onMounted(load)
 
         <div v-if="selected.rollback_record" class="card">
           <div class="card-head"><h2>回滚记录</h2></div>
-          <div class="card-body"><pre class="json">{{ JSON.stringify(selected.rollback_record, null, 2) }}</pre></div>
+          <div class="card-body"><pre class="json" tabindex="0">{{ JSON.stringify(selected.rollback_record, null, 2) }}</pre></div>
         </div>
       </div>
       <div v-else class="card"><div class="card-body"><div class="empty">选择左侧提案查看生命周期</div></div></div>

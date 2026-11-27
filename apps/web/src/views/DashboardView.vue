@@ -191,7 +191,7 @@ onUnmounted(() => window.clearInterval(timer))
       <div class="grid c3 mt">
         <section class="panel">
           <div class="panel-head"><h2>最近执行</h2><router-link class="small" to="/runs">全部 →</router-link></div>
-          <div class="panel-body tight scroll-x">
+          <div class="panel-body tight scroll-x" tabindex="0">
             <table><thead><tr><th>Run</th><th>结论</th><th>时间</th></tr></thead><tbody>
               <tr v-for="r in latestEvents" :key="r.run_id" class="row-click" @click="$router.push(`/runs/${r.run_id}`)">
                 <td class="mono small">{{ r.run_id.slice(-12) }}</td>

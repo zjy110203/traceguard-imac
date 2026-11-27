@@ -149,15 +149,15 @@ const successRate = computed(() => {
           <section class="panel">
             <div class="panel-head"><h2>延迟与重试</h2><span class="small muted">样本 n={{ data.latency_sample }}</span></div>
             <div class="panel-body kv">
-              <dt>平均延迟</dt><dd class="mono">{{ data.avg_latency_ms }} ms</dd>
-              <dt>P95 延迟</dt><dd class="mono">{{ data.p95_latency_ms }} ms</dd>
-              <dt>重试次数</dt><dd class="mono">{{ data.retries }}</dd>
-              <dt>Prompt 版本</dt><dd class="mono">{{ Object.keys(data.prompt_versions).join(', ') || '—' }}</dd>
+              <div class="kvt">平均延迟</div><div class="kvd mono">{{ data.avg_latency_ms }} ms</div>
+              <div class="kvt">P95 延迟</div><div class="kvd mono">{{ data.p95_latency_ms }} ms</div>
+              <div class="kvt">重试次数</div><div class="kvd mono">{{ data.retries }}</div>
+              <div class="kvt">Prompt 版本</div><div class="kvd mono">{{ Object.keys(data.prompt_versions).join(', ') || '—' }}</div>
             </div>
           </section>
           <section class="panel">
             <div class="panel-head"><h2>最近调用记录</h2><span class="small muted">仅安全元数据</span></div>
-            <div class="panel-body tight scroll-x">
+            <div class="panel-body tight scroll-x" tabindex="0">
               <table>
                 <thead><tr><th>时间</th><th>Agent</th><th>模型</th><th>状态</th><th>延迟</th><th>Tokens</th></tr></thead>
                 <tbody>

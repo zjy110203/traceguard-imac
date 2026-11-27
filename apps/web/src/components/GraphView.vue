@@ -170,7 +170,7 @@ watch(
     <div v-if="(graph?.stats?.nodes ?? 0) > Object.keys(layout.positions).length" class="small muted" style="margin-bottom: 6px">
       当前显示 {{ Object.keys(layout.positions).length }} / {{ graph?.stats?.nodes }} 节点；可输入节点 ID 定位被折叠的节点。
     </div>
-    <div ref="stage" class="graph-stage" @pointerdown="onPointerDown" @pointermove="onPointerMove"
+    <div ref="stage" class="graph-stage" tabindex="0" @pointerdown="onPointerDown" @pointermove="onPointerMove"
       @pointerup="drag = null" @pointerleave="drag = null" @wheel.prevent="onWheel">
       <svg :width="layout.contentW" :height="layout.contentH" style="display: block"
         :style="{ transform: `scale(${scale}) translate(${pan.x}px, ${pan.y}px)`, transformOrigin: '0 0' }">

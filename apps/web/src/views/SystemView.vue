@@ -148,7 +148,7 @@ onMounted(() => load())
         <div class="flex-col">
           <div class="card">
             <div class="card-head"><h2>运行配置</h2></div>
-            <div class="card-body"><pre class="json">{{ JSON.stringify(config, null, 2) }}</pre></div>
+            <div class="card-body"><pre class="json" tabindex="0">{{ JSON.stringify(config, null, 2) }}</pre></div>
           </div>
           <div class="card">
             <div class="card-head"><h2>数据统计</h2></div>
@@ -175,11 +175,11 @@ onMounted(() => load())
         <div class="flex-col">
           <div class="card">
             <div class="card-head"><h2>浏览器自检结果</h2></div>
-            <div class="card-body"><pre class="json">{{ JSON.stringify(browser, null, 2) }}</pre></div>
+            <div class="card-body"><pre class="json" tabindex="0">{{ JSON.stringify(browser, null, 2) }}</pre></div>
           </div>
           <div class="card">
             <div class="card-head"><h2>最近产物</h2></div>
-            <div class="card-body tight scroll-x">
+            <div class="card-body tight scroll-x" tabindex="0">
               <table>
                 <thead><tr><th>名称</th><th>类型</th><th>大小</th></tr></thead>
                 <tbody>

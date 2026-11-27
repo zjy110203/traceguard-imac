@@ -288,7 +288,7 @@ onUnmounted(() => {
                   <span class="small muted">不可变版本，审核状态可流转</span>
                 </div>
               </div>
-              <div class="card-body tight scroll-x">
+              <div class="card-body tight scroll-x" tabindex="0">
                 <table>
                   <thead><tr><th>版本</th><th>状态</th><th>来源</th><th>时间</th><th></th></tr></thead>
                   <tbody>
@@ -311,7 +311,7 @@ onUnmounted(() => {
                   <span class="small muted">cleanup: {{ current.cleanup_policy }}</span>
                 </div>
               </div>
-              <div class="card-body tight scroll-x">
+              <div class="card-body tight scroll-x" tabindex="0">
                 <table>
                   <thead><tr><th style="width: 44px">#</th><th>动作</th><th>定位 / 值</th><th>说明</th></tr></thead>
                   <tbody>
@@ -339,7 +339,7 @@ onUnmounted(() => {
                     @click="saveBindings">保存绑定</button>
                 </div>
               </div>
-              <div class="card-body tight scroll-x">
+              <div class="card-body tight scroll-x" tabindex="0">
                 <table>
                   <thead><tr><th>断言</th><th>类型</th><th>必需</th><th>期望</th><th>Oracle</th></tr></thead>
                   <tbody>
@@ -377,9 +377,9 @@ onUnmounted(() => {
               <div class="card-head"><h2>审核</h2></div>
               <div class="card-body">
                 <div class="kv">
-                  <dt>当前状态</dt><dd><StatusBadge :value="detail.review_status" /></dd>
-                  <dt>最新版本</dt><dd>v{{ detail.latest_version }}</dd>
-                  <dt>运行配置</dt><dd class="mono small">{{ JSON.stringify(current?.run_config ?? {}) }}</dd>
+                  <div class="kvt">当前状态</div><div class="kvd"><StatusBadge :value="detail.review_status" /></div>
+                  <div class="kvt">最新版本</div><div class="kvd">v{{ detail.latest_version }}</div>
+                  <div class="kvt">运行配置</div><div class="kvd mono small">{{ JSON.stringify(current?.run_config ?? {}) }}</div>
                 </div>
                 <div class="hr" />
                 <p class="small muted">审核人必须是具名人类角色（Agent 不能自审）。审核通过后才允许正式执行。</p>
@@ -407,51 +407,51 @@ onUnmounted(() => {
                 </p>
                 <template v-else>
                   <div class="kv">
-                    <dt>回放状态</dt>
-                    <dd><StatusBadge :value="replay.status" /></dd>
-                    <dt>样本进度</dt>
-                    <dd>{{ replay.samples_recorded ?? 0 }} / {{ replay.samples_expected ?? 0 }}</dd>
-                    <dt>成功 / 失败</dt>
-                    <dd>
+                    <div class="kvt">回放状态</div>
+                    <div class="kvd"><StatusBadge :value="replay.status" /></div>
+                    <div class="kvt">样本进度</div>
+                    <div class="kvd">{{ replay.samples_recorded ?? 0 }} / {{ replay.samples_expected ?? 0 }}</div>
+                    <div class="kvt">成功 / 失败</div>
+                    <div class="kvd">
                       通过 {{ replayCounts.passed }} · 失败 {{ replayCounts.failed }} ·
                       未完成 {{ replayCounts.pending }}
-                    </dd>
-                    <dt>稳定性结论</dt>
-                    <dd>
+                    </div>
+                    <div class="kvt">稳定性结论</div>
+                    <div class="kvd">
                       {{ replay.classification?.classification || replay.conclusion || '尚未形成' }}
-                    </dd>
-                    <dt>可晋升</dt>
-                    <dd>{{ replay.promotable ? '是（仍需人工审核）' : '否' }}</dd>
-                    <dt>关联 Oracle</dt>
-                    <dd class="mono small">
+                    </div>
+                    <div class="kvt">可晋升</div>
+                    <div class="kvd">{{ replay.promotable ? '是（仍需人工审核）' : '否' }}</div>
+                    <div class="kvt">关联 Oracle</div>
+                    <div class="kvd mono small">
                       {{ Object.keys(replay.oracle_versions || {}).length
                         ? JSON.stringify(replay.oracle_versions)
                         : '—' }}
-                    </dd>
-                    <dt>Oracle 完整性</dt>
-                    <dd>
+                    </div>
+                    <div class="kvt">Oracle 完整性</div>
+                    <div class="kvd">
                       {{ replay.oracle_complete ? '完整' : '不完整' }}
                       <span v-if="replay.oracle_problems?.length" class="small muted">
                         （{{ replay.oracle_problems.join('；') }}）
                       </span>
-                    </dd>
-                    <dt>浏览器</dt>
-                    <dd class="small">{{ (replay.browser_versions || []).join('、') || '—' }}</dd>
-                    <dt>报告来源</dt>
-                    <dd class="mono small">
+                    </div>
+                    <div class="kvt">浏览器</div>
+                    <div class="kvd small">{{ (replay.browser_versions || []).join('、') || '—' }}</div>
+                    <div class="kvt">报告来源</div>
+                    <div class="kvd mono small">
                       {{ replay.replay_id }} · {{ fmtTime(replay.created_at) }}
-                    </dd>
-                    <dt>完成时间</dt>
-                    <dd class="small">{{ fmtTime(replay.completed_at) }}</dd>
-                    <dt>审核条件</dt>
-                    <dd>
+                    </div>
+                    <div class="kvt">完成时间</div>
+                    <div class="kvd small">{{ fmtTime(replay.completed_at) }}</div>
+                    <div class="kvt">审核条件</div>
+                    <div class="kvd">
                       <span class="badge" :class="replayGate?.satisfied ? 'pass' : 'warn'">
                         {{ replayGate?.satisfied ? '满足' : '未满足' }}
                       </span>
                       <span v-if="replay.blocked_reason" class="small muted">
                         （{{ replay.blocked_reason }}）
                       </span>
-                    </dd>
+                    </div>
                   </div>
                   <ul
                     v-if="replayGate && !replayGate.satisfied"

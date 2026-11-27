@@ -357,7 +357,7 @@ onUnmounted(() => {
           </select>
         </label>
         <button class="search-trigger" type="button" @click="searchOpen = true; query = ''; runSearch()">
-          <Search :size="14" /><span>搜索页面、Run、用例…</span><kbd><Command :size="10" />K</kbd>
+          <Search :size="14" /><span>搜索页面、Run、用例…</span><kbd aria-hidden="true"><Command :size="10" />K</kbd>
         </button>
         <span class="env-pill">{{ env }}</span>
         <span class="top-status" :class="healthError || !dbOk ? 'bad' : 'ok'" :title="healthError || '后端健康'">

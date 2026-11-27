@@ -254,23 +254,23 @@ onMounted(load)
           </div>
           <div class="card-body">
             <div class="kv">
-              <dt>结论变化</dt>
-              <dd>{{ plan.diagnosis_before?.outcome || '—' }} → <b>{{ plan.diagnosis_after?.outcome || '—' }}</b></dd>
-              <dt>停止原因</dt>
-              <dd class="small">{{ plan.stop_reason }}{{ plan.stop_detail ? ' · ' + plan.stop_detail : '' }}</dd>
-              <dt>未解决冲突</dt>
-              <dd>{{ plan.unresolved_conflicts?.length ? plan.unresolved_conflicts.join(', ') : '无' }}</dd>
-              <dt>LLM 规划</dt>
-              <dd class="small">
+              <div class="kvt">结论变化</div>
+              <div class="kvd">{{ plan.diagnosis_before?.outcome || '—' }} → <b>{{ plan.diagnosis_after?.outcome || '—' }}</b></div>
+              <div class="kvt">停止原因</div>
+              <div class="kvd small">{{ plan.stop_reason }}{{ plan.stop_detail ? ' · ' + plan.stop_detail : '' }}</div>
+              <div class="kvt">未解决冲突</div>
+              <div class="kvd">{{ plan.unresolved_conflicts?.length ? plan.unresolved_conflicts.join(', ') : '无' }}</div>
+              <div class="kvt">LLM 规划</div>
+              <div class="kvd small">
                 {{ plan.llm_planner?.called ? '已调用（仅影响候选排序，参数未参与执行）' : '未调用（确定性 Planner 决策）' }}
-              </dd>
+              </div>
             </div>
             <div class="hr" />
             <div v-if="plan.stop_reason.includes('BUDGET')" class="small muted" style="margin-bottom: 8px">
               预算按诊断隔离且是 <b>P06 provisional</b> 配置（50 次 / 60 秒）；已关闭或已耗尽的预算不能通过重复请求绕过，
               需要新建诊断后重新探针。
             </div>
-            <div class="scroll-x">
+            <div class="scroll-x" tabindex="0">
               <table>
                 <thead><tr><th>#</th><th>探针</th><th>状态</th><th>时间对齐</th><th>新增证据</th><th>回灌诊断</th><th>对假设的影响</th></tr></thead>
                 <tbody>
@@ -335,7 +335,7 @@ onMounted(load)
                 </div>
                 <template v-if="rev.hypothesis_changes?.length">
                   <div class="small muted" style="margin-top: 8px">假设变化（状态 / 置信度）</div>
-                  <div class="scroll-x" style="margin-top: 4px">
+                  <div class="scroll-x" style="margin-top: 4px" tabindex="0">
                     <table>
                       <thead><tr><th>假设</th><th>变化</th><th>状态</th><th>置信度</th></tr></thead>
                       <tbody>
@@ -371,9 +371,9 @@ onMounted(load)
               <div class="card-head"><h2>症状与假设</h2><div class="actions"><span class="small muted">engine {{ diag.engine }}</span></div></div>
               <div class="card-body">
                 <div class="kv">
-                  <dt>症状</dt><dd class="mono small">{{ diag.symptom }}</dd>
-                  <dt>Flaky 特征</dt><dd>{{ diag.flaky_characteristic ? '是（多次执行结果不一致）' : '否' }}</dd>
-                  <dt>已确认根因</dt><dd>{{ diag.root_causes.length }} 条</dd>
+                  <div class="kvt">症状</div><div class="kvd mono small">{{ diag.symptom }}</div>
+                  <div class="kvt">Flaky 特征</div><div class="kvd">{{ diag.flaky_characteristic ? '是（多次执行结果不一致）' : '否' }}</div>
+                  <div class="kvt">已确认根因</div><div class="kvd">{{ diag.root_causes.length }} 条</div>
                 </div>
                 <div class="hr" />
                 <div v-for="h in diag.hypotheses" :key="h.hypothesis_id" class="card" style="box-shadow:none; margin-bottom: 10px">
@@ -427,7 +427,7 @@ onMounted(load)
                   <span class="small muted">只读 · 白名单 · 预算受限</span>
                 </div>
               </div>
-              <div class="card-body tight scroll-x">
+              <div class="card-body tight scroll-x" tabindex="0">
                 <table class="probe-table">
                   <thead><tr><th>探针</th><th class="col-purpose">目的</th><th>状态</th><th></th></tr></thead>
                   <tbody>
@@ -465,10 +465,10 @@ onMounted(load)
               <div class="card-head"><h2>LLM 顾问调用状态</h2><span class="small muted">候选不等于 CONFIRMED</span></div>
               <div class="card-body">
                 <div class="kv">
-                  <dt>是否调用</dt><dd>{{ diag.llm_advisor?.called ? '是' : '否' }}</dd>
-                  <dt>跳过原因</dt><dd class="mono">{{ diag.llm_advisor?.skipped || '—' }}</dd>
-                  <dt>新增候选</dt><dd>{{ diag.llm_advisor?.added?.length ?? 0 }} 条</dd>
-                  <dt>错误</dt><dd class="mono fail-text">{{ diag.llm_advisor?.error || '—' }}</dd>
+                  <div class="kvt">是否调用</div><div class="kvd">{{ diag.llm_advisor?.called ? '是' : '否' }}</div>
+                  <div class="kvt">跳过原因</div><div class="kvd mono">{{ diag.llm_advisor?.skipped || '—' }}</div>
+                  <div class="kvt">新增候选</div><div class="kvd">{{ diag.llm_advisor?.added?.length ?? 0 }} 条</div>
+                  <div class="kvt">错误</div><div class="kvd mono fail-text">{{ diag.llm_advisor?.error || '—' }}</div>
                 </div>
                 <p class="small muted mt">LLM 候选仅以 <b>suggested_by=llm:*</b> 与 <b>CANDIDATE</b> 进入假设池；任何 CONFIRMED 只来自确定性规则与可信证据。</p>
               </div>
@@ -479,9 +479,9 @@ onMounted(load)
               <div class="card-body">
                 <div v-if="disposition">
                   <div class="kv">
-                    <dt>类型</dt><dd><StatusBadge :value="disposition.review_status" /> {{ disposition.kind }}</dd>
-                    <dt>路由目标</dt><dd class="mono small">{{ disposition.route_target }}</dd>
-                    <dt>原因</dt><dd class="small">{{ disposition.reason }}</dd>
+                    <div class="kvt">类型</div><div class="kvd"><StatusBadge :value="disposition.review_status" /> {{ disposition.kind }}</div>
+                    <div class="kvt">路由目标</div><div class="kvd mono small">{{ disposition.route_target }}</div>
+                    <div class="kvt">原因</div><div class="kvd small">{{ disposition.reason }}</div>
                   </div>
                   <div class="hr" />
                   <label for="disp-reviewer">审核人</label>
@@ -527,13 +527,13 @@ onMounted(load)
                 <template v-if="graph">
                   <GraphView :graph="graph" @select="onGraphSelect" />
                   <div v-if="graphNode" class="kv" style="margin-top: 8px">
-                    <dt>节点</dt><dd class="mono small">{{ graphNode.node_type }} · {{ graphNode.node_id }}</dd>
-                    <dt>引用对象</dt>
-                    <dd class="mono small">
+                    <div class="kvt">节点</div><div class="kvd mono small">{{ graphNode.node_type }} · {{ graphNode.node_id }}</div>
+                    <div class="kvt">引用对象</div>
+                    <div class="kvd mono small">
                       <a v-if="graphNode.node_type === 'Evidence'" href="javascript:void(0)"
                         @click="jumpToEvidence(graphNode.ref_id)">{{ graphNode.ref_id }} ↗</a>
                       <template v-else>{{ graphNode.ref_id }}</template>
-                    </dd>
+                    </div>
                   </div>
                 </template>
                 <div v-else class="empty">证据图尚未生成（在 Run 详情页生成后可在此查看）</div>

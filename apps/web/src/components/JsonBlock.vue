@@ -14,6 +14,6 @@ const text = computed(() => {
 <template>
   <div>
     <div v-if="label" class="small muted" style="margin-bottom: 4px">{{ label }}</div>
-    <pre class="json">{{ text }}</pre>
+    <pre class="json" tabindex="0">{{ text }}</pre>
   </div>
 </template>

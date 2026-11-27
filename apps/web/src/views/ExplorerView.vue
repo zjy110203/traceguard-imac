@@ -265,14 +265,14 @@ onMounted(load)
             <template v-if="currentStep">
               <div class="section-title">步骤 {{ activeStep + 1 }} · {{ currentStep.action }}</div>
               <div class="kv">
-                <dt>决策来源</dt><dd><span class="source-tag" :class="sourceOf(currentStep)">{{ sourceLabel[sourceOf(currentStep)] }}</span></dd>
-                <dt>参数</dt><dd><code class="code-inline">{{ JSON.stringify(currentStep.params || {}) }}</code></dd>
-                <dt>Reason</dt><dd class="mono">{{ currentStep.reason || '—' }}</dd>
-                <dt>结果</dt><dd class="mono">{{ currentStep.result || '—' }}</dd>
-                <dt>Gateway</dt><dd><StatusBadge :value="currentStep.gateway === 'denied' ? 'DENIED' : currentStep.gateway === 'allowed' ? 'ALLOWED' : 'NOT_EVALUATED'" /></dd>
-                <dt>错误</dt><dd class="mono fail-text">{{ currentStep.error || '—' }}</dd>
-                <dt>页面状态</dt><dd class="mono">{{ (currentStep.page_state_refs || []).join(', ') || selected?.trace?.page_state_refs?.[activeStep] || '—' }}</dd>
-                <dt>关联证据</dt><dd class="mono">{{ (currentStep.evidence_refs || []).join(', ') || '—' }}</dd>
+                <div class="kvt">决策来源</div><div class="kvd"><span class="source-tag" :class="sourceOf(currentStep)">{{ sourceLabel[sourceOf(currentStep)] }}</span></div>
+                <div class="kvt">参数</div><div class="kvd"><code class="code-inline">{{ JSON.stringify(currentStep.params || {}) }}</code></div>
+                <div class="kvt">Reason</div><div class="kvd mono">{{ currentStep.reason || '—' }}</div>
+                <div class="kvt">结果</div><div class="kvd mono">{{ currentStep.result || '—' }}</div>
+                <div class="kvt">Gateway</div><div class="kvd"><StatusBadge :value="currentStep.gateway === 'denied' ? 'DENIED' : currentStep.gateway === 'allowed' ? 'ALLOWED' : 'NOT_EVALUATED'" /></div>
+                <div class="kvt">错误</div><div class="kvd mono fail-text">{{ currentStep.error || '—' }}</div>
+                <div class="kvt">页面状态</div><div class="kvd mono">{{ (currentStep.page_state_refs || []).join(', ') || selected?.trace?.page_state_refs?.[activeStep] || '—' }}</div>
+                <div class="kvt">关联证据</div><div class="kvd mono">{{ (currentStep.evidence_refs || []).join(', ') || '—' }}</div>
               </div>
             </template>
             <div v-else class="empty small">点击中间轨迹中的步骤查看详情。</div>
@@ -280,10 +280,10 @@ onMounted(load)
             <div class="detail-section mt" v-if="selected?.compiled">
               <div class="sec-title">编译产物（规则编译器）</div>
               <div class="kv">
-                <dt>候选用例</dt><dd><router-link :to="`/testcases/${selected.compiled.testcase_id}`" class="mono">{{ selected.compiled.testcase_id }}</router-link> · PENDING</dd>
-                <dt>Compiler</dt><dd class="mono">{{ selected.compiled.compiler_version }}</dd>
-                <dt>Model Version</dt><dd class="mono">{{ selected.compiled.model_version }}</dd>
-                <dt>Prompt</dt><dd class="mono">{{ selected.compiled.prompt_version }}</dd>
+                <div class="kvt">候选用例</div><div class="kvd"><router-link :to="`/testcases/${selected.compiled.testcase_id}`" class="mono">{{ selected.compiled.testcase_id }}</router-link> · PENDING</div>
+                <div class="kvt">Compiler</div><div class="kvd mono">{{ selected.compiled.compiler_version }}</div>
+                <div class="kvt">Model Version</div><div class="kvd mono">{{ selected.compiled.model_version }}</div>
+                <div class="kvt">Prompt</div><div class="kvd mono">{{ selected.compiled.prompt_version }}</div>
               </div>
               <div v-if="selected.compiled.warnings?.length" class="warning-box mt">
                 <div class="small strong">编译 Warning</div>

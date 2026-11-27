@@ -99,7 +99,7 @@ onMounted(load)
     <div class="bench-grid">
       <div class="card">
         <div class="card-head"><h2>实验</h2><div class="actions"><span class="small muted">{{ items.length }}</span></div></div>
-        <div class="card-body tight scroll-x">
+        <div class="card-body tight scroll-x" tabindex="0">
           <AsyncBlock :loading="loading" :error="error" :empty="items.length === 0" empty-title="暂无实验" empty-hint="选择上方按钮运行真实实验">
             <table>
               <thead><tr><th>实验</th><th>类型</th><th>状态</th><th>指标</th><th>时间</th></tr></thead>
@@ -132,13 +132,13 @@ onMounted(load)
           </div>
           <div class="card-body">
             <div class="kv">
-              <dt>Experiment ID</dt><dd class="mono small">{{ selected.experiment_id }}</dd>
-              <dt>数据集版本</dt><dd class="mono small">{{ selected.dataset }}</dd>
-              <dt>实验类型</dt><dd class="mono small">{{ selected.kind }}</dd>
-              <dt>基线 / 模型</dt><dd class="mono small">{{ baselines.join(' · ') || '—' }}</dd>
-              <dt>最小样本量</dt><dd class="mono small">{{ minSample ?? '—' }}</dd>
-              <dt>配置</dt><dd class="mono small">{{ JSON.stringify(selected.config) }}</dd>
-              <dt>说明</dt><dd class="small">{{ selected.notes || '—' }}</dd>
+              <div class="kvt">Experiment ID</div><div class="kvd mono small">{{ selected.experiment_id }}</div>
+              <div class="kvt">数据集版本</div><div class="kvd mono small">{{ selected.dataset }}</div>
+              <div class="kvt">实验类型</div><div class="kvd mono small">{{ selected.kind }}</div>
+              <div class="kvt">基线 / 模型</div><div class="kvd mono small">{{ baselines.join(' · ') || '—' }}</div>
+              <div class="kvt">最小样本量</div><div class="kvd mono small">{{ minSample ?? '—' }}</div>
+              <div class="kvt">配置</div><div class="kvd mono small">{{ JSON.stringify(selected.config) }}</div>
+              <div class="kvt">说明</div><div class="kvd small">{{ selected.notes || '—' }}</div>
             </div>
             <div v-if="minSample !== null && minSample < 10" class="alert-line warn mt">
               样本不足：最小分母 n={{ minSample }}。结果仅作为观察，不做统计显著性结论。
@@ -163,7 +163,7 @@ onMounted(load)
 
         <div class="card">
           <div class="card-head"><h2>指标（分子 / 分母）</h2></div>
-          <div class="card-body tight scroll-x">
+          <div class="card-body tight scroll-x" tabindex="0">
             <table style="min-width: 680px">
               <thead>
                 <tr><th style="width: 190px">指标</th><th v-for="b in baselines" :key="b">{{ b }}</th></tr>

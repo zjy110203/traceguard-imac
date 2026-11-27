@@ -92,7 +92,7 @@ function verdictCount(v: string) {
         </div>
         <div class="actions"><span class="small muted">{{ filtered.length }} 条</span></div>
       </div>
-      <div class="card-body tight scroll-x">
+      <div class="card-body tight scroll-x" tabindex="0">
         <AsyncBlock :loading="loading" :error="error" :empty="filtered.length === 0" empty-title="暂无执行记录">
           <table>
             <thead><tr><th>Run</th><th>用例 / 版本</th><th>结论</th><th>执行状态</th><th>模式</th><th>步骤</th><th>耗时</th><th>证据</th><th>时间</th></tr></thead>

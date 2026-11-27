@@ -93,3 +93,40 @@
 - 文档：本文件
 - 证据：`docs/assets/run018/wp9/`（待生成）
 - 状态：**PARTIAL**（布局验收 DONE，无障碍验收需真实 Chromium 执行）
+
+---
+
+## R1 轮：16 视图真实 Chromium 无障碍验收（升级 PARTIAL → VERIFIED）
+
+`scripts/ui_a11y_run018.py`（真实 Chromium + axe-core @ apps/web/node_modules）：
+**16 视图 × 2 主题（light/dark）× 2 断点（1440/390）= 65/65 PASS**，证据归档
+`docs/assets/run018/wp9/`（a11y-summary.json + axe-reports.json + 违规截图）。
+
+### 检查项（每视图真实执行）
+
+- **axe-core**：wcag2a/2aa/21a/21aa 全规则（label、button-name、color-contrast、
+  aria-* 、结构规则）；serious/critical = FAIL，moderate 如实记录；
+- **键盘导航**：Tab ×8 真实焦点移动（≥3 步）+ **焦点可见**（outline/box-shadow 探针）；
+- **弹窗**（users 视图真实操作）：焦点陷阱（Tab 循环保持在 dialog 内）+ Escape 关闭；
+- **Light / Dark WCAG AA 对比度**：color-contrast 分主题执行；
+- **390px 移动**：无页面级横向溢出、无控件越界（RUN-017 探针语义 + SVG 边界修正）；
+- 空状态 / 错误态 / Loading：seed 数据有真实渲染 + Console 错误观测；
+  权限不足状态的专项注入未执行（如实记录为未覆盖项）。
+
+### 首轮发现的真实违规与修复（全部修复后复测通过）
+
+| 违规 | 数量 | 修复 |
+|---|---|---|
+| button-name（critical） | 32 | 搜索触发按钮：移动端 span 以 sr-only 保留于无障碍树（替代 display:none），kbd 标记 aria-hidden |
+| color-contrast（serious） | 22 | 暗色主题 primary 按钮文字改用 `--brand-text: #0b1f4e`；`.selected` 行内 muted 提亮为 text-2 |
+| scrollable-region-focusable（serious） | 20 | 23 处 `.scroll-x` 容器 + `pre.json` + `.graph-stage` 全部补 `tabindex="0"` |
+| dlitem（serious） | 16 | grid 布局的 dt/dd 转换为 `.kvt/.kvd` div（结构本非真定义列表，语义如实） |
+| label-content-name-mismatch | 若干 | accessible name 与可见文本对齐 |
+| 390px 布局越界 | 3 | 图表 SVG `max-width:100%` 自适应；证据 chip 行 flex 换行 + 长 ID 可断行 |
+
+修复后前端 `npm run typecheck` + `npm run build` 通过，UI 业务闭环回归
+36/36 PASS（无功能性破坏）。
+
+### 状态
+
+**VERIFIED**（真实 Chromium 执行、违规真实修复、复测全绿、回归通过）。

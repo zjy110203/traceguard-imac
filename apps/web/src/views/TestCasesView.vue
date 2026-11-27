@@ -154,7 +154,7 @@ onMounted(load)
         </div>
         <div class="actions"><span class="small muted">{{ filtered.length }} 个用例</span></div>
       </div>
-      <div class="card-body tight scroll-x">
+      <div class="card-body tight scroll-x" tabindex="0">
         <AsyncBlock :loading="loading" :error="error" :empty="filtered.length === 0" empty-title="暂无用例" empty-hint="可新建用例或初始化演示资产">
           <table>
             <thead>

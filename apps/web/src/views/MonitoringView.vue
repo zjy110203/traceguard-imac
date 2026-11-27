@@ -272,7 +272,7 @@ onUnmounted(stopTimer)
               <div class="card-head"><h2>Worker 运行情况</h2>
                 <span class="muted small">在线 = 心跳 {{ String(snap.worker.thresholds.worker_offline_seconds ?? '—') }}s 内（provisional）</span>
               </div>
-              <div class="card-body tight scroll-x">
+              <div class="card-body tight scroll-x" tabindex="0">
                 <table>
                   <thead>
                     <tr><th>Worker</th><th>状态</th><th>最近心跳</th><th>当前 Run</th><th>租约剩余</th><th>领取/接管/失败</th></tr>
@@ -306,7 +306,7 @@ onUnmounted(stopTimer)
               <div class="card-head"><h2>最近错误</h2>
                 <router-link class="muted small" to="/runs">执行中心 →</router-link>
               </div>
-              <div class="card-body tight scroll-x">
+              <div class="card-body tight scroll-x" tabindex="0">
                 <table>
                   <thead><tr><th>来源</th><th>详情</th><th>时间</th></tr></thead>
                   <tbody>
@@ -401,7 +401,7 @@ onUnmounted(stopTimer)
               {{ showHistory ? '隐藏历史告警' : `历史告警（${history.length}）` }}
             </button>
           </div>
-          <div class="card-body tight scroll-x">
+          <div class="card-body tight scroll-x" tabindex="0">
             <table>
               <thead>
                 <tr><th>级别</th><th>类型</th><th>状态</th><th>描述</th><th>关联</th><th>发生 / 最近</th><th>处理</th></tr>
@@ -509,7 +509,7 @@ onUnmounted(stopTimer)
               <div class="card-head"><h2>告警阈值（provisional）</h2>
                 <span class="muted small">{{ snap.thresholds_status.disclaimer }}</span>
               </div>
-              <div class="card-body"><pre class="json">{{ JSON.stringify(snap.thresholds, null, 2) }}</pre></div>
+              <div class="card-body"><pre class="json" tabindex="0">{{ JSON.stringify(snap.thresholds, null, 2) }}</pre></div>
             </div>
           </div>
         </div>

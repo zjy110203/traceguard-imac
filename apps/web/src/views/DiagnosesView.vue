@@ -70,7 +70,7 @@ onMounted(load)
 
     <div class="card">
       <div class="card-head"><h2>诊断记录</h2><div class="actions"><span class="small muted">{{ filtered.length }} 条</span></div></div>
-      <div class="card-body tight scroll-x">
+      <div class="card-body tight scroll-x" tabindex="0">
         <AsyncBlock :loading="loading" :error="error" :empty="filtered.length === 0" empty-title="暂无诊断" empty-hint="在 Run 详情中执行诊断">
           <table>
             <thead><tr><th>诊断</th><th>用例</th><th>结论</th><th>处置</th><th>根因</th><th>Flaky</th><th>时间</th></tr></thead>

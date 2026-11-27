@@ -359,10 +359,10 @@ onUnmounted(() => {
                   <div class="sec-title">观察数据</div>
                   <div class="kv">
                     <template v-for="[k, v] in obsPairs(selectedStep.observation)" :key="k">
-                      <dt>{{ k }}</dt><dd class="mono small">{{ v }}</dd>
+                      <div class="kvt">{{ k }}</div><div class="kvd mono small">{{ v }}</div>
                     </template>
                     <template v-if="!obsPairs(selectedStep.observation).length">
-                      <dt>—</dt><dd class="muted">无观察数据</dd>
+                      <div class="kvt">—</div><div class="kvd muted">无观察数据</div>
                     </template>
                   </div>
                 </div>
@@ -413,7 +413,7 @@ onUnmounted(() => {
         <!-- assertions -->
         <div v-if="tab === 'assertions'" class="card">
           <div class="card-head"><h2>断言判定</h2><div class="actions"><span class="small muted">基于 Oracle 与确定性规则，不由 Agent 判定</span></div></div>
-          <div class="card-body tight scroll-x">
+          <div class="card-body tight scroll-x" tabindex="0">
             <table>
               <thead><tr><th>断言</th><th>状态</th><th>必需</th><th>Oracle</th><th>判定依据</th><th></th></tr></thead>
               <tbody>
@@ -462,7 +462,7 @@ onUnmounted(() => {
                 <button class="sm ghost" style="margin-left: auto" @click="graphNode = null">关闭</button>
               </div>
               <div class="kv" style="margin-bottom: 8px">
-                <dt>引用对象</dt><dd class="mono small">{{ graphNode.ref_id }}</dd>
+                <div class="kvt">引用对象</div><div class="kvd mono small">{{ graphNode.ref_id }}</div>
               </div>
               <JsonBlock :data="graphNode.properties" />
             </div>
@@ -492,8 +492,8 @@ onUnmounted(() => {
             </div>
             <div class="card-body">
               <div class="kv">
-                <dt>症状</dt><dd class="mono small">{{ d.symptom }}</dd>
-                <dt>根因数量</dt><dd>{{ d.root_causes.length }}</dd>
+                <div class="kvt">症状</div><div class="kvd mono small">{{ d.symptom }}</div>
+                <div class="kvt">根因数量</div><div class="kvd">{{ d.root_causes.length }}</div>
               </div>
               <div class="hr" />
               <div v-for="h in d.hypotheses" :key="h.hypothesis_id" style="margin-bottom: 10px">
@@ -517,7 +517,7 @@ onUnmounted(() => {
               <h2>探针建议（Active Diagnosis）</h2>
               <div class="actions"><button class="sm" @click="loadProbes">刷新建议</button></div>
             </div>
-            <div class="card-body tight scroll-x">
+            <div class="card-body tight scroll-x" tabindex="0">
               <table>
                 <thead><tr><th>探针</th><th>目的</th><th>EIG 评分</th><th></th></tr></thead>
                 <tbody>
@@ -538,7 +538,7 @@ onUnmounted(() => {
         <div v-if="tab === 'events'" class="flex-col">
           <div class="card">
             <div class="card-head"><h2>事件流（只追加）</h2><div class="actions"><span class="badge" :class="streamMode === 'live' ? 'pass' : streamMode === 'polling' ? 'warn' : 'neutral'">{{ streamLabel }}</span><span class="small muted">序号在实例内唯一 · 幂等键去重 · SSE 仅作实时提示</span></div></div>
-            <div class="card-body tight scroll-x">
+            <div class="card-body tight scroll-x" tabindex="0">
               <table>
                 <thead><tr><th>#</th><th>类型</th><th>发生时间</th><th>生产者</th><th>载荷</th></tr></thead>
                 <tbody>

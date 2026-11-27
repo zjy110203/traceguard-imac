@@ -113,7 +113,7 @@ onMounted(load)
     </div>
 
     <div class="card">
-      <div class="card-body tight scroll-x">
+      <div class="card-body tight scroll-x" tabindex="0">
         <AsyncBlock :loading="loading" :error="error" :empty="filtered.length === 0" empty-title="暂无 Oracle" empty-hint="新建后绑定到用例断言">
           <table>
             <thead><tr><th>Oracle</th><th>断言</th><th>预期行为</th><th>审批</th><th>版本</th><th>时间</th></tr></thead>
