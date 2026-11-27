@@ -6,7 +6,7 @@
 > `compile_source` 改为服务端可信来源（公共 HTTP 只能产生 human，compiler/healed
 > 仅经 Explorer/Repair 可信入口并带血缘）；补齐 8 个视图的前端权限门禁（四角色真实验收 24/24）；
 > Monitoring 统计范围显式化；TestCaseVersion 增加 `authoring_hash`，篡改历史业务内容将被 409 拒绝。
-> **CI**：PR Gate **#115** 与 Nightly Gate **#68** @ `564b21c`（本分支 HEAD）真实通过
+> **CI**：PR Gate **#115** 与 Nightly Gate **#68** @ `564b21c`（代码 HEAD）真实通过
 > （Nightly 6/6 Job，ui-acceptance 2m5s；`#113/#66` 为 `19f527f` 上的前一档结果，保留可追溯）；
 > 后端全量 1144 passed + a11y 77/77；CI 侧 LLM 真实调用 BLOCKED（仓库未配 Secret，
 > 本地 `scripts/llm_smoke.py` 11/11 REAL_PROVIDER 通过）；Reliability Gate CI NOT_RUN。

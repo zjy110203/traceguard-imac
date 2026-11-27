@@ -257,3 +257,16 @@ git ls-files -z | xargs -0 stat -f '%z %N' | sort -rn | head
 | `docs/assets/run020-prep/llm/llm-smoke-20261127.json` | 真实 LLM smoke 证据（新增，无密钥） |
 
 > 本轮未改动任何业务代码、测试、CI 配置与历史证据文件。
+
+## 11. 审计后追加：文档收口提交的 CI（仅文档）
+
+本轮审计与设计文档的提交 `f409bf4`（仅 md + 台账 + smoke 证据，无代码）也已推送，
+用于验证"文档改动不会破坏门禁"：
+
+| 门禁 | 运行 | 结论 |
+|---|---|---|
+| PR Gate | **#116** @ `f409bf4` | **SUCCESS**（3m19s） |
+| Nightly Gate | **#69** @ `f409bf4` | **SUCCESS（6/6 Job，10m14s）**：backend-full 10m7s、ui-acceptance 2m15s、postgres 1m1s、security 15s、llm-smoke 20s（真实调用 BLOCKED）、gate-verdict 2s |
+
+> 口径：**代码 HEAD 仍是 `564b21c`**（PR Gate #115 / Nightly #68）；`f409bf4` 只追加文档与证据，
+> 其 CI 结果不用于替代代码 HEAD 的门禁结论，也不作为发布证据。

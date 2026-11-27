@@ -24,7 +24,8 @@ RUN-019-R2: 三个真实缺口收口（UI 验收 / 来源可信 / 权限门禁�
 执行内核可靠性、智能诊断升级、权限与来源可信治理、三级 CI 门禁与长稳验收。
 **172 个提交、线性历史（0 个 merge 提交）、2967 文件、+313,389/−2,354。**
 
-- head：`workbuddy/run019-product-completion` → `564b21c`
+- head：`workbuddy/run019-product-completion` → 代码 HEAD `564b21c`
+  （其后 `f409bf4` 仅追加 RUN-020 准备文档与证据，无代码改动；PR Gate #116 通过）
 - 已跑通的 CI（HEAD 上）：**PR Gate #115 SUCCESS（3m40s）**、
   **Nightly Gate #68 SUCCESS（6/6 Job，10m52s）**
 - 状态：**HOLD（等待 Reliability Gate + CI 真实 LLM + 人工评审）**
@@ -82,6 +83,8 @@ RUN-019-R2: 三个真实缺口收口（UI 验收 / 来源可信 / 权限门禁�
 | 门禁 | 运行 | 结论 | 明细 |
 |---|---|---|---|
 | PR Gate | **#115** | **SUCCESS** 3m40s | backend（ruff check / ruff format / unit+contract / fast integration）+ frontend（`vue-tsc --noEmit` + `vite build`） |
+| PR Gate（文档提交） | **#116** @ `f409bf4` | **SUCCESS** 3m19s | 仅文档 + 证据，无代码改动 |
+| Nightly Gate（文档提交） | **#69** @ `f409bf4` | **SUCCESS（6/6）** 10m14s | backend-full 10m7s、ui-acceptance 2m15s、postgres 1m1s、security 15s、llm-smoke 20s（BLOCKED）、gate-verdict 2s |
 | Nightly Gate | **#68** | **SUCCESS（6/6）** 10m52s | backend-full 9m33s、ui-acceptance **2m5s**、postgres 1m3s（PG16）、security 20s、llm-smoke 23s、gate-verdict 4s |
 | ├ llm-smoke | 同上 | Job SUCCESS，**真实调用 BLOCKED** | 仓库无 `DEEPSEEK_API_KEY`；gate-verdict 注明“不得用于 Release 放行” |
 | Reliability Gate | — | **NOT_RUN** | 仅 `workflow_dispatch`；本机无 `gh`/令牌（见 `RUN-020-RELEASE-ADMISSION.md` §1） |

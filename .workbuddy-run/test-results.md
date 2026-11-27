@@ -114,3 +114,5 @@
 | CI llm-smoke | #68 | Job SUCCESS，真实调用 **BLOCKED**（无仓库 Secret） |
 | Reliability Gate | — | **NOT_RUN**（无 Actions 权限） |
 | 证据核对 | UI 42 项/41 PASS；RBAC 24；a11y 77/77 | 与声明一致（a11y 内部标签为 RUN-018，NOTE） |
+| CI PR Gate（文档提交） | #116 @ `f409bf4` | SUCCESS 3m19s |
+| CI Nightly（文档提交） | #69 @ `f409bf4` | SUCCESS 6/6（10m14s；backend-full 10m7s、ui-acceptance 2m15s、postgres 1m1s、security 15s、llm-smoke 20s BLOCKED、gate-verdict 2s） |

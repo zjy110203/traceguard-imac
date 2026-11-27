@@ -18,7 +18,7 @@ Diagnosis → Probe → Repair → Sandbox → Promotion → Regression）做成
 
 | 短板 | 事实 | 后果 |
 |---|---|---|
-| 智能能力没有独立评测 | Compiler 只有"JSON Schema 合法率"；Diagnosis 的 Holdout 是**单轮、单标签、与规则同源**；Repair 的成功率来自少量演示用例 | 无法回答"模型到底行不行"，也无法判断换模型/改 Prompt 是变好还是变坏 |
+| 智能能力没有独立评测 | Compiler 只有"JSON Schema 合法率"；Diagnosis 的 Holdout 仅 30 样本、单标签、且为**合成报告构造**（非真实故障注入）；Repair 的成功率来自少量演示用例 | 无法回答"模型到底行不行"，也无法判断换模型/改 Prompt 是变好还是变坏 |
 | LLM 只在"顾问位" | `compiler_mode=rule_only`、`probe/repair planner=false`；Explorer/诊断顾问即使调用也只是候选 | 平台仍是"规则系统 + LLM 装饰"，不是智能系统 |
 | 真实调用证据不闭环 | CI 无 Secret → 每轮 `BLOCKED`；本地 smoke 通过但不进实验口径 | Release 无法声明任何 AI 能力 |
 | 没有统一的成本/延迟口径 | 只有 `llm_usage.jsonl` 与 `/system/llm/summary` 的粗聚合 | 无法做"质量/成本"取舍，也无法给预算决策 |
@@ -198,7 +198,7 @@ scripts/run020_benchmark.py --suite {compiler,diagnosis,repair} --arms rule,llm 
 
 | 已有 | 缺口 |
 |---|---|
-| `DeepSeekProvider`（重试 2 次、超时、错误分类、usage、成本估算）；`ProviderRegistry`；`ModelRouter`；`PromptManager`；`TokenUsageTracker`（JSONL + 日预算）；`/system/llm/summary`；`scripts/llm_smoke.py`（11 项） | ①Provider 是**具体类**，registry 类型写死 DeepSeek；②无结构化 schema 校验（仅 `json.loads` + 个别键检查）；③审计只在 JSONL 文件，**无 DB 记录**，不能按 Run/Agent 查询；④重试不感知 `Retry-After`、无抖动；⑤三态 provenance 未统一落库；⑥预算只按日，缺少 per-run 硬闸（有 `max_calls_per_run` 但未覆盖全部路径） |
+| `DeepSeekProvider`（重试 2 次、超时、错误分类、usage、成本估算）；`ProviderRegistry`；`ModelRouter`；`PromptManager`；`TokenUsageTracker`（JSONL + 日预算）；`/system/llm/summary`；`scripts/llm_smoke.py`（11 项） | ①Provider 是**具体类**，registry 类型写死 DeepSeek；②无结构化 schema 校验（仅 `json.loads` + 个别键检查）；③审计只在 JSONL 文件，**无 DB 记录**，不能按 Run/Agent 查询；④重试不感知 `Retry-After`、无抖动；⑤三态 provenance 未统一落库；⑥`TG_LLM_MAX_CALLS_PER_RUN` 是**死配置**（全仓无引用，仅 `should_skip_llm()` 看日预算），per-run 硬闸实际不存在 |
 
 ### 5.2 设计
 
@@ -397,6 +397,9 @@ class ProviderAdapter(Protocol):
 |---|---|
 | 新增 | `packages/agents/traceguard_agents/compiler/nl_compiler.py` |
 | 新增 | `packages/agents/traceguard_agents/compiler/requirements.py` |
+| 新增 | `packages/agents/traceguard_agents/compiler/page_objects.py` |
+| 新增 | `packages/agents/traceguard_agents/compiler/step_generator.py` |
+| 新增 | `packages/agents/traceguard_agents/compiler/oracle_proposer.py` |
 | 新增 | `packages/agents/traceguard_agents/compiler/ambiguity.py` |
 | 新增 | `packages/agents/traceguard_agents/compiler/app_profile.py` |
 | 修改 | `packages/agents/traceguard_agents/compiler/compiler.py`（复用 locator/断言构造，不改既有行为） |
@@ -493,6 +496,7 @@ class ProviderAdapter(Protocol):
 
 | 类型 | 路径 |
 |---|---|
+| 新增 | `packages/evidence/traceguard_evidence/diagnosis/hypothesis_builder.py` |
 | 新增 | `packages/evidence/traceguard_evidence/diagnosis/multifault.py` |
 | 新增 | `packages/evidence/traceguard_evidence/diagnosis/abstention.py` |
 | 修改 | `packages/evidence/.../diagnosis/engine.py`（主因排序、弃权原因，不改既有判定语义） |
