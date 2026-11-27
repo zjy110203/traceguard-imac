@@ -281,6 +281,22 @@ class ArtifactRow(Base):
     created_at: Mapped[str] = mapped_column(String(40), default=utc_now_iso)
 
 
+class ArtifactLifecycleLockRow(Base):
+    """RUN-018 WP2：SQLite 侧的跨进程 artifact 生命周期锁表。
+
+    SQLite 没有 advisory lock；锁协议通过「事务内首先写入本表」取得库级写锁
+    （BEGIN IMMEDIATE 等价语义），事务提交/回滚自动释放。持有期间，
+    其他进程的同协议操作（put / GC / 引用创建）在 busy_timeout 内等待。
+    PostgreSQL 不使用本表（改用 pg_advisory_xact_lock，真正的 per-artifact 键）。
+    """
+
+    __tablename__ = "tg_artifact_lifecycle_lock"
+    artifact_id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    holder: Mapped[str] = mapped_column(String(160), default="")
+    purpose: Mapped[str] = mapped_column(String(40), default="")
+    locked_at: Mapped[float] = mapped_column(Float, default=_ts)
+
+
 class DocRow(Base):
     """通用聚合文档表：graph / diagnosis / probe / disposition / repair / experiment 等。
 

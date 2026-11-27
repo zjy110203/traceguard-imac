@@ -32,6 +32,7 @@ from traceguard_persistence.models import (
     TestCaseRow,
     TestCaseVersionRow,
 )
+from traceguard_persistence.stores import lock_and_verify_report_refs
 
 TASK_TRANSITIONS: dict[str, set[str]] = {
     "CREATED": {"QUEUED", "CANCELLED"},
@@ -711,9 +712,12 @@ class TaskService:
                     f"illegal run transition {r.execution_status}->{execution_status}",
                 )
             # 7) 状态变更 + 回执原子写入（同一事务）
+            # RUN-018 WP2：报告中的 art_* 引用必须与 GC 共享生命周期锁并复核登记，
+            # 已回收的产物会让报告提交被拒绝（不产生 dangling reference）。
             previous_status = r.execution_status
             r.execution_status = execution_status
             r.test_verdict = test_verdict
+            lock_and_verify_report_refs(self.db, s, report)
             r.report_json = report
             r.observer_mode = observer_mode or r.observer_mode
             r.error = error

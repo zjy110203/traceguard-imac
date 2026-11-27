@@ -8,18 +8,22 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
+import socket
 import threading
 import time
 import uuid
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Iterator, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import String, cast, select, update
+from sqlalchemy import String, cast, select, text, update
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 from traceguard_core.errors import AppError, ErrorCode
 from traceguard_core.ids import new_id, utc_now_iso
 from traceguard_core.logging import redact
@@ -41,6 +45,96 @@ from .models import (
 
 #: Evidence `doc` JSON 中可能出现的产物引用（artifact_id = art_ + sha256[:20]）
 _ARTIFACT_REF_RE = re.compile(r"art_[0-9a-f]{20}")
+
+
+# ------------------------------------------------------- RUN-018 WP2 生命周期锁
+def _artifact_lock_key(artifact_id: str) -> int:
+    """PostgreSQL advisory lock 的 per-artifact 键（63-bit 正整数，避免与其他模块冲突）。"""
+    h = hashlib.sha256(f"tg-artifact-lifecycle:{artifact_id}".encode()).hexdigest()
+    return int(h[:15], 16) & 0x7FFF_FFFF_FFFF_FFFF
+
+
+@contextmanager
+def artifact_lifecycle_lock(
+    db: Database, artifact_id: str, *, purpose: str = ""
+) -> Iterator[Session]:
+    """统一 Artifact Lifecycle Lock（RUN-018 WP2）：跨 OS 进程的 per-artifact 生命周期锁。
+
+    锁与业务工作共用**同一事务**：锁必须覆盖真正的临界区（复核 + 文件移动 /
+    复核 + 行删除 / 写文件 + 登记），而不是只保护一次 SELECT。
+    事务提交或回滚时锁自动释放——不存在"忘记解锁"或"持锁进程崩溃后锁泄漏"
+    （数据库连接断开即释放）。
+
+    - PostgreSQL 16：`pg_advisory_xact_lock(per-artifact 键)`，真正的 per-artifact
+      并发（不同产物互不阻塞）；
+    - SQLite：事务内首先写入 `tg_artifact_lifecycle_lock` 锁表取得库级写锁
+      （与 BEGIN IMMEDIATE 等价），全库串行——SQLite 单写者的天然约束下，
+      全局串行即为正确的 per-artifact 语义；等待由 busy_timeout=30s 承担。
+
+    仅使用 Python threading.Lock 不合格（不跨进程）；本协议保证跨 OS 进程有效。
+    """
+    with db.session() as s:
+        if db.engine.dialect.name == "postgresql":
+            s.execute(
+                text("SELECT pg_advisory_xact_lock(:k)"), {"k": _artifact_lock_key(artifact_id)}
+            )
+        else:
+            s.execute(
+                text(
+                    "INSERT OR REPLACE INTO tg_artifact_lifecycle_lock "
+                    "(artifact_id, holder, purpose, locked_at) "
+                    "VALUES (:aid, :holder, :purpose, :ts)"
+                ),
+                {
+                    "aid": artifact_id[:80],
+                    "holder": f"{socket.gethostname()}:{os.getpid()}",
+                    "purpose": purpose[:40],
+                    "ts": time.time(),
+                },
+            )
+        yield s
+        # db.session() 上下文退出时 commit（或异常时 rollback）→ 锁释放
+
+
+def _acquire_extra_ref_locks(s: Session, db: Database, refs: Sequence[str]) -> None:
+    """在同一事务内为附加的 art_* 引用补充锁（已排序调用，避免锁序环路）。
+
+    PostgreSQL：逐条执行 advisory xact lock（每条引用一把锁，直到事务结束）。
+    SQLite：本事务已通过锁表写入持有库级写锁，全库串行，无需逐条加锁。
+    """
+    if db.engine.dialect.name == "postgresql":
+        for ref in refs:
+            s.execute(text("SELECT pg_advisory_xact_lock(:k)"), {"k": _artifact_lock_key(ref)})
+
+
+def verify_artifact_refs_exist(s: Session, refs: Iterable[str]) -> None:
+    """引用创建的最终守卫：取得锁后重新检查 Artifact 登记是否仍然存在。
+
+    任何引用创建方（Evidence / Run 报告）在取得生命周期锁之后调用本函数；
+    产物已被 GC 回收时**拒绝引用创建**，绝不产生 dangling reference。
+    """
+    for ref in refs:
+        if s.get(ArtifactRow, ref) is None:
+            raise AppError(
+                ErrorCode.CONFLICT,
+                f"ARTIFACT_COLLECTED: 产物 {ref} 已被 GC 回收，引用创建被拒绝",
+            )
+
+
+def lock_and_verify_report_refs(db: Database, s: Session, report: Any) -> None:
+    """Run 报告写入前的引用守卫（RUN-018 WP2 场景 B：Run.report_json 同样遵守锁协议）。
+
+    在提交报告的**同一事务**内：对报告中每条 art_* 引用取得生命周期锁
+    （按排序获取，避免与 GC 的单锁请求形成锁序环路），然后验证登记仍然存在；
+    已回收 → 拒绝报告提交（CONFLICT），不产生悬空引用。
+    """
+    if not isinstance(report, dict) or not report:
+        return
+    refs = sorted(set(_ARTIFACT_REF_RE.findall(json.dumps(report, ensure_ascii=False))))
+    if not refs:
+        return
+    _acquire_extra_ref_locks(s, db, refs)
+    verify_artifact_refs_exist(s, refs)
 
 
 def _iso_epoch(value: str | None) -> float:
@@ -437,39 +531,70 @@ class PersistentEvidenceManager:
         *,
         fence: tuple[str, int] | None = None,
     ) -> None:
-        with self._lock, self.db.session() as s:
-            if fence is not None and run_id:
-                if not fenced_guard(
-                    s,
-                    run_id=run_id,
-                    worker_id=str(fence[0]),
-                    fencing_token=int(fence[1]),
-                ):
-                    raise AppError(
-                        ErrorCode.CONFLICT,
-                        "LEASE_LOST: 租约已失效，证据写入被拒绝（fencing guard）",
-                    )
-            if s.get(EvidenceRow, rec.evidence_id):
-                raise AppError(ErrorCode.CONFLICT, "evidence_id exists (immutable)")
-            s.add(
-                EvidenceRow(
-                    evidence_id=rec.evidence_id,
-                    workspace_id=rec.workspace_id,
-                    run_id=run_id,
-                    kind=rec.kind,
-                    source_type=rec.source_type,
-                    sha256=rec.sha256,
-                    stored_content_sha256=rec.stored_content_sha256,
-                    attachment_sha256=rec.attachment_sha256,
-                    attachment_ref=rec.attachment_ref,
-                    source_trust=rec.source_trust,
-                    integrity_check=rec.integrity_check,
-                    integrity_detail=dict(rec.integrity_detail),
-                    redacted=rec.redacted,
-                    doc=rec.to_dict(),
-                    captured_at=rec.captured_at or utc_now_iso(),
+        doc_json = json.dumps(rec.to_dict(), ensure_ascii=False)
+        # RUN-018 WP2：证据中引用的产物（attachment_ref + doc 内嵌 art_* 引用）
+        # 必须与 GC 共享 per-artifact 生命周期锁；锁内重新检查 Artifact 登记存在，
+        # 已被回收 → 拒绝创建（不产生 dangling reference）。锁按排序获取。
+        refs = sorted(set(_ARTIFACT_REF_RE.findall(doc_json)))
+        primary_ref = rec.attachment_ref or ""
+        # 只有整串都是 artifact_id（art_+20hex）的 attachment_ref 才参与锁协议；
+        # 其他格式的 attachment_ref（自定义外部引用）保持原有行为。
+        if primary_ref and _ARTIFACT_REF_RE.fullmatch(primary_ref) and primary_ref not in refs:
+            refs.append(primary_ref)
+        if refs:
+            with self._lock, artifact_lifecycle_lock(self.db, refs[0], purpose="evidence_ref") as s:
+                self._insert_locked(rec, run_id, s, fence=fence, refs=refs)
+        else:
+            with self._lock, self.db.session() as s:
+                self._insert_locked(rec, run_id, s, fence=fence, refs=[])
+
+    def _insert_locked(
+        self,
+        rec: EvidenceRecord,
+        run_id: str | None,
+        s: Any,
+        *,
+        fence: tuple[str, int] | None = None,
+        refs: list[str],
+    ) -> None:
+        if fence is not None and run_id:
+            if not fenced_guard(
+                s,
+                run_id=run_id,
+                worker_id=str(fence[0]),
+                fencing_token=int(fence[1]),
+            ):
+                raise AppError(
+                    ErrorCode.CONFLICT,
+                    "LEASE_LOST: 租约已失效，证据写入被拒绝（fencing guard）",
                 )
+        if refs:
+            # PostgreSQL：为其余引用补齐 advisory 锁（首把已由 lifecycle lock 取得，
+            # 同事务内重复申请同键是安全的）。SQLite：锁表写事务已持有库级写锁。
+            _acquire_extra_ref_locks(s, self.db, refs)
+            # 锁内最终复核：全部引用的 Artifact 登记必须仍然存在
+            verify_artifact_refs_exist(s, refs)
+        if s.get(EvidenceRow, rec.evidence_id):
+            raise AppError(ErrorCode.CONFLICT, "evidence_id exists (immutable)")
+        s.add(
+            EvidenceRow(
+                evidence_id=rec.evidence_id,
+                workspace_id=rec.workspace_id,
+                run_id=run_id,
+                kind=rec.kind,
+                source_type=rec.source_type,
+                sha256=rec.sha256,
+                stored_content_sha256=rec.stored_content_sha256,
+                attachment_sha256=rec.attachment_sha256,
+                attachment_ref=rec.attachment_ref,
+                source_trust=rec.source_trust,
+                integrity_check=rec.integrity_check,
+                integrity_detail=dict(rec.integrity_detail),
+                redacted=rec.redacted,
+                doc=rec.to_dict(),
+                captured_at=rec.captured_at or utc_now_iso(),
             )
+        )
 
     def verify_integrity(self, evidence_id: str, original_content: dict[str, Any]) -> bool:
         """**旧语义**：调用者提交原始内容做来源摘要比对（不是存储完整性校验）。
@@ -1197,20 +1322,21 @@ class ArtifactStore:
           失去执行权的旧 Worker 不能登记新的产物记录（否则会产生无人引用的孤儿产物）。
         - 文件先原子落盘（临时文件 + rename），守卫失败时若本次新建且库中仍无登记，
           立即删掉自己刚写的文件——不留孤儿，也不误删他人已登记的同哈希文件。
+
+        RUN-018 WP2：整个「检查 + 写文件 + 登记」临界区持有统一生命周期锁
+        （见 `artifact_lifecycle_lock`）。与 GC 的隔离动作（`_safe_quarantine_file`）
+        共享同一把 per-artifact 锁：
+        - GC 先持锁：put 等待 → GC 复核无登记 → 完成隔离 → put 取得锁后**重新写文件**
+          并登记 → 最终 ArtifactRow 对应文件真实存在；
+        - put 先持锁：写文件 + 登记完成后 GC 才取得锁 → GC 发现登记 → 不隔离。
+        检查与移动之间不再有 unlocked 窗口（旧实现的竞态 A 根因）。
         """
         digest = hashlib.sha256(data).hexdigest()
         artifact_id = f"art_{digest[:20]}"
         path = self._local_path(digest)
         created_file = False
-        if not path.exists():
-            path.parent.mkdir(parents=True, exist_ok=True)
-            tmp = path.with_name(f".{digest}.{uuid.uuid4().hex}.tmp")
-            tmp.write_bytes(data)
-            # os.replace 同分区原子；并发同哈希写入时后者覆盖前者，内容一致因此无害
-            tmp.replace(path)
-            created_file = True
         try:
-            with self.db.session() as s:
+            with artifact_lifecycle_lock(self.db, artifact_id, purpose="put") as s:
                 if fence is not None:
                     if not fenced_guard(
                         s,
@@ -1224,6 +1350,13 @@ class ArtifactStore:
                         )
                 row = s.get(ArtifactRow, artifact_id)
                 if row is None:
+                    if not path.exists():
+                        path.parent.mkdir(parents=True, exist_ok=True)
+                        tmp = path.with_name(f".{digest}.{uuid.uuid4().hex}.tmp")
+                        tmp.write_bytes(data)
+                        # os.replace 同分区原子；并发同哈希写入时后者覆盖前者，内容一致因此无害
+                        tmp.replace(path)
+                        created_file = True
                     s.add(
                         ArtifactRow(
                             artifact_id=artifact_id,
@@ -1237,6 +1370,14 @@ class ArtifactStore:
                             created_at=utc_now_iso(),
                         )
                     )
+                elif not path.exists():
+                    # 已登记但文件缺失（历史不一致）：内容寻址语义下按传入内容自愈重建。
+                    # 锁内重建不会被并发的 GC 隔离打断。
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    tmp = path.with_name(f".{digest}.{uuid.uuid4().hex}.tmp")
+                    tmp.write_bytes(data)
+                    tmp.replace(path)
+                    created_file = True
         except Exception:
             if created_file:
                 self._remove_unregistered_file(artifact_id, path)
@@ -1251,17 +1392,20 @@ class ArtifactStore:
         }
 
     def _remove_unregistered_file(self, artifact_id: str, path: Path) -> None:
-        """删除本次新建但未成功登记的产物文件；若已有登记则保留（他人可能正在引用）。"""
+        """删除本次新建但未成功登记的产物文件；若已有登记则保留（他人可能正在引用）。
+
+        RUN-018 WP2：与 GC 隔离动作共享生命周期锁，检查与 unlink 之间无窗口。
+        """
         try:
-            with self.db.session() as s:
+            with artifact_lifecycle_lock(self.db, artifact_id, purpose="put_cleanup") as s:
                 registered = s.get(ArtifactRow, artifact_id) is not None
+                if registered:
+                    return
+                try:
+                    path.unlink(missing_ok=True)
+                except OSError:
+                    return
         except Exception:  # noqa: BLE001 - 数据库不可用时宁可留文件给 GC，也不误删
-            return
-        if registered:
-            return
-        try:
-            path.unlink(missing_ok=True)
-        except OSError:
             return
 
     def _local_path(self, digest: str) -> Path:
@@ -1595,14 +1739,20 @@ class ArtifactStore:
         }
 
     def _safe_quarantine_file(self, action: dict[str, Any], quarantine: Path) -> dict[str, Any]:
-        """RUN-018 WP4 竞态 A 修复：隔离文件前重新检查 ArtifactRow 登记。"""
+        """RUN-018 WP2 竞态 A 修复（锁协议版）：隔离文件前持有统一生命周期锁。
+
+        旧实现：检查（SELECT）与移动（replace）之间退出数据库事务 → 竞态窗口。
+        新实现：`artifact_lifecycle_lock` 与 put() 共享 per-artifact 锁，
+        「复核登记 + 复核引用 + 移动文件」在锁内一次完成：
+        - put() 先持锁：登记完成后 GC 才进入 → 发现登记 → 跳过；
+        - GC 先持锁：复核通过即移动 → put 等待锁，取得后重新写文件并登记。
+        同步动作写入 GC journal（intent → done），进程崩溃后可由
+        `recover_journal()` 恢复（§2.4 文件系统与数据库崩溃一致性）。
+        """
         sha256 = action["sha256"]
         artifact_id = f"art_{sha256[:20]}"
         src = Path(action["path"])
-
-        # 关键：文件移动前**再查一次**数据库——如果 Worker 在扫描后已经
-        # 为该 SHA 登记了 ArtifactRow（put() 内部会写文件 + 登记），则不能隔离
-        with self.db.session() as s:
+        with artifact_lifecycle_lock(self.db, artifact_id, purpose="gc_quarantine") as s:
             row = s.get(ArtifactRow, artifact_id)
             if row is not None:
                 return {
@@ -1615,46 +1765,183 @@ class ArtifactStore:
                     "result": "skipped_referenced",
                     "reason_detail": "referenced_before_quarantine",
                 }
-
-        if not src.is_file():
-            return {"result": "gone"}
-        quarantine.mkdir(parents=True, exist_ok=True)
-        dest = quarantine / sha256
-        # 再检查一次文件是否被替换（put() 的原子写）
-        if not src.is_file():
-            return {"result": "gone"}
-        src.replace(dest)
-        return {"result": "quarantined", "quarantine_path": str(dest)}
+            if not src.is_file():
+                return {"result": "gone"}
+            quarantine.mkdir(parents=True, exist_ok=True)
+            dest = quarantine / sha256
+            jid = self._journal_intent(
+                "quarantine_file", artifact_id, sha256, src, dest, extra=action
+            )
+            src.replace(dest)
+            self._journal_done(jid)
+            return {"result": "quarantined", "quarantine_path": str(dest)}
 
     def _safe_delete_row(self, action: dict[str, Any], quarantine: Path) -> dict[str, Any]:
-        """RUN-018 WP4 竞态 B 修复：在同一事务内完成"复核 + 删除"。
+        """RUN-018 WP2 竞态 B 修复（锁协议版）：复核与删除在同一把生命周期锁内完成。
 
-        SQLite：写事务天然互斥（一个写者），复核与删除在同事务内不会被
-        并发的 Evidence/Run 写入穿插。
-        PostgreSQL：READ COMMITTED 下用 SELECT FOR UPDATE 锁行后复核+删除。
+        旧实现注释声称 SELECT FOR UPDATE，实际只是 `s.get()`，且 Evidence/Run
+        引用写入方并不与 GC 共享锁 → PostgreSQL 并发安全无法证明。
+        新实现：GC 与**所有引用创建方**（Evidence `_insert` / Run 报告提交）共享
+        `artifact_lifecycle_lock`：
+        - 引用先持锁：引用创建完成（同事务提交）→ GC 进入后发现引用 → 跳过；
+        - GC 先持锁：完整复核 + 删除 → 引用写入方取得锁后重新检查 Artifact
+          是否仍然存在，已回收则拒绝引用创建（不产生 dangling reference）。
+
+        崩溃一致性（§2.4）：DB 删除提交成功后文件移动前崩溃 → journal 留有
+        intent 记录，`recover_journal()` 会把残留文件移入 quarantine；
+        文件移动后崩溃 → journal done 缺失同样可恢复判定。
         """
         artifact_id = action["artifact_id"]
-        with self.db.session() as s:
+        sha256 = str(action.get("sha256") or artifact_id[4:])
+        src = Path(action.get("path") or "")
+        dest = quarantine / sha256
+        with artifact_lifecycle_lock(self.db, artifact_id, purpose="gc_delete") as s:
             row = s.get(ArtifactRow, artifact_id)
             if row is None:
                 return {"result": "gone"}
-
-            # 同事务内定向复核：检查 Evidence.attachment_ref / Evidence.doc / Run.report_json
+            # 锁内定向复核：Evidence.attachment_ref / Evidence.doc / Run.report_json
             if self._artifact_still_referenced(s, artifact_id):
                 return {"result": "skipped_referenced"}
-
-            # 同事务删除——数据库写锁保证不会与并发的引用创建交错
+            jid = self._journal_intent("delete_row", artifact_id, sha256, src, dest, extra=action)
+            # 同事务删除（session 退出时提交 → 锁释放）
             s.delete(row)
-            # 事务在 session 退出时提交（或由 db.session() 上下文管理器处理）
 
-        # 登记删除后处理落盘文件
-        src = Path(action.get("path") or "")
+        # DB 已提交；处理落盘文件。此顺序保证「登记删除」先于「文件隔离」：
+        # 崩溃最坏留下一个孤儿文件（下一次 GC 会回收），绝不会出现
+        # ArtifactRow 指向被隔离走的文件。
         if src.is_file():
             quarantine.mkdir(parents=True, exist_ok=True)
-            dest = quarantine / action["sha256"]
             src.replace(dest)
+            self._journal_done(jid)
             return {"result": "deleted", "quarantine_path": str(dest)}
+        self._journal_done(jid, note="source_file_absent")
         return {"result": "deleted"}
+
+    # ------------------------------------------------------- RUN-018 WP2 GC journal
+    def _journal_file(self) -> Path:
+        return self.root / "_gc-journal.jsonl"
+
+    def _journal_append(self, record: dict[str, Any]) -> None:
+        """JSONL 追加（单行 < 4KB，O_APPEND 原子性足以跨进程并发追加）。"""
+        try:
+            f = self._journal_file()
+            f.parent.mkdir(parents=True, exist_ok=True)
+            with f.open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+        except Exception:  # noqa: BLE001 - journal 失败不阻塞 GC 主流程（审计另有 JSONL）
+            return
+
+    def _journal_intent(
+        self,
+        op: str,
+        artifact_id: str,
+        sha256: str,
+        src: Path,
+        dest: Path,
+        *,
+        extra: dict[str, Any] | None = None,
+    ) -> str:
+        jid = uuid.uuid4().hex
+        self._journal_append(
+            {
+                "jid": jid,
+                "at": utc_now_iso(),
+                "op": op,
+                "artifact_id": artifact_id,
+                "sha256": sha256,
+                "src": str(src),
+                "dest": str(dest),
+                "state": "intent",
+                "extra": {k: extra.get(k) for k in ("path", "reason") if extra and k in extra},
+            }
+        )
+        return jid
+
+    def _journal_done(self, jid: str, *, note: str = "") -> None:
+        self._journal_append({"jid": jid, "state": "done", "note": note, "at": utc_now_iso()})
+
+    def recover_journal(self) -> dict[str, Any]:
+        """崩溃恢复（RUN-018 WP2 §2.4）：处理 GC journal 中 intent 无 done 的条目。
+
+        - quarantine_file：dest 已存在且 src 不存在 → 文件其实已移动，补记 done；
+          src 仍存在且登记不存在 → pending（留给下一次 GC 重新复核后回收）；
+          登记已存在 → abandoned（不该隔离）。
+        - delete_row：登记已删除 → 按 src/dest 实际状态补完文件移动并补记 done；
+          登记仍在 → abandoned（DB 删除未提交）。
+
+        所有隔离都保留审计记录；本函数默认不删除任何文件，只做幂等恢复。
+        """
+        f = self._journal_file()
+        if not f.is_file():
+            return {"journal": str(f), "recovered": 0, "pending": 0, "abandoned": 0, "details": []}
+        open_intents: dict[str, dict[str, Any]] = {}
+        with f.open("r", encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    rec = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                jid = str(rec.get("jid") or "")
+                if rec.get("state") == "intent":
+                    open_intents[jid] = rec
+                elif rec.get("state") == "done":
+                    open_intents.pop(jid, None)
+        details: list[dict[str, Any]] = []
+        counts = {"recovered": 0, "pending": 0, "abandoned": 0}
+        for jid, intent in open_intents.items():
+            op = intent.get("op")
+            src = Path(intent.get("src") or "")
+            dest = Path(intent.get("dest") or "")
+            artifact_id = str(intent.get("artifact_id") or "")
+            resolution = ""
+            with self.db.session() as s:
+                row = s.get(ArtifactRow, artifact_id)
+            if op == "quarantine_file":
+                if dest.is_file() and not src.is_file():
+                    counts["recovered"] += 1
+                    resolution = "recovered_file_already_moved"
+                elif src.is_file() and row is None and not dest.exists():
+                    counts["pending"] += 1
+                    resolution = "pending_next_gc_recheck"
+                else:
+                    counts["abandoned"] += 1
+                    resolution = "abandoned_state_changed"
+            elif op == "delete_row":
+                if row is not None:
+                    counts["abandoned"] += 1
+                    resolution = "abandoned_db_delete_not_committed"
+                elif src.is_file() and not dest.exists():
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    src.replace(dest)
+                    counts["recovered"] += 1
+                    resolution = "recovered_file_moved_post_commit"
+                else:
+                    counts["recovered"] += 1
+                    resolution = "recovered_already_consistent"
+            else:
+                counts["abandoned"] += 1
+                resolution = "unknown_op"
+            self._journal_append(
+                {
+                    "jid": jid,
+                    "state": "resolved",
+                    "resolution": resolution,
+                    "op": op,
+                    "artifact_id": artifact_id,
+                    "at": utc_now_iso(),
+                }
+            )
+            details.append({"jid": jid, "op": op, "resolution": resolution})
+        return {
+            "journal": str(f),
+            "recovered": counts["recovered"],
+            "pending": counts["pending"],
+            "abandoned": counts["abandoned"],
+            "details": details,
+        }
 
 
 def save_json_artifact(store: ArtifactStore, obj: Any, workspace_id: str, name: str) -> dict:
