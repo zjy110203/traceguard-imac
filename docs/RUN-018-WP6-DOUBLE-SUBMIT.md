@@ -93,3 +93,63 @@ RUN-017 中 TF-TIME-003 仍为 **UNKNOWN**——因为没有专门的独立观�
 - 代码：`benchmark/traceguard_benchmark/double_submit.py`
 - 测试：`tests/unit/test_double_submit_run018.py`（9 passed）
 - 状态：**IMPLEMENTED**（需真实 TeamFlow 环境验证后升 VERIFIED）
+
+---
+
+## 8. RUN-018-R1 轮：真实浏览器独立观测（升级 IMPLEMENTED → VERIFIED）
+
+上一轮的 HTTP 双线程观测只能验证服务端行为，无法回答"用户双击后前端到底发了
+几个请求"。本轮在 `double_submit.py` 新增 `BrowserDoubleSubmitObserver`
+（Playwright Chromium，真实浏览器）：
+
+### 8.1 实验 A：同一 BrowserContext 快速双击
+
+`_RequestCapture` 通过 `page.on("request"/"response")` 捕获真实发出的
+`POST /api/projects`（URL / 状态码 / 耗时）：
+
+- 两次 `click()` 无等待（真实双击节奏）；第二次点击因无故障时页面立即导航
+  找不到按钮 → 如实记录 `second_click_note`（不视为观测失败，交由实验 B）；
+- TF-TIME-003 激活时：**实测确认 FRONTEND_DEBOUNCE_EFFECTIVE**——
+  用户双击 2 次、前端只发出 1 次 POST、业务只创建 1 条（expA_count=1）。
+  Ground Truth（前端 300ms 去重窗口丢弃第二次提交）与独立观测一致 → CONFIRMED。
+- 截图、Console 错误、请求数据全部落盘（`exp-a-<token>.png` + JSON）。
+
+### 8.2 实验 B：两个独立 BrowserContext 并发提交
+
+两个线程各持有独立 Playwright 实例 + 独立 context（独立会话），Barrier 对齐后
+同时点击：
+
+- **真实发现**：健康环境下两个独立上下文同名前缀提交全部 200，服务端
+  **没有幂等/同名去重**，权威回读 2 条记录——分类 `DUPLICATE_CREATED`
+  （status=CONFIRMED，真实重复数据）。
+  这是本轮的诚实观测结论：TeamFlow 服务端对跨会话并发同名创建无幂等保护。
+- 每上下文截图（`exp-b1/b2-<token>.png`）+ JSON 证据落盘。
+
+### 8.3 分类映射（6 类，A/B 严格区分不合并）
+
+| 分类 | 判定 | status |
+|---|---|---|
+| FRONTEND_DEBOUNCE_EFFECTIVE | 双击 2 次 → 前端只发 1 次 POST → expA 1 条 | fault_active ? CONFIRMED : NOT_TRIGGERED |
+| SERVER_IDEMPOTENCY_EFFECTIVE | ≥2 请求全成功 → 只落 1 条 | NOT_TRIGGERED（幂等挡住 ≠ 故障） |
+| DUPLICATE_CREATED | 落 ≥2 条 | CONFIRMED（真实重复数据） |
+| ONE_REQUEST_FAILED | 一败一成 | UNKNOWN |
+| BUSINESS_STATE_UNKNOWN | 权威回读失败 / 无法判定 | UNKNOWN（不得改写成正常） |
+| OBSERVER_FAILED | 浏览器/基础设施失败 | UNKNOWN |
+
+CONFIRMED 不只凭 HTTP 200：需 Ground Truth（TF-TIME-003 设计行为）与独立
+权威状态回读共同支撑；实验按项目名前缀（expA/expB1/expB2）归属计数。
+
+### 8.4 测试
+
+- `tests/integration/test_double_submit_browser_run018.py`（3 项：实验 A 真实
+  Chromium、实验 B 真实 Chromium + 清理真实性断言、分类映射不变量）；
+- 既有 `tests/unit/test_double_submit_run018.py` 9 项全部保留通过；
+- 合计 12 项 × 3 轮稳定。
+
+### 8.5 边界声明
+
+- HTTP 观测器保留（`DOUBLE_SUBMIT_OBSERVER:http_rapid_submit`）用于无浏览器
+  环境的快速验证，不再作为前端双提交问题的完整验证；
+- 清理使用 default workspace 显式 `allow_default`（token≥12 hex，与 WP3 契约
+  一致），清理失败如实报告（断言 cleanup.ok）。
+- 状态：**VERIFIED**（真实 TeamFlow + 真实 Chromium 端到端执行）。
