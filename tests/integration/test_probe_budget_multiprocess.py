@@ -72,10 +72,18 @@ def test_multiprocess_state_survives_killed_worker(tmp_path: Path) -> None:
         "--kill-one",
     )
     assert report["_exit"] == 0, report["_stdout"]
+    # 确定性 kill 协议：真实 PID 被真实 SIGKILL，退出码必须是 -9
     assert report["killed_pid"] > 0
+    assert report["checks"]["killed_for_real"] is True
+    assert report["killed_exitcode"] == -9, report["kill_diagnostics"]
+    # kill 前数据库已有真实预留（READY 协议保证）
+    assert report["probes_used_before_kill"] >= 1
+    assert report["killed_reserved"] >= 1
+    # kill 后预算状态没有重置，其他进程继续工作
     assert report["final_probes_used"] <= 4
     assert report["final_probes_used"] == report["reserved_total"]
     assert report["checks"]["not_reset_after_kill"] is True
+    assert report["checks"]["others_continue_work"] is True
 
 
 def test_closed_budget_cannot_be_bypassed_by_new_process(tmp_path: Path) -> None:

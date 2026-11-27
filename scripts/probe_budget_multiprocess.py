@@ -1,4 +1,4 @@
-"""RUN-007 WP1-04：ProbeBudget 真正的多 OS 进程并发验证。
+"""RUN-007 WP1-04 / RUN-018 WP1：ProbeBudget 真正的多 OS 进程并发验证。
 
 不是线程模拟：每个 worker 都是独立 Python 进程（`spawn`，无共享内存），
 共享同一个 SQLite/PostgreSQL 数据库与同一个 Budget Scope。
@@ -8,6 +8,17 @@
 2. 某个进程被 SIGKILL 后，预算状态不会被重置或回退；
 3. 已关闭的预算不能被新进程绕过；
 4. 能读到最终文档（数据完整、可解析、probes_used 与回执一致）。
+
+RUN-018 WP1 确定性 kill 协议（替代旧的固定 sleep(0.6)）：
+1. 目标子进程完成第一次有效预算预留后写出 ready 证据文件并发出 READY 事件；
+2. 目标子进程进入明确的等待状态（wait_event）；
+3. 父进程等待 READY（超时即确定性失败，不 SKIP）；
+4. 父进程确认子进程仍然存活；
+5. 父进程执行真实 SIGKILL；
+6. 回读共享数据库，记录 kill 前的 probes_used；
+7. 启动其余子进程继续工作；
+8. 验证预算状态没有重置、其他进程继续扣减；
+9. 保存真实 killed_pid、退出码（-9）和最终数据库状态。
 
 用法：
     python scripts/probe_budget_multiprocess.py --db .traceguard/run007/budget.db \
@@ -45,6 +56,8 @@ def _child_main(cfg: dict[str, Any]) -> None:
     attempts = int(cfg["attempts"])
     out_path = cfg["out_path"]
     delay = float(cfg.get("reserve_delay", 0.0))
+    ready_path = cfg.get("ready_path")
+    release_path = cfg.get("release_path")
 
     from traceguard_api.runtime import Runtime
     from traceguard_api.services.probe_service import ProbeService
@@ -70,6 +83,36 @@ def _child_main(cfg: dict[str, Any]) -> None:
                 result["reasons"][reason] = result["reasons"].get(reason, 0) + 1
             else:
                 result["reserved"] += 1
+                # 确定性 READY 协议（文件版，不共享 mp 锁）：
+                # 第一次有效预留后写出 ready 证据文件并进入明确等待状态。
+                # 注意：绝不与会被 SIGKILL 的进程共享 multiprocessing 锁——
+                # 被杀进程若持有 POSIX 信号量会把父进程永久锁死。
+                if ready_path and not Path(ready_path).exists():
+                    Path(ready_path).write_text(
+                        json.dumps(
+                            {
+                                "pid": os.getpid(),
+                                "reserved": result["reserved"],
+                                "scope": scope,
+                                "ready_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                            },
+                            ensure_ascii=False,
+                        ),
+                        encoding="utf-8",
+                    )
+                    if release_path:
+                        # 明确等待状态：轮询 release 文件（父进程 kill 后会写出）。
+                        deadline = time.monotonic() + 120.0
+                        released = False
+                        while time.monotonic() < deadline:
+                            if Path(release_path).exists():
+                                released = True
+                                break
+                            time.sleep(0.05)
+                        if released:
+                            break  # 父进程放行且未 kill（兜底路径），继续剩余 attempts
+                        result["error"] = "release_timeout_without_parent_release"
+                        break
             if delay:
                 time.sleep(delay)
         snap = svc.budgets.get_or_create(scope, workspace_id="default").snapshot()
@@ -82,8 +125,7 @@ def _child_main(cfg: dict[str, Any]) -> None:
     Path(out_path).write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")
 
 
-def _spawn(cfg: dict[str, Any]) -> mp.Process:
-    ctx = mp.get_context("spawn")
+def _spawn(cfg: dict[str, Any], ctx: mp.context.BaseContext) -> mp.Process:
     p = ctx.Process(target=_child_main, args=(cfg,))
     p.start()
     return p
@@ -114,7 +156,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--budget", type=int, default=20)
     ap.add_argument("--attempts", type=int, default=20)
     ap.add_argument("--cost", type=float, default=1.0)
-    ap.add_argument("--kill-one", action="store_true", help="中途 SIGKILL 一个 worker")
+    ap.add_argument("--kill-one", action="store_true", help="确定性 SIGKILL 一个 worker")
     ap.add_argument("--close-first", action="store_true", help="先把预算关闭，再让子进程尝试申请")
     ap.add_argument("--out", required=True)
     args = ap.parse_args(argv)
@@ -147,26 +189,102 @@ def main(argv: list[str] | None = None) -> int:
         svc.budgets.close(args.scope, "TEST_CLOSED")
     db.dispose()
 
-    # 2) 启动独立进程
-    cfg_base = {
-        "db_url": db_url,
-        "scope": args.scope,
-        "attempts": args.attempts,
-        "reserve_delay": 0.01,
-    }
-    procs: list[tuple[mp.Process, str]] = []
-    for i in range(args.procs):
-        child_out = str(out_dir / f"worker-{i}-{time.time_ns()}.json")
-        proc = _spawn({**cfg_base, "out_path": child_out})
-        procs.append((proc, child_out))
-
+    ctx = mp.get_context("spawn")
+    kill_diagnostics: dict[str, Any] = {}
     killed_pid = 0
-    if args.kill_one and procs:
-        time.sleep(0.6)
-        proc, _ = procs[0]
-        if proc.is_alive():
-            killed_pid = proc.pid or 0
-            os.kill(proc.pid, signal.SIGKILL)
+    killed_exitcode: int | None = None
+    killed_reserved = 0
+    probes_used_before_kill: int | None = None
+    ready_timeout = False
+
+    if args.kill_one:
+        # 确定性 kill 协议（文件同步版）：先只启动目标进程，等它完成第一次有效预留并 READY。
+        # 不使用 mp.Event：被 SIGKILL 的进程可能持有信号量锁，会把父进程永久锁死。
+        ready_path = out_dir / f"kill-target-ready-{time.time_ns()}.json"
+        release_path = out_dir / f"kill-target-release-{time.time_ns()}.json"
+        target_cfg = {
+            "db_url": db_url,
+            "scope": args.scope,
+            "attempts": args.attempts,
+            "reserve_delay": 0.01,
+            "out_path": str(out_dir / f"worker-0-{time.time_ns()}.json"),
+            "ready_path": str(ready_path),
+            "release_path": str(release_path),
+        }
+        target = _spawn(target_cfg, ctx)
+
+        # 步骤 3：父进程轮询等待 READY 文件（确定性，不允许用固定 sleep 替代）
+        deadline = time.monotonic() + 60.0
+        got_ready = False
+        while time.monotonic() < deadline:
+            if ready_path.exists():
+                got_ready = True
+                break
+            time.sleep(0.05)
+        if not got_ready:
+            ready_timeout = True
+            kill_diagnostics["ready_timeout"] = True
+            kill_diagnostics["target_alive_after_timeout"] = target.is_alive()
+        # 步骤 4：确认子进程仍然存活
+        if got_ready and target.is_alive():
+            killed_pid = target.pid or 0
+            kill_diagnostics["confirmed_alive"] = True
+        elif got_ready:
+            kill_diagnostics["confirmed_alive"] = False
+
+        # 步骤 6：kill 前回读共享数据库
+        if got_ready:
+            pre = _read_budget(db_url, args.scope)
+            doc = pre or {}
+            probes_used_before_kill = int(doc.get("probes_used", 0))
+
+        # 步骤 5：真实 SIGKILL（不是模拟退出）
+        if killed_pid > 0:
+            os.kill(killed_pid, signal.SIGKILL)
+        release_path.write_text(
+            "released", encoding="utf-8"
+        )  # 兜底放行，避免目标进程意外存活时永久挂起
+        target.join(timeout=60)
+        killed_exitcode = target.exitcode
+        ready_file = Path(ready_path)
+        if ready_file.exists():
+            try:
+                killed_reserved = int(
+                    json.loads(ready_file.read_text(encoding="utf-8"))["reserved"]
+                )
+            except Exception:  # noqa: BLE001
+                killed_reserved = 0
+
+        # 步骤 7：其余子进程在 kill 之后启动并继续工作
+        procs: list[tuple[mp.Process, str]] = []
+        for i in range(1, args.procs):
+            child_out = str(out_dir / f"worker-{i}-{time.time_ns()}.json")
+            proc = _spawn(
+                {
+                    "db_url": db_url,
+                    "scope": args.scope,
+                    "attempts": args.attempts,
+                    "reserve_delay": 0.01,
+                    "out_path": child_out,
+                },
+                ctx,
+            )
+            procs.append((proc, child_out))
+    else:
+        procs = []
+        for i in range(args.procs):
+            child_out = str(out_dir / f"worker-{i}-{time.time_ns()}.json")
+            proc = _spawn(
+                {
+                    "db_url": db_url,
+                    "scope": args.scope,
+                    "attempts": args.attempts,
+                    "reserve_delay": 0.01,
+                    "out_path": child_out,
+                },
+                ctx,
+            )
+            procs.append((proc, child_out))
 
     for proc, _ in procs:
         proc.join(timeout=180)
@@ -179,21 +297,35 @@ def main(argv: list[str] | None = None) -> int:
             children.append(json.loads(p.read_text(encoding="utf-8")))
     reserved_total = sum(int(c.get("reserved", 0)) for c in children)
     errors = [c["error"] for c in children if c.get("error")]
+    if args.kill_one and ready_timeout:
+        errors.append("READY_TIMEOUT: 目标子进程 60s 内未完成第一次有效预留")
 
     final = _read_budget(db_url, args.scope)
     # DocRecord.to_dict() 把 doc 字段平铺在顶层
     doc = final or {}
     probes_used = int(doc.get("probes_used", 0))
 
+    # kill 场景：被杀进程的真实预留数必须计入总账（来自 ready 证据文件）
+    reserved_all = reserved_total + killed_reserved
+
     checks = {
         "no_overdraft": probes_used <= args.budget,
-        "counter_persisted": probes_used == reserved_total,
-        "not_reset_after_kill": (probes_used > 0) if reserved_total > 0 else True,
+        "counter_persisted": probes_used == reserved_all,
+        "not_reset_after_kill": (
+            (probes_used_before_kill is not None and probes_used >= probes_used_before_kill > 0)
+            if args.kill_one
+            else (probes_used > 0 if reserved_all > 0 else True)
+        ),
         "doc_readable": bool(final),
         "closed_not_bypassed": (
             probes_used == 0 and all(c.get("rejected", 0) > 0 for c in children)
             if args.close_first
             else True
+        ),
+        # RUN-018 WP1 新增：kill 确定性检查
+        "killed_for_real": ((killed_pid > 0 and killed_exitcode == -9) if args.kill_one else True),
+        "others_continue_work": (
+            (reserved_total > 0 and len(children) >= args.procs - 1) if args.kill_one else True
         ),
     }
     report = {
@@ -207,8 +339,13 @@ def main(argv: list[str] | None = None) -> int:
         "cost_per_probe": args.cost,
         "kill_one": args.kill_one,
         "killed_pid": killed_pid,
+        "killed_exitcode": killed_exitcode,
+        "killed_reserved": killed_reserved,
+        "probes_used_before_kill": probes_used_before_kill,
+        "kill_diagnostics": kill_diagnostics,
         "close_first": args.close_first,
-        "reserved_total": reserved_total,
+        "reserved_total": reserved_all,
+        "reserved_from_survivors": reserved_total,
         "final_probes_used": probes_used,
         "final_snapshot": doc,
         "children": children,
@@ -219,7 +356,7 @@ def main(argv: list[str] | None = None) -> int:
     Path(args.out).write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(
         json.dumps(
-            {k: report[k] for k in ("passed", "reserved_total", "final_probes_used")},
+            {k: report[k] for k in ("passed", "reserved_total", "final_probes_used", "killed_pid")},
             ensure_ascii=False,
         )
     )
