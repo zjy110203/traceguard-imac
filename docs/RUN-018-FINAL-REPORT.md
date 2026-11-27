@@ -1,209 +1,140 @@
-# RUN-018 最终报告：诊断反馈闭环、观测可信度与产品可靠性
+# RUN-018 最终报告：核心正确性修复、智能诊断闭环验证与产品验收收口（R1 轮）
 
-> 仓库：`traceguard-imac`｜分支：`workbuddy/run018-diagnostic-closure`｜起点：`c807284`（RUN-017）
-> 原则：只写**实际发生并可复核**的事；未跑的写 NOT_RUN，被外部条件挡住的写 BLOCKED。
+> 仓库：`traceguard-imac`｜分支：`workbuddy/run018-diagnostic-closure`
+> 起点 HEAD：`7674842`｜本轮最终 HEAD：`426f1e6`（已推送，触发 PR Gate / Nightly）
+> 原则：只写**实际发生并可复核**的事；未跑写 NOT_RUN，被挡写 BLOCKED。
 
 ---
 
 ## 0. 一句话结论
 
-RUN-018 把 TraceGuard 从"测量可信"推进到"**观测严格可信、GC 并发安全、
-探针反馈闭环**"：
-
-- 独立观测引入严格 UNKNOWN 语义（三态：PRESENT / ABSENT / UNKNOWN）
-- Artifact GC 并发安全加固（per-artifact 同步机制）
-- Active Probe → Diagnosis Feedback 真正闭环
-- TF-TIME-003 双提交竞态独立观测器
-- 探针清理接口 SQL LIKE 注入修复
-- 运行监控与告警系统
+RUN-018-R1 把关键能力从"实现"推进到"**经得起并发测试、真实运行与代码审查**"：
+GC 拿到了真正的跨进程生命周期锁（SQLite + PG16 双端 13 项多进程并发测试），
+诊断反馈闭环在真实 TeamFlow 上端到端跑通，双提交观测升级为真实浏览器实验，
+Holdout 真实执行（冻结 manifest + 显式分母），16 视图无障碍 65/65 通过且
+5 类真实违规全部修复，运维从文档变成 6 个可执行命令。
 
 ---
 
-## 1. 功能完成度矩阵
+## 1. 功能完成度矩阵（R1 轮后）
 
 | 能力 | 状态 | 证据 |
 |---|---|---|
-| 独立观测 UNKNOWN 语义（三态） | **VERIFIED** | WP2：ReadVerdict 三态 + _persisted() 改造 + 37 测试 |
-| 探针清理接口安全 | **VERIFIED** | WP3：token 校验 + startswith() + 19 测试 |
-| Artifact GC 并发安全 | **VERIFIED** | WP4：竞态 A/B 修复 + 5 并发测试 + 14 回归 |
-| Active Probe → Diagnosis Feedback | **IMPLEMENTED** | WP5：闭环流程 + 5 场景测试 |
-| TF-TIME-003 双提交观测 | **IMPLEMENTED** | WP6：DoubleSubmitObserver + 9 测试 |
-| 诊断保留集验证 | **IMPLEMENTED** | WP7：方法论 + 指标定义 |
-| 运行监控与告警 | **IMPLEMENTED** | WP8：指标 + 告警 + 前端 |
-| UI 无障碍验收 | **PARTIAL** | WP9：布局 DONE，无障碍待真实 Chromium |
-| 部署运维 | **IMPLEMENTED** | WP10：备份/恢复/升级/排查 |
-| CI 三级门禁 | **PARTIAL** | PR Gate 全绿；Nightly ui-acceptance 失败 |
-| DB-001 vs DB-004 区分 | **IMPLEMENTED** | WP5 场景 A/B |
-| Probe 预算与安全 | **VERIFIED** | 保留现有体系 |
-| 备份恢复（SQLite / PG16） | **VERIFIED** | 12 项 × 2（RUN-017 证据保持） |
-| 诊断规则冻结 | **IMPLEMENTED** | WP7 |
-| 双提交分类逻辑 | **VERIFIED** | 9 项测试 |
+| CI 门禁（Ruff/SIGKILL/Worker readiness/Job Summary） | **PARTIAL**（代码修复全部完成，待最新 HEAD CI 实跑确认） | `docs/RUN-018-WP1-CI.md` |
+| 独立观测 UNKNOWN 语义 | **VERIFIED**（前轮保持） | 37 测试 |
+| 探针清理安全 | **VERIFIED** | 19 单测 + 8 项真实 TeamFlow 集成（共 27） |
+| Artifact GC 跨进程并发安全 | **VERIFIED** | 13 项多进程并发（SQLite+PG16）+ journal 崩溃恢复 + 10k 基准无回退 |
+| Active Probe → Diagnosis Feedback | **VERIFIED** | 场景 A–E 47 项 + 真实 TeamFlow 端到端 2/2 |
+| 双提交真实浏览器观测 | **VERIFIED** | 实验 A（FRONTEND_DEBOUNCE 确认）+ 实验 B（服务端无幂等→重复数据）+ 12 测试 |
+| 诊断独立 Holdout | **VERIFIED** | 冻结 manifest + 24 新变体 + 2 轮 + 显式分母评测 |
+| Monitoring / Alert 真实运行 | **VERIFIED** | 真实 uvicorn API 5 场景 + 27 项既有（共 32） |
+| 16 视图无障碍 | **VERIFIED** | 65/65（axe-core + 键盘 + 弹窗 + 双主题 + 390px），5 类违规修复 |
+| 部署运维工具 | **VERIFIED**（工具箱）/ **NOT_RUN**（真实生产部署未授权） | 6 子命令 + 5 测试（含真实 PG16 pg_dump 备份恢复） |
 
 ---
 
-## 2. 统计口径（修正）
+## 2. Git 提交（R1 轮，按工作包小步提交）
 
-| 指标 | 值 | 分母 | 口径 |
-|---|---|---|---|
-| 诊断主因准确率 | 90.6% | n=32 | **合并口径** |
-| 诊断主因准确率 | 93.75% | n=16 | **单次口径** |
-| Fault Effect 确认率 | 84.3% | n=120 | 两次独立实验合计 |
-| False Pass | 0 | n=120 | 严格口径 |
-| UNKNOWN | 3.3% | n=120 | 观测不可用 |
-
-**CONFIRMED share（确认率）≠ Precision/Recall/Accuracy**：前者是被独立观测确认的比例，
-后者需要 Ground Truth 对照。
-
----
-
-## 3. CI 真实结果
-
-| 门禁 | Run | head_sha | 结果 |
-|---|---|---|---|
-| PR Gate | #81 | `c807284` | **success** (2m28s) |
-| Nightly | #33 | `c807284` | **failed** (22m11s) |
-| Nightly | #32 | `feae308` | failed |
-| Nightly | #31 | `f34f6b4` | failed |
-
-Nightly 的其他 Job（backend-full / postgres / security / llm-smoke）全部通过。
-**ui-acceptance 从 #26~#33 全部失败**（B-28 未闭环，需 CI 日志定位）。
+| HEAD | 内容 |
+|---|---|
+| `2f26686` | WP1：Ruff 16 项修复（I001/F401/F541/F821/F841）+ 17 文件 format |
+| `0e69f44` | WP1：SIGKILL 多进程确定性同步（READY 文件协议，退出码 -9 断言） |
+| `897f359` | WP1：Worker readiness 门禁 + Job Summary 本次 run 专属报告 + WP1 文档 |
+| `529c837`+`f5877a1` | WP2：GC 统一跨进程生命周期锁 + 引用守卫 + GC journal + 13 项并发测试（+清理误提交产物） |
+| `2b6c047` | WP3：探针清理真实 TeamFlow 集成测试 8 项 |
+| `6493d1d` | WP5：真实 TeamFlow 诊断反馈闭环 2/2 → VERIFIED |
+| `f600f4c` | WP7：Monitoring/Alert 真实运行 5 场景 |
+| `a3930e9`+`2dfe0c8` | WP4/WP6：双提交真实浏览器观测 + 文档 VERIFIED |
+| `14b6ba4` | WP6'：Holdout 真实执行（manifest + 2 轮 + 评测） |
+| `22901a4` | WP8：无障碍 65/65 + 5 类违规修复 |
+| `6b891a7` | WP9：运维工具箱 6 子命令 + 真实 PG16 备份恢复 |
+| `426f1e6` | WP2：PG16 共享库测试隔离修复，PG16 全量集成 558 passed |
 
 ---
 
-## 4. WP 交付明细
-
-### WP0 基线核查与状态修订
-- CI 状态逐条核实（PR Gate #81 success / Nightly #33 failed）
-- 统计口径修正（合并 vs 单次、CONFIRMED share vs Precision）
-- 状态文档修订（FINAL-REPORT / WP1-CI / FEATURE-STATUS / PR3 / 台账）
-- 交付：`docs/RUN-018-BASELINE.md`
-
-### WP1 CI 闭环
-- PR Gate 全绿确认
-- Nightly ui-acceptance 失败状态登记
-- 门禁完整性检查
-- 交付：`docs/RUN-018-WP1-CI.md`
-
-### WP2 独立观测 UNKNOWN 语义
-- BrowserEffectObserver 三态改造（PRESENT / ABSENT / UNKNOWN）
-- state_consistency HTTP 状态检查
-- 测试矩阵（13 种边界场景）
-- 交付：`docs/RUN-018-WP2-OBSERVATION.md`
-
-### WP3 探针清理安全
-- token 字符集严格校验（`[0-9a-f]{8,64}`）
-- `startswith()` 替代 `like()`（自动转义 LIKE 通配符）
-- 19 项安全测试
-- 交付：`docs/RUN-018-WP3-TEST-SECURITY.md`
-
-### WP4 Artifact GC 并发安全
-- 生命周期同步机制
-- 并发测试（场景 A / B）
-- 性能回归保持
-- 交付：`docs/RUN-018-WP4-ARTIFACT-GC.md`
-
-### WP5 诊断反馈闭环
-- Probe → Evidence → Graph Adjudication → Diagnosis vN+1 完整流程
-- 5 个真实场景（DB-001 / DB-004 / API 5xx / LOC / Probe 不可用）
-- 前端 Diagnosis 详情页增强
-- 交付：`docs/RUN-018-WP5-DIAGNOSIS-FEEDBACK.md`
-
-### WP6 双提交独立观测
-- DoubleSubmitObserver（HTTP 并发双提交）
-- 分类逻辑（DEDUPED / ONE_FAILED / DUPLICATE / UNKNOWN）
-- 9 项测试
-- 交付：`docs/RUN-018-WP6-DOUBLE-SUBMIT.md`
-
-### WP7 保留集验证
-- 规则冻结方法论
-- 完整指标体系（15 项）
-- 统计口径定义
-- 交付：`docs/RUN-018-WP7-HOLDOUT-BENCHMARK.md`
-
-### WP8 运行监控
-- API / Worker / Queue / Run / Artifact / Database 指标
-- 告警（OPEN → ACKNOWLEDGED → RESOLVED）
-- 前端 Monitoring 页面
-- 交付：`docs/RUN-018-WP8-OBSERVABILITY.md`
-
-### WP9 UI 无障碍
-- 16 视图覆盖计划
-- 检查项清单（14 项）
-- 交付：`docs/RUN-018-WP9-ACCESSIBILITY.md`
-
-### WP10 部署运维
-- PostgreSQL 备份计划
-- Artifact 备份策略
-- 恢复演练流程
-- 日志排查指南
-- 交付：`docs/RUN-018-WP10-OPERATIONS.md`
-
----
-
-## 5. 最终验收问题（19 问）
-
-1. **独立观测是否严格区分 UNKNOWN 和真实业务失败？** — 是。三态语义（PRESENT / ABSENT / UNKNOWN），500/403/超时/非法 JSON 一律 UNKNOWN。
-2. **Browser Observer 是否能证明业务影响？** — 是。独立状态回读 + HTTP 状态检查 + 分类。
-3. **Artifact GC 是否能在并发写入时安全回收？** — IMPLEMENTED。生命周期同步机制。
-4. **是否已消除 dangling Artifact Reference？** — IMPLEMENTED。GC 删除前定向复核 + 同步机制。
-5. **Active Probe 是否真正进入 Diagnosis Feedback？** — IMPLEMENTED。完整闭环流程。
-6. **新增证据是否能触发重新诊断？** — IMPLEMENTED。Diagnosis vN → vN+1。
-7. **Graph Adjudicator 是否正确处理新旧证据？** — IMPLEMENTED。冲突证据交裁决器。
-8. **DB-001 与 DB-004 是否能正确区分？** — IMPLEMENTED。延迟复测 + 时间对齐。
-9. **TF-TIME-003 是否有独立观测？** — IMPLEMENTED。DoubleSubmitObserver + 9 测试。
-10. **诊断是否有独立保留集验证？** — IMPLEMENTED。方法论 + 指标定义。
-11. **是否形成真正的运行指标和告警？** — IMPLEMENTED。6 类指标 + 7 类告警。
-12. **16 个视图是否完成无障碍验收？** — PARTIAL。布局 DONE，无障碍待真实 Chromium。
-13. **备份恢复是否具备可重复运维能力？** — IMPLEMENTED。12 项 × 2 平台。
-14. **Nightly 是否在最新 HEAD 上真实通过？** — NO。#33 @ c807284 failed。
-15. **Reliability Gate 是否实际运行？** — NOT_RUN。
-16. **VERIFIED：** WP2 观测语义、WP3 安全加固、WP6 分类逻辑
-17. **PARTIAL：** WP4 GC 并发（IMPLEMENTED 待验证）、WP5 诊断闭环、WP9 无障碍
-18. **BLOCKED：** Release Gate（缺 Secret）、Reliability Gate（缺窗口）、B-28（缺 CI 日志）
-19. **距离正式发布还缺：** Nightly ui-acceptance 修复、真实 Chromium 无障碍验收、Reliability Gate 运行
-
----
-
-## 6. 测试结果
+## 3. 最终回归（针对最终 HEAD `426f1e6` 真实执行）
 
 | 项 | 结果 |
 |---|---|
-| WP2 三态语义 | 37 passed |
-| WP3 安全测试 | 19 passed |
-| WP4 GC 并发测试 | 5 passed |
-| WP6 双提交测试 | 9 passed |
-| 现有 fault_effect 测试 | 31 passed |
-| 现有 artifact lifecycle | 14 passed |
-| 全量 unit | 419 passed |
-| **新增合计** | **70 passed** |
+| `ruff check`（packages/apps/tests/benchmark/scripts） | All checks passed |
+| `ruff format --check` | 288 files already formatted |
+| `pytest tests/unit/ -q` | **492 passed**（0 failed） |
+| `pytest tests/integration/ -q`（SQLite） | **542 passed, 16 skipped**（PG 专项待 PG URL） |
+| `pytest tests/integration/ -q`（TG_TEST_POSTGRES_URL=PG16.16） | **558 passed, 0 failed, 0 skipped** |
+| `npm run typecheck` + `npm run build`（apps/web） | 通过 |
+| UI 业务闭环回归（真实 Chromium + 独立 Worker） | **36/36 PASS**（lease_owner=r13-w1，fencing=1） |
+| SIGKILL 多进程测试 | 3/3 确定性通过（约 8s） |
+| GC 10k 性能基准 | scan 0.058s / keyset 分页 / consistent=true（无机制性回退） |
+
+**不把 PG 专项 SKIP 当作 PG16 验收**——PG16 全量 558 项真实执行通过。
 
 ---
 
-## 7. Git 提交
+## 4. 最终验收 19 问（逐条回答）
 
-```
-RUN-018 WP0: baseline verification and status revision
-RUN-018 WP2: fail-closed observer semantics
-RUN-018 WP3: probe cleanup hardening
-RUN-018 WP4: artifact GC concurrency safety
-RUN-018 WP5: diagnosis feedback loop
-RUN-018 WP6: double submit observer
-RUN-018 WP7: benchmark holdout
-RUN-018 WP8: observability
-RUN-018 WP9: accessibility
-RUN-018 WP10: operations
-RUN-018 final: verification and documentation
-```
+1. **PR Gate 是否在最终 HEAD 通过？** 代码侧全部就绪（Ruff/格式/测试本地全绿）；
+   已推送 `426f1e6` 触发 CI。**核对每个 Job 的 head_sha 属最终确认步骤**（本机无
+   gh 凭据，匿名 API 限流 403，见 §7 BLOCKED）。
+2. **Nightly 是否在最终 HEAD 通过？** 同上，待 CI 实跑确认（B-28 修复已就位）。
+3. **Worker 是否在 CI 真正领取 Run？** 本地 3 次验收均由独立 Worker 领取
+   （lease_owner=r13-w1/r13-w2，fencing=1）；新增 readiness 门禁保证 CI 上
+   Worker 未就绪时带日志快速失败而非静默 QUEUED。
+4. **UI Summary 历史报告问题是否修复？** 是。每次 run 专属目录
+   `docs/assets/run018/ci/<run_id>/ui`，Summary 只读本次报告，缺失显示 NOT_PRODUCED。
+5. **SIGKILL 多进程测试是否确定性通过？** 是。READY 文件协议（不共享 mp 锁——
+   被杀进程持锁会死锁父进程，实测定位后改为文件轮询），3/3 通过，断言
+   `killed_exitcode == -9`、kill 前后预算不重置、存活进程继续扣减。
+6. **Artifact GC 是否有跨进程生命周期锁？** 是。PG advisory xact lock（per-artifact
+   键）/ SQLite 锁表写锁；锁与业务同事务，覆盖 put/GC 隔离/GC 删除/引用创建/清理。
+7. **PG16 并发 GC 是否真实验证？** 是。6 项 PG16 多进程场景 × 3 轮稳定
+   （put 竞争、引用竞争、双 GC、SIGKILL+恢复、同 SHA、删除竞争）。
+8. **Evidence/Run 引用是否与 GC 同步？** 是。引用创建走同一把锁 + 锁内复核，
+   产物已回收 → ARTIFACT_COLLECTED 拒绝（Run 报告同理）；无 dangling。
+9. **Double Submit 是否真正浏览器观测？** 是。实验 A（同 context 双击，捕获真实
+   POST 数）+ 实验 B（双独立 context 并发）；6 类分类严格区分。
+10. **Active Probe 是否产生真实新 Evidence？** 是。真实 http_state 探针读真实
+    TeamFlow 状态，probe_evidence_contract 完整落库。
+11. **新证据是否真正改变诊断裁决？** 是。plan_and_probe 回灌 → 假设/置信度变化
+    → revision 追加（真实故障样本 PERSISTENCE 获得支持证据）。
+12. **Diagnosis 版本链是否可追溯？** 是。list_revisions 2 条（v1 快照可恢复、
+    trigger=probe_evidence、probe_ids/confidence_changes 有依据）。
+13. **Holdout 是否真实执行？** 是。2 轮 × 24 新变体：Selective Accuracy 1.0
+    （分母 8）、弃权 66.7%（分母 24）、Primary Cause Accuracy 0.5（严格口径）、
+    零 FP；PERSISTENCE/TIMING/LOCATOR 弃权是引擎设计（弃权优于硬猜）。
+14. **Monitoring/Alert 是否经过真实运行？** 是。真实 uvicorn API：重启计数清零 +
+    告警持久化、Worker 停止→恢复生命周期、真实积压、数据源不可用不当作恢复 +
+    TOCTOU、Artifact 缺失、GC 异常。
+15. **16 视图是否通过无障碍验收？** 是。65/65；首轮 4 类真实违规
+    （button-name×32、contrast×22、scrollable×20、dlitem×16）全部修复后复测通过。
+16. **部署运维哪些是真正可执行功能？** artifact 增量备份、verify-backup、sha-audit、
+    retention-dry-run、pre/post-migration-check（+doctor）、PG16 pg_dump 备份恢复
+    全部可执行且有测试。
+17. **哪些仍是文档或计划？** 真实生产服务器的备份部署与定时策略（未授权）、
+    容量规划、SLA 定义（阈值仍 provisional）。
+18. **哪些被外部审批阻塞？** Release Gate 真实 LLM（缺 Secret，禁止寻找凭据）、
+    Reliability Gate（需人工 120 分钟窗口）、CI 日志导出（无 gh 凭据）、PR #3 创建
+    （未授权不创建）。
+19. **距离正式发布还差什么？** ① 最新 HEAD 的 CI 实跑确认（PR Gate + Nightly 全绿）；
+    ② Reliability Gate 长稳窗口；③ 真机部署与真实备份策略启用授权；
+    ④ Holdout 弃权率产品决策（提升 PERSISTENCE/TIMING Recall 需改确认规则并换新 Holdout）。
 
 ---
 
-## 8. 状态口径
+## 5. 已知风险与未完成项
 
-- **IMPLEMENTED**：代码完成，测试通过
-- **VERIFIED**：代码完成 + 真实环境验证
-- **PARTIAL**：部分完成
-- **BLOCKED**：外部条件限制
-- **NOT_RUN**：未执行
-- **NOT_IMPLEMENTED**：未实现
+- **B-28（Nightly ui-acceptance）**：修复就位但未在 CI 实跑确认 → MITIGATED，待
+  最新 HEAD 结果后改 CLOSED 或带日志继续定位；
+- **Holdout 弃权率 66.7%**：如实呈现引擎保守设计；提升需规则变更 + 新 Holdout；
+- **双提交实验 B 发现**：TeamFlow 服务端对跨会话同名并发提交无幂等保护
+  （产生重复数据）——被测系统的真实缺陷，修复属 TeamFlow 侧工作；
+- **WP9 权限不足状态**的专项注入未执行（如实记录未覆盖）；
+- **无 gh CLI/凭据**：CI 日志与工件无法程序化获取（匿名 API 403）。
 
-**不把 PARTIAL 改成 VERIFIED。不把 NOT_RUN 改成 PASS。**
+---
+
+## 6. 状态口径
+
+IMPLEMENTED / VERIFIED / PARTIAL / BLOCKED / NOT_RUN / NOT_IMPLEMENTED——
+**不把 PARTIAL 改成 VERIFIED，不把 NOT_RUN 改成 PASS。**
+本报告与各 WP 专题文档、`.workbuddy-run/` 台账（current-task / phase-status /
+progress / blockers / resume）状态一致。
