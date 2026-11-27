@@ -27,11 +27,13 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
   'platform-admin': [
     'read', 'testcase.create', 'testcase.review', 'oracle.create', 'oracle.bind',
     'run.execute', 'diagnosis.operate', 'probe.execute', 'repair.submit',
-    'repair.approve', 'repair.promote', 'repair.rollback', 'system.configure', 'user.manage',
+    'repair.approve', 'repair.promote', 'repair.rollback', 'repair.regression',
+    'system.configure', 'system.observe', 'user.manage',
   ],
   'qa-lead': [
     'read', 'testcase.create', 'testcase.review', 'oracle.create', 'oracle.bind',
     'run.execute', 'diagnosis.operate', 'probe.execute', 'repair.submit', 'repair.approve',
+    'repair.regression',
   ],
   'qa-engineer': [
     'read', 'testcase.create', 'run.execute', 'diagnosis.operate', 'probe.execute', 'repair.submit',

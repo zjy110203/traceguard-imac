@@ -1,0 +1,156 @@
+{
+  "workpackage": "RUN-016 WP2.1",
+  "database": "PostgreSQL",
+  "database_name": "traceguard_run019_regression",
+  "proposal_id": "repair_1795774402511489a2c90d35a",
+  "processes": 10,
+  "started_at_iso": "2026-11-27T18:13:22+0800",
+  "started_at_epoch": 1795774402.5581062,
+  "requests": [
+    {
+      "idx": 0,
+      "ok": true,
+      "run_id": "run_1795774405778fa10a49d57ce",
+      "status": "PASSED",
+      "verdict": "PASSED",
+      "elapsed_s": 0.453,
+      "pid": 70025
+    },
+    {
+      "idx": 1,
+      "ok": true,
+      "run_id": "run_1795774405778fa10a49d57ce",
+      "status": "PASSED",
+      "verdict": "PASSED",
+      "elapsed_s": 0.507,
+      "pid": 70026
+    },
+    {
+      "idx": 2,
+      "ok": true,
+      "run_id": "run_1795774405778fa10a49d57ce",
+      "status": "PASSED",
+      "verdict": "PASSED",
+      "elapsed_s": 0.564,
+      "pid": 70027
+    },
+    {
+      "idx": 3,
+      "ok": true,
+      "run_id": "run_1795774405778fa10a49d57ce",
+      "status": "PASSED",
+      "verdict": "PASSED",
+      "elapsed_s": 0.52,
+      "pid": 70028
+    },
+    {
+      "idx": 4,
+      "ok": true,
+      "run_id": "run_1795774405778fa10a49d57ce",
+      "status": "PASSED",
+      "verdict": "PASSED",
+      "elapsed_s": 0.567,
+      "pid": 70029
+    },
+    {
+      "idx": 5,
+      "ok": true,
+      "run_id": "run_1795774405778fa10a49d57ce",
+      "status": "PASSED",
+      "verdict": "PASSED",
+      "elapsed_s": 0.457,
+      "pid": 70030
+    },
+    {
+      "idx": 6,
+      "ok": true,
+      "run_id": "run_1795774405778fa10a49d57ce",
+      "status": "PASSED",
+      "verdict": "PASSED",
+      "elapsed_s": 0.523,
+      "pid": 70031
+    },
+    {
+      "idx": 7,
+      "ok": true,
+      "run_id": "run_1795774405778fa10a49d57ce",
+      "status": "PASSED",
+      "verdict": "PASSED",
+      "elapsed_s": 0.458,
+      "pid": 70032
+    },
+    {
+      "idx": 8,
+      "ok": true,
+      "run_id": "run_1795774405778fa10a49d57ce",
+      "status": "PASSED",
+      "verdict": "PASSED",
+      "elapsed_s": 0.565,
+      "pid": 70033
+    },
+    {
+      "idx": 9,
+      "ok": true,
+      "run_id": "run_1795774405778fa10a49d57ce",
+      "status": "PASSED",
+      "verdict": "PASSED",
+      "elapsed_s": 0.431,
+      "pid": 70034
+    }
+  ],
+  "worker_reports": [
+    {
+      "worker": "r16-mp-w1",
+      "processed": 1,
+      "pid": 70024
+    }
+  ],
+  "exit_codes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "run_ids": [
+    "run_1795774405778fa10a49d57ce"
+  ],
+  "claim_rows": [
+    {
+      "proposal_id": "repair_1795774402511489a2c90d35a",
+      "run_id": "run_1795774405778fa10a49d57ce",
+      "claim_key": "repair-regression:repair_1795774402511489a2c90d35a:v2:attempt1"
+    }
+  ],
+  "runs_in_db": 1,
+  "submissions": 1,
+  "regression_status": "PASSED",
+  "regression_verdict": "PASSED",
+  "history_len": 1,
+  "checks": {
+    "全部请求成功返回": true,
+    "请求数等于进程数": true,
+    "唯一有效 Regression Claim": true,
+    "唯一 Regression Run": true,
+    "所有请求指向同一 Run": true,
+    "唯一 Regression History": true,
+    "每个 Run 至多一份提交回执": true,
+    "最终结论为 PASSED": true,
+    "无重复执行（Run 数 == 1）": true,
+    "Worker 实际消费了 Run": true,
+    "新 Runtime 恢复原 Run": true,
+    "重复请求不创建新 Run": true,
+    "失败请求不破坏赢家状态": true
+  },
+  "passed": 13,
+  "failed": [],
+  "ended_at_iso": "2026-11-27T18:13:28+0800",
+  "ended_at_epoch": 1795774408.351899,
+  "status": "PASS"
+}

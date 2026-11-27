@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""RUN-019 WP1 联合验收：真实 API + 真实 SQLite + 真实 Chromium/TeamFlow 的资产管理闭环。
+"""RUN-019 WP1 联合验收：真实 API + 真实数据库 + 真实 Chromium/TeamFlow 的资产管理闭环。
 
 用法：
     .venv/bin/python scripts/wp1_business_loop_run019.py
+    .venv/bin/python scripts/wp1_business_loop_run019.py \\
+        --db-url 'postgresql+psycopg://traceguard@127.0.0.1:55432/traceguard_run019_wp1_loop'
 
 证据输出：docs/assets/run019/wp1/wp1-loop.json
 原则：每步真实调用，失败即记录 FAIL 并以非零码退出；不把 BLOCKED 写成 PASS。
@@ -10,6 +12,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import sys
@@ -61,6 +64,14 @@ def step(name: str, fn):  # type: ignore[no-untyped-def]
 
 
 def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument(
+        "--db-url",
+        default="",
+        help="可选：外部数据库 DSN（如 PostgreSQL 16）；为空时使用隔离 SQLite",
+    )
+    args = ap.parse_args()
+
     from fastapi.testclient import TestClient
     from traceguard_core.config import reset_settings_cache
     from traceguard_persistence import Database, set_database
@@ -78,8 +89,13 @@ def main() -> int:
     from traceguard_api.services import reset_services
 
     reset_auth_policy_cache()
-    tmp = tempfile.mkdtemp(prefix="tg-run019-wp1-")
-    db = Database(f"sqlite:///{tmp}/wp1.db")
+    if args.db_url:
+        db = Database(args.db_url)
+        db_label = f"real postgresql 16 ({args.db_url.rsplit('/', 1)[-1]})"
+    else:
+        tmp = tempfile.mkdtemp(prefix="tg-run019-wp1-")
+        db = Database(f"sqlite:///{tmp}/wp1.db")
+        db_label = "real sqlite (temporary, isolated)"
     set_database(db)
     reset_runtime()
     reset_services()
@@ -294,7 +310,7 @@ def main() -> int:
             "head": __import__("subprocess")
             .check_output(["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True)
             .strip(),
-            "database": "real sqlite (temporary, isolated)",
+            "database": db_label,
             "teamflow": "http://127.0.0.1:8001 (real process)",
             "total": len(RECORDS),
             "passed": len(RECORDS) - len(failures),
