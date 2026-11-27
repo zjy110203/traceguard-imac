@@ -54,6 +54,11 @@ _PATHS = [
     "packages/persistence",
     "apps/api",
     "apps/teamflow",
+    # RUN-018 R2（B-28 根因）：独立 Worker 子进程以 `-m traceguard_worker.main`
+    # 启动，包名在 apps/workers 下。本地 venv 有 traceguard.pth 注入该路径，
+    # CI 仅按 requirements 安装 → ModuleNotFoundError → Worker 退出码 1 →
+    # readiness 失败、脚本退出 3。白名单环境必须显式包含该路径。
+    "apps/workers",
 ]
 
 
