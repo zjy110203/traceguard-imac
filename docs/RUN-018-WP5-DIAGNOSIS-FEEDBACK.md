@@ -1,9 +1,11 @@
 # RUN-018 WP5：Active Probe → Diagnosis Feedback 真正闭环
 
-> 时间：2026-11-27
+> 时间：2026-11-27（RUN-018-R1 轮补充真实运行验证）
 > 范围：探针证据契约 / 证据反馈规则 / 五个真实场景 / 预算与安全 / 前端诊断详情
 > 测试：`tests/integration/test_diagnosis_feedback_scenarios_run018.py`（10）、
-> `tests/unit/test_probe_contract_run018.py`（9）
+> `tests/unit/test_probe_contract_run018.py`（9）、
+> `tests/integration/test_diagnosis_feedback_real_run_run018.py`（2，真实 TeamFlow 运行）
+> 状态：**VERIFIED**（确定性场景 + 真实 TeamFlow 端到端闭环均已执行）
 
 ---
 
@@ -92,6 +94,32 @@ DiagnosisService + ProbeService + GraphService，确定性探针执行器）：
 迭代上限 `STOP_ITERATION_LIMIT`（不允许无限重试）。
 
 ## 5. 5.5 Probe 预算与安全
+
+### 5.3 真实运行验证（RUN-018-R1 轮新增，§5.3 九步全链路）
+
+`tests/integration/test_diagnosis_feedback_real_run_run018.py`：真实 TeamFlow 进程
+（独立 OS 进程 + 独立库）+ 真实 Runtime 持久化，不 patch 探针执行器：
+
+1. 真实故障注入 TF-DB-001（持久化静默失败）；
+2. 真实 HTTP 创建项目 → API 返回 ok 但 `persisted=False`（真实业务签名）；
+3. 独立状态查询确认业务未落库（真实状态回读）；
+4. 真实观测构造 Run 报告与 TRUSTED 证据 → 初始诊断（revision 1）；
+5. `plan_and_probe` 完整闭环：Evidence Gap → Probe Plan（business_state_unknown
+   → http_state）→ **真实只读探针**（HTTP 读 TeamFlow `/api/state/projects`）；
+6. 探针证据落库：Workspace 继承 Run 归属（default）、`probe_evidence_contract`
+   完整、observed_at 时间语义正确；
+7. GraphService 重建图：`ProbeExecution` 节点 + `evaluates` 边进入图；
+8. 同一诊断 revision 追加到 ≥2：`list_revisions` 版本链可追溯（v1 快照可恢复、
+   trigger=probe_evidence、probe_ids / hypothesis_changes / confidence_changes
+   有依据）；PERSISTENCE 假设附着真实支持证据；**Run Verdict 不被探针改写**；
+9. 真实清理：清除故障 + probe-cleanup（allow_default token 契约）。
+
+探针不可用变体（真实 TeamFlow 宕机 → 连接拒绝）：http_state 不伪造 SUCCEEDED、
+无证据的 CONFIRMED 不出现、Run Verdict 保持 INCONCLUSIVE。
+
+结果：**2/2 passed**（3 轮连跑稳定）；确定性场景 47 项回归全部保持通过。
+
+### 5.5 预算与安全
 
 - **预算体系保留**：每 Run/Diagnosis 独立 `ProbeBudget`、CAS 持久化、fail-closed（未改动）；
 - **不允许无限重试**：`plan_and_probe` 迭代上限 + 同 gap 不重复尝试（新增测试）；
