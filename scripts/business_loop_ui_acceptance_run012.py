@@ -996,82 +996,157 @@ def main(argv: list[str] | None = None) -> int:
                 rep.screenshot(eng_p, "01-intent-created")
 
                 # ---------------------------------------------------- 2. TestCase
+                # RUN-019-R2：TestCase 步骤输入已改为可视化 StepEditor（RUN-019 WP1）。
+                # 旧脚本沿用 RUN-012 的 `#tc-steps` 隐藏文本框，Nightly #65 因此
+                # `TimeoutError: Page.fill: Timeout 30000ms exceeded`。
+                # 这里改为真实操作可视化编辑器（新增/改动作/填定位器/填值/配断言），
+                # 不再依赖任何隐藏兼容输入框，也不跳过 UI 创建步骤。
                 eng_p.goto(base + "/testcases", wait_until="domcontentloaded")
-                eng_p.wait_for_selector("button.primary:has-text('新建用例')", timeout=20000)
-                eng_p.click("button.primary:has-text('新建用例')")
+                eng_p.wait_for_selector('[data-testid="testcase-new"]', timeout=20000)
+                eng_p.click('[data-testid="testcase-new"]')
                 eng_p.wait_for_selector("#tc-title", timeout=10000)
                 tc_title = "WP4 闭环用例：成功提示可见"
                 eng_p.fill("#tc-title", tc_title)
                 if intent_id:
                     eng_p.select_option("#tc-intent-ref", intent_id)
-                eng_p.fill(
-                    "#tc-steps",
-                    json.dumps(
-                        [
-                            {
-                                "step_id": "s1",
-                                "action": "navigate",
-                                "value": "/projects",
-                                "description": "打开项目列表",
-                            },
-                            {
-                                "step_id": "s2",
-                                "action": "click",
-                                "target": {"strategy": "test_id", "value": "nav-new"},
-                                "description": "新建",
-                            },
-                            {
-                                "step_id": "s3",
-                                "action": "fill",
-                                "target": {"strategy": "test_id", "value": "project-name"},
-                                "value": "WP4 闭环项目",
-                                "description": "填写名称",
-                            },
-                            {
-                                "step_id": "s4",
-                                "action": "click",
-                                "target": {"strategy": "test_id", "value": "create-submit"},
-                                "description": "提交",
-                            },
-                            {
-                                "step_id": "s5",
-                                "action": "assert",
-                                "target": {"strategy": "test_id", "value": "banner-success"},
-                                "value": "banner-success",
-                                "description": "读取成功提示",
-                            },
-                        ],
-                        ensure_ascii=False,
-                    ),
+
+                editor = eng_p.locator('[data-testid="step-editor"]')
+                editor.wait_for(state="visible", timeout=15000)
+                rep.check(
+                    "②a 新建用例使用可视化步骤编辑器（旧 #tc-steps 已不存在）",
+                    editor.count() == 1 and eng_p.locator("#tc-steps").count() == 0,
+                    f"editor={editor.count()} legacy_tc_steps={eng_p.locator('#tc-steps').count()}",
                 )
-                eng_p.fill(
-                    "#tc-assertions",
-                    json.dumps(
-                        [
-                            {
-                                "assertion_id": "a_wp4_banner",
-                                "description": "成功提示可见",
-                                "kind": "ui",
-                                "required": True,
-                                "expected": {"test_id": "banner-success"},
-                            }
-                        ],
-                        ensure_ascii=False,
-                    ),
+                prefilled_steps = eng_p.locator('[data-testid="step-row"]').count()
+                prefilled_assertions = eng_p.locator('[data-testid="assertion-row"]').count()
+                # 清空表单预置的演示步骤/断言，改为逐步手工录入，避免"预置数据冒充录入"。
+                for _ in range(30):
+                    rows = eng_p.locator('[data-testid="step-row"]')
+                    if rows.count() == 0:
+                        break
+                    rows.first.locator('[data-testid="step-remove"]').click()
+                    eng_p.wait_for_timeout(80)
+                for _ in range(10):
+                    rows = eng_p.locator('[data-testid="assertion-row"]')
+                    if rows.count() == 0:
+                        break
+                    rows.first.locator('[data-testid="assertion-remove"]').click()
+                    eng_p.wait_for_timeout(80)
+                rep.check(
+                    "②b 可视化编辑器可清空预置内容（步骤/断言均归零）",
+                    eng_p.locator('[data-testid="step-row"]').count() == 0
+                    and eng_p.locator('[data-testid="assertion-row"]').count() == 0,
+                    f"prefilled_steps={prefilled_steps} prefilled_assertions={prefilled_assertions}",
                 )
-                eng_p.click("button.primary:has-text('创建（待审核）')")
+
+                step_plan = [
+                    ("navigate", "", "", "/projects", "打开项目列表"),
+                    ("click", "test_id", "nav-new", "", "新建"),
+                    ("fill", "test_id", "project-name", "WP4 闭环项目", "填写名称"),
+                    ("click", "test_id", "create-submit", "", "提交"),
+                    ("assert", "test_id", "banner-success", "banner-success", "读取成功提示"),
+                ]
+                for idx, (action, strategy, target, value, desc) in enumerate(step_plan):
+                    eng_p.click('[data-testid="step-add"]')
+                    row = eng_p.locator('[data-testid="step-row"]').nth(idx)
+                    row.wait_for(state="visible", timeout=5000)
+                    row.locator('[data-testid="step-action"]').select_option(action)
+                    eng_p.wait_for_timeout(60)
+                    if strategy:
+                        row.locator('[data-testid="step-strategy"]').select_option(strategy)
+                        eng_p.wait_for_timeout(60)
+                    if target:
+                        row.locator('[data-testid="step-target"]').fill(target)
+                        eng_p.wait_for_timeout(60)
+                    if value:
+                        row.locator('[data-testid="step-value"]').fill(value)
+                        eng_p.wait_for_timeout(60)
+                    row.locator('[data-testid="step-description"]').fill(desc)
+                    eng_p.wait_for_timeout(60)
+                ui_step_count = eng_p.locator('[data-testid="step-row"]').count()
+
+                assertion_expected = {"test_id": "banner-success"}
+                eng_p.click('[data-testid="assertion-add"]')
+                arow = eng_p.locator('[data-testid="assertion-row"]').first
+                arow.wait_for(state="visible", timeout=5000)
+                arow.locator('[data-testid="assertion-kind"]').select_option("ui")
+                eng_p.wait_for_timeout(60)
+                arow.locator('[data-testid="assertion-description"]').fill("成功提示可见")
+                eng_p.wait_for_timeout(60)
+                expected_box = arow.locator('[data-testid="assertion-expected"]')
+                expected_box.fill(json.dumps(assertion_expected, ensure_ascii=False))
+                expected_box.press("Tab")  # change 事件在失焦后触发，触发解析并写回 props
+                eng_p.wait_for_timeout(250)
+                expected_error = eng_p.locator('[data-testid="assertion-expected-error"]').count()
+                assertion_id = arow.locator('[data-testid="assertion-id-0"]').input_value()
+                rep.check(
+                    "②c 可视化编辑器录入 5 步 + 1 断言（含期望值 JSON 通过校验）",
+                    ui_step_count == len(step_plan) and bool(assertion_id) and expected_error == 0,
+                    f"steps={ui_step_count} assertion_id={assertion_id} expected_error={expected_error}",
+                )
+
+                # JSON 高级模式保留：切过去必须能看到同一份内容，切回来不丢数据。
+                eng_p.click('[data-testid="step-mode-json"]')
+                eng_p.wait_for_selector('[data-testid="step-json"]', timeout=5000)
+                json_view = eng_p.locator('[data-testid="step-json"]').input_value()
+                json_has_steps = json_view.count("nav-new") == 1 and json_view.count("banner-success") >= 2
+                eng_p.click('[data-testid="step-mode-visual"]')
+                eng_p.wait_for_selector('[data-testid="step-row"]', timeout=5000)
+                steps_after_roundtrip = eng_p.locator('[data-testid="step-row"]').count()
+                assertions_after_roundtrip = eng_p.locator('[data-testid="assertion-row"]').count()
+                rep.check(
+                    "②d JSON 高级模式反映同一份可视化内容，切回后步骤不丢失",
+                    json_has_steps
+                    and steps_after_roundtrip == len(step_plan)
+                    and assertions_after_roundtrip == 1,
+                    f"json_chars={len(json_view)} steps_after_roundtrip={steps_after_roundtrip} "
+                    f"assertions_after_roundtrip={assertions_after_roundtrip}",
+                )
+
+                eng_p.click('[data-testid="testcase-create-submit"]')
                 eng_p.wait_for_timeout(1500)
                 tcs = eng.get("/api/v1/testcases?workspace_id=default")
                 tc_rows = tcs if isinstance(tcs, list) else tcs.get("items", [])
                 tcm = [t for t in tc_rows if t.get("title") == tc_title]
                 rep.check(
-                    "② UI 新建用例 → 服务端 PENDING",
+                    "②e UI 新建用例 → 服务端 PENDING",
                     len(tcm) == 1 and tcm[0].get("review_status") == "PENDING",
                     f"匹配 {len(tcm)} 条 status={(tcm[0].get('review_status') if tcm else 'N/A')}",
                     server_verified=True,
                 )
                 tc_id = str(tcm[0].get("testcase_id")) if tcm else ""
                 version = int(tcm[0].get("latest_version") or 1) if tcm else 1
+                saved = eng.get(f"/api/v1/testcases/{tc_id}/versions/{version}") if tc_id else {}
+                saved_steps = saved.get("steps") or []
+                saved_assertions = saved.get("assertions") or []
+                saved_ok = len(saved_steps) == len(step_plan) and len(saved_assertions) == 1
+                for idx, (action, strategy, target, value, _desc) in enumerate(step_plan):
+                    if idx >= len(saved_steps):
+                        saved_ok = False
+                        break
+                    got = saved_steps[idx]
+                    got_target = got.get("target") or {}
+                    if (
+                        got.get("action") != action
+                        or (strategy and got_target.get("strategy") != strategy)
+                        or (target and got_target.get("value") != target)
+                        or (value and got.get("value") != value)
+                    ):
+                        saved_ok = False
+                        break
+                assertion_ok = bool(saved_assertions) and (
+                    str(saved_assertions[0].get("assertion_id")) == assertion_id
+                    and (saved_assertions[0].get("expected") or {}) == assertion_expected
+                    and str(saved_assertions[0].get("kind")) == "ui"
+                )
+                rep.check(
+                    "②f 服务端回读：可视化录入的步骤与断言逐项一致",
+                    saved_ok and assertion_ok,
+                    f"steps={len(saved_steps)} assertions={len(saved_assertions)} "
+                    f"actions={[s.get('action') for s in saved_steps]} "
+                    f"expected={(saved_assertions[0].get('expected') if saved_assertions else None)}",
+                    server_verified=True,
+                )
                 rep.screenshot(eng_p, "02-testcase-pending")
 
                 # ---------------------------------------- 3. Oracle（已审批）+ 绑定
@@ -1083,7 +1158,7 @@ def main(argv: list[str] | None = None) -> int:
                 lead_p.wait_for_selector("#oracle-assertion", timeout=10000)
                 oracle_id = "oracle_wp4_banner"
                 lead_p.fill("#oracle-id", oracle_id)
-                lead_p.fill("#oracle-assertion", "a_wp4_banner")
+                lead_p.fill("#oracle-assertion", assertion_id)
                 lead_p.fill("#oracle-expected", "创建成功后必须出现成功提示")
                 lead_p.fill("#oracle-reqref", "REQ-WP4-LOOP#UI-1")
                 lead_p.check("#oracle-approve-now")
@@ -1116,7 +1191,7 @@ def main(argv: list[str] | None = None) -> int:
                 bindings = ver.get("oracle_bindings") or {}
                 rep.check(
                     "⑤ UI 保存绑定 → 服务端 oracle_bindings 落库",
-                    str((bindings.get("a_wp4_banner") or {}).get("oracle_id")) == oracle_id,
+                    str((bindings.get(assertion_id) or {}).get("oracle_id")) == oracle_id,
                     f"bindings={list(bindings)}",
                     server_verified=True,
                 )

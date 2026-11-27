@@ -117,6 +117,23 @@ async function create() {
       notify('至少需要一个步骤和一条断言', true)
       return
     }
+    // 契约层 LocatorSpec.value 要求非空：选了策略却没填目标元素时，提交前明确报错而不是 422。
+    const incompleteStep = steps.value.findIndex(
+      (s) => s.target?.strategy && !String(s.target?.value || '').trim(),
+    )
+    if (incompleteStep >= 0) {
+      notify(`步骤 ${incompleteStep + 1} 已选择定位策略但未填写目标元素`, true)
+      return
+    }
+    const missingDesc = assertions.value.findIndex((a) => !String(a.description || '').trim())
+    if (missingDesc >= 0) {
+      notify(`断言 ${missingDesc + 1} 缺少描述（服务端要求非空）`, true)
+      return
+    }
+    const cleanSteps = steps.value.map((s) => ({
+      ...s,
+      target: s.target?.strategy && String(s.target.value || '').trim() ? s.target : null,
+    }))
     // base_url 省略时由服务端按 TG_TEAMFLOW_BASE_URL 解析；前端只在明确知道配置时写入。
     const runConfig: Record<string, unknown> = { fail_fast: false, trace: true }
     if (targetBaseUrl.value) runConfig.base_url = targetBaseUrl.value
@@ -124,7 +141,7 @@ async function create() {
       workspace_id: currentWorkspaceId.value,
       title: form.value.title,
       intent_ref: form.value.intent_ref || null,
-      steps: steps.value,
+      steps: cleanSteps,
       assertions: assertions.value,
       run_config: runConfig,
       cleanup_policy: 'RESET_DATA',
@@ -147,8 +164,8 @@ onMounted(load)
     <PageHeader eyebrow="Catalog / Test Assets" title="测试资产"
       subtitle="TestIntent → TestCase 版本 / 审核 → 正式执行。只有 APPROVED 版本可执行。">
       <template #actions>
-        <button @click="load">刷新</button>
-        <button class="primary" @click="showCreate = true">新建用例</button>
+        <button data-testid="testcase-refresh" @click="load">刷新</button>
+        <button class="primary" data-testid="testcase-new" :disabled="!allowed('testcase.create')" @click="showCreate = true">新建用例</button>
       </template>
     </PageHeader>
 
@@ -218,7 +235,7 @@ onMounted(load)
       </div>
       <template #footer>
         <button @click="showCreate = false">取消</button>
-        <button class="primary" :disabled="busy === 'create'" @click="create">创建（待审核）</button>
+        <button class="primary" data-testid="testcase-create-submit" :disabled="busy === 'create'" @click="create">创建（待审核）</button>
       </template>
     </ModalShell>
   </div>

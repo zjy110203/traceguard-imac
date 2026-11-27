@@ -91,3 +91,6 @@ docs/assets/run017/wp4/gc-*/
 # RUN-018 WP1：CI 每次 run 的 UI 验收运行态产物只作为 artifact 上传，不入库
 docs/assets/run018/ci/**/_runtime/
 docs/assets/run018/ci/**/worker-*
+
+# RUN-019-R2：本地验收运行时目录（DB/日志不入库）
+docs/assets/run019-r2/**/_runtime/
