@@ -12,8 +12,6 @@ from __future__ import annotations
 
 import re
 
-import pytest
-
 # 合法 token 正则（与 api.py 中的 _PROBE_TOKEN_RE 一致）
 _PROBE_TOKEN_RE = re.compile(r"^[0-9a-f]{8,64}$")
 

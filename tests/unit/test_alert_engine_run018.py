@@ -13,13 +13,14 @@ from __future__ import annotations
 import time
 
 import pytest
-
+from traceguard_persistence import Database
 from traceguard_persistence.alerts import (
     ALERT_TRANSITIONS,
     ALERT_TYPES,
     AlertEngine,
     AlertStateError,
 )
+from traceguard_persistence.models import RunRow, WorkerHeartbeatRow
 from traceguard_persistence.monitoring import (
     PROVISIONAL_THRESHOLDS,
     MetricsCollector,
@@ -27,8 +28,6 @@ from traceguard_persistence.monitoring import (
     reset_process_metrics,
     upsert_worker_heartbeat,
 )
-from traceguard_persistence.models import RunRow, WorkerHeartbeatRow
-from traceguard_persistence import Database
 
 
 @pytest.fixture
@@ -142,7 +141,9 @@ def test_queue_backlog_rule_count_and_wait(db) -> None:  # type: ignore[no-untyp
 def test_queue_backlog_rule_oldest_wait(db) -> None:  # type: ignore[no-untyped-def]
     engine = AlertEngine(db)
     # 数量低于阈值，但最老等待超过 provisional 阈值
-    _seed_queued_runs(db, n=1, age_s=float(PROVISIONAL_THRESHOLDS["queue_oldest_wait_seconds"]) + 60)
+    _seed_queued_runs(
+        db, n=1, age_s=float(PROVISIONAL_THRESHOLDS["queue_oldest_wait_seconds"]) + 60
+    )
     result = engine.evaluate(_snapshot(db))
     assert "QUEUE_BACKLOG" in result["findings"]
 

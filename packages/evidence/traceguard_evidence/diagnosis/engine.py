@@ -103,9 +103,7 @@ def hypothesis_confidence(h: Any) -> float:
         1 for r in supporting if r.get("confirming") and str(r.get("trust")) == "TRUSTED"
     )
     bonus = min(0.1, 0.05 * confirming)
-    if supporting and all(
-        str(r.get("trust")) in {"POST_HOC", "TIME_UNKNOWN"} for r in supporting
-    ):
+    if supporting and all(str(r.get("trust")) in {"POST_HOC", "TIME_UNKNOWN"} for r in supporting):
         base = min(base, 0.4)
     return round(min(1.0, base + bonus), 3)
 

@@ -103,7 +103,9 @@ async def monitoring_metrics(
 @router.get("/alerts")
 async def list_alerts(
     request: Request,
-    status: str | None = Query(default=None, pattern="^(OPEN|ACKNOWLEDGED|RESOLVED|open|acknowledged|resolved)$"),
+    status: str | None = Query(
+        default=None, pattern="^(OPEN|ACKNOWLEDGED|RESOLVED|open|acknowledged|resolved)$"
+    ),
     alert_type: str | None = Query(default=None),
     limit: int = Query(default=100, ge=1, le=500),
 ) -> dict[str, Any]:
@@ -160,7 +162,9 @@ async def acknowledge_alert(
     try:
         doc = _engine().acknowledge(alert_id, actor)
     except KeyError:
-        raise HTTPException(404, detail={"code": "NOT_FOUND", "message": "alert not found"}) from None
+        raise HTTPException(
+            404, detail={"code": "NOT_FOUND", "message": "alert not found"}
+        ) from None
     except AlertStateError as exc:
         raise HTTPException(409, detail={"code": "ILLEGAL_STATE", "message": str(exc)}) from exc
     _audit_alert(request, actor, "alert.acknowledge", alert_id)
@@ -178,7 +182,9 @@ async def resolve_alert(alert_id: str, request: Request, body: ResolveReq) -> di
     try:
         doc = _engine().resolve(alert_id, actor, body.reason)
     except KeyError:
-        raise HTTPException(404, detail={"code": "NOT_FOUND", "message": "alert not found"}) from None
+        raise HTTPException(
+            404, detail={"code": "NOT_FOUND", "message": "alert not found"}
+        ) from None
     except AlertStateError as exc:
         raise HTTPException(409, detail={"code": "ILLEGAL_STATE", "message": str(exc)}) from exc
     _audit_alert(request, actor, "alert.resolve", alert_id)

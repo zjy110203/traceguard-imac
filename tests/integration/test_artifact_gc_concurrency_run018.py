@@ -14,13 +14,10 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import sys
 import threading
 import time
 from pathlib import Path
-
-import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "packages" / "persistence"))
@@ -70,7 +67,7 @@ def _register_row(store: ArtifactStore, digest: str) -> None:
 def _add_evidence_ref(store: ArtifactStore, artifact_id: str) -> None:
     with store.db.session() as s:
         ev = EvidenceRow(
-            evidence_id=f"ev_test_{int(time.time()*1000)}",
+            evidence_id=f"ev_test_{int(time.time() * 1000)}",
             workspace_id="default",
             run_id="run_test",
             kind="attachment",
@@ -92,13 +89,16 @@ class TestGCConcurrencyA:
         digest = _write_artifact_file(store, data)
 
         # 模拟 GC 扫描：发现文件不在登记表中（orphan file）
-        scan = store.scan(retention_days=0)  # cutoff=now，所有都算 fresh/orphan
         # 手动构造扫描结果：把文件列为 orphan_files
         artifact_id = f"art_{digest[:20]}"
         scan_result = {
             "orphan_rows": [],
             "orphan_files": [
-                {"sha256": digest, "path": str(store.root / digest[:2] / digest), "mtime": time.time()}
+                {
+                    "sha256": digest,
+                    "path": str(store.root / digest[:2] / digest),
+                    "mtime": time.time(),
+                }
             ],
             "protected_fresh": [],
             "missing_files": [],
@@ -137,7 +137,11 @@ class TestGCConcurrencyA:
         scan_result = {
             "orphan_rows": [],
             "orphan_files": [
-                {"sha256": digest, "path": str(store.root / digest[:2] / digest), "mtime": time.time()}
+                {
+                    "sha256": digest,
+                    "path": str(store.root / digest[:2] / digest),
+                    "mtime": time.time(),
+                }
             ],
             "protected_fresh": [],
             "missing_files": [],
@@ -173,9 +177,7 @@ class TestGCConcurrencyA:
         actions = gc_result.get("result", {}).get("actions", [])
         for a in actions:
             if a.get("op") == "quarantine_file":
-                assert a.get("result") in ("skipped_referenced", "gone"), (
-                    f"并发保护失效: {a}"
-                )
+                assert a.get("result") in ("skipped_referenced", "gone"), f"并发保护失效: {a}"
 
 
 class TestGCConcurrencyB:
@@ -257,6 +259,13 @@ class TestGCConcurrencyB:
         scan_result = store.scan(retention_days=0)
         result = store.collect_garbage(scan_result, apply=True)
 
+        # 未被引用的产物应被回收（结果中应有 delete_row 动作）
+        deleted_ids = {
+            a.get("artifact_id") for a in result.get("actions", []) if a.get("op") == "delete_row"
+        }
+        assert f"art_{digests[1][:20]}" in deleted_ids, f"未引用产物应被删除: {result}"
+        assert f"art_{digests[2][:20]}" in deleted_ids, f"未引用产物应被删除: {result}"
+
         # 被引用的产物不被删除
         with store.db.session() as s:
             row = s.get(ArtifactRow, f"art_{digests[0][:20]}")
@@ -285,8 +294,10 @@ class TestGCIdempotent:
         result1 = store.collect_garbage(scan_result, apply=True)
         result2 = store.collect_garbage(scan_result, apply=True)
 
+        # 第一次回收应删除未引用产物（无引用场景下全部删除）
+        assert any(a.get("op") == "delete_row" for a in result1.get("actions", [])), (
+            f"首次 GC 应有删除动作: {result1}"
+        )
         # 第二次回收应全部 gone 或 skipped
         for a in result2.get("actions", []):
-            assert a.get("result") in ("gone", "skipped_referenced"), (
-                f"重复回收不应报错: {a}"
-            )
+            assert a.get("result") in ("gone", "skipped_referenced"), f"重复回收不应报错: {a}"

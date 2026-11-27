@@ -186,7 +186,9 @@ def test_alerts_lifecycle_open_ack_resolve(monitoring_client) -> None:  # type: 
 
     # 已解决告警不得再次处理
     assert (
-        client.post(f"/api/v1/monitoring/alerts/{alert['alert_id']}/resolve", json={"reason": "x"}).status_code
+        client.post(
+            f"/api/v1/monitoring/alerts/{alert['alert_id']}/resolve", json={"reason": "x"}
+        ).status_code
         == 409
     )
 
@@ -198,7 +200,8 @@ def test_alerts_not_found(monitoring_client) -> None:  # type: ignore[no-untyped
     client, _db = monitoring_client
     assert client.get("/api/v1/monitoring/alerts/alrt_missing").status_code == 404
     assert (
-        client.post("/api/v1/monitoring/alerts/alrt_missing/acknowledge", json={}).status_code == 404
+        client.post("/api/v1/monitoring/alerts/alrt_missing/acknowledge", json={}).status_code
+        == 404
     )
 
 
@@ -274,4 +277,7 @@ def test_alert_detail_workspace_forbidden(monitoring_auth_client) -> None:  # ty
     assert r.json()["detail"]["code"] == "WORKSPACE_FORBIDDEN"
 
     admin_headers = _login(client, "mon-admin")
-    assert client.get(f"/api/v1/monitoring/alerts/{alert_id}", headers=admin_headers).status_code == 200
+    assert (
+        client.get(f"/api/v1/monitoring/alerts/{alert_id}", headers=admin_headers).status_code
+        == 200
+    )

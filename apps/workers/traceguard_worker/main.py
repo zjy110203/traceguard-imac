@@ -105,11 +105,11 @@ def run(once: bool = False, poll_interval: float | None = None) -> int:
 
     # RUN-018 WP8：心跳 + 告警评估（观测失败绝不影响执行主循环）
     from traceguard_persistence.alerts import AlertEngine
+    from traceguard_persistence.db import get_database
     from traceguard_persistence.monitoring import (
         MetricsCollector,
         upsert_worker_heartbeat,
     )
-    from traceguard_persistence.db import get_database
 
     db = get_database()
     engine = AlertEngine(db, min_evaluate_interval_s=30.0)

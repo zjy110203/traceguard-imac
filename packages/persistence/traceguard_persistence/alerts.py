@@ -31,8 +31,8 @@ from sqlalchemy import select
 from traceguard_core.ids import new_id
 
 from .db import Database
-from .monitoring import effective_thresholds, note_db_failure
 from .models import AlertRow
+from .monitoring import effective_thresholds, note_db_failure
 
 #: 状态机：允许的迁移
 ALERT_TRANSITIONS: dict[str, set[str]] = {
@@ -395,7 +395,9 @@ class AlertEngine:
                     (AlertRow.scope_workspace.is_(None))
                     | (AlertRow.scope_workspace.in_(list(workspace_ids)))
                 )
-            rows = s.scalars(q.order_by(AlertRow.last_seen.desc()).limit(max(1, min(limit, 500)))).all()
+            rows = s.scalars(
+                q.order_by(AlertRow.last_seen.desc()).limit(max(1, min(limit, 500)))
+            ).all()
             return [self._row_dict(r) for r in rows]
 
     def get_alert(self, alert_id: str) -> dict[str, Any] | None:

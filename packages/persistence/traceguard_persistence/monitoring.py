@@ -17,13 +17,16 @@ import hashlib
 import threading
 import time
 from collections import deque
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import func, select
 from traceguard_core.ids import utc_now_iso
 
 from .db import Database
 from .models import ArtifactRow, RunRow, WorkerHeartbeatRow
+
+if TYPE_CHECKING:
+    from .stores import ArtifactStore
 
 # ------------------------------------------------------------------ thresholds
 #: 全部为 **provisional** 阈值：未经过真实负载实测校准，仅用于告警初版触发。
@@ -40,8 +43,6 @@ PROVISIONAL_THRESHOLDS: dict[str, Any] = {
     "artifact_missing_max": 0,
     "artifact_hash_mismatch_max": 0,
     "gc_error_max": 0,
-    "api_error_rate": 0.2,
-    "api_error_rate_min_requests": 20,
     "artifact_hash_check_limit": 50,
 }
 
@@ -53,7 +54,6 @@ THRESHOLD_ENV_KEYS: dict[str, str] = {
     "run_failure_rate": "TG_ALERT_RUN_FAILURE_RATE",
     "run_failure_rate_min_samples": "TG_ALERT_RUN_FAILURE_MIN_SAMPLES",
     "run_overrun_seconds": "TG_ALERT_RUN_OVERRUN_S",
-    "api_error_rate": "TG_ALERT_API_ERROR_RATE",
 }
 
 
@@ -451,7 +451,8 @@ class MetricsCollector:
         }
 
     # ------------------------------------------------------------------ Run
-    def run_metrics(self, *, workspace_ids: list[str] | None = None, now: float | None = None
+    def run_metrics(
+        self, *, workspace_ids: list[str] | None = None, now: float | None = None
     ) -> dict[str, Any]:
         now_ts = time.time() if now is None else now
         window_start = now_ts - 86400.0
@@ -464,9 +465,7 @@ class MetricsCollector:
                     RunRow.execution_status
                 )
                 if workspace_ids is not None:
-                    verdict_stmt = verdict_stmt.where(
-                        RunRow.workspace_id.in_(list(workspace_ids))
-                    )
+                    verdict_stmt = verdict_stmt.where(RunRow.workspace_id.in_(list(workspace_ids)))
                     status_stmt = status_stmt.where(RunRow.workspace_id.in_(list(workspace_ids)))
                 verdicts = {str(k or "UNKNOWN"): int(v) for k, v in s.execute(verdict_stmt).all()}
                 by_status = {str(k or "UNKNOWN"): int(v) for k, v in s.execute(status_stmt).all()}
@@ -568,7 +567,9 @@ class MetricsCollector:
             return out
         try:
             with self.db.session() as s:
-                out["registered"] = int(s.scalar(select(func.count()).select_from(ArtifactRow)) or 0)
+                out["registered"] = int(
+                    s.scalar(select(func.count()).select_from(ArtifactRow)) or 0
+                )
                 out["total_bytes"] = int(
                     s.scalar(select(func.coalesce(func.sum(ArtifactRow.size), 0))) or 0
                 )
@@ -588,7 +589,9 @@ class MetricsCollector:
                     continue  # 缺失由 scan() 统一报告，避免重复
                 digest = hashlib.sha256(p.read_bytes()).hexdigest()
                 if digest != sha256:
-                    mismatch.append({"artifact_id": artifact_id, "expected": sha256, "actual": digest})
+                    mismatch.append(
+                        {"artifact_id": artifact_id, "expected": sha256, "actual": digest}
+                    )
             out["hash_mismatch"] = mismatch
             out["hash_check"] = {
                 "checked": checked,
@@ -638,9 +641,7 @@ class MetricsCollector:
 
             with self.db.session() as s:
                 row = s.execute(
-                    _text(
-                        "SELECT COALESCE(MAX(version), 0), COUNT(*) FROM tg_schema_migration"
-                    )
+                    _text("SELECT COALESCE(MAX(version), 0), COUNT(*) FROM tg_schema_migration")
                 ).first()
                 migration = {
                     "latest_version": int(row[0] or 0) if row else 0,
@@ -755,9 +756,7 @@ def _gc_status(artifacts: Any) -> dict[str, Any]:
                 status["last_run_at"] = rec.get("at") or status["last_run_at"]
             # 全文件错误计数（不过滤尾部）：GC 异常检测必须覆盖历史
             status["errors"] = sum(
-                1
-                for ln in lines
-                if (lambda r: r.get("result") == "error")(_safe_json(ln))
+                1 for ln in lines if (lambda r: r.get("result") == "error")(_safe_json(ln))
             )
         if quarantine.is_dir():
             status["quarantine_dirs"] = sum(1 for p in quarantine.iterdir() if p.is_dir())

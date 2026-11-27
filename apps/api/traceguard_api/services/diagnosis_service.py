@@ -523,7 +523,9 @@ class DiagnosisService:
         # ---- RUN-018 WP5 §5.3：每次重诊断完整留存（原诊断 / 新诊断 / 新增证据 /
         # 假设变化 / 置信度变化 / 最终裁决原因），追加写入版本链，不覆盖历史。
         after_state = self._diagnosis_state(doc)
-        hypothesis_changes = _hypothesis_changes(before_state["hypotheses"], after_state["hypotheses"])
+        hypothesis_changes = _hypothesis_changes(
+            before_state["hypotheses"], after_state["hypotheses"]
+        )
         confidence_changes = [
             {
                 "hypothesis_id": c["hypothesis_id"],
@@ -891,7 +893,9 @@ class DiagnosisService:
         existing = self.rt.docs.list(
             kind="diagnosis_revision", ref_id=str(doc.get("diagnosis_id") or ""), limit=200
         )
-        revision_no = 1 + max((int((r.doc or {}).get("revision_no") or 0) for r in existing), default=0)
+        revision_no = 1 + max(
+            (int((r.doc or {}).get("revision_no") or 0) for r in existing), default=0
+        )
         revision_id = new_id("diagrev")
         after = self._diagnosis_state(doc)
         record = {
@@ -1109,7 +1113,9 @@ _GT_KEY_PATTERN = re.compile(r"ground[_\-]?truth", re.IGNORECASE)
 def _strip_ground_truth(obj: Any) -> Any:
     """递归剔除 Ground Truth 相关键（RUN-018 WP5 §5.5：GT 永不进入 Runtime Diagnosis）。"""
     if isinstance(obj, dict):
-        return {k: _strip_ground_truth(v) for k, v in obj.items() if not _GT_KEY_PATTERN.search(str(k))}
+        return {
+            k: _strip_ground_truth(v) for k, v in obj.items() if not _GT_KEY_PATTERN.search(str(k))
+        }
     if isinstance(obj, list):
         return [_strip_ground_truth(v) for v in obj]
     return obj

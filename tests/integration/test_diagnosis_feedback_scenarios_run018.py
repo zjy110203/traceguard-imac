@@ -43,7 +43,9 @@ def _db_lag_report() -> dict[str, Any]:
                 "status": "PASSED",
                 "error": "",
                 "target": {"strategy": "test_id", "value": "create-submit"},
-                "observation": {"network": [{"url": "/api/projects", "status": 200, "failure": ""}]},
+                "observation": {
+                    "network": [{"url": "/api/projects", "status": 200, "failure": ""}]
+                },
             },
             {
                 "step_id": "s2",
@@ -250,9 +252,9 @@ def test_scenario_a_db001_permanent_persistence_keeps_trusted_evidence(rt: Runti
     p = persist[0]
 
     # 1) PERSISTENCE 的可信证据保留（Run 作用域 TRUSTED 证据不被丢弃）
-    assert any(
-        r.get("id") == evd_state and r.get("trust") == "TRUSTED" for r in p["supporting"]
-    ), p["supporting"]
+    assert any(r.get("id") == evd_state and r.get("trust") == "TRUSTED" for r in p["supporting"]), (
+        p["supporting"]
+    )
 
     # 2) 两次独立读取的证据都以支持附着（可追溯），且均未确权（单查询不确认永久故障）
     probe_refs = [r for r in p["supporting"] if str(r.get("id")) != evd_state]
@@ -423,9 +425,7 @@ def test_scenario_c_api_5xx_is_root_cause_and_ui_not_reconfirmed(rt: Runtime) ->
         observed_at=exec_doc.get("observed_at") or _time.time(),
         run_scope=False,
     )
-    out = DiagnosisService(rt).reassess(
-        diag["diagnosis_id"], [signal], run_report=report
-    )
+    out = DiagnosisService(rt).reassess(diag["diagnosis_id"], [signal], run_report=report)
     after = out["diagnosis"]
     ui_after = _by_mechanism(after, "UI_RENDERING")
     api_after = _by_mechanism(after, "API")
@@ -472,7 +472,9 @@ def test_scenario_d_locator_drift_not_escalated_to_business_failure(rt: Runtime)
         },
     )
     _patch_probe(svc, "http_state", _state_result(1))
-    _patch_probe(svc, "network_trace", {"template": "run_network", "run_id": "run_d", "entries": []})
+    _patch_probe(
+        svc, "network_trace", {"template": "run_network", "run_id": "run_d", "entries": []}
+    )
     _patch_probe(svc, "backend_log", {"template": "tail_teamflow", "path": "x", "lines": []})
     plan = svc.plan_and_probe("run_d", diag["diagnosis_id"], max_iterations=4)
 
@@ -498,10 +500,7 @@ def test_scenario_d_locator_drift_not_escalated_to_business_failure(rt: Runtime)
 
     # 3) 业务已落库事实以证据留痕（可追溯到 Run / Workspace / 时间）
     assert plan["evidence_ids"], "探针证据必须落库"
-    probe_evidence = [
-        e
-        for e in rt.evidence.list(run_id="run_d", source_type="probe", limit=50)
-    ]
+    probe_evidence = [e for e in rt.evidence.list(run_id="run_d", source_type="probe", limit=50)]
     assert probe_evidence
     for e in probe_evidence:
         c = e.content.get("probe_evidence_contract") or {}
@@ -592,7 +591,9 @@ def test_plan_does_not_retry_same_gap_and_stops_at_iteration_limit(rt: Runtime) 
     diag = _diagnose(rt, "run_r")
     svc = ProbeService(rt)
     _patch_probe(svc, "http_state", _state_result(1))
-    _patch_probe(svc, "network_trace", {"template": "run_network", "run_id": "run_r", "entries": []})
+    _patch_probe(
+        svc, "network_trace", {"template": "run_network", "run_id": "run_r", "entries": []}
+    )
     _patch_probe(svc, "backend_log", {"template": "tail_teamflow", "path": "x", "lines": []})
     plan = svc.plan_and_probe("run_r", diag["diagnosis_id"], max_iterations=2)
     assert plan["stop_reason"] == "STOP_ITERATION_LIMIT"

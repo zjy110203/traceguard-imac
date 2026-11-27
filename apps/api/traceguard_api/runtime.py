@@ -126,8 +126,12 @@ class Runtime:
             engine = AlertEngine(self.db, min_evaluate_interval_s=30.0)
             collector = MetricsCollector(self.db, self.artifacts, worker_id=pid)
 
-            def beat(status: str, run_id: str | None = None, task_id: str | None = None,
-                     lease_expires_at: float = 0.0) -> None:
+            def beat(
+                status: str,
+                run_id: str | None = None,
+                task_id: str | None = None,
+                lease_expires_at: float = 0.0,
+            ) -> None:
                 try:
                     heartbeat(
                         self.db,

@@ -153,9 +153,7 @@ def test_write_probe_requires_isolation_and_cleanup() -> None:
         ),
         executor,
     )
-    result = engine.execute(
-        "write_probe", {"workspace": "default", "row": {"id": 1}}, "default"
-    )
+    result = engine.execute("write_probe", {"workspace": "default", "row": {"id": 1}}, "default")
     assert result.status == "BLOCKED"
     assert result.reason == "WRITE_PROBE_REQUIRES_ISOLATION_AND_CLEANUP"
 
@@ -178,9 +176,7 @@ def test_write_probe_allowed_with_isolation_and_cleanup() -> None:
         ),
         executor,
     )
-    result = engine.execute(
-        "write_probe_ok", {"workspace": "default", "row": {"id": 1}}, "default"
-    )
+    result = engine.execute("write_probe_ok", {"workspace": "default", "row": {"id": 1}}, "default")
     assert result.status == "SUCCEEDED"
 
 
@@ -243,9 +239,8 @@ def rt(work_tmp, monkeypatch):  # type: ignore[no-untyped-def]
     from traceguard_core.config import reset_settings_cache
 
     reset_settings_cache()
-    from traceguard_persistence import Database
-
     from traceguard_api.runtime import Runtime
+    from traceguard_persistence import Database
 
     db = Database(f"sqlite:///{base / 'contract.db'}")
     runtime = Runtime(db)

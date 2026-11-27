@@ -36,14 +36,14 @@ from traceguard_benchmark.fault_effect import (  # noqa: E402
     EffectClass,
     EffectStatus,
     ReadVerdict,
-    capture_baseline,
-    new_probe_token,
-    observe_fault_effect,
     _probe_persistence,
     _probe_state_consistency,
     _read_state_project,
     _readback,
     _state_list_contains,
+    capture_baseline,
+    new_probe_token,
+    observe_fault_effect,
 )
 
 
@@ -69,11 +69,7 @@ def _make_server(state: _State) -> ThreadingHTTPServer:
             return
 
         def _send(self, code: int, payload: dict | str) -> None:
-            body = (
-                payload.encode()
-                if isinstance(payload, str)
-                else json.dumps(payload).encode()
-            )
+            body = payload.encode() if isinstance(payload, str) else json.dumps(payload).encode()
             self.send_response(code)
             self.send_header(
                 "Content-Type",
@@ -109,7 +105,9 @@ def _make_server(state: _State) -> ThreadingHTTPServer:
             if mode == "state_missing_ok":
                 with state.lock:
                     items = [{"key": k, "name": v["name"]} for k, v in state.projects.items()]
-                self._send(200, {"count": len(items), "keys": [i["key"] for i in items], "projects": items})
+                self._send(
+                    200, {"count": len(items), "keys": [i["key"] for i in items], "projects": items}
+                )
                 return True
             if mode == "state_ok_false":
                 self._send(200, {"ok": False, "count": 0, "projects": []})

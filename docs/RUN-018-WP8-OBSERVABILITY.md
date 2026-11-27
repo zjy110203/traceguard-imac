@@ -171,7 +171,6 @@ API 侧可能已新建告警）。引擎做了两道防护：
 | `run_failure_rate` | 0.5 | `TG_ALERT_RUN_FAILURE_RATE` |
 | `run_failure_rate_min_samples` | 5 | `TG_ALERT_RUN_FAILURE_MIN_SAMPLES` |
 | `run_overrun_seconds` | 900 | `TG_ALERT_RUN_OVERRUN_S` |
-| `api_error_rate` | 0.2 | `TG_ALERT_API_ERROR_RATE` |
 
 **以上全部为 provisional：未经过真实负载实测校准，仅供告警初版触发；
 任何界面与文档都不得将其表述为 SLA。**

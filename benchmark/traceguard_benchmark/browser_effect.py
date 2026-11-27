@@ -588,11 +588,7 @@ class BrowserEffectObserver:
                 "MISLEADING_SUCCESS_ON_FAILURE",
                 "页面显示成功，但独立业务状态确认未落库（False Pass 型用户可见影响）",
             )
-        if (
-            persisted is ReadVerdict.ABSENT
-            and (not success_visible)
-            and (not error_visible)
-        ):
+        if persisted is ReadVerdict.ABSENT and (not success_visible) and (not error_visible):
             return (
                 EffectStatus.CONFIRMED.value,
                 "SILENT_IGNORE",

@@ -1594,9 +1594,7 @@ class ArtifactStore:
             "audit_path": str(audit_file),
         }
 
-    def _safe_quarantine_file(
-        self, action: dict[str, Any], quarantine: Path
-    ) -> dict[str, Any]:
+    def _safe_quarantine_file(self, action: dict[str, Any], quarantine: Path) -> dict[str, Any]:
         """RUN-018 WP4 竞态 A 修复：隔离文件前重新检查 ArtifactRow 登记。"""
         sha256 = action["sha256"]
         artifact_id = f"art_{sha256[:20]}"
@@ -1613,7 +1611,10 @@ class ArtifactStore:
                 }
             # 也查引用（防止通过其他途径产生引用）
             if self._artifact_still_referenced(s, artifact_id):
-                return {"result": "skipped_referenced", "reason_detail": "referenced_before_quarantine"}
+                return {
+                    "result": "skipped_referenced",
+                    "reason_detail": "referenced_before_quarantine",
+                }
 
         if not src.is_file():
             return {"result": "gone"}
@@ -1625,9 +1626,7 @@ class ArtifactStore:
         src.replace(dest)
         return {"result": "quarantined", "quarantine_path": str(dest)}
 
-    def _safe_delete_row(
-        self, action: dict[str, Any], quarantine: Path
-    ) -> dict[str, Any]:
+    def _safe_delete_row(self, action: dict[str, Any], quarantine: Path) -> dict[str, Any]:
         """RUN-018 WP4 竞态 B 修复：在同一事务内完成"复核 + 删除"。
 
         SQLite：写事务天然互斥（一个写者），复核与删除在同事务内不会被

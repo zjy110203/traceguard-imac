@@ -124,7 +124,8 @@ def build_probe_evidence_contract(
         "failure_reason": failure_reason or "",
         "duration_ms": int(duration_ms or 0),
         "cost": float(cost or 0.0),
-        "idempotency_key": idempotency_key or derive_idempotency_key(
+        "idempotency_key": idempotency_key
+        or derive_idempotency_key(
             probe_id,
             run_id=run_id,
             diagnosis_id=diagnosis_id,

@@ -30,7 +30,6 @@ import threading
 import time
 import urllib.error
 import urllib.request
-import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -234,7 +233,7 @@ class DoubleSubmitObserver:
         for i, (status, text, ms) in enumerate(results):
             obs.network_evidence.append(
                 {
-                    "step": f"double_submit_{i+1}",
+                    "step": f"double_submit_{i + 1}",
                     "status": status,
                     "elapsed_ms": round(ms, 1),
                     "response": text,
@@ -290,9 +289,7 @@ class DoubleSubmitObserver:
             # 如果两个请求都返回 200/201，但只创建 1 条 → 服务端去重或前端拦截
             # 如果一个成功一个失败 → 第一次失败第二次成功
             statuses = [
-                e["status"]
-                for e in obs.network_evidence
-                if e["step"].startswith("double_submit_")
+                e["status"] for e in obs.network_evidence if e["step"].startswith("double_submit_")
             ]
             ok_count = sum(1 for s in statuses if s in (200, 201))
 
@@ -300,8 +297,8 @@ class DoubleSubmitObserver:
                 obs.status = EffectStatus.CONFIRMED.value
                 obs.classification = "DOUBLE_SUBMIT_DEDUPED"
                 obs.note = (
-                    f"双提交竞态确认：两个请求都返回成功，但服务端只创建 1 个项目。"
-                    f"TF-TIME-003 的 300ms 去重窗口生效（或服务端正确去重）。"
+                    "双提交竞态确认：两个请求都返回成功，但服务端只创建 1 个项目。"
+                    "TF-TIME-003 的 300ms 去重窗口生效（或服务端正确去重）。"
                 )
             elif ok_count == 1:
                 obs.status = EffectStatus.CONFIRMED.value

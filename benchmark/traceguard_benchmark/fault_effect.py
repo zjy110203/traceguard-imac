@@ -987,9 +987,7 @@ def _probe_persistence(
             else:
                 s_read = _read_state_list(base_url, timeout)
                 if s_read.get("valid"):
-                    dup_count = sum(
-                        1 for p in s_read["projects"] if str(p.get("name")) == name
-                    )
+                    dup_count = sum(1 for p in s_read["projects"] if str(p.get("name")) == name)
                     dup_read = {
                         "by": "name",
                         "http_status": s_read.get("http_status"),
