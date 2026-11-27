@@ -121,7 +121,12 @@ interface Snapshot {
   alerts: {
     summary: { open: number; acknowledged: number; created_this_eval: string[] }
   }
-  scope: { mode: string; global: boolean; authorized_workspaces: string[] | null }
+  scope: {
+    mode: string
+    global: boolean
+    workspace_id?: string | null
+    authorized_workspaces: string[] | null
+  }
 }
 
 const snap = ref<Snapshot | null>(null)

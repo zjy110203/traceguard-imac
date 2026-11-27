@@ -10,7 +10,8 @@
 - **RepairsView**：批准/驳回（`repair.approve`）、晋升（`repair.promote`）、
   回滚（`repair.rollback`）、运行回归验证（`repair.regression`）按会话角色禁用；
   审批主体改为服务端可信（不采信页面声明）。
-- **MonitoringView**：告警确认/解决按 `system.observe` 门禁。
+- **MonitoringView**：告警确认/解决按 `system.configure` 门禁（与后端路径映射一致；
+  `system.observe` 仅用于全局运维观测接口）。
 - **DiagnosisDetailView**：诊断结论审批按 `diagnosis.operate`/评审权限门禁。
 - **TestCasesView / TestCaseDetailView / OraclesView / OracleDetailView /
   IntentsView / WorkspacesView**：创建/审核/执行/审批按钮按角色禁用；
@@ -28,7 +29,8 @@
 - `oracle_detail`（RUN-019 新增）
 - `workspaces`（RUN-019 新增）
 
-口径：19 视图 × 2 主题 × 2 断点 = **77 格，77/77 PASS**
+口径：19 视图 × 2 主题 × 2 断点 = **76 个视图组合**，另加 **1 个弹窗焦点
+（users 弹窗 focus trap / Esc 关闭）检查 = **77 格，77/77 PASS**
 （真实 Chromium + axe-core + 键盘焦点检查 + 390px 溢出检查）。
 
 ### 过程中发现并修复的违规（3 类 8 处）

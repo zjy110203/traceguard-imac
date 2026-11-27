@@ -82,7 +82,9 @@ def _wait_replay(api: Http, replay_id: str, timeout_s: float = 120.0) -> dict[st
 _TRUSTED_DB_URL = ""
 
 
-def _create_trusted_candidate(payload: dict[str, Any], *, source: str, source_ref: str) -> dict[str, Any]:
+def _create_trusted_candidate(
+    payload: dict[str, Any], *, source: str, source_ref: str
+) -> dict[str, Any]:
     if not _TRUSTED_DB_URL:
         raise RuntimeError("_TRUSTED_DB_URL 未初始化：无法经可信入口创建候选")
     from traceguard_persistence import Database

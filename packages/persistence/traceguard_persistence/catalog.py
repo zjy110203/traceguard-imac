@@ -75,6 +75,7 @@ def authoring_digest(doc: dict[str, Any]) -> str:
     canonical = json.dumps(payload, sort_keys=True, ensure_ascii=False, default=str)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
+
 #: 非人类主体标识：审核 / 审批 / 晋升一律拒绝（agent 可以"提案"，但不能"批准"）
 NON_HUMAN_TOKENS = {
     "agent",

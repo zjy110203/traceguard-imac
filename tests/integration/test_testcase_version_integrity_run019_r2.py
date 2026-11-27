@@ -74,7 +74,9 @@ def test_version_records_authoring_hash(client):  # type: ignore[no-untyped-def]
     # 作者内容变更（新建版本）必须产生不同的摘要
     v2 = c.post(
         f"/api/v1/testcases/{tc_id}/versions",
-        json={"steps": [{"step_id": "s1", "action": "navigate", "value": "http://127.0.0.1:8011/b"}]},
+        json={
+            "steps": [{"step_id": "s1", "action": "navigate", "value": "http://127.0.0.1:8011/b"}]
+        },
     )
     assert v2.status_code == 201, v2.text
     v2_doc = c.get(f"/api/v1/testcases/{tc_id}/versions/2").json()
@@ -138,10 +140,13 @@ def test_review_appends_metadata_without_changing_authoring_hash(client):  # typ
             "approved_by": "human:qa-lead",
         },
     ).json()
-    assert c.post(
-        f"/api/v1/testcases/{tc_id}/versions/1/oracle-bindings",
-        json={"bindings": {"a1": {"oracle_id": oracle["oracle_id"]}}, "actor": "human:qa-lead"},
-    ).status_code == 200
+    assert (
+        c.post(
+            f"/api/v1/testcases/{tc_id}/versions/1/oracle-bindings",
+            json={"bindings": {"a1": {"oracle_id": oracle["oracle_id"]}}, "actor": "human:qa-lead"},
+        ).status_code
+        == 200
+    )
     review = c.post(
         f"/api/v1/testcases/{tc_id}/versions/1/review",
         json={"decision": "APPROVED", "reviewer": "human:qa-lead"},
@@ -172,14 +177,19 @@ def test_old_run_reference_survives_new_version(client):  # type: ignore[no-unty
     assert c.post("/api/v1/testcases", json=_payload(tc_id)).status_code == 201
     rt = get_services().rt
     task = rt.tasks.create_task(
-        tc_id, f"intg-{uuid.uuid4().hex[:8]}", testcase_version_id=f"{tc_id}@1", workspace_id="default"
+        tc_id,
+        f"intg-{uuid.uuid4().hex[:8]}",
+        testcase_version_id=f"{tc_id}@1",
+        workspace_id="default",
     )
     run = rt.tasks.create_run(task["task_id"], f"{tc_id}@1", auto_queue=False)
     v1_before = c.get(f"/api/v1/testcases/{tc_id}/versions/1").json()
 
     v2 = c.post(
         f"/api/v1/testcases/{tc_id}/versions",
-        json={"steps": [{"step_id": "s1", "action": "navigate", "value": "http://127.0.0.1:8011/c"}]},
+        json={
+            "steps": [{"step_id": "s1", "action": "navigate", "value": "http://127.0.0.1:8011/c"}]
+        },
     )
     assert v2.status_code == 201, v2.text
     assert c.get(f"/api/v1/testcases/{tc_id}/versions/1").json() == v1_before

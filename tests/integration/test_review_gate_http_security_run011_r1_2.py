@@ -100,7 +100,9 @@ def _testcase(
     }
     if compile_source == "human":
         # 人工编写路径：公共 HTTP 合法（服务端固定记录 human + manual_http 血缘）。
-        r = client.post("/api/v1/testcases", json={**body, "compile_source": "human"}, headers=headers)
+        r = client.post(
+            "/api/v1/testcases", json={**body, "compile_source": "human"}, headers=headers
+        )
         assert r.status_code == 201, r.text
         return tc_id
     # RUN-019-R2：compiler / healed 候选不能经公共 HTTP 声明来源，

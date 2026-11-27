@@ -1,0 +1,153 @@
+{
+  "workpackage": "RUN-019-R2 R2-3",
+  "profile": "rbac-roles",
+  "total": 24,
+  "passed": 24,
+  "failed": 0,
+  "results": [
+    {
+      "check": "环境：四个角色已初始化",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "r19r-admin, r19r-lead, r19r-eng, r19r-viewer"
+    },
+    {
+      "check": "服务端权限矩阵与验收期望一致（无隐藏放宽）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "{\"platform-admin\": [\"diagnosis.operate\", \"oracle.bind\", \"oracle.create\", \"probe.execute\", \"read\", \"repair.approve\", \"repair.promote\", \"repair.regression\", \"repair.rollback\", \"repair.submit\", \"run.execute\", \"system.configure\", \"system.observe\", \"testcase.create\", \"testcase.review\", \"user.manage\"], \"q"
+    },
+    {
+      "check": "环境：演示资产已就绪（seed 幂等）",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "{'created': 0, 'skipped': 14}"
+    },
+    {
+      "check": "环境：存在 APPROVED 用例（执行按钮可判定）",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "30 条"
+    },
+    {
+      "check": "platform-admin：/testcases 的 testcase.create 按钮可用",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "exists=True enabled=True expected=True"
+    },
+    {
+      "check": "platform-admin：/repairs 的 repair.submit 按钮可用",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "exists=True enabled=True expected=True"
+    },
+    {
+      "check": "platform-admin：需求审核按钮可用",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "exists=True enabled=True expected=True"
+    },
+    {
+      "check": "platform-admin：APPROVED 用例执行按钮可用",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "enabled=True expected=True"
+    },
+    {
+      "check": "qa-lead：/testcases 的 testcase.create 按钮可用",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "exists=True enabled=True expected=True"
+    },
+    {
+      "check": "qa-lead：/repairs 的 repair.submit 按钮可用",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "exists=True enabled=True expected=True"
+    },
+    {
+      "check": "qa-lead：需求审核按钮可用",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "exists=True enabled=True expected=True"
+    },
+    {
+      "check": "qa-lead：APPROVED 用例执行按钮可用",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "enabled=True expected=True"
+    },
+    {
+      "check": "qa-engineer：/testcases 的 testcase.create 按钮可用",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "exists=True enabled=True expected=True"
+    },
+    {
+      "check": "qa-engineer：/repairs 的 repair.submit 按钮可用",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "exists=True enabled=True expected=True"
+    },
+    {
+      "check": "qa-engineer：需求审核按钮禁用",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "exists=True enabled=False expected=False"
+    },
+    {
+      "check": "qa-engineer：APPROVED 用例执行按钮可用",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "enabled=True expected=True"
+    },
+    {
+      "check": "viewer：/testcases 的 testcase.create 按钮禁用",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "exists=True enabled=False expected=False"
+    },
+    {
+      "check": "viewer：/repairs 的 repair.submit 按钮禁用",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "exists=True enabled=False expected=False"
+    },
+    {
+      "check": "viewer：需求审核按钮禁用",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "exists=True enabled=False expected=False"
+    },
+    {
+      "check": "viewer：APPROVED 用例执行按钮禁用",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "enabled=False expected=False"
+    },
+    {
+      "check": "服务端：viewer 直接创建用例被 403",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=403"
+    },
+    {
+      "check": "服务端：qa-engineer 直接审核被 403（不能自批）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=403"
+    },
+    {
+      "check": "服务端：qa-engineer 直接写演示资产被 403",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=403"
+    },
+    {
+      "check": "服务端：qa-lead 直接晋升被 403（repair.promote 仅平台管理员）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=403"
+    }
+  ]
+}

@@ -1089,7 +1089,9 @@ def main(argv: list[str] | None = None) -> int:
                 eng_p.click('[data-testid="step-mode-json"]')
                 eng_p.wait_for_selector('[data-testid="step-json"]', timeout=5000)
                 json_view = eng_p.locator('[data-testid="step-json"]').input_value()
-                json_has_steps = json_view.count("nav-new") == 1 and json_view.count("banner-success") >= 2
+                json_has_steps = (
+                    json_view.count("nav-new") == 1 and json_view.count("banner-success") >= 2
+                )
                 eng_p.click('[data-testid="step-mode-visual"]')
                 eng_p.wait_for_selector('[data-testid="step-row"]', timeout=5000)
                 steps_after_roundtrip = eng_p.locator('[data-testid="step-row"]').count()

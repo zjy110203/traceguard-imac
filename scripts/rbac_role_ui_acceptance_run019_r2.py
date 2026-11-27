@@ -17,7 +17,6 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
-import time
 from pathlib import Path
 from typing import Any
 
@@ -45,12 +44,37 @@ ROLES: list[tuple[str, str, str]] = [
 
 #: 前端按钮 → 需要的动作。与后端 PERMISSIONS / 前端 ROLE_PERMISSIONS 同构。
 EXPECT: dict[str, dict[str, bool]] = {
-    "testcase.create": {"platform-admin": True, "qa-lead": True, "qa-engineer": True, "viewer": False},
-    "testcase.review": {"platform-admin": True, "qa-lead": True, "qa-engineer": False, "viewer": False},
+    "testcase.create": {
+        "platform-admin": True,
+        "qa-lead": True,
+        "qa-engineer": True,
+        "viewer": False,
+    },
+    "testcase.review": {
+        "platform-admin": True,
+        "qa-lead": True,
+        "qa-engineer": False,
+        "viewer": False,
+    },
     "run.execute": {"platform-admin": True, "qa-lead": True, "qa-engineer": True, "viewer": False},
-    "repair.submit": {"platform-admin": True, "qa-lead": True, "qa-engineer": True, "viewer": False},
-    "system.configure": {"platform-admin": True, "qa-lead": False, "qa-engineer": False, "viewer": False},
-    "user.manage": {"platform-admin": True, "qa-lead": False, "qa-engineer": False, "viewer": False},
+    "repair.submit": {
+        "platform-admin": True,
+        "qa-lead": True,
+        "qa-engineer": True,
+        "viewer": False,
+    },
+    "system.configure": {
+        "platform-admin": True,
+        "qa-lead": False,
+        "qa-engineer": False,
+        "viewer": False,
+    },
+    "user.manage": {
+        "platform-admin": True,
+        "qa-lead": False,
+        "qa-engineer": False,
+        "viewer": False,
+    },
 }
 
 #: 页面按钮选择器 → 动作（按钮必须真实存在于 DOM，禁用态由前端权限决定）。
@@ -148,8 +172,10 @@ def main() -> int:
         admin = sessions["platform-admin"]
         matrix = admin.get("/api/v1/auth/permissions")["matrix"]
         matrix_ok = all(
-            all((role in matrix and action in matrix[role]) == expected
-                for role, expected in per_role.items())
+            all(
+                (role in matrix and action in matrix[role]) == expected
+                for role, expected in per_role.items()
+            )
             for action, per_role in EXPECT.items()
         )
         rep.check(
@@ -167,7 +193,9 @@ def main() -> int:
         testcases = admin.get("/api/v1/testcases?workspace_id=default")
         tc_rows = testcases if isinstance(testcases, list) else testcases.get("items", [])
         approved = [tc for tc in tc_rows if tc.get("review_status") == "APPROVED"]
-        rep.check("环境：存在 APPROVED 用例（执行按钮可判定）", len(approved) >= 1, f"{len(approved)} 条")
+        rep.check(
+            "环境：存在 APPROVED 用例（执行按钮可判定）", len(approved) >= 1, f"{len(approved)} 条"
+        )
         tc_id = str(approved[0]["testcase_id"]) if approved else ""
 
         eng_api = sessions["qa-engineer"]
@@ -210,8 +238,7 @@ def main() -> int:
                             expected = EXPECT[action][role]
                             ok = exists and enabled == expected and (enabled or expected is False)
                             rep.check(
-                                f"{role}：{path} 的 {action} 按钮"
-                                f"{'可用' if expected else '禁用'}",
+                                f"{role}：{path} 的 {action} 按钮{'可用' if expected else '禁用'}",
                                 ok,
                                 f"exists={exists} enabled={enabled} expected={expected}",
                                 server_verified=True,
@@ -236,9 +263,13 @@ def main() -> int:
                         # 执行按钮：APPROVED 用例在 TestCases 列表上的可执行性。
                         page.goto(base + "/testcases", wait_until="domcontentloaded")
                         page.wait_for_timeout(900)
-                        exec_btn = page.locator(
-                            'tr:has-text("' + tc_id + '") button:has-text("执行")'
-                        ).first if tc_id else None
+                        exec_btn = (
+                            page.locator(
+                                'tr:has-text("' + tc_id + '") button:has-text("执行")'
+                            ).first
+                            if tc_id
+                            else None
+                        )
                         if exec_btn is not None and exec_btn.count() >= 1:
                             enabled = bool(exec_btn.is_enabled())
                             expected = EXPECT["run.execute"][role]
@@ -315,7 +346,9 @@ def main() -> int:
         "failed": len(rep.failed),
         "results": rep.results,
     }
-    (OUT / "rbac-roles.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+    (OUT / "rbac-roles.json").write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     print(f"total={summary['total']} passed={summary['passed']} failed={summary['failed']}")
     return 1 if rep.failed else 0
 

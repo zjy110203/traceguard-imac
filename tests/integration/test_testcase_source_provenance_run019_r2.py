@@ -51,16 +51,12 @@ def auth_client(tmp_path, monkeypatch):  # type: ignore[no-untyped-def]
     app = create_app()
     with TestClient(app) as client:
         for username, role in (("eng", "qa-engineer"), ("lead", "qa-lead")):
-            created = auth_store.create_user(
-                db, username=username, password=PASSWORD, roles=[role]
-            )
+            created = auth_store.create_user(db, username=username, password=PASSWORD, roles=[role])
             auth_store.set_user_workspaces(db, created["user_id"], ["default"])
 
         def login(username: str) -> dict[str, str]:
             """切换会话身份：CSRF 令牌与会话 Cookie 必须来自同一次登录。"""
-            r = client.post(
-                "/api/v1/auth/login", json={"username": username, "password": PASSWORD}
-            )
+            r = client.post("/api/v1/auth/login", json={"username": username, "password": PASSWORD})
             assert r.status_code == 200, r.text
             return {"X-CSRF-Token": r.json()["csrf_token"]}
 
@@ -154,9 +150,7 @@ def test_trusted_candidate_entry_rejects_human_and_missing_lineage(auth_client):
     catalog = get_services().rt.catalog
     tc_id = f"tcase_src_{uuid.uuid4().hex[:8]}"
     with pytest.raises(AppError) as human_exc:
-        catalog.create_trusted_candidate(
-            _payload(tc_id), source="human", source_ref="someone"
-        )
+        catalog.create_trusted_candidate(_payload(tc_id), source="human", source_ref="someone")
     assert "TRUSTED_CANDIDATE_SOURCE_INVALID" in human_exc.value.message
 
     with pytest.raises(AppError) as ref_exc:
@@ -193,7 +187,9 @@ def test_new_version_inherits_compiler_lineage(auth_client):  # type: ignore[no-
     )
     r = client.post(
         f"/api/v1/testcases/{tc_id}/versions",
-        json={"steps": [{"step_id": "s1", "action": "navigate", "value": "http://127.0.0.1:8011/x"}]},
+        json={
+            "steps": [{"step_id": "s1", "action": "navigate", "value": "http://127.0.0.1:8011/x"}]
+        },
         headers=login("eng"),
     )
     assert r.status_code == 201, r.text
@@ -239,7 +235,9 @@ def test_compiler_candidate_without_replay_rejected_and_old_run_reference_stable
 
     v2 = client.post(
         f"/api/v1/testcases/{tc_id}/versions",
-        json={"steps": [{"step_id": "s1", "action": "navigate", "value": "http://127.0.0.1:8011/y"}]},
+        json={
+            "steps": [{"step_id": "s1", "action": "navigate", "value": "http://127.0.0.1:8011/y"}]
+        },
         headers=login("eng"),
     )
     assert v2.status_code == 201, v2.text
