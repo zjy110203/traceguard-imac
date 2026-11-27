@@ -1,0 +1,650 @@
+{
+  "generated_at": "2026-11-27T17:18:49+0800",
+  "head": "ba37662da0ba20f16686d18526c726c068ad3721",
+  "database": "real sqlite (temporary, isolated)",
+  "teamflow": "http://127.0.0.1:8001 (real process)",
+  "total": 20,
+  "passed": 20,
+  "failed": 0,
+  "records": [
+    {
+      "step": "0. 管理员登录",
+      "result": "PASS",
+      "elapsed_ms": 52.8,
+      "detail": "5jJR1QpCGVPBHSmrY8X3NHYIzpAD1MnZ"
+    },
+    {
+      "step": "1. 创建 Workspace（服务端可信创建者）",
+      "result": "PASS",
+      "elapsed_ms": 14.4,
+      "detail": {
+        "workspace_id": "ws_1795771127715dd2f68f2eb6f",
+        "name": "WP1 验收空间",
+        "description": "RUN-019 联合验收",
+        "created_from": "user:admin",
+        "created_by": "user:admin"
+      }
+    },
+    {
+      "step": "2. 创建用户",
+      "result": "PASS",
+      "elapsed_ms": 24.9,
+      "detail": {
+        "user_id": "usr_76a5ce14ae03f908300b",
+        "username": "wp1user",
+        "roles": [
+          "viewer"
+        ],
+        "workspaces": [
+          "default"
+        ]
+      }
+    },
+    {
+      "step": "3. 分配角色",
+      "result": "PASS",
+      "elapsed_ms": 3.3,
+      "detail": {
+        "user_id": "usr_76a5ce14ae03f908300b",
+        "roles": [
+          "qa-engineer"
+        ],
+        "before": [
+          "viewer"
+        ]
+      }
+    },
+    {
+      "step": "4. 分配 Workspace",
+      "result": "PASS",
+      "elapsed_ms": 2.9,
+      "detail": {
+        "user_id": "usr_76a5ce14ae03f908300b",
+        "workspaces": [
+          "ws_1795771127715dd2f68f2eb6f"
+        ]
+      }
+    },
+    {
+      "step": "5. 创建需求",
+      "result": "PASS",
+      "elapsed_ms": 3.9,
+      "detail": {
+        "intent_id": "intent_179577112774967ca04108aa9",
+        "title": "WP1 闭环需求",
+        "description": "创建项目后状态必须可持久化读取",
+        "requirement_refs": [
+          "REQ-WP1-001"
+        ],
+        "business_context": {},
+        "preconditions": [],
+        "candidate_assertions": [],
+        "owner": "qa-team",
+        "status": "DRAFT",
+        "version": 1,
+        "schema_version": "0.1.0",
+        "workspace_id": "ws_1795771127715dd2f68f2eb6f"
+      }
+    },
+    {
+      "step": "6. 编辑需求（保留原始来源）",
+      "result": "PASS",
+      "elapsed_ms": 3.6,
+      "detail": {
+        "intent_id": "intent_179577112774967ca04108aa9",
+        "title": "WP1 闭环需求",
+        "description": "创建项目后状态必须可持久化读取（已修订）",
+        "requirement_refs": [
+          "REQ-WP1-001"
+        ],
+        "business_context": {},
+        "preconditions": [],
+        "candidate_assertions": [],
+        "owner": "qa-team",
+        "status": "DRAFT",
+        "version": 2,
+        "schema_version": "0.1.0",
+        "original_requirement_refs": [
+          "REQ-WP1-001"
+        ],
+        "original_description": "创建项目后状态必须可持久化读取",
+        "updated_at": "2026-11-27T09:18:47.754139Z",
+        "workspace_id": "ws_1795771127715dd2f68f2eb6f",
+        "created_at": "2026-11-27T09:18:47.751069Z"
+      }
+    },
+    {
+      "step": "7. 提交评审",
+      "result": "PASS",
+      "elapsed_ms": 3.4,
+      "detail": {
+        "intent_id": "intent_179577112774967ca04108aa9",
+        "title": "WP1 闭环需求",
+        "description": "创建项目后状态必须可持久化读取（已修订）",
+        "requirement_refs": [
+          "REQ-WP1-001"
+        ],
+        "business_context": {},
+        "preconditions": [],
+        "candidate_assertions": [],
+        "owner": "qa-team",
+        "status": "REVIEW",
+        "version": 2,
+        "schema_version": "0.1.0",
+        "original_requirement_refs": [
+          "REQ-WP1-001"
+        ],
+        "original_description": "创建项目后状态必须可持久化读取",
+        "updated_at": "2026-11-27T09:18:47.757844Z",
+        "workspace_id": "ws_1795771127715dd2f68f2eb6f",
+        "created_at": "2026-11-27T09:18:47.751069Z"
+      }
+    },
+    {
+      "step": "8. 审核通过",
+      "result": "PASS",
+      "elapsed_ms": 2.5,
+      "detail": {
+        "intent_id": "intent_179577112774967ca04108aa9",
+        "title": "WP1 闭环需求",
+        "description": "创建项目后状态必须可持久化读取（已修订）",
+        "requirement_refs": [
+          "REQ-WP1-001"
+        ],
+        "business_context": {},
+        "preconditions": [],
+        "candidate_assertions": [],
+        "owner": "qa-team",
+        "status": "APPROVED",
+        "version": 2,
+        "schema_version": "0.1.0",
+        "original_requirement_refs": [
+          "REQ-WP1-001"
+        ],
+        "original_description": "创建项目后状态必须可持久化读取",
+        "updated_at": "2026-11-27T09:18:47.760659Z",
+        "workspace_id": "ws_1795771127715dd2f68f2eb6f",
+        "created_at": "2026-11-27T09:18:47.751069Z"
+      }
+    },
+    {
+      "step": "9. 真实探索（TeamFlow）",
+      "result": "PASS",
+      "elapsed_ms": 1772.1,
+      "detail": {
+        "exploration_id": "exploration_1795771128685f811348b5a60",
+        "intent_id": "intent_179577112774967ca04108aa9",
+        "workspace_id": "ws_1795771127715dd2f68f2eb6f",
+        "status": "COMPLETED",
+        "error": "",
+        "engine": "rule-based-v1",
+        "llm_stats": null,
+        "trace": {
+          "exploration_id": "exploration_1795771128685f811348b5a60",
+          "test_intent_ref": "WP1 闭环需求 创建项目后状态必须可持久化读取（已修订） intent_179577112774967ca04108aa9",
+          "application_version": "teamflow-1.0.0",
+          "browser_version": "http-observer",
+          "agent_version": "explorer-v1",
+          "prompt_version": "rule-based-v1",
+          "tool_version": "tool-gateway-v1",
+          "action_sequence": [
+            {
+              "action": "navigate",
+              "params": {
+                "url": "http://127.0.0.1:8001/projects/new"
+              },
+              "result": "http://127.0.0.1:8001/projects/new",
+              "reason": "navigate",
+              "gateway": "allowed"
+            },
+            {
+              "action": "fill",
+              "params": {
+                "test_id": "project-name",
+                "value": "Explored Project",
+                "workspace": "test"
+              },
+              "result": "filled",
+              "reason": "fill:project-name",
+              "gateway": "allowed"
+            },
+            {
+              "action": "click",
+              "params": {
+                "test_id": "create-submit",
+                "workspace": "test"
+              },
+              "result": "http://127.0.0.1:8001/projects?created=1",
+              "reason": "click:create-submit",
+              "gateway": "allowed"
+            }
+          ],
+          "page_state_refs": [
+            "page_1",
+            "page_2",
+            "page_3"
+          ],
+          "event_refs": [],
+          "evidence_refs": [],
+          "stop_reason": "目标完成",
+          "started_at": "2026-11-27T09:18:48.685209Z"
+        },
+        "gateway_audit": [
+          {
+            "tool": "navigate",
+            "params_keys": [
+              "url"
+            ],
+            "source": "agent",
+            "allowed": true,
+            "reason": "ALLOWED",
+            "at": 1795771128.7197099
+          },
+          {
+            "tool": "fill",
+            "params_keys": [
+              "test_id",
+              "value",
+              "workspace"
+            ],
+            "source": "agent",
+            "allowed": true,
+            "reason": "ALLOWED",
+            "at": 1795771129.1010401
+          },
+          {
+            "tool": "click",
+            "params_keys": [
+              "test_id",
+              "workspace"
+            ],
+            "source": "agent",
+            "allowed": true,
+            "reason": "ALLOWED",
+            "at": 1795771129.143391
+          }
+        ],
+        "action_count": 3,
+        "stop_reason": "目标完成",
+        "created_at": "2026-11-27T09:18:49.525544Z"
+      }
+    },
+    {
+      "step": "10. 编译候选用例",
+      "result": "PASS",
+      "elapsed_ms": 10.0,
+      "detail": {
+        "exploration_id": "exploration_1795771128685f811348b5a60",
+        "intent_id": "intent_179577112774967ca04108aa9",
+        "workspace_id": "ws_1795771127715dd2f68f2eb6f",
+        "status": "COMPILED",
+        "error": "",
+        "engine": "rule-based-v1",
+        "llm_stats": null,
+        "trace": {
+          "exploration_id": "exploration_1795771128685f811348b5a60",
+          "test_intent_ref": "WP1 闭环需求 创建项目后状态必须可持久化读取（已修订） intent_179577112774967ca04108aa9",
+          "application_version": "teamflow-1.0.0",
+          "browser_version": "http-observer",
+          "agent_version": "explorer-v1",
+          "prompt_version": "rule-based-v1",
+          "tool_version": "tool-gateway-v1",
+          "action_sequence": [
+            {
+              "action": "navigate",
+              "params": {
+                "url": "http://127.0.0.1:8001/projects/new"
+              },
+              "result": "http://127.0.0.1:8001/projects/new",
+              "reason": "navigate",
+              "gateway": "allowed"
+            },
+            {
+              "action": "fill",
+              "params": {
+                "test_id": "project-name",
+                "value": "Explored Project",
+                "workspace": "test"
+              },
+              "result": "filled",
+              "reason": "fill:project-name",
+              "gateway": "allowed"
+            },
+            {
+              "action": "click",
+              "params": {
+                "test_id": "create-submit",
+                "workspace": "test"
+              },
+              "result": "http://127.0.0.1:8001/projects?created=1",
+              "reason": "click:create-submit",
+              "gateway": "allowed"
+            }
+          ],
+          "page_state_refs": [
+            "page_1",
+            "page_2",
+            "page_3"
+          ],
+          "event_refs": [],
+          "evidence_refs": [],
+          "stop_reason": "目标完成",
+          "started_at": "2026-11-27T09:18:48.685209Z"
+        },
+        "gateway_audit": [
+          {
+            "tool": "navigate",
+            "params_keys": [
+              "url"
+            ],
+            "source": "agent",
+            "allowed": true,
+            "reason": "ALLOWED",
+            "at": 1795771128.7197099
+          },
+          {
+            "tool": "fill",
+            "params_keys": [
+              "test_id",
+              "value",
+              "workspace"
+            ],
+            "source": "agent",
+            "allowed": true,
+            "reason": "ALLOWED",
+            "at": 1795771129.1010401
+          },
+          {
+            "tool": "click",
+            "params_keys": [
+              "test_id",
+              "workspace"
+            ],
+            "source": "agent",
+            "allowed": true,
+            "reason": "ALLOWED",
+            "at": 1795771129.143391
+          }
+        ],
+        "action_count": 3,
+        "stop_reason": "目标完成",
+        "created_at": "2026-11-27T09:18:49.525544Z",
+        "compiled": {
+          "testcase_id": "tcase_1795771129538d4f2adf7aa1a",
+          "version": 1,
+          "warnings": [
+            "NO_BUSINESS_STATE_API: 只能验证 UI 行为，不能宣称持久化已验证"
+          ],
+          "compiler_version": "compiler-v1",
+          "prompt_version": "prompt-v1",
+          "model_version": "rule-based-v1",
+          "llm_meta": {
+            "mode": "rule_only",
+            "called": false,
+            "fallback": false
+          }
+        }
+      }
+    },
+    {
+      "step": "11. 创建 TestCase",
+      "result": "PASS",
+      "elapsed_ms": 4.1,
+      "detail": {
+        "testcase_id": "tcase_1795771129546e2a75aa5e056",
+        "version": 1,
+        "intent_ref": "intent_179577112774967ca04108aa9",
+        "intent_text": null,
+        "steps": [
+          {
+            "step_id": "s1",
+            "action": "navigate",
+            "target": null,
+            "value": "/projects",
+            "description": ""
+          },
+          {
+            "step_id": "s2",
+            "action": "assert",
+            "target": null,
+            "value": null,
+            "description": "列表可见"
+          }
+        ],
+        "assertions": [
+          {
+            "assertion_id": "a1",
+            "description": "项目列表可见",
+            "kind": "ui",
+            "required": true,
+            "expected": {
+              "test_id": "project-list"
+            },
+            "oracle_id": null,
+            "oracle_version": null
+          }
+        ],
+        "test_data_refs": [],
+        "preconditions": [],
+        "postconditions": [],
+        "cleanup_policy": "NONE",
+        "run_config": {},
+        "compile_source": "human",
+        "review_status": "PENDING",
+        "immutable": true,
+        "created_at": "2026-11-27T09:18:49.546109Z",
+        "schema_version": "0.1.0"
+      }
+    },
+    {
+      "step": "12. 修改用例并创建新版本",
+      "result": "PASS",
+      "elapsed_ms": 4.6,
+      "detail": {
+        "testcase_id": "tcase_1795771129546e2a75aa5e056",
+        "version": 2,
+        "intent_ref": "intent_179577112774967ca04108aa9",
+        "intent_text": null,
+        "steps": [
+          {
+            "step_id": "s1",
+            "action": "navigate",
+            "target": null,
+            "value": "/projects",
+            "description": ""
+          },
+          {
+            "step_id": "s2",
+            "action": "click",
+            "target": {
+              "strategy": "test_id",
+              "value": "nav-new",
+              "source": "human",
+              "stability_score": null
+            },
+            "value": null,
+            "description": ""
+          },
+          {
+            "step_id": "s3",
+            "action": "assert",
+            "target": null,
+            "value": null,
+            "description": "新建入口可见"
+          }
+        ],
+        "assertions": [
+          {
+            "assertion_id": "a1",
+            "description": "项目列表可见",
+            "kind": "ui",
+            "required": true,
+            "expected": {
+              "test_id": "project-list"
+            },
+            "oracle_id": null,
+            "oracle_version": null
+          }
+        ],
+        "test_data_refs": [],
+        "preconditions": [],
+        "postconditions": [],
+        "cleanup_policy": "NONE",
+        "run_config": {},
+        "compile_source": "human",
+        "review_status": "PENDING",
+        "immutable": true,
+        "created_at": "2026-11-27T09:18:49.550833Z",
+        "schema_version": "0.1.0"
+      }
+    },
+    {
+      "step": "13. 创建 Oracle",
+      "result": "PASS",
+      "elapsed_ms": 5.7,
+      "detail": {
+        "oracle_id": "oracle_1795771129554fc74a021a75e",
+        "assertion_id": "a1",
+        "expected_behavior": "项目列表可见",
+        "requirement_ref": "REQ-WP1-001",
+        "expectation_approval": {
+          "approved": false,
+          "approver": "",
+          "note": "",
+          "at": "2026-11-27T09:18:49.555758Z"
+        },
+        "evaluation_rule": {},
+        "consistency_window_ms": 0,
+        "required": true,
+        "version": 1,
+        "approved_by_agent": false,
+        "schema_version": "0.1.0",
+        "approval_history": [
+          {
+            "approved": false,
+            "approved_by": "",
+            "note": "",
+            "at": "2026-11-27T09:18:49.555758Z"
+          }
+        ],
+        "approved": false,
+        "approved_by": "",
+        "workspace_id": "ws_1795771127715dd2f68f2eb6f"
+      }
+    },
+    {
+      "step": "14. 创建 Oracle 新版本并审批",
+      "result": "PASS",
+      "elapsed_ms": 4.2,
+      "detail": {
+        "oracle_id": "oracle_1795771129554fc74a021a75e",
+        "assertion_id": "a1",
+        "expected_behavior": "项目列表可见",
+        "requirement_ref": "REQ-WP1-001",
+        "expectation_approval": {
+          "approved": true,
+          "approver": "user:admin",
+          "note": "WP1 验收审批",
+          "at": "2026-11-27T09:18:49.561152Z"
+        },
+        "evaluation_rule": {},
+        "consistency_window_ms": 0,
+        "required": true,
+        "version": 2,
+        "approved_by_agent": false,
+        "schema_version": "0.1.0",
+        "approval_history": [
+          {
+            "approved": false,
+            "approved_by": "",
+            "note": "",
+            "at": "2026-11-27T09:18:49.555758Z"
+          },
+          {
+            "approved": true,
+            "approved_by": "user:admin",
+            "note": "WP1 验收审批",
+            "at": "2026-11-27T09:18:49.561152Z"
+          }
+        ],
+        "approved": true,
+        "approved_by": "user:admin",
+        "workspace_id": "ws_1795771127715dd2f68f2eb6f"
+      }
+    },
+    {
+      "step": "15. 绑定 Oracle 到用例版本",
+      "result": "PASS",
+      "elapsed_ms": 3.5,
+      "detail": {
+        "testcase_id": "tcase_1795771129546e2a75aa5e056",
+        "version": 2,
+        "review_status": "PENDING",
+        "oracle_bindings": {
+          "a1": {
+            "oracle_id": "oracle_1795771129554fc74a021a75e",
+            "oracle_version": 2,
+            "workspace_id": "ws_1795771127715dd2f68f2eb6f",
+            "approved": true,
+            "approved_by": "user:admin",
+            "oracle_assertion_id": "a1",
+            "assertion_id_mismatch": false,
+            "bound_by": "user:admin",
+            "bound_at": "2026-11-27T09:18:49.564527Z"
+          }
+        },
+        "warnings": []
+      }
+    },
+    {
+      "step": "16. 审核 TestCase（人工豁免稳定性门禁）",
+      "result": "PASS",
+      "elapsed_ms": 4.7,
+      "detail": {
+        "testcase_id": "tcase_1795771129546e2a75aa5e056",
+        "version": 2,
+        "review_status": "APPROVED",
+        "reviewer": "user:admin",
+        "review_revision": 1,
+        "warnings": []
+      }
+    },
+    {
+      "step": "17. 稳定性回放",
+      "result": "PASS",
+      "elapsed_ms": 3.1,
+      "detail": {
+        "testcase_id": "tcase_1795771129546e2a75aa5e056",
+        "version": 2,
+        "satisfied": true,
+        "problems": [],
+        "evidence": null
+      }
+    },
+    {
+      "step": "18. 执行 Run（版本引用固定）",
+      "result": "PASS",
+      "elapsed_ms": 10.4,
+      "detail": {
+        "task_id": "task_17957711295804805f818631c",
+        "run_id": "run_179577112958272fcf5b41e17",
+        "testcase_id": "tcase_1795771129546e2a75aa5e056",
+        "version": 2,
+        "workspace_id": "ws_1795771127715dd2f68f2eb6f",
+        "status": "QUEUED"
+      }
+    },
+    {
+      "step": "19. Run 引用核对",
+      "result": "PASS",
+      "detail": {
+        "task_id": "task_17957711295804805f818631c",
+        "run_id": "run_179577112958272fcf5b41e17",
+        "testcase_id": "tcase_1795771129546e2a75aa5e056",
+        "version": 2,
+        "workspace_id": "ws_1795771127715dd2f68f2eb6f",
+        "status": "QUEUED"
+      }
+    }
+  ]
+}
