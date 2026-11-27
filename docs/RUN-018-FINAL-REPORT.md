@@ -1,11 +1,45 @@
-# RUN-018 最终报告：核心正确性修复、智能诊断闭环验证与产品验收收口（R1 轮）
+# RUN-018 最终报告：核心正确性修复、智能诊断闭环验证与产品验收收口
 
 > 仓库：`traceguard-imac`｜分支：`workbuddy/run018-diagnostic-closure`
-> 起点 HEAD：`7674842`｜本轮最终 HEAD：`94c706e`（已推送）
-> CI 实跑：**PR Gate #103 @ `e1fb5f3` success（3m32s，最终报告提交本身）；
-> 此前 #102 @ `94c706e` success（3m34s）**；
-> Nightly Gate 为 cron 调度（每日 02:00），下次调度将自动以最新 HEAD 实跑。
+> 起点 HEAD：`7674842`｜R1 收口 HEAD：`e4c925b`｜**R2 当前 HEAD：`05a3639`（已推送）**
+> CI 实跑：**PR Gate #106 @ `05a3639` success（3m18s）**（此前 #104 @ `e4c925b` success 3m39s）；
+> Nightly Gate **并非只靠 cron**——本分支每次 push 都会触发。R1 收口 HEAD 的
+> Nightly #57 实际 **failed**（ui-acceptance），详见下方 R2 小节。
 > 原则：只写**实际发生并可复核**的事；未跑写 NOT_RUN，被挡写 BLOCKED。
+
+---
+
+## 0. R2 补正：B-28 的真实闭环（2026-11-27 下午）
+
+**前轮口径错误**：R1 报告写"Nightly 待 cron（02:00）实跑"，实际该分支每次
+push 都触发 Nightly；#56（`e1fb5f3`）与 #57（`e4c925b`）均 failed，失败点同为
+`ui-acceptance` step 8 退出码 3。R1 所报 PR Gate 也不完整——#104 @ `e4c925b`
+success（3m39s），此前只记到 #103。
+
+**定位过程（不完全依赖凭据）**：
+1. `4fa09c8`：让 `Reporter.check()` 的每条 FAIL 输出
+   `::error title=UI 验收失败::` GitHub annotation；Nightly #58 仍失败，但
+   Actions 页面直接显示根因：`ModuleNotFoundError: No module named
+   'traceguard_worker'`（Worker 退出码 1 → readiness `process_not_alive`）。
+2. 根因：`scripts/business_loop_ui_acceptance_run012.py` 的白名单 `_PATHS`
+   漏了 `apps/workers`。本地 venv 的 `traceguard.pth` 注入该路径，掩盖了缺陷；
+   CI 只按 requirements 安装 → 子进程 `-m traceguard_worker.main` 找不到包。
+   这正是 B-28 自 RUN-017 起"本地通过、CI 失败"的长期根因。
+3. `05a3639`：白名单加入 `apps/workers`；同时 `ui-acceptance` job 的依赖安装
+   改为优先 `requirements.lock.txt`（与 backend-full 同口径，失败才回退范围声明）。
+
+**R2 本地复核**（HEAD `05a3639`）：ruff check + format 全绿；**515 unit passed**；
+**542 integration passed**（SQLite，16 PG 专项 skipped）；前端 typecheck + build
+通过；core UI 验收 36/36（修复前后各跑一次）。
+**CI 复核（代码 HEAD `05a3639`）**：
+- PR Gate #106 @ `05a3639` **success（3m18s）**（backend + frontend 双 job）；
+- Nightly Gate #59 @ `05a3639` **success（12m55s）**：backend-full 8m23s、
+  ui-acceptance 2m4s、postgres 1m15s、security 15s、llm-smoke 26s、
+  gate-verdict 3s 全部成功。ui-acceptance 无 FAIL annotation，证据工件
+  3.04 MB（失败时仅 133 KB）——B-28 从 RUN-017 起的"本地通过、CI 失败"
+  至此真正闭环（此前 R1 只做到 MITIGATED）。
+- 唯一非失败提示：LLM smoke 因缺 Secret 如实 BLOCKED，gate-verdict 已明确
+  该证据不得用于 Release 放行（维持原口径）。
 
 ---
 
@@ -55,13 +89,13 @@ Holdout 真实执行（冻结 manifest + 显式分母），16 视图无障碍 65
 
 ---
 
-## 3. 最终回归（针对最终 HEAD `426f1e6` 真实执行）
+## 3. 最终回归（R2 于 HEAD `05a3639` 复核；R1 记录针对 `426f1e6`）
 
 | 项 | 结果 |
 |---|---|
 | `ruff check`（packages/apps/tests/benchmark/scripts） | All checks passed |
 | `ruff format --check` | 288 files already formatted |
-| `pytest tests/unit/ -q` | **492 passed**（0 failed） |
+| `pytest tests/unit/ -q` | **515 passed**（R2 实测；R1 记录为 492） |
 | `pytest tests/integration/ -q`（SQLite） | **542 passed, 16 skipped**（PG 专项待 PG URL） |
 | `pytest tests/integration/ -q`（TG_TEST_POSTGRES_URL=PG16.16） | **558 passed, 0 failed, 0 skipped** |
 | `npm run typecheck` + `npm run build`（apps/web） | 通过 |
@@ -79,9 +113,10 @@ Holdout 真实执行（冻结 manifest + 显式分母），16 视图无障碍 65
    （3m34s，backend + frontend 双 job 全绿）**。过程记录：#86~#98 连续绿；
    #99~#101 于 30-33s 早退——根因是 426f1e6 的补丁漏跑 `ruff format`
    （format --check 门禁确定性失败，本地复核复现），`94c706e` 修复后通过。
-2. **Nightly 是否在最终 HEAD 通过？** 待 cron（每日 02:00 北京时间）自动以最新
-   HEAD 实跑；WP1 修复（readiness 门禁 + 本次 run 专属报告）已就位，B-28 待
-   该次结果 CLOSED。无 gh 凭据（匿名 API 403），结果核对需凭据或 Actions 页面。
+2. **Nightly 是否在最终 HEAD 通过？** R1 收口 HEAD `e4c925b` 的 Nightly #57
+   **failed**（见 R2 小节）；根因已在 `05a3639` 修复，#59 的实跑结果以台账
+   最新记录为准。WP1 的 readiness 门禁 + 本次 run 专属报告仍有效，且本次
+   正是靠 FAIL annotation 在 Actions 页面无凭据定位到根因。
 3. **Worker 是否在 CI 真正领取 Run？** 本地 3 次验收均由独立 Worker 领取
    （lease_owner=r13-w1/r13-w2，fencing=1）；新增 readiness 门禁保证 CI 上
    Worker 未就绪时带日志快速失败而非静默 QUEUED。
@@ -128,8 +163,9 @@ Holdout 真实执行（冻结 manifest + 显式分母），16 视图无障碍 65
 
 ## 5. 已知风险与未完成项
 
-- **B-28（Nightly ui-acceptance）**：修复就位；PR Gate #102 全绿，Nightly 待
-  cron 实跑 → MITIGATED；
+- **B-28（Nightly ui-acceptance）**：根因已定位并修复（R2 / `05a3639`：
+  `_PATHS` 补 `apps/workers`），CI 实跑结论以 `.workbuddy-run/blockers.md`
+  最新记录为准；
 - **CI 过程教训**：`426f1e6` 补丁漏跑 `ruff format` 导致 PR Gate #99~#101 早退
   （30-33s）——提交前必须完整跑 `ruff check + format --check` 双门禁；
 - **Holdout 弃权率 66.7%**：如实呈现引擎保守设计；提升需规则变更 + 新 Holdout；

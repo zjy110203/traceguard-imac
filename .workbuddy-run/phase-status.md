@@ -3,7 +3,7 @@
 | 阶段 | 状态 | 证据 |
 |---|---|---|
 | WP0 基线核查 | DONE | git fetch/HEAD 对齐（7674842 起点） |
-| WP1 CI 闭环 | VERIFIED（PR Gate #102 @ 94c706e success 3m34s；Nightly 待 cron 实跑） | docs/RUN-018-WP1-CI.md；GitHub Actions |
+| WP1 CI 闭环 | **VERIFIED**：PR Gate #106 @ 05a3639 success 3m18s；Nightly #59 @ 05a3639 success 12m55s（6/6 job），B-28 CLOSED | docs/RUN-018-WP1-CI.md；docs/RUN-018-FINAL-REPORT.md §0；GitHub Actions |
 | WP2 观测 UNKNOWN 语义 | VERIFIED（前轮） | 37 测试 |
 | WP3 探针清理安全 | VERIFIED | 19 单测 + 8 项真实 TeamFlow 集成 |
 | WP4 Artifact GC 并发 | VERIFIED | 13 项多进程并发（SQLite+PG16）+ journal + 10k 基准无回退；docs/RUN-018-WP4-ARTIFACT-GC.md |

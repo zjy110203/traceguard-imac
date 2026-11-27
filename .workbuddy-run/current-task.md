@@ -1,6 +1,13 @@
-# 当前任务（RUN-018-R1 收口，2026-11-27 09:37 CST 开始，进行中）
+# 当前任务（RUN-018-R2：B-28 根因修复与 CI 复核，2026-11-27 下午）
 
-> 分支 `workbuddy/run018-diagnostic-closure`（起点 `7674842`）。
+> 分支 `workbuddy/run018-diagnostic-closure`（起点 `7674842`，当前 HEAD `05a3639`）。
+> R1 收口 HEAD `e4c925b` 的 Nightly #57 实际 failed；R2 已定位根因
+> （独立 Worker 白名单 PYTHONPATH 缺 `apps/workers`，本地 .pth 掩盖），
+> 提交 `4fa09c8`（FAIL annotation 可诊断化）+ `05a3639`（根因修复 +
+> 依赖锁口径统一）。**PR Gate #106 success 3m18s；Nightly #59 success
+> 12m55s（6/6 job）；B-28 CLOSED。**
+>
+> 以下为 R1 范围记录（保留历史口径）：
 > 主题：核心正确性修复、智能诊断闭环验证与产品验收收口。
 >
 > 本轮完成（提交 2f26686 → 6b891a7 → 22901a4 之后）：

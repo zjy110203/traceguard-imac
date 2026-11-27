@@ -114,3 +114,16 @@ Approval、Promotion（版本 2）、Regression（真实回归 Run PASSED）、R
   readiness 门禁保证同类故障下次 CI 会带完整 Worker 日志在业务链路前快速失败。
 - SIGKILL 测试的 CI Linux `os.kill` 语义与本地 macOS 一致（`exitcode == -9`），
   最终需 CI 实跑确认。
+
+## R2 补记（2026-11-27 下午）：B-28 根因闭环
+
+- 前轮"Nightly 待 cron 实跑"口径不实：本分支每次 push 都触发 Nightly，
+  #56/#57 实际 failed（ui-acceptance step 8 退出码 3）。
+- `4fa09c8`：每条 FAIL 生成 `::error title=UI 验收失败::` annotation；
+  #58 的 annotation 直接给出根因：`ModuleNotFoundError: No module named
+  'traceguard_worker'`（Worker 退出码 1 → readiness `process_not_alive`）。
+- `05a3639`：白名单 `_PATHS` 补 `apps/workers`（本地 `traceguard.pth` 曾
+  掩盖该缺项），`ui-acceptance` job 改用 `requirements.lock.txt` 优先安装。
+- 验证：PR Gate #106 @ `05a3639` success（3m18s）；Nightly #59 @ `05a3639`
+  **整体 success（12m55s，6/6 job）**，ui-acceptance 2m4s、无 FAIL annotation，
+  证据工件 3.04 MB（失败时仅 133 KB）；无 `.pth` 的独立 venv 本地复现 36/36。

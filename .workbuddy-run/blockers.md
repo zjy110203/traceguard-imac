@@ -2,7 +2,7 @@
 
 | 编号 | 事项 | 状态 |
 |---|---|---|
-| B-28 | Nightly ui-acceptance 持续失败 | MITIGATED：readiness 门禁 + Summary 唯一报告修复；PR Gate #102 @ 94c706e success；待 Nightly cron（02:00）实跑后 CLOSED |
+| B-28 | Nightly ui-acceptance 持续失败 | **CLOSED**：Nightly #59 @ `05a3639` **整体 success（12m55s，6/6 job）**，ui-acceptance 2m4s 且无 FAIL annotation、证据 3.04 MB（失败时 133 KB）。根因：独立 Worker 白名单 PYTHONPATH 漏 `apps/workers`（本地 `traceguard.pth` 掩盖），`05a3639` 已修 |
 | B-26 | PR #3 创建 | NOT_RUN（无 gh CLI，未授权不创建） |
 | B-27 | gh/API 导出 CI 日志 | BLOCKED（无凭据，匿名 API 限流 403） |
 | B-24 | Release Gate 真实 LLM 证据 | NOT_RUN（缺 Secret，禁止寻找凭据） |

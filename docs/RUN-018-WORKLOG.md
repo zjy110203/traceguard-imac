@@ -1,5 +1,34 @@
 # RUN-018 WORKLOG（执行日志）
 
+## RUN-018-R2 轮（2026-11-27，B-28 真实闭环）
+
+- **发现前轮收口口径不实**：Nightly Gate 不仅由每日 02:00 cron 触发，本分支
+  `workbuddy/run018-diagnostic-closure` 的每次 push 也会触发。核查 Actions 页面
+  发现 #56（e1fb5f3）、#57（e4c925b）均 **failed**，失败点同为
+  `ui-acceptance` step 8 退出码 3——前轮报告写成"待 cron 实跑"是不准确的。
+  同时补记：PR Gate #104 @ e4c925b 也是 success（3m39s），前轮只记到 #103。
+- **让失败可诊断**（4fa09c8）：`Reporter.check()` 对每条 FAIL 输出
+  `::error title=UI 验收失败::` annotation（本地为普通 stdout）。Nightly #58
+  @ 4fa09c8 仍失败，但 annotation 直接给出根因：
+  `ModuleNotFoundError: No module named 'traceguard_worker'`（两个独立 Worker
+  退出码 1 → readiness 判定 `process_not_alive` → 脚本退出 3）。
+- **根因**：`scripts/business_loop_ui_acceptance_run012.py` 的白名单 `_PATHS`
+  漏了 `apps/workers`。本地 venv 的 `traceguard.pth` 注入了该路径，掩盖缺陷；
+  CI 仅按 requirements 安装，没有该 .pth → 子进程 `-m traceguard_worker.main`
+  找不到包。这是 B-28 自 RUN-017 起"本地通过、CI 失败"长期未定位的真正原因。
+- **修复**（05a3639）：白名单 `_PATHS` 显式加入 `apps/workers`，不再依赖本地
+  .pth；同步把 `ui-acceptance` job 的依赖安装改为优先 `requirements.lock.txt`
+  （与 backend-full 同口径，失败才回退范围声明）。
+- 本地全量复核：ruff check/format 全绿；515 unit passed；542 integration passed
+  （SQLite，16 PG 专项 skipped）；前端 typecheck + build 通过；core UI 验收
+  36/36（本地两次，修复前后各一次）。另用**无 traceguard.pth 的独立 venv**
+  （模拟 CI 的依赖安装形态）复跑 core 验收，同样 36/36、退出码 0。
+- **CI 实跑（代码 HEAD `05a3639`）**：PR Gate #106 success（3m18s）；
+  Nightly Gate #59 **success（12m55s，全部 6 个 job 成功）**，ui-acceptance
+  2m4s、无 FAIL annotation、证据工件 3.04 MB（失败时仅 133 KB）。B-28 CLOSED。
+- 口径修正：R1 报告的"Nightly 待 cron 实跑"与"492 unit"均已按实测更正；
+  PR Gate #104 @ e4c925b success 亦补记。
+
 ## RUN-018-R1 轮（2026-11-27，起点 7674842）
 
 按时间序的真实工作记录（详细证据见各 WP 专题文档与 docs/assets/run018/）。
