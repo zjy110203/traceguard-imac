@@ -66,7 +66,11 @@ jobs:
           test -f dist/index.html || { echo "BLOCKED: 前端 dist 未产出"; exit 1; }
           echo "frontend dist ready: $(ls dist | tr '\n' ' ')"
       - name: Full backend suite (SQLite)
-        run: .venv/bin/pytest -q
+        # RUN-019-R2：CI 曾出现整步挂起（本地 7 分钟、CI 正常 6 分钟），
+        # 45 分钟 Job 超时前拿不到任何测试名/栈信息。看门狗在 15 分钟把全部
+        # 线程栈写入 Job Summary（可公开读取），35 分钟强制失败退出码 124。
+        run: |
+          .venv/bin/python scripts/ci_pytest_watchdog.py --timeout 900 --hard-timeout 2100 -- -q
       - name: RUN-016/017 专项（Benchmark v2 / 故障观测 / Regression 重试）
         # 这些用例要么需要真实 Chromium（浏览器观测），要么需要启动独立 TeamFlow 子进程，
         # 因此不进 PR Gate，只在安装好 Chromium 的 Nightly 上跑。
