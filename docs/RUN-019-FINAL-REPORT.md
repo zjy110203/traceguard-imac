@@ -13,7 +13,7 @@
 | WP2 智能诊断升级 | **VERIFIED** | 独立 Holdout 30×2：目标类 Recall 1.0、ambiguous 全弃权、API/NETWORK 无回归；`docs/RUN-019-WP2-DIAGNOSIS.md` |
 | WP3 前端完整性 | **VERIFIED** | a11y 77/77；认证开启真实浏览器资产闭环 8/8；`docs/RUN-019-WP3-FRONTEND.md` |
 | WP4 完整闭环回归 | **VERIFIED** | PG16 full-loop 40/40；回归十进程并发 13/13；`docs/RUN-019-WP4-BUSINESS-LOOP.md` |
-| WP5 质量门禁 | **VERIFIED**（CI 项除外） | 全量 1131 passed；PG 专项 32；TS/build；soak 62min；`docs/RUN-019-WP5-QUALITY-GATES.md` |
+| WP5 质量门禁 | **VERIFIED**（CI 项除外） | 全量 1131 passed；PG 专项 32；TS/build；soak 62min **33/33**；`docs/RUN-019-WP5-QUALITY-GATES.md` |
 | WP6 文档台账 | DONE | README / FEATURE-STATUS / `.workbuddy-run/` 已更新；历史报告未删除 |
 
 ## 1. 本轮新增/修复的真实缺陷（不含 RUN-018 已修项）
