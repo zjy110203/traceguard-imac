@@ -81,3 +81,22 @@
 
 `test_ten_concurrent_regression_requests_create_one_run`：SQLite 写锁竞争 + 20s 等待超时
 → 改为 60s 等待（断言未放宽），连续全量通过。
+
+## RUN-019-R2（2026-11-27，最终代码）
+
+| 项 | 命令 | 结果 |
+|---|---|---|
+| Ruff | `ruff check apps packages scripts tests` | All checks passed |
+| Ruff format | `ruff format --check apps/api packages scripts tests` | 280 files already formatted |
+| 后端全量 | `pytest -q` | **1144 passed / 16 skipped**（419s；skip 均为 PG 专项） |
+| 前端类型 | `npm run typecheck` | 通过 |
+| 前端构建 | `npm run build` | 通过 |
+| 来源可信专项 | `pytest tests/integration/test_testcase_source_provenance_run019_r2.py` | 8 passed |
+| 版本完整性专项 | `pytest tests/integration/test_testcase_version_integrity_run019_r2.py` | 5 passed |
+| 审核门禁回归 | `pytest tests/integration/test_review_gate_http_security_run011_r1_2.py` | 通过 |
+| UI 全链路 | `business_loop_ui_acceptance_run017.py --profile core` | 42 项 / 41 PASS / 0 FAIL / 1 NOTE |
+| 四角色权限 | `rbac_role_ui_acceptance_run019_r2.py` | 24/24 PASS |
+| a11y（R2 复跑） | `ui_a11y_run019.py --out docs/assets/run019-r2/local/a11y` | 77/77 |
+| CI PR Gate | #113 @ `19f527f` | backend 3m36s + frontend 26s，SUCCESS |
+| CI Nightly | #66 @ `19f527f` | 6/6 Job SUCCESS（ui-acceptance 2m01s；LLM BLOCKED） |
+| Reliability Gate | `workflow_dispatch` | NOT_RUN（无 gh/凭据）；本地 62min soak 33/33 保留 |

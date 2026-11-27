@@ -68,3 +68,30 @@
   拿到的是字符串而非数组。已修复（解析 + active 布尔化），并补 RBAC 回归。
 - 种子需求均被用例引用时服务端按门禁拒绝编辑（预期保护），验收改为
   UI 先建后编。
+
+## 4. R2 源码级权限审计（2026-11-27）
+
+RUN-019 WP3 的门禁只覆盖了部分视图。R2 逐视图审计发现 **8 个视图完全没有 `can()` 判定**，
+按钮对 viewer 也可见可点（仅靠后端 403 兜底），与"前端按真实会话权限显示或禁用"的要求不符。
+
+| 视图 | 补齐的动作 |
+|---|---|
+| IntentsView | 新建/编辑/提交评审/废弃/探索 → `testcase.create`；通过 → `testcase.review` |
+| RunDetailView | 诊断/证据图 → `diagnosis.operate`；重试 → `run.execute`；探针 → `probe.execute` |
+| TestCaseDetailView | 新建版本/稳定性回放 → `testcase.create`；保存绑定 → `oracle.bind` |
+| RepairsView | 新建/规则校验/沙箱/提交 → `repair.submit`（此前仅审批/晋升/回滚有门禁） |
+| OracleDetailView | 审批并新建版本 → `oracle.create` |
+| UsersView | 新建/编辑权限/启用停用 → `user.manage` |
+| SystemView / BenchmarkView | 自检/seed/实验 A-C → `system.configure` |
+| ExplorerView | 发起探索/编译候选 → `testcase.create` |
+| DiagnosisDetailView | 探针/主动闭环 → `probe.execute`；分流复核 → `diagnosis.operate` |
+
+**四角色真实验收**：`scripts/rbac_role_ui_acceptance_run019_r2.py`
+（真实登录 × 真实 Chromium × 服务端回读），**24/24 PASS**：
+
+- 每个角色核对按钮"存在且可用 / 存在但禁用"，不存在与不可用分开判定；
+- 直接绕过前端发请求确认服务端独立 403：viewer 建用例、qa-engineer 审核、
+  qa-engineer 写演示资产、qa-lead 晋升；
+- 服务端 `/auth/permissions` 矩阵与验收期望逐动作比对，确认无隐藏放宽。
+
+证据：`docs/assets/run019-r2/local/rbac/`（4 张角色截图 + rbac-roles.json）。

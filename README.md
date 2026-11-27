@@ -1,14 +1,22 @@
 # TraceGuard
 
+> **RUN-019-R2（2026-11-27）收口完成**：
+> 修复 Nightly #65 的真实失败根因——UI 验收脚本仍在操作已删除的 `#tc-steps`，
+> 改为真实操作可视化 StepEditor（并补齐断言 expected 的可视化编辑）；
+> `compile_source` 改为服务端可信来源（公共 HTTP 只能产生 human，compiler/healed
+> 仅经 Explorer/Repair 可信入口并带血缘）；补齐 8 个视图的前端权限门禁（四角色真实验收 24/24）；
+> Monitoring 统计范围显式化；TestCaseVersion 增加 `authoring_hash`，篡改历史业务内容将被 409 拒绝。
+> **CI**：PR Gate #113 与 Nightly #66 @ `19f527f` 真实通过（6/6 Job，ui-acceptance 2m01s）；
+> 后端全量 1144 passed + a11y 77/77；LLM 真实调用 BLOCKED（缺 Secret）；Reliability Gate CI NOT_RUN。
+> 权威结论：`docs/RUN-019-FINAL-REPORT.md`；R2 差距清单：`docs/RUN-019-R2-GAP-CLOSURE.md`。
+
 > **RUN-019（2026-11-27）产品完整性收口**：
 > 核心资产管理功能完整化——Workspace 管理 API（可信创建者/成员/详情编辑）、
 > 用户角色安全变更（最后管理员行锁保护）、TestIntent 编辑/状态机/审批权限分离、
 > TestCase 版本管理 + 可视化步骤编辑器 + 版本差异、Oracle 详情/历史/审批/反向引用；
 > 智能诊断 PERSISTENCE/TIMING/LOCATOR 证据链升级（新 Holdout 30×2：目标类 Recall 1.0、
 > ambiguous 全弃权，RUN-018 Holdout 未改动）；前端 16+ 视图权限门禁对齐 + a11y 77/77 +
-> 认证开启的真实浏览器资产闭环 8/8；PG16 全血缘闭环回归 40/40（含回归验证与回滚）；
-> 后端全量 1131 passed + PG16 专项 32 passed。
-> 权威结论：`docs/RUN-019-FINAL-REPORT.md`；差距分析：`docs/RUN-019-GAP-ANALYSIS.md`。
+> 认证开启的真实浏览器资产闭环 8/8；PG16 全血缘闭环回归 40/40（含回归验证与回滚）。
 
 > **RUN-017（2026-11-26）产品成熟度与交付闭环**：
 > 独立故障观测从"能跑"修到"测得对"（基线 + 分类 + 值一致性 + 浏览器级观测）、

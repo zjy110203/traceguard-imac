@@ -1,0 +1,39 @@
+{
+  "run": "RUN-018 WP8/R1 accessibility",
+  "axe_version_file": "/Users/dlp--test/Desktop/traceguard/apps/web/node_modules/axe-core/axe.min.js",
+  "views": [
+    "dashboard",
+    "intents",
+    "explorer",
+    "testcases",
+    "testcase_detail",
+    "oracles",
+    "runs",
+    "run_detail",
+    "diagnoses",
+    "diagnosis_detail",
+    "repairs",
+    "benchmark",
+    "models",
+    "system",
+    "users",
+    "login",
+    "monitoring",
+    "oracle_detail",
+    "workspaces"
+  ],
+  "widths": [
+    1440,
+    390
+  ],
+  "themes": [
+    "light",
+    "dark"
+  ],
+  "cells_total": 77,
+  "passed": 77,
+  "failed": 0,
+  "skipped": 0,
+  "duration_s": 107.0,
+  "failures": []
+}

@@ -1,5 +1,14 @@
 # 功能状态矩阵（更新至 2026-11-27 RUN-019）
 
+> **RUN-019-R2 状态（2026-11-27，收口完成）**：分支 `workbuddy/run019-product-completion`。
+> RUN-019 起点 `73edc346`；R2 起点 `61ffd4a`；R2 代码 `2b90d6c`→`dfb49b2`，证据 `19f527f`。
+> R2 关闭了三项真实缺口：**UI 验收与可视化编辑器脱节**（Nightly #65 失败）、
+> **compile_source 客户端可伪造**（绕过稳定性回放）、**前端 8 个视图无权限门禁**；
+> 并把 TestCaseVersion 的"不可变"从流程标记变成 `authoring_hash` 可验证约束。
+> **CI 真实结果**：PR Gate #113 @ `19f527f` SUCCESS；Nightly #66 @ `19f527f`
+> **6/6 Job success**（ui-acceptance 2m01s 真实通过）；LLM 真实调用仍 BLOCKED（缺 Secret）；
+> Reliability Gate CI **NOT_RUN**（仅 workflow_dispatch，无凭据）。**不重新设计架构。**
+
 > **RUN-019 状态（2026-11-27，产品完整性收口）**：分支 `workbuddy/run019-product-completion`，
 > 基线 = RUN-018-R2 HEAD `05a3639`。主题：核心资产管理功能完整化、智能诊断升级、
 > 前端产品级完整性、完整闭环回归与质量门禁。**不重新设计架构。**
@@ -16,9 +25,10 @@
 >   真实浏览器资产业务闭环 8/8（认证开启，Cookie 会话）。
 > - **闭环回归**：PG16 full-loop **40/40**（含回归验证 PASSED、故障注入 FAILED 不伪造、
 >   回滚）、WP1 闭环双库 20/20、回归十进程并发 13/13（`docs/RUN-019-WP4-BUSINESS-LOOP.md`）。
-> - **质量门禁**：ruff 全绿；后端全量 **1131 passed**/16 skipped（SQLite）；PG16 专项 32 passed；
+> - **质量门禁**：ruff 全绿；后端全量 **1144 passed**/16 skipped（SQLite，R2 最终）；PG16 专项 32 passed；
 >   前端 TS strict + build；Reliability：本地 62 分钟真实 soak（PG16 + 独立 Worker）。
-> - **CI**：分支已推送 `9f21f03`；PR Gate/Nightly 状态 BLOCKED（无 gh/凭据核实，同 B-26/B-27）。
+> - **R2 复验**：UI 全链路 41 PASS/0 FAIL；四角色权限 24/24；a11y 77/77；版本完整性 5/5；来源可信 8/8。
+> - **CI**：PR Gate #113 与 Nightly #66 @ `19f527f` 真实通过（6/6 Job）；Reliability Gate CI NOT_RUN（无凭据）。
 > 权威结论见 `docs/RUN-019-FINAL-REPORT.md`。
 
 ---

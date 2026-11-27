@@ -17,8 +17,10 @@
 | TestIntent 编辑 | **VERIFIED** | `PATCH /intents/{id}`：版本递增、原始来源保留、编辑后回 DRAFT；已关联用例时 412 |
 | TestIntent 状态机 | **VERIFIED** | DRAFT→REVIEW/DEPRECATED；REVIEW→APPROVED/DRAFT/DEPRECATED；APPROVED→DEPRECATED；非法跳转 412 |
 | 提交评审 / 审批权限分离 | **VERIFIED** | `POST /intents/{id}/submit`（testcase.create）与 `/approve`（testcase.review）；旧 `/status` 对 APPROVED 目标额外校验 review 权限；qa-engineer 审批 403 |
-| TestCase 可视化步骤编辑器 | **IMPLEMENTED** | `StepEditor.vue`：增删改排序、target/value/description、断言与 Oracle 绑定、JSON 高级模式；8 类 action 全部可选；前端 typecheck+build 通过 |
-| TestCase 新版本 | **VERIFIED** | `POST /testcases/{id}/versions`；服务端递增版本；历史版本不可变；`test_testcase_new_version_immutable_and_diff` |
+| TestCase 可视化步骤编辑器 | **VERIFIED（R2）** | `StepEditor.vue`：增删改排序、target/value/description、断言与 Oracle 绑定、**断言 expected 可视化 JSON 编辑**、JSON 高级模式；8 类 action 全部可选。R2 增加稳定 `data-testid`，真实浏览器验收 ②a–②f 六项通过（`docs/assets/run019-r2/local/ui/`） |
+| TestCase 新版本 | **VERIFIED** | `POST /testcases/{id}/versions`；服务端递增版本；`test_testcase_new_version_immutable_and_diff` |
+| 版本作者内容完整性（R2） | **VERIFIED** | `authoring_hash` 随版本落库，审核/绑定写库前复核；直接改库篡改步骤 → 409 `TESTCASE_VERSION_CONTENT_MUTATED`；`test_testcase_version_integrity_run019_r2.py` 5/5 |
+| compile_source 来源可信（R2） | **VERIFIED** | 公共 HTTP 固定 human + `source_origin=manual_http`；声明 compiler/healed → 403；版本递增继承血缘；Explorer/Repair 走 `create_trusted_candidate()`；专项 8/8 |
 | TestCase 版本差异比较 | **VERIFIED** | `GET /testcases/{id}/versions/{a}/diff/{b}`；用例详情显示 changed_fields + unified diff |
 | Oracle 详情/历史/审批记录/反向关联 | **VERIFIED** | `OracleDetailView.vue` + `/oracles/{id}/versions|references|approve`；审批基于旧版新建版本、历史不可覆盖；反向引用真实落库 |
 | Oracle 跨 Workspace ID 复用拒绝 | **VERIFIED** | `create_oracle()` 对已有 ID 的 workspace 校验；专项 403 |
@@ -48,13 +50,17 @@
 ## 4. 质量门禁
 
 - `ruff check` / `ruff format --check`：全绿；
-- `pytest tests/ -q --timeout=180`：**1125 passed / 16 skipped**（16 skip 全为未配置 `TG_TEST_POSTGRES_URL` 的 PG 专项）；
+- `pytest tests/ -q`：**1144 passed / 16 skipped**（R2 最终；16 skip 全为未配置 `TG_TEST_POSTGRES_URL` 的 PG 专项）；
 - `npm run typecheck` + `npm run build`：通过（新增 2 个业务路由、1 个组件、3 个视图）；
 - PostgreSQL 16 专项与 CI 实跑在 WP5 统一核对，不在此提前声明。
 
 ## 5. 仍保留的缺口（不伪装完成）
 
 - Workspace 成员管理是**展示 + 通过用户页修改范围**，没有独立成员邀请/角色-in-workspace 模型：NEEDS_DECISION；
-- 测试用例 `compile_source` 仍由创建请求声明，前端已不再伪造审核主体，但服务端血缘推导未实现：PARTIAL；
-- `TestCaseVersion.immutable` 仍是流程级标记（审核后锁定绑定），非存储级只读约束：PARTIAL；
+- ~~测试用例 `compile_source` 仍由创建请求声明~~：**R2 CLOSED**——公共 HTTP 只能产生 human，
+  compiler/healed 仅经服务端可信候选入口写入并带 exploration/proposal 血缘；
+  剩余风险：进程内代码仍可直接调用持久层（同一边界内视为可信）。
+- ~~`TestCaseVersion.immutable` 仍是流程级标记~~：**R2 CLOSED（应用层）**——`authoring_hash`
+  在审核/绑定写库前复核，篡改被 409 拒绝；**剩余风险**：R2 之前的历史版本无摘要基线，
+  且数据库本身未做行级只读/签名，DBA 级直接改库仍不可检测。
 - 前端无 JS/TS 单元测试（沿用既有 Python E2E/无障碍脚本），本轮新增视图的真实浏览器验收在 WP3/WP5 执行。

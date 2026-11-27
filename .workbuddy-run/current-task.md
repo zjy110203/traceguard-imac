@@ -1,37 +1,28 @@
-# 当前任务（RUN-019：产品完整性收口，2026-11-27）
+# 当前任务（RUN-019-R2：产品收口、CI 修复与发布准入，2026-11-27）
 
-> 分支 `workbuddy/run019-product-completion`（起点 = RUN-018-R2 HEAD `05a3639`，
-> 本轮推进至 `9f21f03`）。RUN-018 台账全部保留，本文件切换为 RUN-019 口径。
->
-> 主题：核心资产管理功能完整化、智能诊断升级、前端产品级完整性、
-> 完整闭环回归与质量门禁。
+> 分支 `workbuddy/run019-product-completion`。RUN-019 起点 `73edc346`；
+> R2 起点 `61ffd4a`；R2 代码提交 `2b90d6c` → `dfb49b2` → `19f527f`。
+> RUN-018/RUN-019 台账全部保留，本文件切换为 R2 口径。
 
 ## 完成情况
 
-- WP0 差距分析：`docs/RUN-019-GAP-ANALYSIS.md`（六态口径逐项标注）
-- WP1 资产管理：Workspace 管理 API（详情/编辑/可信创建者/成员）、用户角色安全
-  变更（最后管理员并发保护 tg_admin_guard）、TestIntent 编辑/状态机/审批权限分离、
-  TestCase 新版本/版本差异/可视化步骤编辑器、Oracle 详情/历史/审批/反向引用；
-  联合验收 SQLite 20/20 + PG16 20/20；`docs/RUN-019-WP1-ASSET-MANAGEMENT.md`
-- WP2 诊断升级：PERSISTENCE/TIMING/LOCATOR 证据链与根因规则升级；
-  独立新 Holdout（30 变体 × 2 轮，manifest 冻结 SHA-256）；目标类别 Recall 1.0、
-  API/NETWORK 无回归、ambiguous 全弃权；RUN-018 原始 Holdout 未改动；
-  `docs/RUN-019-WP2-DIAGNOSIS.md`
-- WP3 前端完整性：16+ 视图权限门禁（前后端矩阵对齐 repair.regression/
-  system.observe）、a11y 修复（对比度/键盘/溢出）→ 77/77、真实浏览器资产
-  业务闭环 8/8（认证开启）；`scripts/ui_a11y_run019.py`、
-  `scripts/asset_ui_acceptance_run019.py`
-- WP4 闭环回归：PG16 full-loop 40/40（含回归验证与回滚）、回归十进程并发
-  13/13；`docs/RUN-019-WP4-BUSINESS-LOOP.md`
-- WP5 门禁：ruff 全绿；后端全量 1131 passed/16 skipped；PG16 专项 32 passed；
-  前端 typecheck/build；a11y 77/77；Reliability soak 62 分钟（PG16）33/33 通过
-- WP6 文档：进行中
+- R2-1 UI E2E：`StepEditor` 稳定 `data-testid` + 断言 expected 可视化编辑；
+  验收脚本改走真实可视化操作并从服务端回读。core profile **42 项 / 41 PASS / 0 FAIL / 1 NOTE**。
+- R2-2 来源可信：公共 HTTP 固定 human（`source_origin=manual_http`），
+  compiler/healed 声明 → 403；版本递增继承血缘；Explorer/Repair 走
+  `create_trusted_candidate()`。专项 8/8。
+- R2-3 权限门禁：补齐 8 个无 `can()` 视图；四角色真实验收（真实登录 + 真实浏览器 +
+  服务端 403）**24/24**。
+- R2-4 Workspace/版本：Monitoring 默认当前 Workspace、全局汇总显式勾选并展示 scope；
+  `authoring_hash` 校验历史业务内容（篡改 → 409）。专项 5/5。
+- 本地门禁：ruff 全绿；后端全量 **1144 passed / 16 skipped**；typecheck + build 通过。
+- R2-5/R2-6：CI 与最终报告（进行中，见 `.workbuddy-run/blockers.md`）。
 
 ## 遗留与如实记录
 
-- B-26（PR 创建）：NOT_RUN（无 gh CLI/凭据）；本轮分支已推送
-  `workbuddy/run019-product-completion` @ `9f21f03`，PR Gate 状态
-  BLOCKED（无法核实，同 B-27）。
-- Reliability Gate：CI 版本需手动触发（B-25）；本地 62 分钟 soak 替代执行。
+- LLM Secret 未配置：llm-smoke 按规则 BLOCKED，不声称真实调用成功。
+- Reliability Gate（CI）需 workflow_dispatch：本机无 gh CLI/凭据，无法触发；
+  本地 62 分钟 soak（RUN-019）33/33 保留，CI 侧如实标记 NOT_RUN。
+- PR 创建：未授权，不执行。
 
 禁止：改 main、强推、reset --hard、git clean、自动合并 PR、读取凭据。

@@ -11,3 +11,14 @@
 | WP4 闭环回归 | VERIFIED | `docs/RUN-019-WP4-BUSINESS-LOOP.md` + `docs/assets/run019/wp4/` |
 | WP5 质量门禁 | DONE | 全量 1131 passed；PG 专项 32；soak 62min 33/33（`docs/assets/run019/wp5/soak/soak-62min.json`） |
 | WP6 文档 | DONE | README/FEATURE-STATUS/台账更新 |
+
+## RUN-019-R2（2026-11-27）
+
+| 工作包 | 状态 | 证据 |
+|---|---|---|
+| R2-1 UI E2E / StepEditor | VERIFIED | `docs/assets/run019-r2/local/ui/run017-ui-core.json`（41 PASS / 0 FAIL） |
+| R2-2 compile_source 来源可信 | VERIFIED | `tests/integration/test_testcase_source_provenance_run019_r2.py`（8/8） |
+| R2-3 前端权限门禁 | VERIFIED | `docs/assets/run019-r2/local/rbac/rbac-roles.json`（24/24） |
+| R2-4 Workspace 范围 / 版本完整性 | VERIFIED | `test_testcase_version_integrity_run019_r2.py`（5/5） |
+| R2-5 CI 门禁 | 见 blockers（PR Gate #113 / Nightly #66） | `docs/RUN-019-FINAL-REPORT.md` |
+| R2-6 文档与台账 | DONE（随 CI 结论回填） | 本文件 + `.workbuddy-run/` |

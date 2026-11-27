@@ -111,10 +111,12 @@ platform-admin / qa-lead / qa-engineer / viewer 各自真实登录 + 真实浏�
 
 ## 5. R2-5 CI 与 Reliability Gate
 
-| 门禁 | 结果 | 说明 |
-|---|---|---|
-| PR Gate（最终 HEAD） | 待回填 | backend + frontend 两 Job |
-| Nightly（最终 HEAD） | 待回填 | backend-full / security / postgres / ui-acceptance / llm-smoke / gate-verdict |
-| Reliability Gate（CI，workflow_dispatch） | 待回填 | soak_minutes=62 / min_runs=100 / workers=3 |
+| 门禁 | HEAD | 结果 | 说明 |
+|---|---|---|---|
+| PR Gate #113 | `19f527f` | **SUCCESS** | backend 3m36s + frontend 26s |
+| Nightly #66 | `19f527f` | **SUCCESS（6/6）** | backend-full / security / postgres / ui-acceptance（2m01s）/ llm-smoke（Job 成功，真实调用 BLOCKED）/ gate-verdict |
+| Reliability Gate（CI） | — | **NOT_RUN** | 仅 `workflow_dispatch`；本机无 gh CLI/凭据，未触发；本地 62 分钟 soak 33/33 保留 |
 
+Nightly #65（`61ffd4a`）为对照：ui-acceptance 因 `#tc-steps` 超时失败、gate-verdict 失败；
+R2-1 修复后 #66 同一 Job 真实通过（2m01s）。
 LLM Secret 未配置时按既有规则 BLOCKED，**不声称真实调用成功**。

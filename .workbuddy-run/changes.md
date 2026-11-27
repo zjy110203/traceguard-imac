@@ -41,3 +41,27 @@
   `test_promotion_recovery_run016.py`（7）、`test_system_config_rbac_run016.py`（10）
 - `tests/unit/test_benchmark_fault_effect_run016.py`（9）、`test_benchmark_false_pass_v2_run016.py`（6）、
   `test_fencing_entrypoint_audit_run016.py`（3）
+
+## RUN-019-R2（2026-11-27）
+
+| 文件 | 变更 |
+|---|---|
+| `apps/web/src/components/StepEditor.vue` | 稳定 data-testid；断言 expected 可视化 JSON 编辑与校验；新步骤默认无 locator；选策略未填值→null |
+| `apps/web/src/views/TestCasesView.vue` | 提交前校验（空 target/缺描述）；`data-testid` 创建入口 |
+| `scripts/business_loop_ui_acceptance_run012.py` | TestCase 段改真实可视化操作（清空→逐步录入→JSON 往返→创建→服务端回读） |
+| `apps/api/traceguard_api/routers/catalog.py` | 拒绝客户端声明来源；HTTP 固定 human + manual_http 血缘；版本继承来源 |
+| `packages/contracts/traceguard_contracts/models.py` | `source_origin` / `source_ref` |
+| `packages/persistence/traceguard_persistence/catalog.py` | `create_trusted_candidate()`；来源血缘；`authoring_hash` 写入与审核/绑定前复核；晋升/回滚血缘+摘要 |
+| `apps/api/.../exploration_service.py` / `repair_service.py` | Compiler/自愈候选改走可信入口并带 exploration/proposal 血缘 |
+| `apps/api/traceguard_api/seed.py` | 内置资产记录 `source_origin=seed` |
+| `apps/web/src/views/*.vue` | 8 个视图补齐权限门禁（Intents/RunDetail/TestCaseDetail/Repairs/OracleDetail/Users/System/Benchmark/Explorer/DiagnosisDetail） |
+| `apps/web/src/views/MonitoringView.vue` | 默认当前 Workspace；全局汇总显式勾选 + scope 展示 |
+| `apps/web/src/views/{Runs,Diagnoses}View.vue` | 「包含 Benchmark」标注为跨全部已授权 Workspace 聚合 |
+| `.github/workflows/nightly-gate.yml` | 全量测试接入看门狗（15min 栈/35min 强制失败） |
+| `scripts/ci_pytest_watchdog.py` | 新增：CI 挂起可诊断 |
+| `scripts/rbac_role_ui_acceptance_run019_r2.py` | 新增：四角色真实权限验收 |
+| `scripts/stability_replay_acceptance_run013.py` | 改走可信候选入口（不再经 HTTP 声明来源） |
+| `tests/integration/test_testcase_source_provenance_run019_r2.py` | 新增 8 项正反例 |
+| `tests/integration/test_testcase_version_integrity_run019_r2.py` | 新增 5 项完整性 |
+| `tests/integration/test_review_gate_http_security_run011_r1_2.py` | compiler/healed 候选改由服务层构造 |
+| 文档 | RUN-019-FINAL-REPORT / R2-GAP-CLOSURE / WP1 / WP3 / WP5 / FEATURE-STATUS / README |
