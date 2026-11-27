@@ -1,3 +1,28 @@
+# 功能状态矩阵（更新至 2026-11-27 RUN-019）
+
+> **RUN-019 状态（2026-11-27，产品完整性收口）**：分支 `workbuddy/run019-product-completion`，
+> 基线 = RUN-018-R2 HEAD `05a3639`。主题：核心资产管理功能完整化、智能诊断升级、
+> 前端产品级完整性、完整闭环回归与质量门禁。**不重新设计架构。**
+> - **资产管理**：Workspace 管理 API（详情/编辑/成员/服务端可信创建者）、用户角色安全变更
+>   （`tg_admin_guard` 行锁防"最后一个管理员"并发绕过）、TestIntent 编辑/状态机/审批权限分离
+>   （submit/approve 独立端点 + 权限映射）、TestCase 新版本与版本差异 API + 可视化步骤编辑器、
+>   Oracle 详情/历史版本/审批记录/反向引用。联合验收：SQLite 20/20 + PG16 20/20
+>   （`docs/RUN-019-WP1-ASSET-MANAGEMENT.md`）。
+> - **智能诊断**：PERSISTENCE/TIMING/LOCATOR 证据链与根因规则升级；独立新 Holdout
+>   （30 变体 × 2 轮，manifest SHA-256 冻结）：目标三类 Recall 1.0、API/NETWORK 无回归、
+>   ambiguous 全弃权；RUN-018 原始 Holdout 未改动（`docs/RUN-019-WP2-DIAGNOSIS.md`）。
+> - **前端**：新增 WorkspacesView/OracleDetailView + 16 视图权限门禁（前后端矩阵对齐，
+>   补 `repair.regression`/`system.observe`）+ a11y 修复 → 77/77（19 视图×2主题×2断点）；
+>   真实浏览器资产业务闭环 8/8（认证开启，Cookie 会话）。
+> - **闭环回归**：PG16 full-loop **40/40**（含回归验证 PASSED、故障注入 FAILED 不伪造、
+>   回滚）、WP1 闭环双库 20/20、回归十进程并发 13/13（`docs/RUN-019-WP4-BUSINESS-LOOP.md`）。
+> - **质量门禁**：ruff 全绿；后端全量 **1131 passed**/16 skipped（SQLite）；PG16 专项 32 passed；
+>   前端 TS strict + build；Reliability：本地 62 分钟真实 soak（PG16 + 独立 Worker）。
+> - **CI**：分支已推送 `9f21f03`；PR Gate/Nightly 状态 BLOCKED（无 gh/凭据核实，同 B-26/B-27）。
+> 权威结论见 `docs/RUN-019-FINAL-REPORT.md`。
+
+---
+
 # 功能状态矩阵（更新至 2026-11-26 RUN-017）
 
 > **RUN-017 状态（2026-11-26，收口）**：分支 `workbuddy/run017-product-maturity`，基线 `f18e871`。

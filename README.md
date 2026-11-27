@@ -1,5 +1,15 @@
 # TraceGuard
 
+> **RUN-019（2026-11-27）产品完整性收口**：
+> 核心资产管理功能完整化——Workspace 管理 API（可信创建者/成员/详情编辑）、
+> 用户角色安全变更（最后管理员行锁保护）、TestIntent 编辑/状态机/审批权限分离、
+> TestCase 版本管理 + 可视化步骤编辑器 + 版本差异、Oracle 详情/历史/审批/反向引用；
+> 智能诊断 PERSISTENCE/TIMING/LOCATOR 证据链升级（新 Holdout 30×2：目标类 Recall 1.0、
+> ambiguous 全弃权，RUN-018 Holdout 未改动）；前端 16+ 视图权限门禁对齐 + a11y 77/77 +
+> 认证开启的真实浏览器资产闭环 8/8；PG16 全血缘闭环回归 40/40（含回归验证与回滚）；
+> 后端全量 1131 passed + PG16 专项 32 passed。
+> 权威结论：`docs/RUN-019-FINAL-REPORT.md`；差距分析：`docs/RUN-019-GAP-ANALYSIS.md`。
+
 > **RUN-017（2026-11-26）产品成熟度与交付闭环**：
 > 独立故障观测从"能跑"修到"测得对"（基线 + 分类 + 值一致性 + 浏览器级观测）、
 > Regression INCONCLUSIVE 人工授权新 Attempt、`fenced_session` 重入防护、
