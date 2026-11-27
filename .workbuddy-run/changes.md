@@ -65,3 +65,18 @@
 | `tests/integration/test_testcase_version_integrity_run019_r2.py` | 新增 5 项完整性 |
 | `tests/integration/test_review_gate_http_security_run011_r1_2.py` | compiler/healed 候选改由服务层构造 |
 | 文档 | RUN-019-FINAL-REPORT / R2-GAP-CLOSURE / WP1 / WP3 / WP5 / FEATURE-STATUS / README |
+
+## RUN-020-PREPARATION（2026-11-27，仅文档与证据，无代码改动）
+
+| 文件 | 变更 |
+|---|---|
+| `docs/RUN-020-PREPARATION-AUDIT.md` | 新增：第一阶段最终交付审计 |
+| `docs/RUN-020-RELEASE-ADMISSION.md` | 新增：R2-B1/B2/B3 准入（Reliability / 真实 LLM / PR） |
+| `docs/RUN-020-DESIGN.md` | 新增：RUN-020 技术实施方案（WP1~WP5） |
+| `docs/RUN-020-WORKPACKAGES.md` | 新增：30 个可执行任务卡 |
+| `docs/RUN-020-PR-DESCRIPTION.md` | 新增：正式 PR 材料 |
+| `docs/RUN-020-WORKLOG.md` | 新增：本轮工作日志 |
+| `README.md` / `docs/FEATURE-STATUS.md` | CI 编号回填 `#115/#68`；FEATURE-STATUS 补全 R2 提交链 |
+| `docs/RUN-019-FINAL-REPORT.md` / `docs/RUN-019-R2-GAP-CLOSURE.md` | 追加收口后复验行（历史行保留） |
+| `docs/assets/run020-prep/llm/llm-smoke-20261127.json` | 新增：真实 LLM smoke 证据（无密钥） |
+| `.workbuddy-run/*` | 台账更新（current-task/progress/changes/test-results/phase-status/blockers） |

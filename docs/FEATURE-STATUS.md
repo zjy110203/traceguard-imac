@@ -1,13 +1,20 @@
 # 功能状态矩阵（更新至 2026-11-27 RUN-019）
 
 > **RUN-019-R2 状态（2026-11-27，收口完成）**：分支 `workbuddy/run019-product-completion`。
-> RUN-019 起点 `73edc346`；R2 起点 `61ffd4a`；R2 代码 `2b90d6c`→`dfb49b2`，证据 `19f527f`。
+> RUN-019 起点 `73edc346`；R2 起点 `61ffd4a`；R2 提交链
+> `2b90d6c`→`87696a6`→`cbc620f`→`dfb49b2`→`19f527f`（证据）→`7988210`（CI 看门狗）→`564b21c`（收口）。
 > R2 关闭了三项真实缺口：**UI 验收与可视化编辑器脱节**（Nightly #65 失败）、
 > **compile_source 客户端可伪造**（绕过稳定性回放）、**前端 8 个视图无权限门禁**；
 > 并把 TestCaseVersion 的"不可变"从流程标记变成 `authoring_hash` 可验证约束。
-> **CI 真实结果**：PR Gate #113 @ `19f527f` SUCCESS；Nightly #66 @ `19f527f`
-> **6/6 Job success**（ui-acceptance 2m01s 真实通过）；LLM 真实调用仍 BLOCKED（缺 Secret）；
-> Reliability Gate CI **NOT_RUN**（仅 workflow_dispatch，无凭据）。**不重新设计架构。**
+> **CI 真实结果**：PR Gate **#115** @ `564b21c` SUCCESS（3m40s）；Nightly Gate **#68** @ `564b21c`
+> **6/6 Job success**（ui-acceptance 2m5s 真实通过）；`#113/#66` 为 `19f527f` 上的前一档结果，保留可追溯。
+> LLM：**CI 侧 BLOCKED**（仓库未配 Secret，llm-smoke Job success 但如实记 BLOCKED）；
+> **本地 REAL_PROVIDER 11/11 PASS**（`scripts/llm_smoke.py`，证据 `docs/assets/run020-prep/llm/`）。
+> Reliability Gate CI **NOT_RUN**（仅 workflow_dispatch，本机无凭据）。**不重新设计架构。**
+>
+> **RUN-020 准备（2026-11-27）**：能力等级（L0 规则 / L1 顾问 / L2 主路径 / L3 可度量）与
+> 升级方案见 `docs/RUN-020-DESIGN.md`；现状与缺口盘点见 `docs/RUN-020-PREPARATION-AUDIT.md`。
+> 本轮不改功能状态，仅补度量与准入材料。
 
 > **RUN-019 状态（2026-11-27，产品完整性收口）**：分支 `workbuddy/run019-product-completion`，
 > 基线 = RUN-018-R2 HEAD `05a3639`。主题：核心资产管理功能完整化、智能诊断升级、

@@ -6,9 +6,14 @@
 > `compile_source` 改为服务端可信来源（公共 HTTP 只能产生 human，compiler/healed
 > 仅经 Explorer/Repair 可信入口并带血缘）；补齐 8 个视图的前端权限门禁（四角色真实验收 24/24）；
 > Monitoring 统计范围显式化；TestCaseVersion 增加 `authoring_hash`，篡改历史业务内容将被 409 拒绝。
-> **CI**：PR Gate #113 与 Nightly #66 @ `19f527f` 真实通过（6/6 Job，ui-acceptance 2m01s）；
-> 后端全量 1144 passed + a11y 77/77；LLM 真实调用 BLOCKED（缺 Secret）；Reliability Gate CI NOT_RUN。
+> **CI**：PR Gate **#115** 与 Nightly Gate **#68** @ `564b21c`（本分支 HEAD）真实通过
+> （Nightly 6/6 Job，ui-acceptance 2m5s；`#113/#66` 为 `19f527f` 上的前一档结果，保留可追溯）；
+> 后端全量 1144 passed + a11y 77/77；CI 侧 LLM 真实调用 BLOCKED（仓库未配 Secret，
+> 本地 `scripts/llm_smoke.py` 11/11 REAL_PROVIDER 通过）；Reliability Gate CI NOT_RUN。
 > 权威结论：`docs/RUN-019-FINAL-REPORT.md`；R2 差距清单：`docs/RUN-019-R2-GAP-CLOSURE.md`。
+> **RUN-020 准备（2026-11-27）**：交付审计 `docs/RUN-020-PREPARATION-AUDIT.md`、
+> 发布准入 `docs/RUN-020-RELEASE-ADMISSION.md`、技术方案 `docs/RUN-020-DESIGN.md`、
+> 工作包 `docs/RUN-020-WORKPACKAGES.md`、PR 材料 `docs/RUN-020-PR-DESCRIPTION.md`。
 
 > **RUN-019（2026-11-27）产品完整性收口**：
 > 核心资产管理功能完整化——Workspace 管理 API（可信创建者/成员/详情编辑）、

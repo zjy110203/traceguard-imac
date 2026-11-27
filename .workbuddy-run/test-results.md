@@ -100,3 +100,17 @@
 | CI PR Gate | #113 @ `19f527f` | backend 3m36s + frontend 26s，SUCCESS |
 | CI Nightly | #66 @ `19f527f` | 6/6 Job SUCCESS（ui-acceptance 2m01s；LLM BLOCKED） |
 | Reliability Gate | `workflow_dispatch` | NOT_RUN（无 gh/凭据）；本地 62min soak 33/33 保留 |
+
+## RUN-020-PREPARATION（2026-11-27，HEAD `564b21c`）
+
+| 项 | 命令 | 结果 |
+|---|---|---|
+| 后端全量 | `pytest -q` | **1144 passed / 16 skipped / 0 failed**（382.40s） |
+| Ruff | `ruff check apps packages scripts tests` | All checks passed |
+| Ruff format | `ruff format --check apps/api packages scripts tests` | 281 files already formatted |
+| 真实 LLM（本地） | `scripts/llm_smoke.py` | **11/11 PASS**（Flash 700ms / Pro 4789ms / 5 calls / $0.000639） |
+| CI PR Gate | #115 @ `564b21c` | SUCCESS 3m40s |
+| CI Nightly | #68 @ `564b21c` | SUCCESS 6/6（backend-full 9m33s、ui-acceptance 2m5s、postgres 1m3s、security 20s、llm-smoke 23s、gate-verdict 4s） |
+| CI llm-smoke | #68 | Job SUCCESS，真实调用 **BLOCKED**（无仓库 Secret） |
+| Reliability Gate | — | **NOT_RUN**（无 Actions 权限） |
+| 证据核对 | UI 42 项/41 PASS；RBAC 24；a11y 77/77 | 与声明一致（a11y 内部标签为 RUN-018，NOTE） |

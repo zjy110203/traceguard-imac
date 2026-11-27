@@ -115,6 +115,8 @@ platform-admin / qa-lead / qa-engineer / viewer 各自真实登录 + 真实浏�
 |---|---|---|---|
 | PR Gate #113 | `19f527f` | **SUCCESS** | backend 3m36s + frontend 26s |
 | Nightly #66 | `19f527f` | **SUCCESS（6/6）** | backend-full / security / postgres / ui-acceptance（2m01s）/ llm-smoke（Job 成功，真实调用 BLOCKED）/ gate-verdict |
+| PR Gate #114 / Nightly #67 | `7988210` | SUCCESS / SUCCESS | 加入 CI 看门狗后的复验 |
+| PR Gate #115 / Nightly #68 | `564b21c`（HEAD） | **SUCCESS / SUCCESS（6/6）** | 收口提交后最终档：PR 3m40s、Nightly 10m52s（ui-acceptance 2m5s） |
 | Reliability Gate（CI） | — | **NOT_RUN** | 仅 `workflow_dispatch`；本机无 gh CLI/凭据，未触发；本地 62 分钟 soak 33/33 保留 |
 
 Nightly #65（`61ffd4a`）为对照：ui-acceptance 因 `#tc-steps` 超时失败、gate-verdict 失败；

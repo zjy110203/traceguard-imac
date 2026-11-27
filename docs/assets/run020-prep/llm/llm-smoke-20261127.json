@@ -1,0 +1,70 @@
+{
+  "workpackage": "RUN-020-PREPARATION R2-B2",
+  "provider": "deepseek",
+  "provenance": "REAL_PROVIDER",
+  "git_head": "564b21c8280f9ce9f6e925715fd973d74ad570b4",
+  "captured_at_utc": "2026-11-27T14:18:46Z",
+  "command": ".venv/bin/python scripts/llm_smoke.py",
+  "python": "3.13.12",
+  "checks_total": 11,
+  "checks_passed": 11,
+  "checks_failed": 0,
+  "note": "本地真实调用（非 CI）。密钥未读取/未导出/未入库；本文件不含任何密钥。",
+  "checks": [
+    {
+      "check": "connectivity_models",
+      "ok": true,
+      "detail": "models=['deepseek-flash', 'deepseek-v4-pro']"
+    },
+    {
+      "check": "configured_models_exist",
+      "ok": true,
+      "detail": "default=deepseek-flash reasoning=deepseek-v4-pro"
+    },
+    {
+      "check": "flash_text_call",
+      "ok": true,
+      "detail": "38in/77out 700ms"
+    },
+    {
+      "check": "token_usage_recorded",
+      "ok": true,
+      "detail": "cached=0"
+    },
+    {
+      "check": "flash_json_output",
+      "ok": true,
+      "detail": "keys=['action', 'params', 'reason']"
+    },
+    {
+      "check": "pro_reasoning_call",
+      "ok": true,
+      "detail": "model=deepseek-v4-pro 4789ms"
+    },
+    {
+      "check": "timeout_boundary",
+      "ok": true,
+      "detail": "kind=timeout elapsed=0.03s"
+    },
+    {
+      "check": "truncated_output_handled",
+      "ok": true,
+      "detail": "kind=invalid_json"
+    },
+    {
+      "check": "cost_estimated_marked",
+      "ok": true,
+      "detail": "calls=5 cost=$0.000639"
+    },
+    {
+      "check": "key_redaction_settings",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "key_redaction_error_msg",
+      "ok": true,
+      "detail": "not_configured"
+    }
+  ]
+}

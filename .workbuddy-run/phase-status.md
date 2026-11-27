@@ -22,3 +22,15 @@
 | R2-4 Workspace / 版本完整性 | VERIFIED | `test_testcase_version_integrity_run019_r2.py` 5/5；a11y 77/77 复跑 |
 | R2-5 CI 门禁 | PR/Nightly 通过 | PR Gate #113 / Nightly #66 @ `19f527f`；Reliability CI NOT_RUN（无凭据） |
 | R2-6 文档与台账 | DONE | `docs/RUN-019-FINAL-REPORT.md`、`docs/RUN-019-R2-GAP-CLOSURE.md`、本台账 |
+
+## RUN-020-PREPARATION 阶段（2026-11-27）
+
+| 阶段 | 状态 | 证据 |
+|---|---|---|
+| M0-1 最终交付审计 | DONE | `docs/RUN-020-PREPARATION-AUDIT.md`；HEAD `564b21c`，工作区干净，R2 七提交齐全 |
+| M0-2 文档与 HEAD 一致 | FIXED | 四处 CI 编号回填 `#115/#68`；历史结论未改写 |
+| M0-3 Reliability 准入 | NOT_RUN（外部阻塞） | 需 `workflow_dispatch` + Actions 写权限；本机无 `gh`/令牌 |
+| M0-4 真实 LLM 准入 | 本地 PASSED / CI BLOCKED | `scripts/llm_smoke.py` 11/11 @ `564b21c`；CI 无仓库 Secret |
+| M0-5 PR 准备 | DONE（未创建） | `docs/RUN-020-PR-DESCRIPTION.md` |
+| M0-6 RUN-020 设计 | DONE | `docs/RUN-020-DESIGN.md` + `docs/RUN-020-WORKPACKAGES.md` |
+| M1~M5 实现 | NOT_STARTED | 任务卡已列，按 `WP1-T1 → …` 顺序开工 |

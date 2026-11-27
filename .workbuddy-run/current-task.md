@@ -1,4 +1,41 @@
-# 当前任务（RUN-019-R2：产品收口、CI 修复与发布准入，2026-11-27）
+# 当前任务（RUN-020-PREPARATION：最终交付审计与智能化升级准备，2026-11-27）
+
+> 分支 `workbuddy/run019-product-completion`，HEAD `564b21c`（本地 = 远端）。
+> 本轮**只做审计、准入材料与 RUN-020 设计**，不改业务代码。
+
+## 完成情况（M0）
+
+- 第一阶段审计：分支/HEAD/工作区/相对 main（172 提交、0 落后、线性）/R2 七提交/文档一致性/
+  临时产物/RUN-014~018 证据完整性，全部逐条核实 →
+  `docs/RUN-020-PREPARATION-AUDIT.md`。
+- 发现并修复文档不一致：README / FEATURE-STATUS / RUN-019-FINAL-REPORT / R2-GAP-CLOSURE
+  的 CI 编号仍停在 `#113/#66 @ 19f527f`，已回填 **#115/#68 @ `564b21c`**（历史行保留不改写）。
+- R2-B1：Reliability Gate 需 `workflow_dispatch` + Actions 写权限；本机无 `gh`/令牌 →
+  **NOT_RUN（外部阻塞）**，执行步骤与 9 条硬验收条件已成文。
+- R2-B2：真实 LLM —— **本地 REAL_PROVIDER 11/11 PASS**（`scripts/llm_smoke.py`，HEAD `564b21c`）；
+  **CI 仍 BLOCKED**（仓库未配 Secret，Nightly #68 注释确认）。未读取/导出任何密钥。
+- R2-B3：PR 材料已产出（`docs/RUN-020-PR-DESCRIPTION.md`）；**未创建 PR**（无授权/无 `gh`）。
+- 第三阶段：RUN-020 方案（WP1~WP5）→ `docs/RUN-020-DESIGN.md`（架构/数据流/文件作用域/
+  验收标准/测试策略/依赖/风险）+ `docs/RUN-020-WORKPACKAGES.md`（30 个任务卡，含验收命令）。
+
+## 复核结果
+
+- `pytest -q`：**1144 passed / 16 skipped / 0 failed**（382.40s，16 skip 均本地无 PG）。
+- `ruff check`：All checks passed；`ruff format --check`：281 files already formatted。
+- CI：PR Gate **#115** SUCCESS（3m40s）；Nightly **#68** SUCCESS（6/6，10m52s）。
+
+## 遗留与如实记录
+
+- Reliability Gate（CI）仍 NOT_RUN：需有 Actions 权限者 dispatch（62/100/3，不得下调）。
+- CI 真实 LLM 仍 BLOCKED：需配置仓库 Secret；本地通过不替代 CI。
+- PR #1/#2 仍 open 且为本分支祖先：不得分别合并，以 RUN-019-R2 PR 为唯一入口。
+- LICENSE 仍 NEEDS_DECISION；`docs/assets` 241.7 MB 入库（本轮不改历史证据）。
+
+禁止：改 main、强推、reset --hard、git clean、自动合并 PR、读取凭据。
+
+---
+
+# 前一任务（RUN-019-R2：产品收口、CI 修复与发布准入，2026-11-27）
 
 > 分支 `workbuddy/run019-product-completion`。RUN-019 起点 `73edc346`；
 > R2 起点 `61ffd4a`；R2 代码提交 `2b90d6c` → `dfb49b2` → `19f527f`。

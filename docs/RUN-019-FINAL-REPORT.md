@@ -134,7 +134,15 @@ oracle_bindings）仍可追加；Oracle 版本审批时固定，审批后禁止�
 | └ gate-verdict | | SUCCESS 3s | 按既有规则接受 LLM BLOCKED |
 | Nightly #65（对照） | `61ffd4a` | FAILURE | ui-acceptance `TimeoutError: Page.fill #tc-steps`；gate-verdict 失败 |
 | PR Gate #112（对照） | `61ffd4a` | SUCCESS | 仅 backend+frontend，覆盖不到 UI E2E |
+| PR Gate #114 / Nightly #67 | `7988210` | SUCCESS / SUCCESS（6/6） | 加入 `ci_pytest_watchdog.py` 后的复验 |
+| **PR Gate #115 / Nightly #68** | **`564b21c`（分支 HEAD）** | **SUCCESS / SUCCESS（6/6 Job）** | 收口提交后的最终档：PR 3m40s；Nightly 10m52s（backend-full 9m33s、ui-acceptance 2m5s、postgres 1m3s、security 20s、llm-smoke 23s、gate-verdict 4s） |
 | Reliability Gate（CI） | — | **NOT_RUN** | 只能 `workflow_dispatch`；本机无 gh CLI/凭据，未触发 |
+
+> 口径说明：上表 `#113/#66` 对应 `19f527f`，**保留为历史事实不改写**；
+> 分支最终 HEAD `564b21c` 的真实结果是 **PR Gate #115 / Nightly Gate #68（6/6 SUCCESS）**。
+> LLM 侧：CI 的 `llm-smoke` Job 成功但真实调用 **BLOCKED**（仓库未配 Secret）；
+> 本地 `scripts/llm_smoke.py` 在 `564b21c` 上 **11/11 REAL_PROVIDER PASS**
+> （证据 `docs/assets/run020-prep/llm/llm-smoke-20261127.json`），两者不互相替代。
 
 **Reliability 本地证据（RUN-019 保留）**：`scripts/soak_run013.py --minutes 62` @ PG16，
 墙钟 62.16 分钟、122 个真实 Run 全终态、33/33 checks PASS

@@ -12,7 +12,7 @@
   {
     "check": "flash_text_call",
     "ok": true,
-    "detail": "38in/86out 1315ms"
+    "detail": "38in/77out 700ms"
   },
   {
     "check": "token_usage_recorded",
@@ -27,7 +27,7 @@
   {
     "check": "pro_reasoning_call",
     "ok": true,
-    "detail": "model=deepseek-v4-pro 3239ms"
+    "detail": "model=deepseek-v4-pro 4789ms"
   },
   {
     "check": "timeout_boundary",
@@ -42,7 +42,7 @@
   {
     "check": "cost_estimated_marked",
     "ok": true,
-    "detail": "calls=136 cost=$0.061997"
+    "detail": "calls=5 cost=$0.000639"
   },
   {
     "check": "key_redaction_settings",
