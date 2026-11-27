@@ -28,9 +28,9 @@
 
 - 真实 PG16（`traceguard_run019_soak`）+ 独立 API + 2 个独立 Worker 进程；
 - 真实 TestCase → 真实 Chromium → 真实 TeamFlow 周期执行；
-- 真实故障注入（SIGTERM / SIGKILL / SIGSTOP 接管 / API 重启 / DB 连接中断）；
-- 结果与指标：`docs/assets/run019/wp5/soak/`（soak-report.json + worker metrics + 日志）。
-- 结果摘要见 `docs/RUN-019-FINAL-REPORT.md`。
+- 真实故障注入（SIGTERM / SIGKILL / SIGSTOP 接管 / API 重启 / DB 连接中断 / SSE 断连）；
+- **结果：33/33 checks PASS**（`docs/assets/run019/wp5/soak/soak-62min.json`）——
+  墙钟 62.16 分钟、122 个真实 Run 全部终态、四类故障全部恢复、数据一致性七项全零异常。
 
 CI 版 Reliability Gate（≥60 分钟 + min_runs）需要手动 workflow_dispatch，
 本轮未获得授权触发（与 B-25 同口径，如实记录）。

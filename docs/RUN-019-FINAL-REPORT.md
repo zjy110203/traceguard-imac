@@ -40,7 +40,15 @@
 
 ## 3. Reliability（62 分钟 soak @ PG16）
 
-> 结果以 `docs/assets/run019/wp5/soak/soak-report.json` 为准（本节由执行结果回填）。
+**33/33 checks PASS**（`docs/assets/run019/wp5/soak/soak-62min.json`）：
+
+- 严格墙钟 **62.16 分钟**（要求 ≥60，无容差）；**122 个真实 Run** 全部到达终态
+  （terminal=122/122），无状态倒退、无重复业务结果；
+- 真实故障全部恢复：DB 连接中断（API+Worker 继续完成 Run）、SSE 断连后游标续传
+  （不重复已读事件）、执行中 SIGKILL Worker（存活 Worker 租约接管，fencing=2 执行到终态）、
+  全部 Worker 重启后恢复消费；
+- 数据一致性：无重复步骤、无孤儿步骤/证据、终态 Run 无残留租约、提交回执唯一、
+  事件序号无重复；活跃 Worker ≥2 贯穿全程。
 
 ## 4. 未决事项（如实记录）
 

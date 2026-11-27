@@ -24,7 +24,7 @@
 - WP4 闭环回归：PG16 full-loop 40/40（含回归验证与回滚）、回归十进程并发
   13/13；`docs/RUN-019-WP4-BUSINESS-LOOP.md`
 - WP5 门禁：ruff 全绿；后端全量 1131 passed/16 skipped；PG16 专项 32 passed；
-  前端 typecheck/build；a11y 77/77；Reliability soak 62 分钟（PG16）后台执行中
+  前端 typecheck/build；a11y 77/77；Reliability soak 62 分钟（PG16）33/33 通过
 - WP6 文档：进行中
 
 ## 遗留与如实记录
