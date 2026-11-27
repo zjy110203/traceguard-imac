@@ -1,0 +1,256 @@
+{
+  "workpackage": "RUN-017 WP6",
+  "run_id": "local1",
+  "profile": "core",
+  "git_head": "0e69f44b87b572a454819a621fb8781acc7a1c8b",
+  "engine": "Playwright Chromium + real API (auth+CSRF) + real TeamFlow + independent Worker processes",
+  "deployment": {
+    "inline_worker": false,
+    "independent_workers": 2,
+    "lease_ttl_s": 6.0,
+    "database": "sqlite"
+  },
+  "total": 37,
+  "passed": 36,
+  "failed": 0,
+  "screenshots": [
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run018/ci/local1/ui/01-intent-created.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run018/ci/local1/ui/02-testcase-pending.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run018/ci/local1/ui/03-oracle-approved.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run018/ci/local1/ui/04-oracle-bound.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run018/ci/local1/ui/05-approved.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run018/ci/local1/ui/06-run-detail.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run018/ci/local1/ui/07-run-failed.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run018/ci/local1/ui/08-diagnosis.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run018/ci/local1/ui/08a-evidence-graph.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run018/ci/local1/ui/08b-probe-suggestions.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run018/ci/local1/ui/09-repair-created.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run018/ci/local1/ui/10-repair-sandbox.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run018/ci/local1/ui/11-repair-promoted.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run018/ci/local1/ui/11a-repair-regression.png",
+    "/Users/dlp--test/Desktop/traceguard/docs/assets/run018/ci/local1/ui/12-repair-rolled-back.png"
+  ],
+  "results": [
+    {
+      "check": "环境：真实 TeamFlow 可启动",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "http://127.0.0.1:51944"
+    },
+    {
+      "check": "环境：真实 API 可启动",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "http://127.0.0.1:51943"
+    },
+    {
+      "check": "环境：独立 Worker 进程已启动（API 内嵌 Worker 关闭）",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "r13-w1:3642, r13-w2:3643"
+    },
+    {
+      "check": "环境：独立 Worker READY（心跳已写入 + mode=standalone + 状态新鲜）",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "r13-w1:{\"ready\": true, \"worker\": \"r13-w1\", \"mode\": \"standalone\", \"status\": \"IDLE\", \"pid\": 3642, \"hb_age_s\": 0.1, \"problems\": []} | r13-w2:{\"ready\": true, \"worker\": \"r13-w2\", \"mode\": \"standalone\", \"status\": \"IDLE\", \"pid\": 3643, \"hb_age_s\": 0.1, \"problems\": []}"
+    },
+    {
+      "check": "环境：三个角色已初始化",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "r12-eng, r12-lead, r12-admin"
+    },
+    {
+      "check": "三个角色身份来自服务端",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "['qa-engineer']/['qa-lead']/['platform-admin']"
+    },
+    {
+      "check": "服务端配置暴露真实被测目标地址",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "teamflow_base_url=http://127.0.0.1:51944"
+    },
+    {
+      "check": "API 不启动内嵌 Worker（TG_INLINE_WORKER=false）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "worker={'inline': False, 'id': '204deiMac.local-3624'}"
+    },
+    {
+      "check": "① UI 创建需求 → 服务端真实落库",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "匹配 1 条"
+    },
+    {
+      "check": "② UI 新建用例 → 服务端 PENDING",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "匹配 1 条 status=PENDING"
+    },
+    {
+      "check": "③ UI 新建已审批 Oracle → 服务端落库",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "匹配 1 条 approved=True"
+    },
+    {
+      "check": "④ 用例详情页提供 Oracle 绑定控件",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "select 数量=1"
+    },
+    {
+      "check": "⑤ UI 保存绑定 → 服务端 oracle_bindings 落库",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "bindings=['a_wp4_banner']"
+    },
+    {
+      "check": "⑥ UI 审核通过 → 服务端 APPROVED（Oracle 门禁未绕过）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=APPROVED"
+    },
+    {
+      "check": "⑦ UI 执行 → 产生真实 Run",
+      "status": "PASS",
+      "server_verified": false,
+      "detail": "run_id=run_1795745508651e5cef65c543e"
+    },
+    {
+      "check": "⑧ Run 由真实 Worker 执行到终态",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=COMPLETED verdict=PASSED observer=playwright"
+    },
+    {
+      "check": "⑨ 执行使用真实浏览器（playwright）而非降级",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "observer_mode=playwright"
+    },
+    {
+      "check": "⑨a Run 由独立 Worker 进程领取并持有租约（Fencing Token > 0）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "lease_owner=r13-w1 fencing=1"
+    },
+    {
+      "check": "⑩ Run 产出真实步骤轨迹与证据",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "steps=5 evidence=19"
+    },
+    {
+      "check": "⑪ 已向真实被测目标注入故障 TF-UI-002（提交静默忽略）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "TF-UI-002 activated"
+    },
+    {
+      "check": "⑫ 故障注入后真实 Run 失败（verdict=FAILED）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "verdict=FAILED status=COMPLETED"
+    },
+    {
+      "check": "⑬ 失败 Run 的诊断入口可用",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "enabled=True"
+    },
+    {
+      "check": "⑭ UI 诊断 → 服务端生成 Diagnosis",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "diagnoses=1"
+    },
+    {
+      "check": "诊断 ID",
+      "status": "NOTE",
+      "detail": "diagnosis_1795745517565c8afee95e623"
+    },
+    {
+      "check": "⑭a UI 证据图 → 服务端图节点可渲染",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "api_nodes=35 dom=1 svg=38"
+    },
+    {
+      "check": "⑭b UI 探针建议来自服务端并可执行",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "api_probes=3 ui_rows=3"
+    },
+    {
+      "check": "⑮ 修复中心提供 LLM 建议入口",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "提案入口存在（LLM 建议位于提案弹窗内）"
+    },
+    {
+      "check": "⑯ 未配置 LLM 凭据时如实提示，不伪造成功",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "toast='修复规划器已禁用，无法生成 LLM 建议'"
+    },
+    {
+      "check": "⑰ UI 新建修复提案 → 服务端落库",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "proposals=1"
+    },
+    {
+      "check": "⑱ 提案初始状态为 VALIDATED（规则校验通过）",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=VALIDATED"
+    },
+    {
+      "check": "⑲a 已清除故障（sticky 语义），目标恢复真实行为",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "TF-UI-002 cleared"
+    },
+    {
+      "check": "⑲ UI 沙箱验证 → 服务端真实执行并落库结果",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "sandbox_status=PASSED run=run_1795745530644f8c3e3d28e94 reason="
+    },
+    {
+      "check": "⑳ UI 提交审批 → 服务端 PENDING_APPROVAL",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=PENDING_APPROVAL"
+    },
+    {
+      "check": "㉑ UI 审批 → 服务端 APPROVED",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=APPROVED"
+    },
+    {
+      "check": "㉒ UI 晋升 → 服务端 PROMOTED 且版本号有效",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=PROMOTED promoted_version=2"
+    },
+    {
+      "check": "㉒a UI 运行回归验证 → 服务端创建真实回归 Run 并给出结论",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=PASSED verdict=PASSED run=run_179574554586970310ad813de"
+    },
+    {
+      "check": "㉓ UI 回滚 → 服务端 ROLLED_BACK 且留痕",
+      "status": "PASS",
+      "server_verified": true,
+      "detail": "status=ROLLED_BACK record=True"
+    }
+  ]
+}

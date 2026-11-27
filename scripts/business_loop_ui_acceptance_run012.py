@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import http.cookiejar
 import json
+import os
 import signal
 import subprocess
 import sys
@@ -197,6 +198,22 @@ class Reporter:
         return [r for r in self.results if r["status"] == "FAIL"]
 
 
+def _git_head() -> str:
+    """本地运行时读取当前 HEAD（CI 用 GITHUB_SHA）。失败不阻塞验收。"""
+    import subprocess
+
+    try:
+        return subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=str(ROOT),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        ).stdout.strip()
+    except Exception:  # noqa: BLE001
+        return ""
+
+
 def _post_fault(teamflow: str, fault_id: str, params: dict[str, Any]) -> None:
     """向真实被测目标注入故障（仅测试目标侧，不触碰 TraceGuard 自身状态）。"""
     req = urllib.request.Request(
@@ -256,10 +273,13 @@ class WorkerFleet:
     用于真实验证租约到期、接管与旧 Worker 越权提交。
     """
 
-    def __init__(self, env: dict[str, str], out: Path, lease_ttl_s: float) -> None:
+    def __init__(
+        self, env: dict[str, str], out: Path, lease_ttl_s: float, db_file: Path | None = None
+    ) -> None:
         self.env = dict(env)
         self.out = out
         self.lease_ttl_s = lease_ttl_s
+        self.db_file = db_file
         self.procs: dict[str, subprocess.Popen[bytes]] = {}
         self.logs: dict[str, Any] = {}
 
@@ -288,6 +308,79 @@ class WorkerFleet:
     def alive(self, name: str) -> bool:
         proc = self.procs.get(name)
         return bool(proc and proc.poll() is None)
+
+    def ready(self, name: str, *, fresh_s: float = 10.0) -> dict[str, Any]:
+        """RUN-018 WP1：真正的 Worker readiness（不是只看进程存活）。
+
+        通过 tg_worker_heartbeat 校验：
+        - Worker ID 正确（记录存在）；
+        - PID 与本进程匹配；
+        - mode=standalone；
+        - status ∈ {IDLE, RUNNING}；
+        - 心跳时间足够新鲜；
+        - 数据库归属一致（能查到心跳 ⇒ 连接的是共享库）。
+        """
+        proc = self.procs.get(name)
+        pid = proc.pid if proc else None
+        if not (proc and proc.poll() is None):
+            return {
+                "ready": False,
+                "worker": name,
+                "reason": "process_not_alive",
+                "pid": pid,
+                "exitcode": proc.returncode if proc else None,
+            }
+        if not self.db_file:
+            return {"ready": False, "worker": name, "reason": "no_db_file", "pid": pid}
+        import sqlite3
+
+        try:
+            conn = sqlite3.connect(str(self.db_file), timeout=3)
+            try:
+                row = conn.execute(
+                    "SELECT mode, status, pid, last_heartbeat_at FROM tg_worker_heartbeat "
+                    "WHERE worker_id = ?",
+                    (name,),
+                ).fetchone()
+            finally:
+                conn.close()
+        except Exception as exc:  # noqa: BLE001 - 诊断信息原样带回
+            return {"ready": False, "worker": name, "reason": f"db_error: {exc}", "pid": pid}
+        if not row:
+            return {"ready": False, "worker": name, "reason": "no_heartbeat_row", "pid": pid}
+        mode, status, hb_pid, hb_at = row
+        hb_age = time.time() - float(hb_at or 0)
+        problems = []
+        if mode != "standalone":
+            problems.append(f"mode={mode}")
+        if status not in ("IDLE", "RUNNING"):
+            problems.append(f"status={status}")
+        if int(hb_pid or 0) != int(pid or 0):
+            problems.append(f"pid_mismatch:{hb_pid}!={pid}")
+        if hb_age > fresh_s:
+            problems.append(f"stale_heartbeat:{hb_age:.1f}s")
+        return {
+            "ready": not problems,
+            "worker": name,
+            "mode": mode,
+            "status": status,
+            "pid": hb_pid,
+            "hb_age_s": round(hb_age, 1),
+            "problems": problems,
+        }
+
+    def log_tail(self, name: str, limit: int = 40) -> str:
+        """Worker 启动失败时保留 stderr/stdout 证据（最近 N 行）。"""
+        log = self.logs.get(name)
+        if not log:
+            return ""
+        try:
+            log.flush()
+            with open(log.name, "rb") as f:  # noqa: SIM115
+                lines = f.read().decode("utf-8", errors="replace").splitlines()
+            return "\n".join(lines[-limit:])
+        except Exception:  # noqa: BLE001
+            return ""
 
     def send(self, name: str, sig: int) -> None:
         proc = self.procs.get(name)
@@ -390,8 +483,8 @@ def _run_worker_faults(
     # ---------------------------------------------------------- 2. 正常退出
     fleet.start(worker1)
     rep.check(
-        "W1-③ 独立 Worker-1 启动并注册",
-        bool(_wait_until(lambda: fleet.alive(worker1), 15)),
+        "W1-③ 独立 Worker-1 启动并注册（READY：心跳已写入）",
+        bool(_wait_until(lambda: fleet.ready(worker1).get("ready"), 30, 1.0)),
         f"pid={fleet.procs[worker1].pid}",
     )
     code = fleet.stop(worker2, timeout=15)
@@ -402,8 +495,8 @@ def _run_worker_faults(
     )
     fleet.start(worker2)
     rep.check(
-        "W1-⑤ Worker-2 可重新启动并继续消费",
-        bool(_wait_until(lambda: fleet.alive(worker2), 15)),
+        "W1-⑤ Worker-2 可重新启动并继续消费（READY：心跳已写入）",
+        bool(_wait_until(lambda: fleet.ready(worker2).get("ready"), 30, 1.0)),
         f"pid={fleet.procs[worker2].pid}",
     )
 
@@ -627,7 +720,7 @@ def _run_worker_faults(
 
     # ------------------------------------------------ 6. 双 Worker 并发幂等
     fleet.start("r13-w4")
-    _wait_until(lambda: fleet.alive("r13-w4"), 15)
+    _wait_until(lambda: fleet.ready("r13-w4").get("ready"), 30, 1.0)
     concurrent = [
         str(
             lead2.post(
@@ -679,6 +772,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     ap.add_argument("--lease-ttl", type=float, default=6.0, help="独立 Worker 租约 TTL（秒）")
     ap.add_argument("--faults", action="store_true", help="执行独立 Worker 故障场景")
+    # RUN-018 WP1：CI 侧标识本次运行（Job Summary 只读本次报告，不回退历史）。
+    ap.add_argument("--run-id", default="", help="本次运行的唯一标识（如 GitHub run_id）")
+    ap.add_argument("--profile", default="", help="profile 名称（core/full），仅写入报告元数据")
     # RUN-016 WP4.3：追加证据图 / 探针建议 / 回归验证三段 UI 校验（不影响 RUN-012/013 口径）
     ap.add_argument(
         "--extended",
@@ -712,7 +808,7 @@ def main(argv: list[str] | None = None) -> int:
         inline_worker=not independent,
         lease_ttl_s=args.lease_ttl,
     )
-    fleet = WorkerFleet(env, out, args.lease_ttl) if independent else None
+    fleet = WorkerFleet(env, out, args.lease_ttl, db_file=db_file) if independent else None
     api_holder: dict[str, Any] = {"proc": None}
 
     # TeamFlow：真实被测目标（独立进程 + 独立库）
@@ -747,19 +843,37 @@ def main(argv: list[str] | None = None) -> int:
             return 3
         rep.check("环境：真实 API 可启动", True, base)
         if fleet:
-            for i in range(1, max(2, args.independent_workers) + 1):
-                fleet.start(f"r13-w{i}")
-            started = _wait_until(
-                lambda: all(
-                    fleet.alive(f"r13-w{i}") for i in range(1, max(2, args.independent_workers) + 1)
-                ),
-                20,
-            )
+            n_workers = max(2, args.independent_workers)
+            names = [f"r13-w{i}" for i in range(1, n_workers + 1)]
+            for name in names:
+                fleet.start(name)
+            started = _wait_until(lambda: all(fleet.alive(n) for n in names), 20)
             rep.check(
                 "环境：独立 Worker 进程已启动（API 内嵌 Worker 关闭）",
                 bool(started),
                 ", ".join(f"{n}:{p.pid}" for n, p in fleet.procs.items()),
             )
+            # RUN-018 WP1：进程存活 ≠ 可消费任务。必须确认心跳已写入且状态 IDLE，
+            # 否则 Run 会永远 QUEUED（Nightly #37 的真实故障形态）。
+            ready_ok = bool(
+                _wait_until(lambda: all(fleet.ready(n).get("ready") for n in names), 45, 1.0)
+            )
+            ready_detail = " | ".join(
+                f"{n}:{json.dumps(fleet.ready(n), ensure_ascii=False)}" for n in names
+            )
+            if not ready_ok:
+                # 保留全部 Worker 日志尾部作为失败证据
+                for n in names:
+                    tail = fleet.log_tail(n)
+                    if tail:
+                        rep.check(f"环境：Worker {n} 失败日志尾部", False, tail[-400:])
+            rep.check(
+                "环境：独立 Worker READY（心跳已写入 + mode=standalone + 状态新鲜）",
+                ready_ok,
+                ready_detail[:600],
+            )
+            if not ready_ok:
+                return 3
 
         users = [
             ("r12-eng", "qa-engineer", '["default"]'),
@@ -1340,6 +1454,9 @@ def main(argv: list[str] | None = None) -> int:
 
     summary = {
         "workpackage": args.workpackage,
+        "run_id": args.run_id or os.environ.get("GITHUB_RUN_ID", ""),
+        "profile": args.profile,
+        "git_head": os.environ.get("GITHUB_SHA", _git_head()),
         "engine": (
             "Playwright Chromium + real API (auth+CSRF) + real TeamFlow + "
             + ("independent Worker processes" if independent else "inline Worker")

@@ -131,16 +131,38 @@ jobs:
         # profile=core 去掉最耗时的独立 Worker 故障段（SIGKILL/租约接管在 2–4 vCPU
         # runner 上容易触发等待超时）；完整故障段在 Reliability Gate（手动）跑。
         # timeout 1500：25 分钟内没跑完就明确失败，不静默挂到 job 超时。
+        # RUN-018 WP1：每次 run 使用唯一输出目录（按 GITHUB_RUN_ID），
+        # Summary 只读本次报告，不回退仓库中的历史报告。
+        env:
+          TG_UI_ACCEPTANCE_OUT: docs/assets/run018/ci/${{ github.run_id }}/ui
+          TG_UI_ACCEPTANCE_RUN_ID: ${{ github.run_id }}
         run: |
           timeout 1500 .venv/bin/python scripts/business_loop_ui_acceptance_run017.py --profile core
       - name: 汇总 UI 验收结果（写入 Job Summary，便于无凭据环境直接核对）
         if: always()
+        env:
+          TG_UI_ACCEPTANCE_OUT: docs/assets/run018/ci/${{ github.run_id }}/ui
         run: |
           .venv/bin/python - <<'PY'
           import json, os, pathlib
-          files = sorted(pathlib.Path("docs/assets/run017/wp5/ui").glob("run017-ui-*.json"))
+          # RUN-018 WP1：只读本次 run 专属目录，绝不回退到 docs/assets/run017/wp5/ui 等历史证据。
+          out_dir = pathlib.Path(os.environ["TG_UI_ACCEPTANCE_OUT"])
+          files = sorted(out_dir.glob("run017-ui-*.json"))
           if not files:
-              print("no ui report found")
+              text = "\n".join(
+                  [
+                      "### UI 全链路验收结果",
+                      "",
+                      "- **NOT_PRODUCED**：本次运行没有产出任何 UI 验收报告。",
+                      f"- 期望目录：`{out_dir}`",
+                      "- 不允许回退读取历史报告（RUN-018 WP1 口径）。",
+                      "",
+                  ]
+              )
+              print(text)
+              summary = os.environ.get("GITHUB_STEP_SUMMARY")
+              if summary:
+                  pathlib.Path(summary).write_text(text, encoding="utf-8")
               raise SystemExit(0)
           data = json.loads(files[-1].read_text(encoding="utf-8"))
           rows = ["| check | status | detail |", "|---|---|---|"]
@@ -149,13 +171,18 @@ jobs:
                   f"| {str(item.get('check'))[:70]} | {item.get('status')} | "
                   f"{str(item.get('detail'))[:90]} |"
               )
+          notes = [r for r in data.get("results", []) if r.get("status") == "NOTE"]
           text = "\n".join(
               [
                   "### UI 全链路验收结果",
                   "",
+                  f"- run_id: `{data.get('run_id') or os.environ.get('GITHUB_RUN_ID', '')}`",
+                  f"- profile: `{data.get('profile') or 'unspecified'}`",
+                  f"- HEAD: `{data.get('git_head') or 'unknown'}`",
                   f"- total: {data.get('total')}",
-                  f"- passed: {data.get('passed')}",
-                  f"- failed: {data.get('failed')}",
+                  f"- PASS: {data.get('passed')}",
+                  f"- FAIL: {data.get('failed')}",
+                  f"- NOTE: {len(notes)}",
                   "",
                   *rows,
               ]
@@ -165,12 +192,12 @@ jobs:
           if summary:
               pathlib.Path(summary).write_text(text, encoding="utf-8")
           PY
-      - name: Upload UI evidence
+      - name: Upload UI evidence（本次 run 专属目录：报告 + 截图 + Worker 日志）
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ui-acceptance-evidence
-          path: docs/assets/run017/wp5/ui
+          name: ui-acceptance-evidence-${{ github.run_id }}
+          path: docs/assets/run018/ci/${{ github.run_id }}/ui
           retention-days: 14
           if-no-files-found: warn
 

@@ -15,6 +15,13 @@
 - `core`：只跑业务闭环（含证据图/探针/回归验证三段扩展校验），去掉最耗时的故障段，
   适合每日 Nightly 的 CI runner（2–4 vCPU 上故障段容易触发等待超时）。
 
+RUN-018 WP1：CI 通过环境变量指定本次运行专属输出目录与 run-id，
+Job Summary 只读取本次报告，不回退历史报告：
+
+    TG_UI_ACCEPTANCE_OUT=docs/assets/run018/ci/<run_id>/ui \
+    TG_UI_ACCEPTANCE_RUN_ID=<run_id> \
+    .venv/bin/python scripts/business_loop_ui_acceptance_run017.py --profile core
+
 用法：
     .venv/bin/python scripts/business_loop_ui_acceptance_run017.py --profile full
     .venv/bin/python scripts/business_loop_ui_acceptance_run017.py --profile core
@@ -22,6 +29,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -37,10 +45,14 @@ if "--profile" in sys.argv:
         PROFILE = sys.argv[index + 1]
         del sys.argv[index : index + 2]
 
+# RUN-018 WP1：输出目录与 run-id 支持环境变量覆盖（CI 每次 run 使用唯一目录）。
+OUT_DIR = os.environ.get("TG_UI_ACCEPTANCE_OUT", "docs/assets/run017/wp5/ui")
+RUN_ID = os.environ.get("TG_UI_ACCEPTANCE_RUN_ID", "")
+
 if __name__ == "__main__":
     args = [
         "--out",
-        "docs/assets/run017/wp5/ui",
+        OUT_DIR,
         "--workpackage",
         "RUN-017 WP6",
         "--label",
@@ -51,6 +63,9 @@ if __name__ == "__main__":
         "6",
         "--extended",
     ]
+    if RUN_ID:
+        args += ["--run-id", RUN_ID]
+    args += ["--profile", PROFILE]
     if PROFILE == "full":
         args.append("--faults")
     sys.exit(run_loop(args))

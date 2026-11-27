@@ -87,3 +87,7 @@ docs/assets/run017/**/_runtime/
 docs/assets/run017/**/worker-*
 docs/assets/run017/**/*.log
 docs/assets/run017/wp4/gc-*/
+
+# RUN-018 WP1：CI 每次 run 的 UI 验收运行态产物只作为 artifact 上传，不入库
+docs/assets/run018/ci/**/_runtime/
+docs/assets/run018/ci/**/worker-*
