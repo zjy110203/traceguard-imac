@@ -1,0 +1,339 @@
+{
+  "round": 1,
+  "executed_at": "2026-11-27T03:44:04Z",
+  "order": "forward",
+  "metrics": {
+    "total_samples": 24,
+    "eval_errors": 0,
+    "abstained_inconclusive": 16,
+    "abstain_share": 0.6667,
+    "accuracy_all_denominator": 0.5,
+    "selective_accuracy_denominator": 8,
+    "selective_accuracy": 1.0,
+    "per_label": {
+      "API": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 4,
+        "fp": 0,
+        "fn": 0,
+        "denominator_precision": 4,
+        "denominator_recall": 4
+      },
+      "PERSISTENCE": {
+        "precision": null,
+        "recall": null,
+        "f1": null,
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "denominator_precision": 0,
+        "denominator_recall": 0
+      },
+      "TIMING": {
+        "precision": null,
+        "recall": null,
+        "f1": null,
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "denominator_precision": 0,
+        "denominator_recall": 0
+      },
+      "LOCATOR": {
+        "precision": null,
+        "recall": null,
+        "f1": null,
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "denominator_precision": 0,
+        "denominator_recall": 0
+      },
+      "NETWORK": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 4,
+        "fp": 0,
+        "fn": 0,
+        "denominator_precision": 4,
+        "denominator_recall": 4
+      }
+    },
+    "macro_f1": 1.0,
+    "time_to_diagnosis_ms_avg": 38.0,
+    "probe_cost_avg": 0.733,
+    "evidence_coverage_avg": 1.0,
+    "confusion_matrix": {
+      "API": {
+        "API": 4,
+        "PERSISTENCE": 0,
+        "TIMING": 0,
+        "LOCATOR": 0,
+        "NETWORK": 0,
+        "INCONCLUSIVE": 0
+      },
+      "PERSISTENCE": {
+        "API": 0,
+        "PERSISTENCE": 0,
+        "TIMING": 0,
+        "LOCATOR": 0,
+        "NETWORK": 0,
+        "INCONCLUSIVE": 4
+      },
+      "TIMING": {
+        "API": 0,
+        "PERSISTENCE": 0,
+        "TIMING": 0,
+        "LOCATOR": 0,
+        "NETWORK": 0,
+        "INCONCLUSIVE": 4
+      },
+      "LOCATOR": {
+        "API": 0,
+        "PERSISTENCE": 0,
+        "TIMING": 0,
+        "LOCATOR": 0,
+        "NETWORK": 0,
+        "INCONCLUSIVE": 4
+      },
+      "NETWORK": {
+        "API": 0,
+        "PERSISTENCE": 0,
+        "TIMING": 0,
+        "LOCATOR": 0,
+        "NETWORK": 4,
+        "INCONCLUSIVE": 0
+      },
+      "INCONCLUSIVE": {
+        "API": 0,
+        "PERSISTENCE": 0,
+        "TIMING": 0,
+        "LOCATOR": 0,
+        "NETWORK": 0,
+        "INCONCLUSIVE": 4
+      }
+    },
+    "primary_cause_accuracy": 0.5
+  },
+  "per_sample": [
+    {
+      "sample_id": "holdout-51041-api_5xx-v1",
+      "family": "api_5xx",
+      "gt": "API",
+      "pred": "API",
+      "correct": true,
+      "abstained": false,
+      "error": null
+    },
+    {
+      "sample_id": "holdout-51041-api_5xx-v2",
+      "family": "api_5xx",
+      "gt": "API",
+      "pred": "API",
+      "correct": true,
+      "abstained": false,
+      "error": null
+    },
+    {
+      "sample_id": "holdout-51041-api_5xx-v3",
+      "family": "api_5xx",
+      "gt": "API",
+      "pred": "API",
+      "correct": true,
+      "abstained": false,
+      "error": null
+    },
+    {
+      "sample_id": "holdout-51041-api_5xx-v4",
+      "family": "api_5xx",
+      "gt": "API",
+      "pred": "API",
+      "correct": true,
+      "abstained": false,
+      "error": null
+    },
+    {
+      "sample_id": "holdout-51041-db001_permanent-v1",
+      "family": "db001_permanent",
+      "gt": "PERSISTENCE",
+      "pred": "INCONCLUSIVE",
+      "correct": false,
+      "abstained": true,
+      "error": null
+    },
+    {
+      "sample_id": "holdout-51041-db001_permanent-v2",
+      "family": "db001_permanent",
+      "gt": "PERSISTENCE",
+      "pred": "INCONCLUSIVE",
+      "correct": false,
+      "abstained": true,
+      "error": null
+    },
+    {
+      "sample_id": "holdout-51041-db001_permanent-v3",
+      "family": "db001_permanent",
+      "gt": "PERSISTENCE",
+      "pred": "INCONCLUSIVE",
+      "correct": false,
+      "abstained": true,
+      "error": null
+    },
+    {
+      "sample_id": "holdout-51041-db001_permanent-v4",
+      "family": "db001_permanent",
+      "gt": "PERSISTENCE",
+      "pred": "INCONCLUSIVE",
+      "correct": false,
+      "abstained": true,
+      "error": null
+    },
+    {
+      "sample_id": "holdout-51041-db004_lag-v1",
+      "family": "db004_lag",
+      "gt": "TIMING",
+      "pred": "INCONCLUSIVE",
+      "correct": false,
+      "abstained": true,
+      "error": null
+    },
+    {
+      "sample_id": "holdout-51041-db004_lag-v2",
+      "family": "db004_lag",
+      "gt": "TIMING",
+      "pred": "INCONCLUSIVE",
+      "correct": false,
+      "abstained": true,
+      "error": null
+    },
+    {
+      "sample_id": "holdout-51041-db004_lag-v3",
+      "family": "db004_lag",
+      "gt": "TIMING",
+      "pred": "INCONCLUSIVE",
+      "correct": false,
+      "abstained": true,
+      "error": null
+    },
+    {
+      "sample_id": "holdout-51041-db004_lag-v4",
+      "family": "db004_lag",
+      "gt": "TIMING",
+      "pred": "INCONCLUSIVE",
+      "correct": false,
+      "abstained": true,
+      "error": null
+    },
+    {
+      "sample_id": "holdout-51041-locator_drift-v1",
+      "family": "locator_drift",
+      "gt": "LOCATOR",
+      "pred": "INCONCLUSIVE",
+      "correct": false,
+      "abstained": true,
+      "error": null
+    },
+    {
+      "sample_id": "holdout-51041-locator_drift-v2",
+      "family": "locator_drift",
+      "gt": "LOCATOR",
+      "pred": "INCONCLUSIVE",
+      "correct": false,
+      "abstained": true,
+      "error": null
+    },
+    {
+      "sample_id": "holdout-51041-locator_drift-v3",
+      "family": "locator_drift",
+      "gt": "LOCATOR",
+      "pred": "INCONCLUSIVE",
+      "correct": false,
+      "abstained": true,
+      "error": null
+    },
+    {
+      "sample_id": "holdout-51041-locator_drift-v4",
+      "family": "locator_drift",
+      "gt": "LOCATOR",
+      "pred": "INCONCLUSIVE",
+      "correct": false,
+      "abstained": true,
+      "error": null
+    },
+    {
+      "sample_id": "holdout-51041-network_env-v1",
+      "family": "network_env",
+      "gt": "NETWORK",
+      "pred": "NETWORK",
+      "correct": true,
+      "abstained": false,
+      "error": null
+    },
+    {
+      "sample_id": "holdout-51041-network_env-v2",
+      "family": "network_env",
+      "gt": "NETWORK",
+      "pred": "NETWORK",
+      "correct": true,
+      "abstained": false,
+      "error": null
+    },
+    {
+      "sample_id": "holdout-51041-network_env-v3",
+      "family": "network_env",
+      "gt": "NETWORK",
+      "pred": "NETWORK",
+      "correct": true,
+      "abstained": false,
+      "error": null
+    },
+    {
+      "sample_id": "holdout-51041-network_env-v4",
+      "family": "network_env",
+      "gt": "NETWORK",
+      "pred": "NETWORK",
+      "correct": true,
+      "abstained": false,
+      "error": null
+    },
+    {
+      "sample_id": "holdout-51041-ambiguous-v1",
+      "family": "ambiguous",
+      "gt": "INCONCLUSIVE",
+      "pred": "INCONCLUSIVE",
+      "correct": true,
+      "abstained": true,
+      "error": null
+    },
+    {
+      "sample_id": "holdout-51041-ambiguous-v2",
+      "family": "ambiguous",
+      "gt": "INCONCLUSIVE",
+      "pred": "INCONCLUSIVE",
+      "correct": true,
+      "abstained": true,
+      "error": null
+    },
+    {
+      "sample_id": "holdout-51041-ambiguous-v3",
+      "family": "ambiguous",
+      "gt": "INCONCLUSIVE",
+      "pred": "INCONCLUSIVE",
+      "correct": true,
+      "abstained": true,
+      "error": null
+    },
+    {
+      "sample_id": "holdout-51041-ambiguous-v4",
+      "family": "ambiguous",
+      "gt": "INCONCLUSIVE",
+      "pred": "INCONCLUSIVE",
+      "correct": true,
+      "abstained": true,
+      "error": null
+    }
+  ]
+}

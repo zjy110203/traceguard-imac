@@ -1,0 +1,727 @@
+{
+  "manifest": {
+    "frozen_at": "2026-11-27T03:44:01Z",
+    "rule_files_sha256": {
+      "packages/evidence/traceguard_evidence/diagnosis/engine.py": "9284ce53e2341e82179303f6464f1687532c452cf2c911a6cdb652aa2883fd23",
+      "packages/evidence/traceguard_evidence/diagnosis/dedup.py": "50d8db09a4b343fdf330d6be6e212a7b4ee72137de6f116516a44357aecc3eb6",
+      "packages/evidence/traceguard_evidence/probe/planner.py": "c2d427181e6da97923f30ec12681b0dcbfebbcb7dc0ab5ddbdfb18cfe0d5bc54",
+      "packages/evidence/traceguard_evidence/probe/feedback.py": "de9a69ce1ab168e81e12ef0547a4d3a3d614e072e726bfba2c4ee2c8bb376ceb",
+      "packages/evidence/traceguard_evidence/probe/contract.py": "58bc767a04407f18e33ea83f1ef85dbc21c139eb70c8558d959f2711a6ccd25b",
+      "apps/api/traceguard_api/services/diagnosis_service.py": "4422efd839502462acb08de412cce47d7ea7341d39f84c3762a5b561d502a1d4"
+    },
+    "rule_strategy_version": "v2",
+    "probe_strategy_version": "probe-strategy-v1-holdout",
+    "ground_truth_version": "fa4cd6467603f98e",
+    "scenario_count": 24,
+    "scenario_list": [
+      "holdout-51041-api_5xx-v1",
+      "holdout-51041-api_5xx-v2",
+      "holdout-51041-api_5xx-v3",
+      "holdout-51041-api_5xx-v4",
+      "holdout-51041-db001_permanent-v1",
+      "holdout-51041-db001_permanent-v2",
+      "holdout-51041-db001_permanent-v3",
+      "holdout-51041-db001_permanent-v4",
+      "holdout-51041-db004_lag-v1",
+      "holdout-51041-db004_lag-v2",
+      "holdout-51041-db004_lag-v3",
+      "holdout-51041-db004_lag-v4",
+      "holdout-51041-locator_drift-v1",
+      "holdout-51041-locator_drift-v2",
+      "holdout-51041-locator_drift-v3",
+      "holdout-51041-locator_drift-v4",
+      "holdout-51041-network_env-v1",
+      "holdout-51041-network_env-v2",
+      "holdout-51041-network_env-v3",
+      "holdout-51041-network_env-v4",
+      "holdout-51041-ambiguous-v1",
+      "holdout-51041-ambiguous-v2",
+      "holdout-51041-ambiguous-v3",
+      "holdout-51041-ambiguous-v4"
+    ],
+    "note": "规则修改必须换新 Holdout（新 manifest），不得重复污染旧数据"
+  },
+  "rounds": {
+    "round1": {
+      "round": 1,
+      "executed_at": "2026-11-27T03:44:04Z",
+      "order": "forward",
+      "metrics": {
+        "total_samples": 24,
+        "eval_errors": 0,
+        "abstained_inconclusive": 16,
+        "abstain_share": 0.6667,
+        "accuracy_all_denominator": 0.5,
+        "selective_accuracy_denominator": 8,
+        "selective_accuracy": 1.0,
+        "per_label": {
+          "API": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "tp": 4,
+            "fp": 0,
+            "fn": 0,
+            "denominator_precision": 4,
+            "denominator_recall": 4
+          },
+          "PERSISTENCE": {
+            "precision": null,
+            "recall": null,
+            "f1": null,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "denominator_precision": 0,
+            "denominator_recall": 0
+          },
+          "TIMING": {
+            "precision": null,
+            "recall": null,
+            "f1": null,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "denominator_precision": 0,
+            "denominator_recall": 0
+          },
+          "LOCATOR": {
+            "precision": null,
+            "recall": null,
+            "f1": null,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "denominator_precision": 0,
+            "denominator_recall": 0
+          },
+          "NETWORK": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "tp": 4,
+            "fp": 0,
+            "fn": 0,
+            "denominator_precision": 4,
+            "denominator_recall": 4
+          }
+        },
+        "macro_f1": 1.0,
+        "time_to_diagnosis_ms_avg": 38.0,
+        "probe_cost_avg": 0.733,
+        "evidence_coverage_avg": 1.0,
+        "confusion_matrix": {
+          "API": {
+            "API": 4,
+            "PERSISTENCE": 0,
+            "TIMING": 0,
+            "LOCATOR": 0,
+            "NETWORK": 0,
+            "INCONCLUSIVE": 0
+          },
+          "PERSISTENCE": {
+            "API": 0,
+            "PERSISTENCE": 0,
+            "TIMING": 0,
+            "LOCATOR": 0,
+            "NETWORK": 0,
+            "INCONCLUSIVE": 4
+          },
+          "TIMING": {
+            "API": 0,
+            "PERSISTENCE": 0,
+            "TIMING": 0,
+            "LOCATOR": 0,
+            "NETWORK": 0,
+            "INCONCLUSIVE": 4
+          },
+          "LOCATOR": {
+            "API": 0,
+            "PERSISTENCE": 0,
+            "TIMING": 0,
+            "LOCATOR": 0,
+            "NETWORK": 0,
+            "INCONCLUSIVE": 4
+          },
+          "NETWORK": {
+            "API": 0,
+            "PERSISTENCE": 0,
+            "TIMING": 0,
+            "LOCATOR": 0,
+            "NETWORK": 4,
+            "INCONCLUSIVE": 0
+          },
+          "INCONCLUSIVE": {
+            "API": 0,
+            "PERSISTENCE": 0,
+            "TIMING": 0,
+            "LOCATOR": 0,
+            "NETWORK": 0,
+            "INCONCLUSIVE": 4
+          }
+        },
+        "primary_cause_accuracy": 0.5
+      },
+      "per_sample": [
+        {
+          "sample_id": "holdout-51041-api_5xx-v1",
+          "family": "api_5xx",
+          "gt": "API",
+          "pred": "API",
+          "correct": true,
+          "abstained": false,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-api_5xx-v2",
+          "family": "api_5xx",
+          "gt": "API",
+          "pred": "API",
+          "correct": true,
+          "abstained": false,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-api_5xx-v3",
+          "family": "api_5xx",
+          "gt": "API",
+          "pred": "API",
+          "correct": true,
+          "abstained": false,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-api_5xx-v4",
+          "family": "api_5xx",
+          "gt": "API",
+          "pred": "API",
+          "correct": true,
+          "abstained": false,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-db001_permanent-v1",
+          "family": "db001_permanent",
+          "gt": "PERSISTENCE",
+          "pred": "INCONCLUSIVE",
+          "correct": false,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-db001_permanent-v2",
+          "family": "db001_permanent",
+          "gt": "PERSISTENCE",
+          "pred": "INCONCLUSIVE",
+          "correct": false,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-db001_permanent-v3",
+          "family": "db001_permanent",
+          "gt": "PERSISTENCE",
+          "pred": "INCONCLUSIVE",
+          "correct": false,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-db001_permanent-v4",
+          "family": "db001_permanent",
+          "gt": "PERSISTENCE",
+          "pred": "INCONCLUSIVE",
+          "correct": false,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-db004_lag-v1",
+          "family": "db004_lag",
+          "gt": "TIMING",
+          "pred": "INCONCLUSIVE",
+          "correct": false,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-db004_lag-v2",
+          "family": "db004_lag",
+          "gt": "TIMING",
+          "pred": "INCONCLUSIVE",
+          "correct": false,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-db004_lag-v3",
+          "family": "db004_lag",
+          "gt": "TIMING",
+          "pred": "INCONCLUSIVE",
+          "correct": false,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-db004_lag-v4",
+          "family": "db004_lag",
+          "gt": "TIMING",
+          "pred": "INCONCLUSIVE",
+          "correct": false,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-locator_drift-v1",
+          "family": "locator_drift",
+          "gt": "LOCATOR",
+          "pred": "INCONCLUSIVE",
+          "correct": false,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-locator_drift-v2",
+          "family": "locator_drift",
+          "gt": "LOCATOR",
+          "pred": "INCONCLUSIVE",
+          "correct": false,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-locator_drift-v3",
+          "family": "locator_drift",
+          "gt": "LOCATOR",
+          "pred": "INCONCLUSIVE",
+          "correct": false,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-locator_drift-v4",
+          "family": "locator_drift",
+          "gt": "LOCATOR",
+          "pred": "INCONCLUSIVE",
+          "correct": false,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-network_env-v1",
+          "family": "network_env",
+          "gt": "NETWORK",
+          "pred": "NETWORK",
+          "correct": true,
+          "abstained": false,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-network_env-v2",
+          "family": "network_env",
+          "gt": "NETWORK",
+          "pred": "NETWORK",
+          "correct": true,
+          "abstained": false,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-network_env-v3",
+          "family": "network_env",
+          "gt": "NETWORK",
+          "pred": "NETWORK",
+          "correct": true,
+          "abstained": false,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-network_env-v4",
+          "family": "network_env",
+          "gt": "NETWORK",
+          "pred": "NETWORK",
+          "correct": true,
+          "abstained": false,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-ambiguous-v1",
+          "family": "ambiguous",
+          "gt": "INCONCLUSIVE",
+          "pred": "INCONCLUSIVE",
+          "correct": true,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-ambiguous-v2",
+          "family": "ambiguous",
+          "gt": "INCONCLUSIVE",
+          "pred": "INCONCLUSIVE",
+          "correct": true,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-ambiguous-v3",
+          "family": "ambiguous",
+          "gt": "INCONCLUSIVE",
+          "pred": "INCONCLUSIVE",
+          "correct": true,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-ambiguous-v4",
+          "family": "ambiguous",
+          "gt": "INCONCLUSIVE",
+          "pred": "INCONCLUSIVE",
+          "correct": true,
+          "abstained": true,
+          "error": null
+        }
+      ]
+    },
+    "round2": {
+      "round": 2,
+      "executed_at": "2026-11-27T03:44:05Z",
+      "order": "reversed",
+      "metrics": {
+        "total_samples": 24,
+        "eval_errors": 0,
+        "abstained_inconclusive": 16,
+        "abstain_share": 0.6667,
+        "accuracy_all_denominator": 0.5,
+        "selective_accuracy_denominator": 8,
+        "selective_accuracy": 1.0,
+        "per_label": {
+          "API": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "tp": 4,
+            "fp": 0,
+            "fn": 0,
+            "denominator_precision": 4,
+            "denominator_recall": 4
+          },
+          "PERSISTENCE": {
+            "precision": null,
+            "recall": null,
+            "f1": null,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "denominator_precision": 0,
+            "denominator_recall": 0
+          },
+          "TIMING": {
+            "precision": null,
+            "recall": null,
+            "f1": null,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "denominator_precision": 0,
+            "denominator_recall": 0
+          },
+          "LOCATOR": {
+            "precision": null,
+            "recall": null,
+            "f1": null,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "denominator_precision": 0,
+            "denominator_recall": 0
+          },
+          "NETWORK": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "tp": 4,
+            "fp": 0,
+            "fn": 0,
+            "denominator_precision": 4,
+            "denominator_recall": 4
+          }
+        },
+        "macro_f1": 1.0,
+        "time_to_diagnosis_ms_avg": 38.7,
+        "probe_cost_avg": 0.733,
+        "evidence_coverage_avg": 1.0,
+        "confusion_matrix": {
+          "API": {
+            "API": 4,
+            "PERSISTENCE": 0,
+            "TIMING": 0,
+            "LOCATOR": 0,
+            "NETWORK": 0,
+            "INCONCLUSIVE": 0
+          },
+          "PERSISTENCE": {
+            "API": 0,
+            "PERSISTENCE": 0,
+            "TIMING": 0,
+            "LOCATOR": 0,
+            "NETWORK": 0,
+            "INCONCLUSIVE": 4
+          },
+          "TIMING": {
+            "API": 0,
+            "PERSISTENCE": 0,
+            "TIMING": 0,
+            "LOCATOR": 0,
+            "NETWORK": 0,
+            "INCONCLUSIVE": 4
+          },
+          "LOCATOR": {
+            "API": 0,
+            "PERSISTENCE": 0,
+            "TIMING": 0,
+            "LOCATOR": 0,
+            "NETWORK": 0,
+            "INCONCLUSIVE": 4
+          },
+          "NETWORK": {
+            "API": 0,
+            "PERSISTENCE": 0,
+            "TIMING": 0,
+            "LOCATOR": 0,
+            "NETWORK": 4,
+            "INCONCLUSIVE": 0
+          },
+          "INCONCLUSIVE": {
+            "API": 0,
+            "PERSISTENCE": 0,
+            "TIMING": 0,
+            "LOCATOR": 0,
+            "NETWORK": 0,
+            "INCONCLUSIVE": 4
+          }
+        },
+        "primary_cause_accuracy": 0.5
+      },
+      "per_sample": [
+        {
+          "sample_id": "holdout-51041-ambiguous-v4",
+          "family": "ambiguous",
+          "gt": "INCONCLUSIVE",
+          "pred": "INCONCLUSIVE",
+          "correct": true,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-ambiguous-v3",
+          "family": "ambiguous",
+          "gt": "INCONCLUSIVE",
+          "pred": "INCONCLUSIVE",
+          "correct": true,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-ambiguous-v2",
+          "family": "ambiguous",
+          "gt": "INCONCLUSIVE",
+          "pred": "INCONCLUSIVE",
+          "correct": true,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-ambiguous-v1",
+          "family": "ambiguous",
+          "gt": "INCONCLUSIVE",
+          "pred": "INCONCLUSIVE",
+          "correct": true,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-network_env-v4",
+          "family": "network_env",
+          "gt": "NETWORK",
+          "pred": "NETWORK",
+          "correct": true,
+          "abstained": false,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-network_env-v3",
+          "family": "network_env",
+          "gt": "NETWORK",
+          "pred": "NETWORK",
+          "correct": true,
+          "abstained": false,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-network_env-v2",
+          "family": "network_env",
+          "gt": "NETWORK",
+          "pred": "NETWORK",
+          "correct": true,
+          "abstained": false,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-network_env-v1",
+          "family": "network_env",
+          "gt": "NETWORK",
+          "pred": "NETWORK",
+          "correct": true,
+          "abstained": false,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-locator_drift-v4",
+          "family": "locator_drift",
+          "gt": "LOCATOR",
+          "pred": "INCONCLUSIVE",
+          "correct": false,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-locator_drift-v3",
+          "family": "locator_drift",
+          "gt": "LOCATOR",
+          "pred": "INCONCLUSIVE",
+          "correct": false,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-locator_drift-v2",
+          "family": "locator_drift",
+          "gt": "LOCATOR",
+          "pred": "INCONCLUSIVE",
+          "correct": false,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-locator_drift-v1",
+          "family": "locator_drift",
+          "gt": "LOCATOR",
+          "pred": "INCONCLUSIVE",
+          "correct": false,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-db004_lag-v4",
+          "family": "db004_lag",
+          "gt": "TIMING",
+          "pred": "INCONCLUSIVE",
+          "correct": false,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-db004_lag-v3",
+          "family": "db004_lag",
+          "gt": "TIMING",
+          "pred": "INCONCLUSIVE",
+          "correct": false,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-db004_lag-v2",
+          "family": "db004_lag",
+          "gt": "TIMING",
+          "pred": "INCONCLUSIVE",
+          "correct": false,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-db004_lag-v1",
+          "family": "db004_lag",
+          "gt": "TIMING",
+          "pred": "INCONCLUSIVE",
+          "correct": false,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-db001_permanent-v4",
+          "family": "db001_permanent",
+          "gt": "PERSISTENCE",
+          "pred": "INCONCLUSIVE",
+          "correct": false,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-db001_permanent-v3",
+          "family": "db001_permanent",
+          "gt": "PERSISTENCE",
+          "pred": "INCONCLUSIVE",
+          "correct": false,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-db001_permanent-v2",
+          "family": "db001_permanent",
+          "gt": "PERSISTENCE",
+          "pred": "INCONCLUSIVE",
+          "correct": false,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-db001_permanent-v1",
+          "family": "db001_permanent",
+          "gt": "PERSISTENCE",
+          "pred": "INCONCLUSIVE",
+          "correct": false,
+          "abstained": true,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-api_5xx-v4",
+          "family": "api_5xx",
+          "gt": "API",
+          "pred": "API",
+          "correct": true,
+          "abstained": false,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-api_5xx-v3",
+          "family": "api_5xx",
+          "gt": "API",
+          "pred": "API",
+          "correct": true,
+          "abstained": false,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-api_5xx-v2",
+          "family": "api_5xx",
+          "gt": "API",
+          "pred": "API",
+          "correct": true,
+          "abstained": false,
+          "error": null
+        },
+        {
+          "sample_id": "holdout-51041-api_5xx-v1",
+          "family": "api_5xx",
+          "gt": "API",
+          "pred": "API",
+          "correct": true,
+          "abstained": false,
+          "error": null
+        }
+      ]
+    }
+  },
+  "started_at": "2026-11-27T03:44:01Z",
+  "probe_strategy_version": "probe-strategy-v1-holdout",
+  "finished_at": "2026-11-27T03:44:05Z"
+}

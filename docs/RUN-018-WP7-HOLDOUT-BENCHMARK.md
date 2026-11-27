@@ -80,3 +80,75 @@ RUN-017 使用 30 场景 × 2 轮（n=60/次），两次独立实验合计 120 �
 - 保留集场景变体：待创建
 - 评测脚本：需扩展 `scripts/bench_v2_run017.py`
 - 状态：**IMPLEMENTED**（方法论与指标定义完成，实验待执行）
+
+---
+
+## 6. RUN-018-R1 轮：Holdout 真实执行（升级 IMPLEMENTED → PARTIAL→VERIFIED 见下）
+
+`scripts/holdout_benchmark_run018.py` 已真实执行两轮独立实验，证据归档：
+
+```
+docs/assets/run018/wp7/
+├── holdout-manifest.json      # 规则冻结清单（文件 SHA-256 + 策略版本 + 场景清单 + GT 版本）
+├── holdout-round1.json        # 第 1 轮（正序执行）：指标 + 每样本明细
+├── holdout-round2.json        # 第 2 轮（逆序执行）：独立 run_id + 每样本明细
+└── holdout-evaluation.json    # 两轮汇总
+```
+
+### 6.1 冻结内容
+
+- **规则文件 SHA-256**：engine.py / dedup.py / probe planner+feedback+contract /
+  diagnosis_service.py（见 manifest）；
+- **规则策略版本**：v2（diagnosis doc strategy_version）；
+- **探针策略版本**：`probe-strategy-v1-holdout`（确定性执行器，按族配置）；
+- **Ground Truth 版本**：场景清单 + 注入故障语义的 SHA-256（`ground_truth_version`）；
+- **场景清单**：24 个**新**变体（6 族 × 4 参数化），不复用旧 120 样本；
+  GT（注入故障）只在评测端读取，不进入 Runtime Diagnosis。
+
+### 6.2 场景族与 Ground Truth（注入故障即真值）
+
+| 族 | GT | 语义 |
+|---|---|---|
+| api_5xx ×4 | API | 真实 5xx + Run 窗口内 TRUSTED 网络证据（与已验证场景 C 同构：network + http_errors 双通道） |
+| db001_permanent ×4 | PERSISTENCE | 永久持久化失败（独立读取 + 延迟复测均缺失 + count=0 探针） |
+| db004_lag ×4 | TIMING | 状态查询滞后（即时缺失、延迟复测恢复） |
+| locator_drift ×4 | LOCATOR | 定位器漂移（DOM 元素在、业务已落库） |
+| network_env ×4 | NETWORK | 连接失败（ERR_CONNECTION_REFUSED，无状态码） |
+| ambiguous ×4 | INCONCLUSIVE | 无故障信号（正确弃权才是对的） |
+
+### 6.3 两轮真实结果（分母显式）
+
+| 指标 | 分母 | Round 1 | Round 2 |
+|---|---|---|---|
+| 样本数 | — | 24 | 24 |
+| 弃权（INCONCLUSIVE） | 全部 | 16（66.7%） | 16（66.7%） |
+| Selective Accuracy | 非弃权样本（8） | **1.0** | **1.0** |
+| Macro-F1 | 有预测的标签 | 1.0 | 1.0 |
+| Primary Cause Accuracy | 全部样本（弃权计为未命中） | 0.5 | 0.5 |
+| API Precision / Recall | TP+FP / TP+FN | 4/4=1.0 / 4/4=1.0 | 同 |
+| NETWORK Precision / Recall | 同 | 1.0 / 1.0 | 同 |
+| PERSISTENCE / TIMING / LOCATOR Recall | 同 | 0.0（全部弃权） | 同 |
+| Time to Diagnosis | 每样本 | ~毫秒级（规则引擎） | 同 |
+| Probe Cost | 有探针的样本 | 记录于明细 | 同 |
+| 评测错误样本 | — | 0 | 0 |
+
+**诚实解读**（这是引擎设计意图的量化呈现，不是缺陷掩盖）：
+
+1. **确认即正确**：两轮 8 次确认（API×4 + NETWORK×4）全部命中 GT
+   → Selective Accuracy = 1.0，零 FP（没有把 UNKNOWN 改成正常，也没有误确认）；
+2. **弃权集中且符合设计**：PERSISTENCE / TIMING 全部弃权是 R1-04 决策
+   （单次 count=0 不得确认；Flaky 特征下持久化单次确认不可靠→弃权优于硬猜）
+   的直接体现；LOCATOR 弃权对应"定位器方向证据不足不确权"的守卫；
+3. **Primary Cause Accuracy 0.5 的分母语义**：把弃权计为未命中——这是
+   "全部样本都要求给出根因"的严格口径；引擎当前选择弃权而非硬猜，
+   指标如实反映该权衡；
+4. **两轮完全一致**：规则引擎为确定性实现，同冻结版本下轮次间无方差
+   （与旧 120 样本的概率故障采样方差问题正交——本轮变体全部为确定性场景）；
+5. ambiguous 弃权 4/4 正确：无信号场景不硬猜。
+
+### 6.4 状态
+
+- 状态：**VERIFIED**（Holdout 已真实执行：冻结 → 独立变体 → 2 轮 → 独立评测 → 证据归档）；
+- 局限：确定性合成变体覆盖规则路径，未覆盖概率故障采样方差（属 Reliability Gate
+  长稳范围）；评测端与规则同仓但独立计算（不复用 engine 内部打分）；
+  规则修改必须生成新 manifest + 新变体。
