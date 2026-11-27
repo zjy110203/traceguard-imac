@@ -1,0 +1,382 @@
+{
+  "dashboard-light-1440": {
+    "violations": [],
+    "passes": 24,
+    "incomplete": 2
+  },
+  "intents-light-1440": {
+    "violations": [],
+    "passes": 22,
+    "incomplete": 1
+  },
+  "explorer-light-1440": {
+    "violations": [],
+    "passes": 20,
+    "incomplete": 1
+  },
+  "testcases-light-1440": {
+    "violations": [],
+    "passes": 22,
+    "incomplete": 1
+  },
+  "testcase_detail-light-1440": {
+    "violations": [],
+    "passes": 23,
+    "incomplete": 2
+  },
+  "oracles-light-1440": {
+    "violations": [],
+    "passes": 22,
+    "incomplete": 1
+  },
+  "runs-light-1440": {
+    "violations": [],
+    "passes": 22,
+    "incomplete": 1
+  },
+  "run_detail-light-1440": {
+    "violations": [],
+    "passes": 21,
+    "incomplete": 2
+  },
+  "diagnoses-light-1440": {
+    "violations": [],
+    "passes": 22,
+    "incomplete": 1
+  },
+  "diagnosis_detail-light-1440": {
+    "violations": [],
+    "passes": 23,
+    "incomplete": 2
+  },
+  "repairs-light-1440": {
+    "violations": [],
+    "passes": 20,
+    "incomplete": 1
+  },
+  "benchmark-light-1440": {
+    "violations": [],
+    "passes": 18,
+    "incomplete": 1
+  },
+  "models-light-1440": {
+    "violations": [],
+    "passes": 24,
+    "incomplete": 2
+  },
+  "system-light-1440": {
+    "violations": [],
+    "passes": 22,
+    "incomplete": 1
+  },
+  "users-light-1440": {
+    "violations": [],
+    "passes": 24,
+    "incomplete": 2
+  },
+  "login-light-1440": {
+    "violations": [],
+    "passes": 24,
+    "incomplete": 2
+  },
+  "monitoring-light-1440": {
+    "violations": [],
+    "passes": 26,
+    "incomplete": 2
+  },
+  "oracle_detail-light-1440": {
+    "violations": [],
+    "passes": 25,
+    "incomplete": 1
+  },
+  "workspaces-light-1440": {
+    "violations": [],
+    "passes": 24,
+    "incomplete": 2
+  },
+  "dashboard-light-390": {
+    "violations": [],
+    "passes": 24,
+    "incomplete": 2
+  },
+  "intents-light-390": {
+    "violations": [],
+    "passes": 22,
+    "incomplete": 2
+  },
+  "explorer-light-390": {
+    "violations": [],
+    "passes": 20,
+    "incomplete": 1
+  },
+  "testcases-light-390": {
+    "violations": [],
+    "passes": 23,
+    "incomplete": 2
+  },
+  "testcase_detail-light-390": {
+    "violations": [],
+    "passes": 23,
+    "incomplete": 2
+  },
+  "oracles-light-390": {
+    "violations": [],
+    "passes": 23,
+    "incomplete": 2
+  },
+  "runs-light-390": {
+    "violations": [],
+    "passes": 23,
+    "incomplete": 2
+  },
+  "run_detail-light-390": {
+    "violations": [],
+    "passes": 21,
+    "incomplete": 2
+  },
+  "diagnoses-light-390": {
+    "violations": [],
+    "passes": 23,
+    "incomplete": 2
+  },
+  "diagnosis_detail-light-390": {
+    "violations": [],
+    "passes": 23,
+    "incomplete": 2
+  },
+  "repairs-light-390": {
+    "violations": [],
+    "passes": 20,
+    "incomplete": 1
+  },
+  "benchmark-light-390": {
+    "violations": [],
+    "passes": 18,
+    "incomplete": 1
+  },
+  "models-light-390": {
+    "violations": [],
+    "passes": 25,
+    "incomplete": 2
+  },
+  "system-light-390": {
+    "violations": [],
+    "passes": 22,
+    "incomplete": 1
+  },
+  "users-light-390": {
+    "violations": [],
+    "passes": 24,
+    "incomplete": 2
+  },
+  "login-light-390": {
+    "violations": [],
+    "passes": 24,
+    "incomplete": 2
+  },
+  "monitoring-light-390": {
+    "violations": [],
+    "passes": 26,
+    "incomplete": 2
+  },
+  "oracle_detail-light-390": {
+    "violations": [],
+    "passes": 26,
+    "incomplete": 1
+  },
+  "workspaces-light-390": {
+    "violations": [],
+    "passes": 24,
+    "incomplete": 2
+  },
+  "dashboard-dark-1440": {
+    "violations": [],
+    "passes": 24,
+    "incomplete": 2
+  },
+  "intents-dark-1440": {
+    "violations": [],
+    "passes": 22,
+    "incomplete": 1
+  },
+  "explorer-dark-1440": {
+    "violations": [],
+    "passes": 20,
+    "incomplete": 1
+  },
+  "testcases-dark-1440": {
+    "violations": [],
+    "passes": 22,
+    "incomplete": 1
+  },
+  "testcase_detail-dark-1440": {
+    "violations": [],
+    "passes": 23,
+    "incomplete": 2
+  },
+  "oracles-dark-1440": {
+    "violations": [],
+    "passes": 22,
+    "incomplete": 1
+  },
+  "runs-dark-1440": {
+    "violations": [],
+    "passes": 22,
+    "incomplete": 1
+  },
+  "run_detail-dark-1440": {
+    "violations": [],
+    "passes": 21,
+    "incomplete": 2
+  },
+  "diagnoses-dark-1440": {
+    "violations": [],
+    "passes": 22,
+    "incomplete": 1
+  },
+  "diagnosis_detail-dark-1440": {
+    "violations": [],
+    "passes": 23,
+    "incomplete": 2
+  },
+  "repairs-dark-1440": {
+    "violations": [],
+    "passes": 20,
+    "incomplete": 1
+  },
+  "benchmark-dark-1440": {
+    "violations": [],
+    "passes": 18,
+    "incomplete": 1
+  },
+  "models-dark-1440": {
+    "violations": [],
+    "passes": 24,
+    "incomplete": 2
+  },
+  "system-dark-1440": {
+    "violations": [],
+    "passes": 22,
+    "incomplete": 1
+  },
+  "users-dark-1440": {
+    "violations": [],
+    "passes": 24,
+    "incomplete": 2
+  },
+  "login-dark-1440": {
+    "violations": [],
+    "passes": 24,
+    "incomplete": 2
+  },
+  "monitoring-dark-1440": {
+    "violations": [],
+    "passes": 26,
+    "incomplete": 2
+  },
+  "oracle_detail-dark-1440": {
+    "violations": [],
+    "passes": 25,
+    "incomplete": 1
+  },
+  "workspaces-dark-1440": {
+    "violations": [],
+    "passes": 24,
+    "incomplete": 2
+  },
+  "dashboard-dark-390": {
+    "violations": [],
+    "passes": 24,
+    "incomplete": 2
+  },
+  "intents-dark-390": {
+    "violations": [],
+    "passes": 22,
+    "incomplete": 2
+  },
+  "explorer-dark-390": {
+    "violations": [],
+    "passes": 20,
+    "incomplete": 1
+  },
+  "testcases-dark-390": {
+    "violations": [],
+    "passes": 23,
+    "incomplete": 2
+  },
+  "testcase_detail-dark-390": {
+    "violations": [],
+    "passes": 23,
+    "incomplete": 2
+  },
+  "oracles-dark-390": {
+    "violations": [],
+    "passes": 23,
+    "incomplete": 2
+  },
+  "runs-dark-390": {
+    "violations": [],
+    "passes": 23,
+    "incomplete": 2
+  },
+  "run_detail-dark-390": {
+    "violations": [],
+    "passes": 21,
+    "incomplete": 2
+  },
+  "diagnoses-dark-390": {
+    "violations": [],
+    "passes": 23,
+    "incomplete": 2
+  },
+  "diagnosis_detail-dark-390": {
+    "violations": [],
+    "passes": 23,
+    "incomplete": 2
+  },
+  "repairs-dark-390": {
+    "violations": [],
+    "passes": 20,
+    "incomplete": 1
+  },
+  "benchmark-dark-390": {
+    "violations": [],
+    "passes": 18,
+    "incomplete": 1
+  },
+  "models-dark-390": {
+    "violations": [],
+    "passes": 25,
+    "incomplete": 2
+  },
+  "system-dark-390": {
+    "violations": [],
+    "passes": 22,
+    "incomplete": 1
+  },
+  "users-dark-390": {
+    "violations": [],
+    "passes": 24,
+    "incomplete": 2
+  },
+  "login-dark-390": {
+    "violations": [],
+    "passes": 24,
+    "incomplete": 2
+  },
+  "monitoring-dark-390": {
+    "violations": [],
+    "passes": 26,
+    "incomplete": 2
+  },
+  "oracle_detail-dark-390": {
+    "violations": [],
+    "passes": 26,
+    "incomplete": 1
+  },
+  "workspaces-dark-390": {
+    "violations": [],
+    "passes": 24,
+    "incomplete": 2
+  }
+}

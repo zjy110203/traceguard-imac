@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, artifactUrl, fmtTime } from '../api'
+import { currentActor } from '../auth'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import GraphView from '../components/GraphView.vue'
 import PageHeader from '../components/PageHeader.vue'
@@ -35,7 +36,7 @@ const loading = ref(true)
 const error = ref('')
 const partialError = ref('')
 const busy = ref('')
-const reviewer = ref('role:qa-lead')
+const reviewer = ref(currentActor())
 
 const disposition = computed(() => dispositions.value.find((p) => p.diagnosis_id === id))
 const conflicts = computed(() => diag.value?.unresolved_conflicts ?? [])

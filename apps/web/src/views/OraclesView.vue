@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { api, fmtTime } from '../api'
-import { currentActor } from '../auth'
+import { authState, can, currentActor } from '../auth'
 import { currentWorkspaceId, wsPath } from '../workspace'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import PageHeader from '../components/PageHeader.vue'
@@ -34,6 +34,10 @@ const form = ref({
   rule: '{"type":"presence","test_id":"banner-success"}',
   approve: true,
 })
+
+const canCreateOracle = computed(
+  () => authState.status?.auth_enabled === false || can('oracle.create'),
+)
 
 const filtered = computed(() =>
   items.value.filter(
@@ -97,7 +101,7 @@ onMounted(load)
       subtitle="Oracle 是判定的唯一依据：未审批的 Oracle 不参与判定，Agent 不能自批。每个 Oracle 都关联 Assertion，具备独立版本与可追溯来源。">
       <template #actions>
         <button @click="load">刷新</button>
-        <button class="primary" @click="showCreate = true">新建 Oracle</button>
+        <button class="primary" :disabled="!canCreateOracle" @click="showCreate = true">新建 Oracle</button>
       </template>
     </PageHeader>
     <div class="oracle-primer panel">

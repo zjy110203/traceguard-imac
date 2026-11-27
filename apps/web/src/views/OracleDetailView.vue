@@ -7,7 +7,7 @@ import {
   type OracleReference,
   type OracleVersionRecord,
 } from '../api'
-import { can, currentActor } from '../auth'
+import { authState, can, currentActor } from '../auth'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import PageHeader from '../components/PageHeader.vue'
 import StatusBadge from '../components/StatusBadge.vue'
@@ -25,6 +25,8 @@ const busy = ref(false)
 const note = ref('')
 
 const current = computed(() => versions.value.find((v) => v.version === selectedVersion.value))
+const allowed = (action: string): boolean =>
+  authState.status?.auth_enabled === false || can(action)
 
 async function load() {
   loading.value = true
@@ -105,7 +107,7 @@ onMounted(load)
             <p class="small"><b>需求引用</b>：{{ detail.requirement_ref || '—' }} ·
               <b>审批人</b>：{{ detail.approved_by || '—' }}</p>
             <pre class="json-block">{{ JSON.stringify(detail.evaluation_rule ?? {}, null, 2) }}</pre>
-            <div v-if="can('oracle.create')" class="toolbar">
+            <div v-if="allowed('oracle.create')" class="toolbar">
               <label for="oracle-note">审批备注</label>
               <input id="oracle-note" v-model="note" placeholder="复核说明" />
               <button class="primary" :disabled="busy" @click="approve">审批并新建版本</button>
@@ -117,30 +119,34 @@ onMounted(load)
         <div class="card">
           <div class="card-body">
             <h4>审批记录</h4>
-            <table>
-              <thead><tr><th>结果</th><th>主体</th><th>说明</th><th>时间</th></tr></thead>
-              <tbody>
-                <tr v-for="(a, idx) in current?.approval_history || []" :key="idx">
-                  <td><StatusBadge :value="a.approved ? 'APPROVED' : 'PENDING'" /></td>
-                  <td class="mono small">{{ a.approved_by || '—' }}</td>
-                  <td class="small">{{ a.note || '—' }}</td>
-                  <td class="small muted">{{ fmtTime(String(a.at || '')) }}</td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="scroll-x" tabindex="0">
+              <table>
+                <thead><tr><th>结果</th><th>主体</th><th>说明</th><th>时间</th></tr></thead>
+                <tbody>
+                  <tr v-for="(a, idx) in current?.approval_history || []" :key="idx">
+                    <td><StatusBadge :value="a.approved ? 'APPROVED' : 'PENDING'" /></td>
+                    <td class="mono small">{{ a.approved_by || '—' }}</td>
+                    <td class="small">{{ a.note || '—' }}</td>
+                    <td class="small muted">{{ fmtTime(String(a.at || '')) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
             <h4 style="margin-top: 18px">关联 TestCase（{{ references.length }}）</h4>
             <p v-if="!references.length" class="small muted">当前版本暂无用例绑定。</p>
-            <table v-else>
-              <thead><tr><th>用例</th><th>版本</th><th>绑定版本</th><th>审核状态</th></tr></thead>
-              <tbody>
-                <tr v-for="r in references" :key="r.testcase_id + '@' + r.version">
-                  <td class="mono small">{{ r.testcase_id }}</td>
-                  <td>v{{ r.version }}</td>
-                  <td>v{{ r.oracle_version ?? '—' }}</td>
-                  <td><StatusBadge :value="r.review_status" /></td>
-                </tr>
-              </tbody>
-            </table>
+            <div v-else class="scroll-x" tabindex="0">
+              <table>
+                <thead><tr><th>用例</th><th>版本</th><th>绑定版本</th><th>审核状态</th></tr></thead>
+                <tbody>
+                  <tr v-for="r in references" :key="r.testcase_id + '@' + r.version">
+                    <td class="mono small">{{ r.testcase_id }}</td>
+                    <td>v{{ r.version }}</td>
+                    <td>v{{ r.oracle_version ?? '—' }}</td>
+                    <td><StatusBadge :value="r.review_status" /></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -153,6 +159,6 @@ onMounted(load)
 .version-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
 .version-list li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 8px; border-radius: 6px; }
 .version-list li.active { background: var(--bg-subtle, rgba(0, 0, 0, 0.05)); }
-.linklike { background: none; border: none; padding: 0; color: var(--link, #2563eb); cursor: pointer; }
+.linklike { background: none; border: none; padding: 0; color: var(--brand, #2563eb); cursor: pointer; }
 .json-block { margin-top: 10px; max-height: 220px; overflow: auto; font-size: 12px; }
 </style>

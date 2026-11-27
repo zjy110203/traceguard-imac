@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, fmtTime, type OracleVersionRecord } from '../api'
-import { currentActor } from '../auth'
+import { authState, can, currentActor } from '../auth'
 import { currentWorkspaceId, wsPath } from '../workspace'
 import StepEditor, {
   type EditableAssertion,
@@ -47,6 +47,9 @@ const form = ref({
 
 steps.value = JSON.parse(form.value.steps) as EditableStep[]
 assertions.value = JSON.parse(form.value.assertions) as EditableAssertion[]
+
+const allowed = (action: string): boolean =>
+  authState.status?.auth_enabled === false || can(action)
 
 const filtered = computed(() =>
   items.value.filter(
@@ -181,9 +184,9 @@ onMounted(load)
                 <td class="small muted nowrap">{{ fmtTime(c.updated_at) }}</td>
                 <td>
                   <div class="flex">
-                    <button class="sm primary" :disabled="c.review_status !== 'APPROVED' || busy === c.testcase_id" @click="execute(c.testcase_id)">执行</button>
-                    <button v-if="c.review_status === 'PENDING'" class="sm" :disabled="busy === c.testcase_id" @click="review(c.testcase_id, c.latest_version, 'APPROVED')">通过</button>
-                    <button v-if="c.review_status === 'PENDING'" class="sm danger" :disabled="busy === c.testcase_id" @click="review(c.testcase_id, c.latest_version, 'REJECTED')">拒绝</button>
+                    <button class="sm primary" :disabled="!allowed('run.execute') || c.review_status !== 'APPROVED' || busy === c.testcase_id" @click="execute(c.testcase_id)">执行</button>
+                    <button v-if="c.review_status === 'PENDING'" class="sm" :disabled="!allowed('testcase.review') || busy === c.testcase_id" @click="review(c.testcase_id, c.latest_version, 'APPROVED')">通过</button>
+                    <button v-if="c.review_status === 'PENDING'" class="sm danger" :disabled="!allowed('testcase.review') || busy === c.testcase_id" @click="review(c.testcase_id, c.latest_version, 'REJECTED')">拒绝</button>
                     <router-link :to="`/testcases/${c.testcase_id}`" class="small">详情</router-link>
                   </div>
                 </td>

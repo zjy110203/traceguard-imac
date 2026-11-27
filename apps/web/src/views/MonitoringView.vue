@@ -7,6 +7,7 @@
  */
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { api, endpoints, fmtBytes, fmtNumber, fmtPercent, fmtTime, type AlertRecord } from '../api'
+import { authState, can } from '../auth'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import MetricCard from '../components/MetricCard.vue'
 import ModalShell from '../components/ModalShell.vue'
@@ -133,6 +134,11 @@ const showHistory = ref(false)
 const resolving = ref<AlertRecord | null>(null)
 const resolveReason = ref('')
 let timer: number | null = null
+
+// 告警确认/解决在服务端映射到 system.configure；认证关闭的开发环境保持可操作。
+const canManageAlerts = computed(
+  () => authState.status?.auth_enabled === false || can('system.configure'),
+)
 
 const activeAlerts = computed(() =>
   alerts.value.filter((a) => a.status === 'OPEN' || a.status === 'ACKNOWLEDGED'),
@@ -422,8 +428,8 @@ onUnmounted(stopTimer)
                   </td>
                   <td class="small muted">{{ fmtTime(a.first_seen) }}<br />{{ fmtTime(a.last_seen) }}（×{{ a.occurrences }}）</td>
                   <td class="small" style="white-space: nowrap">
-                    <button v-if="a.status === 'OPEN'" class="sm" :disabled="busy === `ack-${a.alert_id}`" @click="acknowledge(a)">确认</button>
-                    <button v-if="a.status !== 'RESOLVED'" class="sm" :disabled="busy === `resolve-${a.alert_id}`" @click="openResolve(a)">解决</button>
+                    <button v-if="a.status === 'OPEN' && canManageAlerts" class="sm" :disabled="busy === `ack-${a.alert_id}`" @click="acknowledge(a)">确认</button>
+                    <button v-if="a.status !== 'RESOLVED' && canManageAlerts" class="sm" :disabled="busy === `resolve-${a.alert_id}`" @click="openResolve(a)">解决</button>
                     <div v-if="a.acknowledged_by" class="muted" style="font-size: 11px">
                       ACK：{{ a.acknowledged_by }} @ {{ fmtTime(a.acknowledged_at) }}
                     </div>
@@ -498,7 +504,7 @@ onUnmounted(stopTimer)
                   <span class="chip">方言 {{ snap.database.dialect }}</span>
                   <span class="chip">迁移 v{{ snap.database.migration.latest_version ?? '—' }}（已应用 {{ snap.database.migration.applied ?? '—' }}）</span>
                 </div>
-                <pre class="json" style="margin-top: 10px">{{ JSON.stringify(snap.database.pool, null, 2) }}</pre>
+                <pre class="json" tabindex="0" style="margin-top: 10px">{{ JSON.stringify(snap.database.pool, null, 2) }}</pre>
                 <div class="small muted" style="margin-top: 8px">
                   监控观测到的读/写失败：{{ snap.database.failures.read_failures }} / {{ snap.database.failures.write_failures }}
                   <template v-if="snap.database.failures.last_error"> · 最近：{{ snap.database.failures.last_error }}</template>

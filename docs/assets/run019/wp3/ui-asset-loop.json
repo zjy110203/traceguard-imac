@@ -1,0 +1,103 @@
+{
+  "total": 8,
+  "passed": 8,
+  "failed": 0,
+  "records": [
+    {
+      "step": "工作区创建通过 UI 落库",
+      "result": "PASS",
+      "detail": [
+        {
+          "workspace_id": "default",
+          "name": "Default Workspace",
+          "description": "TraceGuard 默认工作区",
+          "created_at": "2026-11-27T10:10:12.953328Z",
+          "created_by": "system"
+        },
+        {
+          "workspace_id": "ws_17957742161510dcb79ba5329",
+          "name": "UI 验收工作区",
+          "description": "由真实浏览器创建",
+          "created_at": "2026-11-27T10:10:16.152048Z",
+          "created_by": "user:ui-admin"
+        }
+      ]
+    },
+    {
+      "step": "存在可变更角色的用户",
+      "result": "PASS",
+      "detail": [
+        {
+          "user_id": "usr_5b79c55b053fd4c8fbdb",
+          "username": "ui-admin",
+          "roles": [
+            "platform-admin"
+          ],
+          "active": true,
+          "workspaces": [
+            "*"
+          ]
+        },
+        {
+          "user_id": "usr_9d4413c7301e5391ef9b",
+          "username": "ui-viewer",
+          "roles": [
+            "viewer"
+          ],
+          "active": true,
+          "workspaces": [
+            "*"
+          ]
+        }
+      ]
+    },
+    {
+      "step": "用户角色通过 UI 修改",
+      "result": "PASS",
+      "detail": {
+        "user_id": "usr_9d4413c7301e5391ef9b",
+        "username": "ui-viewer",
+        "roles": [
+          "qa-lead",
+          "viewer"
+        ],
+        "active": true,
+        "workspaces": [
+          "*"
+        ]
+      }
+    },
+    {
+      "step": "需求通过 UI 创建",
+      "result": "PASS",
+      "detail": true
+    },
+    {
+      "step": "需求编辑通过 UI 落库且版本递增",
+      "result": "PASS",
+      "detail": {
+        "title": "UI 编辑后的需求标题",
+        "version": 2,
+        "status": "DRAFT"
+      }
+    },
+    {
+      "step": "Oracle 审批通过 UI 创建新版本",
+      "result": "PASS",
+      "detail": 2
+    },
+    {
+      "step": "用例新版本通过 UI 落库",
+      "result": "PASS",
+      "detail": [
+        2,
+        1
+      ]
+    },
+    {
+      "step": "版本差异比较可见",
+      "result": "PASS",
+      "detail": "diff pre rendered"
+    }
+  ]
+}

@@ -163,7 +163,18 @@ def get_user(db: Database, user_id: str) -> dict[str, Any] | None:
 def list_users(db: Database) -> list[dict[str, Any]]:
     with db.session() as s:
         rows = s.execute(text("SELECT * FROM tg_user ORDER BY username")).mappings().all()
-    return [dict(r) for r in rows]
+    users: list[dict[str, Any]] = []
+    for row in rows:
+        user = dict(row)
+        raw_roles = user.get("roles") or "[]"
+        if isinstance(raw_roles, str):
+            try:
+                user["roles"] = json.loads(raw_roles)
+            except json.JSONDecodeError:
+                user["roles"] = [r for r in raw_roles.split(",") if r.strip()]
+        user["active"] = bool(user.get("active"))
+        users.append(user)
+    return users
 
 
 def _lock_admin_guard(s: Any, db: Database) -> None:

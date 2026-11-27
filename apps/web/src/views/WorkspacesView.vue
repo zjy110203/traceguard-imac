@@ -6,7 +6,7 @@ import {
   type WorkspaceMember,
   type WorkspaceRecord,
 } from '../api'
-import { can } from '../auth'
+import { authState, can } from '../auth'
 import { currentWorkspaceId, switchWorkspace } from '../workspace'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import ModalShell from '../components/ModalShell.vue'
@@ -24,6 +24,9 @@ const showCreate = ref(false)
 const busy = ref('')
 const form = ref({ name: '', description: '' })
 const editForm = ref({ name: '', description: '' })
+
+const allowed = (action: string): boolean =>
+  authState.status?.auth_enabled === false || can(action)
 
 const selected = () => items.value.find((w) => w.workspace_id === selectedId.value)
 
@@ -109,7 +112,7 @@ onMounted(load)
       subtitle="创建、查看与编辑工作区；成员范围来自服务端用户授权，默认工作区受保护。切换工作区会重新挂载所有业务视图。">
       <template #actions>
         <button @click="load">刷新</button>
-        <button v-if="can('system.configure')" class="primary" @click="showCreate = true">新建工作区</button>
+        <button v-if="allowed('system.configure')" class="primary" @click="showCreate = true">新建工作区</button>
       </template>
     </PageHeader>
 
@@ -140,16 +143,16 @@ onMounted(load)
           <div class="grid c2">
             <div>
               <label for="ws-name">名称</label>
-              <input id="ws-name" v-model="editForm.name" :disabled="selectedId === 'default' || !can('system.configure')" />
+              <input id="ws-name" v-model="editForm.name" :disabled="selectedId === 'default' || !allowed('system.configure')" />
             </div>
             <div>
               <label for="ws-desc">描述</label>
-              <input id="ws-desc" v-model="editForm.description" :disabled="!can('system.configure')" />
+              <input id="ws-desc" v-model="editForm.description" :disabled="!allowed('system.configure')" />
             </div>
           </div>
           <p v-if="selectedId === 'default'" class="small muted">默认工作区受保护：名称与内容不可修改。</p>
           <div class="toolbar" style="margin-top: 12px">
-            <button :disabled="!can('system.configure') || busy === 'save'" @click="save">保存信息</button>
+            <button :disabled="!allowed('system.configure') || busy === 'save'" @click="save">保存信息</button>
             <button :disabled="selectedId === currentWorkspaceId" @click="activate">切换到此工作区</button>
           </div>
 

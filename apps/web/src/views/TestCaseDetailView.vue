@@ -2,7 +2,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, endpoints, fmtDuration, fmtTime } from '../api'
-import { currentActor } from '../auth'
+import { authState, can, currentActor } from '../auth'
 import { currentWorkspaceId, wsPath } from '../workspace'
 import StepEditor, {
   type EditableAssertion,
@@ -75,6 +75,8 @@ const draftAssertions = ref<EditableAssertion[]>([])
 const diffFrom = ref<number | null>(null)
 const diffTo = ref<number | null>(null)
 const diffResult = ref<{ changed_fields: string[]; diff: string } | null>(null)
+const allowed = (action: string): boolean =>
+  authState.status?.auth_enabled === false || can(action)
 // RUN-013 WP3：稳定性回放状态面板（状态/进度/样本/结论/Oracle/审核条件）
 const replay = ref<StabilityReplay | null>(null)
 const replayGate = ref<GatePreview | null>(null)
@@ -320,7 +322,7 @@ onUnmounted(() => {
           :subtitle="`${detail.testcase_id} · 来源 ${detail.compile_source} · 关联需求 ${detail.intent_ref || '—'}`">
           <template #actions>
             <button @click="router.push('/testcases')">返回列表</button>
-            <button class="primary" :disabled="detail.review_status !== 'APPROVED' || busy === 'exec'" @click="execute">执行当前版本</button>
+            <button class="primary" :disabled="!allowed('run.execute') || detail.review_status !== 'APPROVED' || busy === 'exec'" @click="execute">执行当前版本</button>
           </template>
           <template #meta>
             <div class="flex wrap mt">
@@ -453,8 +455,8 @@ onUnmounted(() => {
                 <div class="hr" />
                 <p class="small muted">审核人必须是具名人类角色（Agent 不能自审）。审核通过后才允许正式执行。</p>
                 <div class="flex" style="margin-top: 10px">
-                  <button class="sm primary" :disabled="busy === 'review'" @click="review('APPROVED')">审核通过</button>
-                  <button class="sm danger" :disabled="busy === 'review'" @click="review('REJECTED')">拒绝</button>
+                  <button class="sm primary" :disabled="!allowed('testcase.review') || busy === 'review'" @click="review('APPROVED')">审核通过</button>
+                  <button class="sm danger" :disabled="!allowed('testcase.review') || busy === 'review'" @click="review('REJECTED')">拒绝</button>
                   <button class="sm" :disabled="busy === 'replay'" @click="startStabilityReplay">启动稳定性回放</button>
                 </div>
                 <p class="small muted" style="margin-top: 6px">

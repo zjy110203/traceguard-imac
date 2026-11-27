@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { api, fmtTime } from '../api'
+import { can, currentActor } from '../auth'
 import { currentWorkspaceId, wsPath } from '../workspace'
 import AsyncBlock from '../components/AsyncBlock.vue'
 import CodeDiff from '../components/CodeDiff.vue'
@@ -20,7 +21,7 @@ const error = ref('')
 const busy = ref('')
 const showCreate = ref(false)
 const includeBench = ref(false)
-const reviewer = ref('role:qa-lead')
+const reviewer = ref(currentActor())
 
 const stepOptions = ref<{ index: number; action: string; target: string }[]>([])
 const baseDoc = ref<TestCaseVersion | null>(null)
@@ -213,12 +214,12 @@ async function runRegression() {
   }
 }
 
-const canApprove = computed(() => selected.value?.status === 'PENDING_APPROVAL')
-const canPromote = computed(() => selected.value?.status === 'APPROVED')
-const canRollback = computed(() => selected.value?.status === 'PROMOTED')
+const canApprove = computed(() => selected.value?.status === 'PENDING_APPROVAL' && can('repair.approve'))
+const canPromote = computed(() => selected.value?.status === 'APPROVED' && can('repair.promote'))
+const canRollback = computed(() => selected.value?.status === 'PROMOTED' && can('repair.rollback'))
 const canRunRegression = computed(() => {
   const r = selected.value
-  if (!r || r.status !== 'PROMOTED') return false
+  if (!r || r.status !== 'PROMOTED' || !can('repair.regression')) return false
   return !['PASSED', 'FAILED', 'INCONCLUSIVE', 'BLOCKED'].includes(r.regression_status || 'NOT_STARTED')
 })
 const regressionRunning = computed(() =>
